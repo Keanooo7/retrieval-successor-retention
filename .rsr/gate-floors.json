@@ -1,0 +1,8 @@
+{
+  "unmeasured_constants": {
+    "commit": "f59d2c1",
+    "direction": "may-fall-never-rise",
+    "evidence": "rsr constants --check",
+    "value": 10.0
+  }
+}
