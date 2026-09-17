@@ -191,3 +191,80 @@ evidence satisfiable **without funding a second model**.
 - [ ] Count events per story; fix the analysis unit; state effective N.
 - [ ] Pre-register the event→sentence aggregation rule and the position-partialling procedure
       **before** looking at any model output (§10.1 requires it pre-registered).
+
+---
+
+# CORRECTION — 2026-09-17, same day
+
+**Source:** session `d23e3dcd` handoff §7. **Verified here** against the NFRD paper before accepting.
+
+## The position-independence conclusion above is wrong
+
+This document says, under *"Does importance come scored independently of serial position?"*:
+
+> **No — and no naturalistic free-recall corpus does.**
+
+**That is incorrect for this dataset.** NFRD ships exactly such a measure and publishes the code for it.
+
+From the NFRD paper's usage notes, verbatim:
+
+> *"In a recent study by Lee and Chen, sentence embedding techniques were used to construct
+> undirected graphs representing the relationships between narrative events based on their semantic
+> similarity. We apply these methods to the NFRD as displayed in Fig. 4. Following the procedures
+> from Lee and Chen, we find a significantly positive effect of **semantic centrality** — indicating
+> the semantic similarity of an event to all others within the narrative — **on the likelihood of
+> recall for that event (p < 0.001 in a linear mixed-effects model)**; notably, the effect size
+> (β = 0.27) mirrors that reported in Lee and Chen. … **We provide all code utilized in the
+> application of these methodologies.**"*
+
+Embeddings are Google's Universal Sentence Encoder; edges thresholded at cosine 0.35; node size in
+Fig. 4 is *"the semantic centrality across relationships, independent of a threshold."*
+
+**Semantic centrality is a per-event importance score that is not serial position.** It is a graph
+property of semantic similarity — **position-independent by construction**, since reordering the
+events leaves it unchanged. §5.3's criterion — *"whether importance is scored independently of serial
+position"* — is therefore **met out of the box**, which is what this document denied.
+
+## How the error happened
+
+I read the Methods and Data Records sections — stimuli, segmentation, recall-probability computation
+— and the technical-validation paragraphs on serial position (PFR, lag-CRP). I concluded from the
+*recall probability* being position-confounded that no position-independent measure existed. The
+centrality measure is in the **usage-notes** section, past where I stopped. A stronger claim than the
+evidence supported, asserted about an entire class of corpora on the strength of one partial read.
+
+## One precision that is mine, not theirs
+
+Their handoff says the authors *"show [centrality] predicts recall independently of serial
+position."* The paper shows a significant positive effect of centrality on recall in a linear
+mixed-effects model; **it does not state that serial position was a covariate in that model.** So:
+
+- **Centrality is position-independent as a construct** — certain, by its definition.
+- **Whether the published β = 0.27 is a position-controlled estimate** — not established from the text.
+
+→ E7 still partials out serial position, exactly as §10.1 requires. The difference the correction
+makes is that E7 now has a **second, independent** importance regressor to correlate the model's
+retention against, instead of only a position-confounded recall probability. That is a materially
+better experiment.
+
+## What stands from the original write-up
+
+Unchanged and still verified: NFRD is **CC0** (osf.io/h2pkv), so there is no data-use agreement and
+no calendar risk; per-event recall probability with bootstrapped CIs; event boundaries **manually
+snapped to sentence boundaries**; 229 participants; four narratives; and it beats Sherlock (N=17,
+audiovisual — a text LM cannot read the stimulus).
+
+The two hazards this document raised also stand, and neither is in their handoff:
+
+1. 🔴 **`baseball` is a likely PG-19 contaminant** — chapter 1 of *Baseball Joe in the Big League*
+   (Chadwick, **1915**), Gutenberg **#27584**, inside PG-19's pre-1919 window, and the story with the
+   **highest** mean recall rate of the four.
+2. **The unit mapping is inverted** from §10.1's assumption — one value per *event*, coarser than a
+   sentence, so effective N is ~100–150 events, not ~300 sentences.
+
+📌 And hazard 1 is now **weaker but not gone**: correction 13 establishes that [P2] trains on
+WikiText, not PG-19, so PG-19 is RSR's own corpus choice. The contamination check still has to run —
+RSR *does* train E3 on PG-19 — but it is RSR's exposure, not inherited from [P2].
+
+**Gate status is unchanged: PASS.** The recommendation is unchanged. The reasoning under it is
+stronger than this document originally claimed, not weaker.

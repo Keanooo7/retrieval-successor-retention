@@ -1,0 +1,8 @@
+{
+  "A_max_synthetic": {
+    "evidence": "docs/spec-corrections.md B-5 (RESOLVED); A_max = S = 48 makes gamma=0.97 legal: horizon 33 <= min(48,48)",
+    "experiment": "owner decision, adopting session d23e3dcd's ADR-0004",
+    "recorded_at": "2026-09-17T23:36:48+00:00",
+    "value": 48
+  }
+}

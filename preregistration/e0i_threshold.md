@@ -114,3 +114,78 @@ which is worse than a null, because a null is informative.
 
 *Registered by the implementation lane before any E0i data existed. The threshold is a commitment,
 not a target: it is not adjusted to whatever the histogram turns out to show.*
+
+---
+
+# ERRATA — 2026-09-17
+
+> 🔴 **The threshold above is NOT being silently changed.** Re-registering a number after the fact is
+> the exact failure this file exists to prevent. The error is stated, the corrected form is derived,
+> and the number stands until the owner re-signs. Both versions remain in `git log`.
+
+**Source:** session `d23e3dcd` handoff §8.1.
+
+## The error: the attenuation exponent is wrong
+
+§3 above defines the gate in **precision-adjusted** events as `n_adjusted = n_raw × p`.
+
+**That is linear and it should be quadratic.** The correct relation is `n_raw × p² ≥ n_required`.
+
+### Derivation
+
+Let `p` be coref precision, so a fraction `(1 − p)` of counted "reintroduction events" are not
+reintroductions. Those contribute no treatment effect, only noise. The measured effect is therefore
+attenuated toward zero:
+
+```
+δ_observed  ≈  p · δ_true
+```
+
+Statistical power for a paired test depends on `δ² · n`, so the `n` required to detect `δ_true` at
+fixed power is:
+
+```
+n_required(δ_observed)  =  7.85 · σ_d² / δ_observed²
+                        =  7.85 · σ_d² / (p · δ_true)²
+                        =  n_ideal / p²
+```
+
+⇒ **the usable event count is `n_raw × p²`, not `n_raw × p`.**
+
+### What it costs
+
+The linear form **understates the requirement**, and it does so worse as precision falls:
+
+| coref precision `p` | raw events needed for 150 usable — linear (wrong) | quadratic (correct) |
+|---|---|---|
+| 0.95 | 158 | **166** |
+| 0.90 | 167 | **185** |
+| 0.80 | 188 | **234** |
+| 0.70 | 214 | **306** |
+
+At `p = 0.7` the original form asks for **30% fewer events than are actually needed** — and it asks
+for least exactly where measurement error is worst. A gate that relaxes as its dependency degrades is
+the wrong shape.
+
+## Standing, until re-signed
+
+- **The pre-registered threshold remains `≥ 150` per bin and `≥ 600` across `(40, 64]`.**
+- **The adjustment formula is corrected to `n_raw × p²`.** This makes the gate *stricter*, never
+  looser — a correction that only ever raises the bar cannot be a post-hoc convenience.
+- `p` is still measured on 100 hand-annotated reintroductions. **Unmeasured `p` still returns
+  exit 3 — did not run. Not a pass.** The correction makes that measurement *more* load-bearing:
+  the gate now depends on `p²`.
+
+## Two things the owner still decides
+
+1. **Re-sign, or hold the linear form as registered.** The quadratic form is correct; adopting it
+   after registration is still a change to a pre-registered rule and should be an explicit signature,
+   not an edit absorbed by whoever noticed.
+2. `d23e3dcd` proposes the gate as **`N_observed × p² ≥ 400`**. That is a different absolute target
+   from the 150/bin derived in §3 above, which came from a stated `σ_d = 0.30` and a 2.0% MDE against
+   [P2]'s own 2–4% headline effect. **Reconcile the two derivations before signing** — they disagree
+   on the number, not on the exponent, and only one of them shows its σ assumption.
+
+📌 `σ_d = 0.30` remains an **assumption**, flagged as one in §4 above. When the first paired run
+produces a real `σ_d`, recompute the MDE and **report it beside the headline**. The event threshold
+does not move retroactively.

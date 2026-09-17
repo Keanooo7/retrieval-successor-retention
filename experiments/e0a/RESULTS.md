@@ -98,3 +98,45 @@ is the harness, the multiplier, the parameter grouping, and the reading rule abo
 2. The bare-TG half, once `src/rsr/model/tg/` runs.
 3. Then the attached run, which is the one the spec actually asks for — and the only one that
    touches the recurrence, which is the part [P4] does not cover.
+
+---
+
+# ⚠️ CAVEAT ADDED 2026-09-17 — the input premise of this measurement is wrong for the real TG
+
+**Source:** session `d23e3dcd`, correction 15, from reading the actual TG source.
+
+This experiment feeds `torch.randn(N_LIVE, d)` gestalts and `torch.randn(d)` context — i.i.d.
+Gaussian, **`Θ(1)` coordinates**, norm `~√d`. That is the assumption §4.3's derivation makes, and
+under it the measurement is sound: the `d=384/d=128` RMS ratio at init is 0.581 against 0.577
+predicted by `Θ(1/√d)`.
+
+**TG's real gestalts are not that.** `tg/models/tg_srep_head.py` L2-normalises the sentence
+representation to `srep_norm_target = 1.0`, so **`‖s_i‖₂ = 1` exactly** and its coordinates are of
+order **`1/√d`**, not `Θ(1)`.
+
+Recounting under unit norm, the trained-regime output after the prescribed `1/d` multiplier is
+**`Θ(1/d)`** — it *decays* with width in exactly the regime μP governs. See
+`docs/spec-corrections.md` **D-15**.
+
+## What still stands, and what does not
+
+| | |
+|---|---|
+| ✅ The **harness** — `coord_check`, `width_invariance`, the multi-seed protocol | stands |
+| ✅ **"Read the verdict at `t ≥ 1`, never at step 0"** | stands, and is independently confirmed: `d23e3dcd` measured the same init decay (0.0895 / 0.0701 / 0.0647 / 0.0512 at d = 128/192/256/384) and reached the same reading rule |
+| ✅ The arithmetic, **given `Θ(1)` inputs** | stands — 0.581 vs 0.577 |
+| 🔴 That this **validates §4.3's `1/d` prescription for TG** | **does not stand.** It validates the reasoning under an input assumption TG violates |
+
+## What E0a must do when it actually runs
+
+1. **Pin what `c_t` is first.** §3.2.2 allows "the current sentence gestalt **or a running context
+   vector**" — different norms, different correct multipliers. E0a cannot measure an underspecified
+   object.
+2. Re-run with **unit-norm** `s_i` (and `c_t`, if `c_t` is a gestalt) to match TG.
+3. Report both input regimes side by side. The difference between them **is** the finding.
+4. The `1/d` multiplier stays as written until measured. §15.3 identifies that derivation as the
+   author's, and D-15 is flagged, not resolved.
+
+📌 A second control `d23e3dcd` tried and reports as **not a substitute**: constructing the correlated
+regime synthetically via `pinv(W)`. It does not control correlation magnitude and gave non-monotone
+results. Real optimizer steps, or nothing.

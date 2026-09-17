@@ -121,3 +121,63 @@ measuring sentence counts under SaT before banking it.
 GetDeploying A40 and RTX A6000 comparison pages · ComputePrices provider pages for RunPod, Vultr and
 Thunder Compute · Thunder Compute pricing page · RunPod pricing and savings-plan documentation ·
 gpuperhour RunPod listing. All retrieved 2026-09-17.
+
+---
+
+# REVISION — 2026-09-17: Mac-Studio-first, and the card this sizes against
+
+Two corrections land on this document at once. **Neither weakens its conclusions; together they
+sharpen the central one.**
+
+## 1. The owner's compute plan, stated correctly
+
+The original draft leans rental-first. The actual plan, and §4.4 labels it:
+
+| Stage | Where | Why |
+|---|---|---|
+| μP coordinate check (E0a), reduction test (E0b), synthetic corpus, E0d, interactive debug | **Mac Studio** (M4 Max, 64 GB) | §4.4 names exactly these four as the Mac's role |
+| **Tune at small width, transfer by μP** | **Mac Studio**, small `d` | This is what μP is *for* — and it is what keeps the rental window short |
+| Golden-tensor extraction from the JAX reference | rented card | `jax-metal`'s last release was v0.1.1 (2024-10-08) and current JAX needs Python ≥3.12 — **there is no Mac GPU path for JAX at all** |
+| E3 / E4 / E5 / E7 — the scaled runs | rented 48 GB | the only place they fit |
+
+So the rental window is **narrower** than this document assumed, and it opens **later**. Good news
+for the budget; it does not change the shape of the §8-vs-§16 conflict or the finding that a
+cancellable hold may not be a purchasable product.
+
+## 2. 🔴 But E0c itself must NOT be sized on the Mac
+
+**This is `d23e3dcd`'s correction 10 and this document walked straight past it.**
+
+§4.2 fixes the maximum feasible `(S, d, batch)` triple against **"64 GB"** — the Mac Studio. **E3 runs
+on A40 / RTX A6000 rentals, which are 48 GB.** This document spent a page comparing 48 GB cards and
+never noticed the spec was sizing against a third of a card more memory than E3 will have.
+
+> **E0c can pass at 64 GB and E3 can OOM in week 6** — which is the precise outcome §7.6 exists to
+> prevent, arriving through the one experiment meant to prevent it.
+
+**`d23e3dcd`'s D4 is the right move: run E0c on the rented card, before the hold is taken, so it
+doubles as the provider smoke test.** You learn whether `S = 80` fits *and* whether the provider
+delivers, in the same hour, for the price of one hour.
+
+📌 They also record a Mac-side hazard that independently disqualifies the Studio for this
+measurement: **~25 GB of its 64 GB is routinely held by `mlx_lm.server` / `llama-server`.** A memory
+ceiling measured against a machine with a quarter of its RAM already spoken for is not a ceiling.
+
+## 3. What this does to B-2
+
+**It sharpens it.** There are now **three** throughput regimes in play:
+
+1. **Mac Studio, small `d`** — where the μP tuning actually happens
+2. **Rented 48 GB cards, large `d`** — where E3 actually runs
+3. **[P2]'s 21 sent/sec at `d_model = 768` / 85.6M params on an A40** — where §4.1's budget comes from
+
+**§4.1's 1,070 GPU-h descends entirely from (3), which is neither of the two you will run.** The
+correction stands and gets more pointed: E0c must report sent/sec for **(2)**, on the card, at the
+widths that will run, and the total must be re-derived from that. The Mac numbers size the tuning
+loop and nothing else.
+
+## 4. Disclosure about this document's own provenance
+
+**This procurement analysis was written on a MacBook Pro 18,3 with 16 GB of RAM** — not the Mac
+Studio, and not a rented card. No throughput or memory number in it was measured; all of it is quoted
+pricing and arithmetic. That was true when it was written and was not stated. It is stated now.

@@ -32,6 +32,24 @@ honest state and it is the useful one.
 
 ## The one blocker
 
+> 🔴 **SUPERSEDED 2026-09-17 by `docs/decisions/ADR-0002-tg-base-found.md`. The verdict below is
+> WRONG. The code exists: `github.com/jlmcc94303/ThoughtGestaltCode` — JAX/Flax, Apache-2.0 — found
+> by session `d23e3dcd` and verified here by direct fetch.**
+>
+> The search of the *paper* below is accurate and stands. The conclusion drawn from it is not. The
+> failure was the instrument: a web index was searched for a repository, returned the 2018 *Sentence
+> Gestalt* model, and was treated as an answer instead of as evidence about the index. **No positive
+> control was run.**
+>
+> **What changes:** the blocker becomes a **3–5 day PyTorch transcription** of a pinned JAX
+> reference, not a 3–6 week from-paper reimplementation. The 29.8 PPL smoke test is **withdrawn** —
+> the release differs from the paper's model by the authors' own README. The author email is
+> **withdrawn** from the critical path. E0a / E0c / E0d remain deferred, on a smaller and better-
+> bounded blocker.
+>
+> This section is left unedited below. An ADR or a gate report that gets quietly corrected teaches
+> nothing, and this one has something to teach.
+
 **ADR-0001: [P2]'s Thought Gestalt implementation is not publicly available.**
 
 Zero hits for `github`, `we release`, `code available`, `available at/upon` or `open source` across

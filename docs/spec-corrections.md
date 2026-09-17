@@ -135,9 +135,37 @@ only**. §5.2 sets synthetic `S = 48`; §5.1 sets synthetic `M = 16`. `A_max` on
 PG-19 sweep is over `A_max ∈ {16, 32}`, but §6 defines A2 as `A_max = M` (= 40 on corpora), where
 horizon 33 ≤ min(80, 40) is **legal**. The conflict is real; it lives on synthetic, not in A2.
 
-**Do:** set synthetic `A_max` explicitly — `A_max ≥ 33` to keep `γ = 0.97` legal, or drop `γ = 0.97`
-from the sweep and say so. **Decide before E1 runs**, and record it here. The constants registry
-treats synthetic `A_max` as unset until then.
+**RESOLVED 2026-09-17 — `A_max = S = 48` on synthetic.** Session `d23e3dcd` reached the same
+question independently, was corrected by the owner, and resolved it in their ADR-0004. Adopted here.
+
+| Config | `S` | `A_max` | `min(S, A_max)` | horizon at γ=0.97 | legal? |
+|---|---|---|---|---|---|
+| Synthetic (E1, E2) | 48 | **48** | 48 | 33 | ✅ |
+| PG-19 E3 headline | 80 | 64 | 64 | 33 | ✅ |
+| A2 ablation | 80 | 40 | 40 | 33 | ✅ |
+
+`γ = 0.99` stays dropped: horizon 100 > `S = 80`.
+
+📌 **And both sessions made the same reading error first.** We each took §3.6(a)'s
+`A_max ∈ {16, 32, 64}` for a prescribed sweep set. It is an **illustration of a failure at `S = 30`**;
+§4.5 says only *"swept where `S` makes it bind."* Two independent agents misreading the same sentence
+the same way is a signal about the sentence — §3.6(a) is worth rewording in v0.6.
+
+🔴 **The consequence `d23e3dcd` derived, which is the valuable half and which this session did not
+have.** The γ frozen at the week-4 gate determines how much weight E3's target window carries:
+
+```
+γ = 0.90    0.90^40 = 0.015     0.90^64 = 0.0012    ->   0.1-1.5% of the return
+γ = 0.97    0.97^40 = 0.296     0.97^64 = 0.142     ->    14-30% of the return
+```
+
+**If E1 freezes γ below 0.97, E3's `(40, 64]` window is known *in advance* to be under-weighted.**
+That belongs in the E3 writeup as a pre-registered limitation — not discovered later as a mystery
+null. Register it before E1 runs.
+
+Synthetic caveat, also theirs: at γ=0.97 the horizon (33) is shorter than the generator's max gap
+(40), so the longest synthetic gaps are attenuated to ~0.30 weight. **Attenuated, not invisible.**
+State it.
 
 ---
 
@@ -198,3 +226,104 @@ condition met. §15.2 itself remains the owner's, unfilled, and no agent may dra
 E0f is partially run: [P2], [P5], [P6], [P7] checked. [P1], [P3], [P4], [P8]–[P14] outstanding.
 The note stays in the spec until that list is empty. [P11] is highest value (it is now an
 *implemented baseline*), [P4] second (§15.1 depends on it).
+
+
+---
+
+## D — found by session `d23e3dcd`, adopted here
+
+Session `d23e3dcd-1fa1-4db1-8bed-07a52030c52a` ran Sprint 1 in parallel on the Mac Studio, without
+the memory palace but **with the actual TG source**, which it found and this session did not. Its
+findings are numbered 7–15 in its own `docs/spec-corrections.md`; the four that change decisions here
+are adopted below, with attribution. Their handoff is `~/Downloads/rsr-sprint-1-handoff-2026-09-17.md`.
+
+Each is marked with whether **this** session independently verified it.
+
+### D-10 · Activation memory is budgeted against the wrong card ✅ *not re-verified, but arithmetically plain*
+
+§4.2 fixes the maximum feasible `(S, d, batch)` triple against **64 GB** — the Mac Studio. **E3 runs
+on rented A40 / RTX A6000 cards, which are 48 GB.**
+
+🔴 **E0c can pass at 64 GB and E3 can OOM in week 6** — the exact outcome §7.6 exists to prevent, and
+this session wrote an entire procurement document about 48 GB cards without noticing it.
+
+**Do:** E0c sizes against **the card E3 will run on**, not the machine it is convenient to measure on.
+`d23e3dcd`'s D4 goes further and moves E0c onto the rented card entirely, doubling it as the provider
+smoke test *before* the hold is taken. That is better than measuring on the Mac and hoping.
+
+### D-12 · [P8] is misdated ✅ **verified here**
+
+The spec cites *"Rae et al. (2020), Compressive Transformer."* It is **2019** — arXiv:1911.05507.
+Confirmed from [P2]'s own bibliography, entry [57]: *"Compressive transformers for long-range sequence
+modelling. arXiv, **2019**. URL https://arxiv.org/abs/1911.05507."*
+
+### D-13 · [P2] trains on WikiText. It never uses PG-19. ✅ **verified here**
+
+Counted over all 20 pages of arXiv:2512.25026v2:
+
+```
+PG-19      0 occurrences
+Gutenberg  0 occurrences
+WikiText   3 occurrences   ("fixed subsets of the WikiText-103 training" set)
+```
+
+**§5.3's "PG-19 — where the claim lives" is RSR's own corpus choice, not a continuation of [P2].**
+And §13's limitation — *"`S = 80` exceeds [P2]'s trained curriculum"* — **understates it**: E3 differs
+from [P2] in stream length *and* in corpus. TG's own behaviour on book-length prose at any `S` is
+uncharacterised, not merely uncharacterised at depth.
+
+📌 This also re-scopes **B-1** and **S-3** slightly: the `29.8 → 30.5` no-curriculum ablation and the
+`g_mem` depth-stratification were both measured on WikiText. They remain the nearest evidence; they
+are not evidence about PG-19.
+
+### D-15 · Unit-norm gestalts break §4.3's μP premise 🔴 **FLAGGED, NOT RESOLVED**
+
+**The deepest finding either session produced, and it needed the source to see.**
+
+`tg/models/tg_srep_head.py` at their pinned commit computes:
+
+```
+s = normalize( Linear( Dropout_0.15( LayerNorm( h[EOS] ) ) ) ) * srep_norm_target
+```
+
+with `srep_norm_target = 1.0`, plus a squared hinge penalty on the pre-normalisation norm holding the
+raw norm in [0.9, 1.1]. So **`‖s_i‖₂ = 1.0` exactly, for every slot, at every step.** §3.1's
+`s_t = W_sent · H⁷[EOS]` is a simplification — `W_sent` is the `proj` Dense, but it arrives wrapped in
+a LayerNorm, a dropout, an L2 normalisation and a bias.
+
+**Why it matters.** §4.3 derives the `1/d` multiplier from *"a dot product of two `d`-dimensional
+**Θ(1)** vectors."* A unit-norm `d`-vector does not have `Θ(1)` coordinates — it has coordinates of
+order `1/√d`. Recounting with `W` at `Var = 1/d`, and both `s_i` and `c_t` gestalts:
+
+| quantity | order |
+|---|---|
+| `s_i`, `c_t` coordinates | `1/√d` |
+| `h = W c_t` coordinates | `1/√d` |
+| `s_iᵀh`, uncorrelated (init) | `1/√d` |
+| `s_iᵀh`, **correlated (trained)** | **Θ(1)** |
+| output after the prescribed `1/d` | 🔴 **Θ(1/d)** |
+
+**Under the prescription as written, `ψ̂`'s output decays with width in exactly the regime μP
+governs** — the failure §4.3 says *"surfaces in week 9 with no error message,"* arriving through input
+normalisation rather than head shape. It is a precise instance of §4.3's own warning that *"the wrong
+argument gives the wrong multiplier for a head of slightly different shape."*
+
+🔴 **It also invalidates the input premise of this session's E0a measurement.**
+`experiments/e0a/run.py` feeds `torch.randn(N, d)` gestalts — i.i.d. Gaussian, `Θ(1)` coordinates,
+norm `~√d`. The 0.581-vs-0.577 match reported there is **correct arithmetic under an assumption the
+real system breaks.** It confirms §4.3's reasoning; it does not confirm §4.3's *prescription* for
+TG's actual gestalts. `experiments/e0a/RESULTS.md` carries this caveat.
+
+**NOT RESOLVED, deliberately — and `d23e3dcd` is right not to have resolved it.** §15.3 identifies
+that derivation as the author's; the recount carries its own assumptions (uncorrelated init,
+`Var = 1/d` on `W`, `c_t` a raw gestalt); and the spec says measure. **The `1/d` multiplier stays as
+written in the code**, with the caveat in the docstring.
+
+**Before E0a runs, one thing must be pinned.** §3.2.2 says `c_t` is *"the current sentence gestalt
+(**or a running context vector**)."* A unit-norm gestalt and a running context vector have different
+norms and therefore **different correct multipliers**. 🔴 **Pick one and write it down.** Until it is
+pinned, E0a is measuring an underspecified object.
+
+*Resolved by them while checking this, and worth recording so nobody re-opens it:* §5.1's "gestalt
+layer 7" and the config's `srep_extraction_layer = 6` **agree** — `tg_model.py` enumerates blocks from
+zero, so index 6 is the 7th block. No discrepancy.
