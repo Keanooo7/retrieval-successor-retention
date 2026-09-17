@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv venv --python 3.12
+
+      - name: Install
+        run: uv pip install --python .venv/bin/python -e ".[dev]"
+
+      - name: Lint
+        run: .venv/bin/ruff check
+
+      - name: Format check
+        run: .venv/bin/ruff format --check
+
+      # E0b runs here, on CPU, on every commit that touches src/rsr/.
+      # CPU rather than GPU deliberately: section 3.7's reduction is asserted
+      # bit-exact, and CPU determinism is what makes that assertion meaningful.
+      # ADR-0001 D3: MPS is best-effort, not required.
+      - name: Test
+        run: .venv/bin/pytest -q
+        env:
+          PYTHONHASHSEED: "0"

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Corpora and derived artifacts: large, regenerable, never versioned.
+data/
+runs/
+outputs/
+*.ckpt
+*.pt
+
+# Golden tensors ARE versioned (tests/fixtures/*.npz) -- they are the external
+# claim test_fidelity.py rests on. See ADR-0002.

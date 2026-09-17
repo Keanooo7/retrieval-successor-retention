@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rsr"
+version = "0.1.0"
+description = "Retrieval-Successor Retention: a prospective retention policy for Thought Gestalt"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Brendan Keane" }]
+
+# Deliberately minimal. ADR-0001: PyTorch is the only project stack -- JAX is a
+# pinned source reference under third_party/, never a dependency, and is never
+# installed on the development machine.
+dependencies = [
+  "torch>=2.4",
+  "numpy>=1.26",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# E0i only (T3). Kept out of the default install because fastcoref pulls a large
+# transitive tree and E0i is a one-week CPU job, not part of the training path.
+coref = [
+  "fastcoref>=2.1.6",
+  "wtpsplit>=2.1.0",
+  "datasets>=2.19",
+  "spacy>=3.7",
+]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
+
+[project.scripts]
+rsr = "rsr.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rsr"]
+
+[tool.ruff]
+line-length = 90
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+  "slow: needs a trained model or a corpus pass; excluded from the fast loop",
+  "rented: must run on rented hardware, not the development machine (ADR-0002)",
+]

@@ -1,0 +1,60 @@
+# GATE-1 — Sprint 1 report
+
+**Status: IN PROGRESS.** This is the shape the report will take, not the report.
+
+Every criterion carries pass / fail / not-run **with an evidence link**. Per
+`CLAUDE.md`: **never report a skipped or unrun test as passing.**
+
+| # | Task | Exit criterion | Status | Evidence |
+|---|---|---|---|---|
+| T1 | Scaffold, CLAUDE.md, CI, constants registry, policy protocol | CI green; `pytest` passes; `docs/spec-corrections.md` committed | ☐ | |
+| T2 | Pre-register E0i's threshold | committed **before** any histogram is computed | ☐ **drafted, unsigned** | `preregistration/e0i_threshold.md` |
+| T3 | E0i — coref histogram + 100-item precision/recall | histogram vs the T2 threshold | ☐ | `experiments/e0i/RESULTS.md` |
+| T4 | E0g — name and obtain the E7 stimulus set | availability, licensing, position-independence; **report regardless of outcome** | ☐ | [ADR-0005](../docs/decisions/ADR-0005-e7-stimulus-set.md) |
+| T5 | E0c — memory and throughput | a committed `(S, d, batch)` triple | ☐ | `experiments/e0c/RESULTS.md` |
+| T6 | E0d — `r_i` vs LOO Δloss | per-layer profile, then Spearman ρ | ☐ | `experiments/e0d/RESULTS.md` |
+| T7 | E0a — μP coordinate check ×2 | activation RMS width-invariant; `ψ̂` output scale checked specifically | ☐ | `experiments/e0a/RESULTS.md` |
+| T8 | GPU procurement | named provider, written quote, **cancellable hold**, movable start, ≥4 GPUs from **week 6** | ☐ | [ADR-0002](../docs/decisions/ADR-0002-rented-hardware.md) |
+| T9 | This report | | ☐ | |
+
+## Task 0
+
+**Answered: yes, with three qualifications that reshaped the sprint.** TG's
+reference implementation is public but is JAX/Flax, is self-declared as differing
+from the paper's model, and ships a non-runnable corpus path. See
+[ADR-0001](../docs/decisions/ADR-0001-tg-base.md).
+
+## §16 condition 4 decision (E7)
+
+☐ Pending [ADR-0005](../docs/decisions/ADR-0005-e7-stimulus-set.md) sign-off and
+the "in hand" exit. Current finding: **a usable set exists** — Raccah et al. 2024,
+CC0, with position-independent per-event importance — so the expected decision is
+that E7 proceeds and falsifier 4 stands. All three of the spec's own named
+candidates fail the spec's own criterion.
+
+## Findings that changed the plan, for the record
+
+1. **Task 0** — above.
+2. **Correction 15** — the reference L2-normalizes every gestalt to unit norm, so
+   §4.3's μP premise ("two `d`-dimensional Θ(1) vectors") does not hold and the
+   bilinear multiplier needs rederiving. **Flagged, not resolved.** E0a decides.
+3. **Correction 9** — §3.6(a)'s `A_max ∈ {16,32,64}` is an illustration, not a
+   prescription; `A_max = S = 48` on synthetic keeps `γ = 0.97` legal
+   ([ADR-0004](../docs/decisions/ADR-0004-a-max-on-synthetic.md)).
+4. **Correction 10** — E0c was budgeted against 64 GB (the Mac) while E3 runs on
+   48 GB rentals. E0c moves to the rental card.
+5. **Correction 8** — §4.1's weeks-5–7 total is 768 GPU-h; §8 also schedules the
+   E7 model and A1 into that window → 842, which breaks the stated floor of 3.
+
+## Schedule honesty
+
+T5, T6 and T7 sit behind the PyTorch TG transcription, which is behind the
+golden-tensor extraction, which is behind T8. If they have not completed they are
+reported here as **in progress with a dated forecast**, not passed on a forecast.
+The kickoff's own note is that the week-4 gate is the milestone whose slip slips
+everything, so a slip is stated rather than absorbed.
+
+## Tests currently skipped, and therefore NOT passing
+
+- `tests/test_reduction.py` — blocked on the transcription.
+- `tests/test_fidelity.py` — blocked on ADR-0002's tolerance and the extraction.
