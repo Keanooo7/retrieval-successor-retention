@@ -1,0 +1,13 @@
+{
+  "widths": [
+    128,
+    192,
+    256,
+    384
+  ],
+  "steps": 8,
+  "psi_drift_at_init": 0.35115622207774144,
+  "psi_drift_at_verdict_step": 0.11858589040933032,
+  "verdict_step": 8,
+  "note": "Verdict is read at t>=1. Step 0 is recorded, never gated on: with the 1/d multiplier the bilinear output is Theta(1/sqrt(d)) at init by construction (uncorrelated s, Wc) and Theta(1) once correlated. See src/rsr/mup/coord_check.py."
+}

@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.DS_Store
+
+# data and artefacts — never committed
+data/
+runs/
+*.pt
+*.ckpt
+*.npz
+*.log
+
+# the orchestrator's local state
+.orchestrator/outbox/
+.orchestrator/landed
+.orchestrator/window

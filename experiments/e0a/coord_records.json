@@ -1,0 +1,866 @@
+[
+  {
+    "width": 128,
+    "step": 0,
+    "name": "output",
+    "rms": 1.1385347843170166
+  },
+  {
+    "width": 128,
+    "step": 0,
+    "name": "psi",
+    "rms": 0.07452145963907242
+  },
+  {
+    "width": 128,
+    "step": 0,
+    "name": "hidden_Wc",
+    "rms": 0.970943033695221
+  },
+  {
+    "width": 128,
+    "step": 0,
+    "name": "delta_psi",
+    "rms": 0.0
+  },
+  {
+    "width": 128,
+    "step": 1,
+    "name": "output",
+    "rms": 1.0094068050384521
+  },
+  {
+    "width": 128,
+    "step": 1,
+    "name": "psi",
+    "rms": 0.1768651157617569
+  },
+  {
+    "width": 128,
+    "step": 1,
+    "name": "hidden_Wc",
+    "rms": 1.3363186120986938
+  },
+  {
+    "width": 128,
+    "step": 1,
+    "name": "delta_psi",
+    "rms": 0.16121402382850647
+  },
+  {
+    "width": 128,
+    "step": 2,
+    "name": "output",
+    "rms": 0.8885167241096497
+  },
+  {
+    "width": 128,
+    "step": 2,
+    "name": "psi",
+    "rms": 0.3161624073982239
+  },
+  {
+    "width": 128,
+    "step": 2,
+    "name": "hidden_Wc",
+    "rms": 2.071936845779419
+  },
+  {
+    "width": 128,
+    "step": 2,
+    "name": "delta_psi",
+    "rms": 0.1496700644493103
+  },
+  {
+    "width": 128,
+    "step": 3,
+    "name": "output",
+    "rms": 0.7762473225593567
+  },
+  {
+    "width": 128,
+    "step": 3,
+    "name": "psi",
+    "rms": 0.4515016973018646
+  },
+  {
+    "width": 128,
+    "step": 3,
+    "name": "hidden_Wc",
+    "rms": 2.8864402770996094
+  },
+  {
+    "width": 128,
+    "step": 3,
+    "name": "delta_psi",
+    "rms": 0.14100192487239838
+  },
+  {
+    "width": 128,
+    "step": 4,
+    "name": "output",
+    "rms": 0.673240602016449
+  },
+  {
+    "width": 128,
+    "step": 4,
+    "name": "psi",
+    "rms": 0.5792801380157471
+  },
+  {
+    "width": 128,
+    "step": 4,
+    "name": "hidden_Wc",
+    "rms": 3.7018558979034424
+  },
+  {
+    "width": 128,
+    "step": 4,
+    "name": "delta_psi",
+    "rms": 0.133169025182724
+  },
+  {
+    "width": 128,
+    "step": 5,
+    "name": "output",
+    "rms": 0.5811291337013245
+  },
+  {
+    "width": 128,
+    "step": 5,
+    "name": "psi",
+    "rms": 0.6992855668067932
+  },
+  {
+    "width": 128,
+    "step": 5,
+    "name": "hidden_Wc",
+    "rms": 4.50118350982666
+  },
+  {
+    "width": 128,
+    "step": 5,
+    "name": "delta_psi",
+    "rms": 0.12580923736095428
+  },
+  {
+    "width": 128,
+    "step": 6,
+    "name": "output",
+    "rms": 0.5018108487129211
+  },
+  {
+    "width": 128,
+    "step": 6,
+    "name": "psi",
+    "rms": 0.8106566667556763
+  },
+  {
+    "width": 128,
+    "step": 6,
+    "name": "hidden_Wc",
+    "rms": 5.2729058265686035
+  },
+  {
+    "width": 128,
+    "step": 6,
+    "name": "delta_psi",
+    "rms": 0.11758360266685486
+  },
+  {
+    "width": 128,
+    "step": 7,
+    "name": "output",
+    "rms": 0.43653053045272827
+  },
+  {
+    "width": 128,
+    "step": 7,
+    "name": "psi",
+    "rms": 0.9121214747428894
+  },
+  {
+    "width": 128,
+    "step": 7,
+    "name": "hidden_Wc",
+    "rms": 6.005413055419922
+  },
+  {
+    "width": 128,
+    "step": 7,
+    "name": "delta_psi",
+    "rms": 0.10837305337190628
+  },
+  {
+    "width": 128,
+    "step": 8,
+    "name": "output",
+    "rms": 0.3856322169303894
+  },
+  {
+    "width": 128,
+    "step": 8,
+    "name": "psi",
+    "rms": 1.0027050971984863
+  },
+  {
+    "width": 128,
+    "step": 8,
+    "name": "hidden_Wc",
+    "rms": 6.690544605255127
+  },
+  {
+    "width": 128,
+    "step": 8,
+    "name": "delta_psi",
+    "rms": 0.0988236740231514
+  },
+  {
+    "width": 192,
+    "step": 0,
+    "name": "output",
+    "rms": 0.9396485686302185
+  },
+  {
+    "width": 192,
+    "step": 0,
+    "name": "psi",
+    "rms": 0.07490187138319016
+  },
+  {
+    "width": 192,
+    "step": 0,
+    "name": "hidden_Wc",
+    "rms": 0.9763677716255188
+  },
+  {
+    "width": 192,
+    "step": 0,
+    "name": "delta_psi",
+    "rms": 0.0
+  },
+  {
+    "width": 192,
+    "step": 1,
+    "name": "output",
+    "rms": 0.8160064220428467
+  },
+  {
+    "width": 192,
+    "step": 1,
+    "name": "psi",
+    "rms": 0.13812506198883057
+  },
+  {
+    "width": 192,
+    "step": 1,
+    "name": "hidden_Wc",
+    "rms": 1.2382104396820068
+  },
+  {
+    "width": 192,
+    "step": 1,
+    "name": "delta_psi",
+    "rms": 0.14806212484836578
+  },
+  {
+    "width": 192,
+    "step": 2,
+    "name": "output",
+    "rms": 0.7012266516685486
+  },
+  {
+    "width": 192,
+    "step": 2,
+    "name": "psi",
+    "rms": 0.27050837874412537
+  },
+  {
+    "width": 192,
+    "step": 2,
+    "name": "hidden_Wc",
+    "rms": 1.9828356504440308
+  },
+  {
+    "width": 192,
+    "step": 2,
+    "name": "delta_psi",
+    "rms": 0.14172007143497467
+  },
+  {
+    "width": 192,
+    "step": 3,
+    "name": "output",
+    "rms": 0.5972904562950134
+  },
+  {
+    "width": 192,
+    "step": 3,
+    "name": "psi",
+    "rms": 0.4005672037601471
+  },
+  {
+    "width": 192,
+    "step": 3,
+    "name": "hidden_Wc",
+    "rms": 2.806352376937866
+  },
+  {
+    "width": 192,
+    "step": 3,
+    "name": "delta_psi",
+    "rms": 0.13380958139896393
+  },
+  {
+    "width": 192,
+    "step": 4,
+    "name": "output",
+    "rms": 0.5052160620689392
+  },
+  {
+    "width": 192,
+    "step": 4,
+    "name": "psi",
+    "rms": 0.5209888815879822
+  },
+  {
+    "width": 192,
+    "step": 4,
+    "name": "hidden_Wc",
+    "rms": 3.612581253051758
+  },
+  {
+    "width": 192,
+    "step": 4,
+    "name": "delta_psi",
+    "rms": 0.12381243705749512
+  },
+  {
+    "width": 192,
+    "step": 5,
+    "name": "output",
+    "rms": 0.4253784716129303
+  },
+  {
+    "width": 192,
+    "step": 5,
+    "name": "psi",
+    "rms": 0.6297918558120728
+  },
+  {
+    "width": 192,
+    "step": 5,
+    "name": "hidden_Wc",
+    "rms": 4.376839637756348
+  },
+  {
+    "width": 192,
+    "step": 5,
+    "name": "delta_psi",
+    "rms": 0.1132243201136589
+  },
+  {
+    "width": 192,
+    "step": 6,
+    "name": "output",
+    "rms": 0.35809969902038574
+  },
+  {
+    "width": 192,
+    "step": 6,
+    "name": "psi",
+    "rms": 0.7265166640281677
+  },
+  {
+    "width": 192,
+    "step": 6,
+    "name": "hidden_Wc",
+    "rms": 5.090315818786621
+  },
+  {
+    "width": 192,
+    "step": 6,
+    "name": "delta_psi",
+    "rms": 0.10296305269002914
+  },
+  {
+    "width": 192,
+    "step": 7,
+    "name": "output",
+    "rms": 0.30365392565727234
+  },
+  {
+    "width": 192,
+    "step": 7,
+    "name": "psi",
+    "rms": 0.8111414909362793
+  },
+  {
+    "width": 192,
+    "step": 7,
+    "name": "hidden_Wc",
+    "rms": 5.747894763946533
+  },
+  {
+    "width": 192,
+    "step": 7,
+    "name": "delta_psi",
+    "rms": 0.0932132825255394
+  },
+  {
+    "width": 192,
+    "step": 8,
+    "name": "output",
+    "rms": 0.261874258518219
+  },
+  {
+    "width": 192,
+    "step": 8,
+    "name": "psi",
+    "rms": 0.8837984204292297
+  },
+  {
+    "width": 192,
+    "step": 8,
+    "name": "hidden_Wc",
+    "rms": 6.34637975692749
+  },
+  {
+    "width": 192,
+    "step": 8,
+    "name": "delta_psi",
+    "rms": 0.08412949740886688
+  },
+  {
+    "width": 256,
+    "step": 0,
+    "name": "output",
+    "rms": 1.0446703433990479
+  },
+  {
+    "width": 256,
+    "step": 0,
+    "name": "psi",
+    "rms": 0.06903339177370071
+  },
+  {
+    "width": 256,
+    "step": 0,
+    "name": "hidden_Wc",
+    "rms": 1.0469708442687988
+  },
+  {
+    "width": 256,
+    "step": 0,
+    "name": "delta_psi",
+    "rms": 0.0
+  },
+  {
+    "width": 256,
+    "step": 1,
+    "name": "output",
+    "rms": 0.9148126244544983
+  },
+  {
+    "width": 256,
+    "step": 1,
+    "name": "psi",
+    "rms": 0.15421678125858307
+  },
+  {
+    "width": 256,
+    "step": 1,
+    "name": "hidden_Wc",
+    "rms": 1.4234697818756104
+  },
+  {
+    "width": 256,
+    "step": 1,
+    "name": "delta_psi",
+    "rms": 0.1486138105392456
+  },
+  {
+    "width": 256,
+    "step": 2,
+    "name": "output",
+    "rms": 0.7908015847206116
+  },
+  {
+    "width": 256,
+    "step": 2,
+    "name": "psi",
+    "rms": 0.2877269983291626
+  },
+  {
+    "width": 256,
+    "step": 2,
+    "name": "hidden_Wc",
+    "rms": 2.1829311847686768
+  },
+  {
+    "width": 256,
+    "step": 2,
+    "name": "delta_psi",
+    "rms": 0.14274318516254425
+  },
+  {
+    "width": 256,
+    "step": 3,
+    "name": "output",
+    "rms": 0.6740893125534058
+  },
+  {
+    "width": 256,
+    "step": 3,
+    "name": "psi",
+    "rms": 0.42117324471473694
+  },
+  {
+    "width": 256,
+    "step": 3,
+    "name": "hidden_Wc",
+    "rms": 3.019484758377075
+  },
+  {
+    "width": 256,
+    "step": 3,
+    "name": "delta_psi",
+    "rms": 0.13734346628189087
+  },
+  {
+    "width": 256,
+    "step": 4,
+    "name": "output",
+    "rms": 0.5663847327232361
+  },
+  {
+    "width": 256,
+    "step": 4,
+    "name": "psi",
+    "rms": 0.5492120385169983
+  },
+  {
+    "width": 256,
+    "step": 4,
+    "name": "hidden_Wc",
+    "rms": 3.8626925945281982
+  },
+  {
+    "width": 256,
+    "step": 4,
+    "name": "delta_psi",
+    "rms": 0.13096393644809723
+  },
+  {
+    "width": 256,
+    "step": 5,
+    "name": "output",
+    "rms": 0.4696946144104004
+  },
+  {
+    "width": 256,
+    "step": 5,
+    "name": "psi",
+    "rms": 0.6697328686714172
+  },
+  {
+    "width": 256,
+    "step": 5,
+    "name": "hidden_Wc",
+    "rms": 4.686889171600342
+  },
+  {
+    "width": 256,
+    "step": 5,
+    "name": "delta_psi",
+    "rms": 0.12354349344968796
+  },
+  {
+    "width": 256,
+    "step": 6,
+    "name": "output",
+    "rms": 0.38644513487815857
+  },
+  {
+    "width": 256,
+    "step": 6,
+    "name": "psi",
+    "rms": 0.7812199592590332
+  },
+  {
+    "width": 256,
+    "step": 6,
+    "name": "hidden_Wc",
+    "rms": 5.47587776184082
+  },
+  {
+    "width": 256,
+    "step": 6,
+    "name": "delta_psi",
+    "rms": 0.11518831551074982
+  },
+  {
+    "width": 256,
+    "step": 7,
+    "name": "output",
+    "rms": 0.3192598521709442
+  },
+  {
+    "width": 256,
+    "step": 7,
+    "name": "psi",
+    "rms": 0.8822939991950989
+  },
+  {
+    "width": 256,
+    "step": 7,
+    "name": "hidden_Wc",
+    "rms": 6.217049598693848
+  },
+  {
+    "width": 256,
+    "step": 7,
+    "name": "delta_psi",
+    "rms": 0.10593558102846146
+  },
+  {
+    "width": 256,
+    "step": 8,
+    "name": "output",
+    "rms": 0.2702782154083252
+  },
+  {
+    "width": 256,
+    "step": 8,
+    "name": "psi",
+    "rms": 0.9717786312103271
+  },
+  {
+    "width": 256,
+    "step": 8,
+    "name": "hidden_Wc",
+    "rms": 6.901315689086914
+  },
+  {
+    "width": 256,
+    "step": 8,
+    "name": "delta_psi",
+    "rms": 0.09612812846899033
+  },
+  {
+    "width": 384,
+    "step": 0,
+    "name": "output",
+    "rms": 0.9494572877883911
+  },
+  {
+    "width": 384,
+    "step": 0,
+    "name": "psi",
+    "rms": 0.04835278540849686
+  },
+  {
+    "width": 384,
+    "step": 0,
+    "name": "hidden_Wc",
+    "rms": 1.0957907438278198
+  },
+  {
+    "width": 384,
+    "step": 0,
+    "name": "delta_psi",
+    "rms": 0.0
+  },
+  {
+    "width": 384,
+    "step": 1,
+    "name": "output",
+    "rms": 0.8171064853668213
+  },
+  {
+    "width": 384,
+    "step": 1,
+    "name": "psi",
+    "rms": 0.1664350926876068
+  },
+  {
+    "width": 384,
+    "step": 1,
+    "name": "hidden_Wc",
+    "rms": 1.5583971738815308
+  },
+  {
+    "width": 384,
+    "step": 1,
+    "name": "delta_psi",
+    "rms": 0.14942310750484467
+  },
+  {
+    "width": 384,
+    "step": 2,
+    "name": "output",
+    "rms": 0.6912396550178528
+  },
+  {
+    "width": 384,
+    "step": 2,
+    "name": "psi",
+    "rms": 0.30638283491134644
+  },
+  {
+    "width": 384,
+    "step": 2,
+    "name": "hidden_Wc",
+    "rms": 2.3805129528045654
+  },
+  {
+    "width": 384,
+    "step": 2,
+    "name": "delta_psi",
+    "rms": 0.14353564381599426
+  },
+  {
+    "width": 384,
+    "step": 3,
+    "name": "output",
+    "rms": 0.5730724930763245
+  },
+  {
+    "width": 384,
+    "step": 3,
+    "name": "psi",
+    "rms": 0.44067761301994324
+  },
+  {
+    "width": 384,
+    "step": 3,
+    "name": "hidden_Wc",
+    "rms": 3.263601064682007
+  },
+  {
+    "width": 384,
+    "step": 3,
+    "name": "delta_psi",
+    "rms": 0.13633058965206146
+  },
+  {
+    "width": 384,
+    "step": 4,
+    "name": "output",
+    "rms": 0.4635119140148163
+  },
+  {
+    "width": 384,
+    "step": 4,
+    "name": "psi",
+    "rms": 0.5662764310836792
+  },
+  {
+    "width": 384,
+    "step": 4,
+    "name": "hidden_Wc",
+    "rms": 4.131165027618408
+  },
+  {
+    "width": 384,
+    "step": 4,
+    "name": "delta_psi",
+    "rms": 0.12812426686286926
+  },
+  {
+    "width": 384,
+    "step": 5,
+    "name": "output",
+    "rms": 0.3636799454689026
+  },
+  {
+    "width": 384,
+    "step": 5,
+    "name": "psi",
+    "rms": 0.6820171475410461
+  },
+  {
+    "width": 384,
+    "step": 5,
+    "name": "hidden_Wc",
+    "rms": 4.957705974578857
+  },
+  {
+    "width": 384,
+    "step": 5,
+    "name": "delta_psi",
+    "rms": 0.1197466105222702
+  },
+  {
+    "width": 384,
+    "step": 6,
+    "name": "output",
+    "rms": 0.2757153809070587
+  },
+  {
+    "width": 384,
+    "step": 6,
+    "name": "psi",
+    "rms": 0.7873528599739075
+  },
+  {
+    "width": 384,
+    "step": 6,
+    "name": "hidden_Wc",
+    "rms": 5.732312202453613
+  },
+  {
+    "width": 384,
+    "step": 6,
+    "name": "delta_psi",
+    "rms": 0.1114102303981781
+  },
+  {
+    "width": 384,
+    "step": 7,
+    "name": "output",
+    "rms": 0.20414556562900543
+  },
+  {
+    "width": 384,
+    "step": 7,
+    "name": "psi",
+    "rms": 0.8819435834884644
+  },
+  {
+    "width": 384,
+    "step": 7,
+    "name": "hidden_Wc",
+    "rms": 6.4477057456970215
+  },
+  {
+    "width": 384,
+    "step": 7,
+    "name": "delta_psi",
+    "rms": 0.10309556871652603
+  },
+  {
+    "width": 384,
+    "step": 8,
+    "name": "output",
+    "rms": 0.1580839902162552
+  },
+  {
+    "width": 384,
+    "step": 8,
+    "name": "psi",
+    "rms": 0.9655277729034424
+  },
+  {
+    "width": 384,
+    "step": 8,
+    "name": "hidden_Wc",
+    "rms": 7.097564697265625
+  },
+  {
+    "width": 384,
+    "step": 8,
+    "name": "delta_psi",
+    "rms": 0.09469257295131683
+  }
+]
