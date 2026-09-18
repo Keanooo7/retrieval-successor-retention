@@ -48,7 +48,13 @@ from torch import Tensor, nn
 
 from rsr.model.tg.config import TGConfig
 
+KERNEL_STD = 0.02
+"""`cfg.kernel_init = nn.initializers.normal(0.02)` in the reference, applied to
+every `nn.Dense`/`nn.Embed`. Attention **in**-projections are the exception and use
+`xavier_uniform`; see `DenseGeneralIn.reset_parameters`."""
+
 __all__ = [
+    "KERNEL_STD",
     "Memory",
     "StepOutput",
     "TGModel",
@@ -193,6 +199,21 @@ class DenseGeneralIn(nn.Module):
         super().__init__()
         self.kernel = nn.Parameter(torch.empty(d, heads, head_dim))
         self.bias = nn.Parameter(torch.zeros(heads, head_dim))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        """`attn_in_proj` -> `xavier_uniform`, with `fan_in = D`, `fan_out = H·Dh`.
+
+        **Measured from the reference's own initial weights**, not derived: the
+        fixture holds an untrained model, so `param/blocks_0/self_attn/query/kernel`
+        IS the initialisation. Its std is 0.0884 across all six layers, and
+        `sqrt(2/(D + H·Dh)) = sqrt(2/256) = 0.0884`. Reasoning from Flax's
+        `_compute_fans` instead gives fan_in 256 / fan_out 8192 and a std of
+        0.0154 -- wrong by 5.7x, and nothing would have failed.
+        """
+        d, heads, head_dim = self.kernel.shape
+        nn.init.xavier_uniform_(self.kernel.view(d, heads * head_dim))
+        nn.init.zeros_(self.bias)
 
     def forward(self, x: Tensor) -> Tensor:  # [..., D] -> [..., H, Dh]
         return torch.einsum("...i,ihd->...hd", x, self.kernel) + self.bias
@@ -205,6 +226,12 @@ class DenseGeneralOut(nn.Module):
         super().__init__()
         self.kernel = nn.Parameter(torch.empty(heads, head_dim, d))
         self.bias = nn.Parameter(torch.zeros(d))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        """`attn_out_proj` -> `kernel_init` = `normal(0, 0.02)`. Measured: 0.0200."""
+        nn.init.normal_(self.kernel, mean=0.0, std=KERNEL_STD)
+        nn.init.zeros_(self.bias)
 
     def forward(self, x: Tensor) -> Tensor:  # [..., H, Dh] -> [..., D]
         return torch.einsum("...hk,hkd->...d", x, self.kernel) + self.bias
@@ -217,6 +244,12 @@ class Dense(nn.Module):
         super().__init__()
         self.kernel = nn.Parameter(torch.empty(d_in, d_out))
         self.bias = nn.Parameter(torch.zeros(d_out))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        """`mlp_kernel` and `head` -> `normal(0, 0.02)`. Measured: 0.0200."""
+        nn.init.normal_(self.kernel, mean=0.0, std=KERNEL_STD)
+        nn.init.zeros_(self.bias)
 
     def forward(self, x: Tensor) -> Tensor:
         return x @ self.kernel + self.bias
@@ -428,6 +461,27 @@ class TGModel(nn.Module):
         self.out_ln = _layer_norm(cfg.D, cfg.layer_norm_epsilon)
         self.srep_head = SrepHead(cfg)
         self.embed_drop = nn.Dropout(cfg.dropout)
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        """🔴 Initialise every parameter.
+
+        The first version of this class did not, and `nn.Parameter(torch.empty(...))`
+        is **uninitialised memory**: a freshly constructed model had `3e36` in one
+        attention kernel and zeros in another, differing between runs under a fixed
+        `torch.manual_seed`. Every test passed, because `test_fidelity.py` and E0b
+        both **load** the reference weights over the top -- so the defect was
+        invisible to everything except an actual training run, where it would have
+        surfaced as divergence and been blamed on the learning rate.
+
+        Submodules initialise themselves in their own `reset_parameters`; this
+        covers what the module owns directly.
+        """
+        nn.init.normal_(self.embed.weight, mean=0.0, std=KERNEL_STD)
+        nn.init.normal_(self.pos_embed.weight, mean=0.0, std=KERNEL_STD)
+        for block in self.blocks:
+            if block.block_type == "C":
+                nn.init.constant_(block.memory_gate, self.cfg.memory_gate_init)
 
     def forward(
         self,

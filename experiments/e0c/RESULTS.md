@@ -23,30 +23,108 @@ Apple M4 Max · 64 GB unified (68,719,476,736 bytes) · macOS Darwin 25.6.0 arm6
 torch 2.14.0 · iogpu.wired_limit_mb = 0 (system default — NOT raised)
 ```
 
-## Result — the committed triples
+## 🔴 Correction: the first numbers measured a model with no memory
 
-**E3 shape (`S = 80`, `M = 40`), MPS:**
+`sweep.py` and `confirm.py` draw tokens with `randint(0, V)` and leave `TGConfig`'s
+default special ids in place. At `V = 50257` the default `eos_id` is **50259** —
+outside the range the tokens come from — so `has_eos` is never true. Measured:
 
-| `d` | batch | driver memory | sent/s | params |
-|---|---|---|---|---|
-| 128 | 64 | 24.63 GB | 3457 | 2.68M |
-| 256 | 32 | 23.57 GB | 1673 | 10.05M |
-| 384 | 16 | 17.49 GB | 885 | 22.25M |
-| **384** | **32** | **35.73 GB** | **1162** | 22.25M |
-| 384 | 64 | 🔴 **68.80 GB** | 807 | 22.25M |
+```
+sentences processed              64
+sentences that WROTE to memory    0
+times the policy was consulted    0
+```
 
-**Synthetic shape (`S = 48`, `M = 16`), MPS** — E1/E2, the approved scope:
+Memory is never written, so `row_has_mem` is false on every row and `TgCrossAttn`
+returns **exactly zero** (`out * row_has_mem`). What was timed is a stack of
+self-attention blocks with a dead cross-attention branch and **no retained gestalt
+graph across the stream** — which is the dominant memory bill (§4.2) and the entire
+mechanism of TG.
 
-| `d` | batch | driver memory | sent/s |
-|---|---|---|---|
-| 128 | 64 | 13.95 GB | 3531 |
-| 256 | 64 | 26.28 GB | 2217 |
-| 384 | 32 | 19.38 GB | 1243 |
-| **384** | **64** | **38.38 GB** | **1466** |
+I reproduced those numbers closely (438 vs 439±4, 445 vs 448±2, 228 vs 228±1), so
+the scripts are reproducible; it is the configuration that is wrong. They are kept
+verbatim as the record of what was run, and superseded by `measure.py`, which
+**asserts** that every sentence reaches memory and that the policy is consulted.
 
-> **COMMITTED: `S = 80`, `d = 384`, `batch = 32` for the E3 shape; `S = 48`,
-> `d = 384`, `batch = 64` for synthetic.** Both on MPS, both with roughly 25 GB of
-> the 64 GB left over.
+## Result — measured with the memory path live
+
+`experiments/e0c/measure.py`, MPS, GPT-2 vocab (50257), 3 repeats, forward +
+backward, no optimizer step.
+
+| policy | `d` | `S` | batch | peak GB | sent/s | h per 1.2M steps | writes | evictions |
+|---|---|---|---|---|---|---|---|---|
+| FIFO | 128 | 80 | 16 | 32.2 | 374±8 | 0.9 | 1280 | 640 |
+| RSR (`neg_age`) | 128 | 80 | 16 | 32.1 | 318±1 | 1.0 | 1280 | 640 |
+| **RSR (learned head)** | **128** | **80** | **16** | **31.8** | **310±2** | **1.1** | 1280 | 640 |
+| FIFO | 128 | 48 | 16 | 20.3 | 392±0 | 0.9 | 768 | 128 |
+| RSR (`neg_age`) | 128 | 48 | 16 | 20.3 | 365±1 | 0.9 | 768 | 128 |
+| **RSR (learned head)** | **128** | **48** | **16** | **20.3** | **357±2** | **0.9** | 768 | 128 |
+| FIFO | 384 | 80 | 8 | 31.0 | 197±0 | 1.7 | 640 | 320 |
+| RSR (`neg_age`) | 384 | 80 | 8 | 31.0 | 180±1 | 1.9 | 640 | 320 |
+| **RSR (learned head)** | **384** | **80** | **8** | **31.0** | **171±4** | **1.9** | 640 | 320 |
+
+> **RECOMMENDED TRAINING CONFIG: `d = 128`, `S = 80`, `batch = 16`** — 31.8 GB and
+> **310 sent/s on the RSR arm**, ~1.1 h per 1.2M-step run.
+
+**Memory is identical across policies** to within 0.4 GB. RSR adds compute, not
+memory, exactly as §4.1 predicts (`O(M·d)` against a 12-layer transformer).
+
+### What the RSR policy actually costs
+
+| Comparison | at `d=128, S=80` | at `d=384, S=80` |
+|---|---|---|
+| FIFO → RSR dispatch (`neg_age`, no head) | −15% | −9% |
+| dispatch → learned value head | −2.5% | −5% |
+| **FIFO → RSR total** | **−17%** | **−13%** |
+
+**Most of the cost is the Python dispatch loop, not the value head.** `neg_age`
+runs no head at all and still costs 15%: `run_policy_loop` builds a `MemoryState`
+per row per step and calls into the policy, and at `batch=16, S=80` that is 1,280
+round-trips with tensor clones in each. The bilinear head itself adds only 2–5% on
+top. If throughput ever needs recovering, the dispatch loop is the target and
+batching the policy across rows is the fix — not simplifying `ψ̂`.
+
+🔴 **The `neg_age` row is not RSR.** §3.7's reduction sets `ψ̂ ≡ −a_i` and runs no
+value head, so quoting it as "the RSR arm" reports dispatch overhead under the name
+of the mechanism. It is in the table as the decomposition, not as the headline.
+
+## Two defects the corrected measurement exposed
+
+**1. `RSRPolicy` could not run on an accelerator at all.** It held its value head on
+the CPU while the memory lived on MPS, and every tensor it created was a CPU
+tensor. Both paths failed:
+
+```
+neg_age:      RuntimeError: Expected all tensors to be on the same device,
+              but found at least two devices, mps:0 and cpu
+learned head: Tensor for argument #2 'mat2' is on CPU, but expected it on GPU
+```
+
+`neg_age` has no head, so this was not "a module was not moved" — it was
+`torch.full(...)` with no `device=`. **E0b could not catch it**: §3.7's reduction
+runs on CPU by design (ADR-0001 D3), so the entire RSR arm would have failed at the
+first accelerated run with every test green. Fixed, with
+`tests/test_device_placement.py` covering the class — a static AST scan that runs
+everywhere including CI, plus live tests where an accelerator exists.
+
+**2. `TGModel` never initialised its parameters.** `nn.Parameter(torch.empty(...))`
+is uninitialised memory. A freshly constructed model held `3e36` in one attention
+kernel and zeros in another, differing between runs under a fixed
+`torch.manual_seed`. Invisible to every test, because `test_fidelity.py` and E0b
+both **load** the reference weights over the top — so it would have surfaced only in
+a training run, as divergence, and been blamed on the learning rate.
+
+The init scales were then **measured from the fixture** (which holds an untrained
+model, so its parameters *are* the reference's initialisation) rather than derived:
+
+```
+attention in-projections   std 0.0884  = xavier_uniform, fan_in=D, fan_out=H·Dh
+every other kernel         std 0.0200  = normal(0, 0.02)
+biases 0 · LayerNorm 1/0 · memory_gate 1.0
+```
+
+Deriving it from Flax's `_compute_fans` instead gives fan_in 256 / fan_out 8192 and
+a std of **0.0154 — wrong by 5.7×**, with nothing to catch it.
 
 ## 🔴 The ceiling, and how it announces itself
 

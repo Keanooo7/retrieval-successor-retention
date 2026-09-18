@@ -46,7 +46,14 @@ src = ["src", "tests"]
 # third_party/ is a pinned, READ-ONLY source reference (ADR-0001, PINS.md). It must
 # never be reformatted or "fixed": the fidelity harness compares against tensors
 # from exactly this tree, and D-A makes the code the reference by construction.
-extend-exclude = ["third_party"]
+extend-exclude = [
+  "third_party",
+  # Kept verbatim as the record of what was run (E0C, 2026-09-17). Reformatting
+  # them would edit the provenance. Superseded by experiments/e0c/measure.py,
+  # which is linted.
+  "experiments/e0c/sweep.py",
+  "experiments/e0c/confirm.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

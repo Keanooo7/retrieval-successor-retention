@@ -457,3 +457,44 @@ does not fit, `S` wins and `d` is cut*.
 
 §13 gains an entry: every throughput and capacity number in this project was
 measured on a single M4 Max, and nothing here supports a claim about other hardware.
+
+## 23 — §4.1's compute budget assumed ≤7 sent/sec; measured is 171–392
+
+**Supersedes:** §4.1's *"assume **≤ 7 sent./sec** pending E0c... ≈48 h per run"*, the
+per-line-item hour estimates, and the 1,070 GPU-h total.
+
+§4.1 reasoned from [P2]'s 21 sent/sec on an A40 at `S ≈ 30`, divided by ~3 for a
+backward chain 2.7× deeper at `S = 80`. **E0c measured it instead** (§12.4: measure,
+don't extrapolate), on this machine, with the memory path live and both policies:
+
+| | measured | §4.1 assumed |
+|---|---|---|
+| RSR, `d=128, S=80, batch=16` | **310 sent/s** | ≤7 |
+| RSR, `d=384, S=80, batch=8` | 171 sent/s | ≤7 |
+| Hours per 1.2M-step run | **1.1 h** | 48 h |
+
+The assumption is off by **~44×** in our favour, and the arithmetic behind it was
+sound — it was anchored to a *rented A40 at a different width*. The A40 figure was
+never measured here and should not have been scaled; the error is the anchoring, not
+the division.
+
+**Consequence for the budget.** §4.1's 912 GPU-h for E3 + A2/A4 + E4 + E5 becomes
+roughly **21 hours of Mac time** at the recommended config. Combined with
+[ADR-0007](decisions/ADR-0007-all-training-on-the-mac-studio.md) — no outsourced
+compute — the whole §4.1 budget section, its parallel-capacity table and its cut
+order are **superseded**: there is nothing to price, nothing to schedule across
+GPUs, and no four-figure spend to stage.
+
+⚠️ **What the measurement does not cover**, and what would move it:
+
+* **random tokens, not real text.** Real batching uses uniform token-budget
+  bucketing (20,000 supervised tokens/step in the reference), so sentence lengths
+  vary and the effective batch does too. These are fixed-shape, fully-packed
+  sentences — the easy case.
+* **no optimizer step** in the timing. AdamW over 22M parameters adds two state
+  tensors and a step.
+* **one data shape per row**, and MPS only.
+
+So this is a measurement of the model's throughput, not of a training loop's. The
+cut order in §4.1 stays on the page as a contingency; it is simply not binding at
+these numbers.

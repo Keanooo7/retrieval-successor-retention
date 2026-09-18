@@ -396,3 +396,82 @@ def test_a_detached_pytorch_model_fails_the_gradient_check(meta, golden):
         f"gestalt->memory graph was severed. The gradient check is not testing "
         f"graph retention."
     )
+
+
+# --------------------------------------------------------------------------- #
+# Initialisation. Separate from the comparison above, because the comparison
+# LOADS the reference weights and therefore cannot see an init defect at all.
+# --------------------------------------------------------------------------- #
+
+
+def test_the_model_initialises_every_parameter(meta):
+    """🔴 `nn.Parameter(torch.empty(...))` is uninitialised memory.
+
+    The first transcription never initialised the attention or MLP kernels. A
+    freshly built model held `3e36` in one and zeros in another, differing between
+    runs under a fixed `torch.manual_seed`. Every test stayed green, because both
+    `test_fidelity.py` and E0b load the reference weights over the top -- so the
+    defect was invisible to everything except a training run, where it surfaces as
+    divergence and gets blamed on the learning rate.
+    """
+    cfg = TGConfig.from_reference_dict(meta["config"])
+    sums = []
+    for _ in range(3):
+        torch.manual_seed(7)
+        sums.append(float(TGModel(cfg).blocks[0].self_attn.query.kernel.sum()))
+    assert len(set(sums)) == 1, f"construction is not deterministic: {sums}"
+
+    torch.manual_seed(7)
+    model = TGModel(cfg)
+    for name, p in model.named_parameters():
+        assert torch.isfinite(p).all(), f"{name} holds non-finite values"
+        assert p.abs().max() < 10.0, f"{name} max {p.abs().max():.3g} is not an init"
+
+
+def test_the_initialisation_matches_the_reference_scales(meta, golden):
+    """The scales were **measured from the fixture**, which holds an untrained
+    model, rather than derived from Flax's `_compute_fans` -- which would have given
+    0.0154 for the attention in-projections instead of 0.0884, wrong by 5.7x with
+    nothing to catch it.
+
+    Tolerance is loose on purpose: this compares two *samples* from the same
+    distribution, not two tensors. It is a scale check, not a fidelity check.
+    """
+    cfg = TGConfig.from_reference_dict(meta["config"])
+    torch.manual_seed(0)
+    model = TGModel(cfg)
+    own = dict(model.named_parameters())
+
+    from rsr.model.tg.loading import reference_name_to_torch
+
+    checked = 0
+    for key in golden.files:
+        if not key.startswith("param/"):
+            continue
+        name = reference_name_to_torch(key[len("param/") :])
+        reference = np.asarray(golden[key])
+        if reference.ndim < 2:  # biases, gates, LayerNorm gains
+            continue
+        ref_std = float(reference.std())
+        got_std = float(own[name].detach().std())
+        assert got_std == pytest.approx(ref_std, rel=0.15), (
+            f"{name}: reference init std {ref_std:.5f}, transcription {got_std:.5f}"
+        )
+        checked += 1
+    assert checked > 50, f"only {checked} parameters checked"
+
+
+def test_attention_in_projections_use_xavier_not_the_kernel_init(meta):
+    """The one exception to `normal(0, 0.02)`, and the one a transcription gets
+    wrong: `xavier_uniform` with `fan_in = D`, `fan_out = H·Dh`."""
+    import math
+
+    cfg = TGConfig.from_reference_dict(meta["config"])
+    torch.manual_seed(0)
+    model = TGModel(cfg)
+    expected = math.sqrt(2.0 / (cfg.D + cfg.H * cfg.head_dim))
+    for projection in ("query", "key", "value"):
+        std = float(getattr(model.blocks[0].self_attn, projection).kernel.std())
+        assert std == pytest.approx(expected, rel=0.15), projection
+    out_std = float(model.blocks[0].self_attn.attn_out_proj.kernel.std())
+    assert out_std == pytest.approx(0.02, rel=0.15), "out-projection is not xavier"

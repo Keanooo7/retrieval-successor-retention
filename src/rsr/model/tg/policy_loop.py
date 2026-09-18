@@ -127,6 +127,9 @@ def run_policy_loop(
     bos_valid = torch.zeros(batch, dtype=torch.bool, device=device)
     acc = None
     captured: list[StepOutput] = []
+    # A policy that owns parameters is device-bound; the memory's device wins.
+    if hasattr(policy, "to"):
+        policy.to(device)
 
     for t in range(steps):
         ids_t, mask_t = sentences[:, t], masks[:, t]

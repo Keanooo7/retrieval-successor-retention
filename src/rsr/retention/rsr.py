@@ -320,9 +320,33 @@ class RSRPolicy:
 
     # -- the eviction rule --------------------------------------------------- #
 
+    def to(self, device: torch.device | str) -> RSRPolicy:
+        """Move `phi` to `device`. Returns self, so it chains like `nn.Module.to`.
+
+        🔴 **A policy is device-bound even though it is not an `nn.Module`.**
+        `RSRPolicy` held its value head on the CPU while the memory lived on the
+        accelerator, and every tensor it created was a CPU tensor. Both paths --
+        the learned head AND `neg_age`, which has no head at all -- raised
+        `Expected all tensors to be on the same device` the first time the policy
+        ran on MPS. E0b did not catch it because §3.7's reduction runs on CPU by
+        design (ADR-0001 D3), so the entire RSR arm would have failed at the first
+        accelerated run.
+        """
+        if self.head is not None:
+            self.head.to(device)
+        return self
+
+    def _device_of(self, slots: MemoryState) -> torch.device:
+        """The memory's device is authoritative; the policy follows it."""
+        device = slots.gestalts.device
+        if self.head is not None and next(self.head.parameters()).device != device:
+            self.head.to(device)
+        return device
+
     def _psi(self, slots: MemoryState, context: Tensor) -> Tensor:
         """`[M]` raw `psi_hat` per slot, before z-scoring. Dead slots are +inf."""
-        dead = torch.full((slots.capacity,), float("inf"))
+        device = self._device_of(slots)
+        dead = torch.full((slots.capacity,), float("inf"), device=device)
         if self.config.psi_override == "neg_age":
             # Section 3.7: psi_hat == -a_i. argmin(-a) = the oldest slot = FIFO.
             psi = -slots.ages().to(torch.float32)
@@ -363,7 +387,8 @@ class RSRPolicy:
         sim = g @ g.T
         sim.fill_diagonal_(-1.0)
         sim = torch.where(slots.live.unsqueeze(0), sim, torch.full_like(sim, -1.0))
-        return torch.where(slots.live, sim.max(dim=1).values, torch.zeros(slots.capacity))
+        best = sim.max(dim=1).values
+        return torch.where(slots.live, best, torch.zeros_like(best))
 
     def select_eviction(self, slots: MemoryState, context: Tensor, step: int) -> int:
         warm = step < self.config.t_warm
