@@ -14,3 +14,6 @@ outputs/
 
 # Golden tensors ARE versioned (tests/fixtures/*.npz) -- they are the external
 # claim test_fidelity.py rests on. See ADR-0002.
+
+# The per-run test census written by tests/conftest.py (gauntlet 1.3).
+test-count.json

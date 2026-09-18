@@ -160,27 +160,110 @@ def test_lru_remembers_an_attention_event_older_than_one_step():
     assert p.select_eviction(later, torch.zeros(2), 5) != 0
 
 
-def test_on_write_voids_the_previous_tenant_s_history():
-    """A new gestalt must not inherit the slot's last-used time. H2O inherits this
-    same hazard for accumulated attention -- hence the hook on the protocol."""
+def test_lru_on_write_is_defensive_and_the_mutation_battery_says_so():
+    """🔴 **A finding, recorded rather than hidden.**
+
+    The 1.7 battery neutered `LRUPolicy.on_write` and **nothing reddened**. The
+    original version of this test asserted the hook was load-bearing; it was not,
+    and the test was vacuous.
+
+    The reason is in `select_eviction`: it takes `max(written_at[i], last_used[i])`,
+    and a stale `last_used` is by construction *older* than the new occupant's write
+    step -- a slot can only be attended at or after the step it was written. So the
+    `max` already discards the previous tenant's history, and `on_write` is
+    redundant **for LRU specifically**.
+
+    It is kept, for two reasons:
+
+    1. The hook is on the protocol because **H2O needs it** -- accumulated attention
+       is not monotone in write time, so a stale accumulator survives the `max`
+       trick and corrupts the heavy-hitter set. That is proved below, on a stand-in,
+       rather than asserted about code that does not exist yet.
+    2. If anyone simplifies the `max` away -- and `last = written_at.clone()` looks
+       like dead weight until you know why it is there -- `on_write` becomes
+       load-bearing immediately.
+
+    This test pins the *argument*, since the behaviour cannot be pinned.
+    """
     p = LRUPolicy()
-    capacity, written = 4, [0, 1, 2, 3]
     st = MemoryState(
-        gestalts=torch.zeros(capacity, 2),
-        written_at=torch.tensor(written, dtype=torch.long),
-        live=torch.ones(capacity, dtype=torch.bool),
-        step=9,
+        gestalts=torch.zeros(4, 2),
+        written_at=torch.tensor([0, 25, 2, 3], dtype=torch.long),
+        live=torch.ones(4, dtype=torch.bool),
+        step=26,
     )
-    p.observe(st, _trace(capacity=capacity, d=2, used=1, step=9), 9)
-    assert p.select_eviction(st, torch.zeros(2), 9) != 1  # slot 1 is protected
-    p.on_write(st, 1, 10)  # ... until a new gestalt takes the slot
-    fresh = MemoryState(
-        gestalts=torch.zeros(capacity, 2),
-        written_at=torch.tensor([0, 10, 2, 3], dtype=torch.long),
-        live=torch.ones(capacity, dtype=torch.bool),
-        step=11,
+    p._last_used[1] = 20  # a stale record from the previous tenant of slot 1
+    # The max() discards it without help: the slot's own write step is later.
+    assert p.select_eviction(st, torch.zeros(2), 26) == 0
+    p.on_write(st, 1, 25)
+    assert p.select_eviction(st, torch.zeros(2), 26) == 0
+
+
+class _Accumulator:
+    """H2O's shape, in miniature: a per-slot sum that is NOT monotone in write step.
+
+    Stands in for `H2OPolicy` so gauntlet 0.4's root-cause fix is provable today.
+    """
+
+    name = "accumulator"
+
+    def __init__(self, use_hook=True):
+        self.total = {}
+        self.use_hook = use_hook
+
+    def select_eviction(self, slots, context, step):
+        scores = torch.tensor([self.total.get(i, 0.0) for i in range(slots.capacity)])
+        scores = torch.where(slots.live, scores, torch.full_like(scores, float("inf")))
+        return int(scores.argmin().item())
+
+    def observe(self, slots, attn, step):
+        share = attn.alpha.sum(dim=(0, 1))
+        for i in range(share.shape[0]):
+            self.total[i] = self.total.get(i, 0.0) + float(share[i])
+
+    def on_write(self, slots, slot, step):
+        if self.use_hook:
+            self.total[slot] = 0.0
+
+    def reset(self):
+        self.total.clear()
+
+
+def test_an_accumulating_policy_is_corrupted_without_the_admission_hook():
+    """Gauntlet 0.4's root cause, proved on the policy shape that actually needs it.
+
+    A slot accumulates heat, is evicted, and a new gestalt takes the slot. Without
+    `on_write` the newcomer inherits the heat and is protected by attention it never
+    received -- so the heavy-hitter set becomes partly an artifact of slot reuse.
+    """
+    st = MemoryState(
+        gestalts=torch.zeros(4, 2),
+        written_at=torch.arange(4, dtype=torch.long),
+        live=torch.ones(4, dtype=torch.bool),
+        step=4,
     )
-    assert p.select_eviction(fresh, torch.zeros(2), 11) == 0  # oldest, as it should
+    # Every slot gets some attention; slot 2 gets ten times as much. Without a
+    # baseline the totals tie at zero and the comparison cannot discriminate.
+    alpha = torch.full((2, 2, 4), 0.1)
+    alpha[:, :, 2] = 1.0
+    heat = AttentionTrace(
+        alpha=alpha,
+        wo_v=torch.zeros(2, 2, 4, 2),
+        live=torch.ones(4, dtype=torch.bool),
+        step=0,
+        eval_mode=True,
+        gate=torch.ones(2),
+    )
+
+    results = {}
+    for use_hook in (True, False):
+        p = _Accumulator(use_hook=use_hook)
+        for step in range(4, 9):  # slot 2 accumulates the most attention
+            p.observe(st, heat, step)
+        p.on_write(st, 2, 9)  # slot 2 is overwritten by a brand-new gestalt
+        results[use_hook] = p.select_eviction(st, torch.zeros(2), 10)
+    assert results[True] == 2, "a fresh occupant has no accumulated attention"
+    assert results[False] != 2, "without the hook it inherits the previous tenant's"
 
 
 def test_reset_clears_lru_state_at_a_stream_boundary():

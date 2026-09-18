@@ -29,7 +29,40 @@ jobs:
       # CPU rather than GPU deliberately: section 3.7's reduction is asserted
       # bit-exact, and CPU determinism is what makes that assertion meaningful.
       # ADR-0001 D3: MPS is best-effort, not required.
+      #
+      # 🔴 NOT `pytest -q`. pyproject already sets `addopts = "-q"`, so `-q` on
+      # the command line is `-qq`, which prints a row of dots and NO COUNT -- CI
+      # reported a pass with no number in it (gauntlet 1.3). `-rs` prints the
+      # skip census: a skipped test is not a passing test and is reported
+      # separately, always.
       - name: Test
-        run: .venv/bin/pytest -q
+        run: .venv/bin/pytest -rs
         env:
           PYTHONHASHSEED: "0"
+
+      # The machine-readable count. `tests/conftest.py` already fails the session
+      # if fewer than MIN_PASSED tests actually passed -- an all-skipped suite
+      # exits 0 without it. This step asserts the artefact exists and is sane, so
+      # a conftest that stopped being collected cannot pass silently either.
+      - name: Assert the test census
+        run: |
+          set -euo pipefail
+          test -f test-count.json || { echo "no test-count.json: conftest.py did not run"; exit 1; }
+          cat test-count.json
+          python - <<'PY'
+          import json, sys
+          c = json.load(open("test-count.json"))
+          print(f"passed={c['passed']} failed={c['failed']} skipped={c['skipped']} errors={c['errors']}")
+          if c["passed"] < 100:
+              sys.exit(f"only {c['passed']} tests passed")
+          if c["failed"] or c["errors"]:
+              sys.exit("failures or collection errors")
+          PY
+
+      - name: Upload the census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-count
+          path: test-count.json
+          if-no-files-found: warn
