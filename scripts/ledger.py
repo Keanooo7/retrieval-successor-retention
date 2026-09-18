@@ -83,6 +83,21 @@ _REPO = Path(__file__).resolve().parents[1]
 #: `write()` gates on these. `runs/` churns by design and does not gate.
 SOURCE_ROOTS = ("src/", "scripts/", "experiments/")
 
+#: Console scripts whose *code* is in this repository even though their name is
+#: not a path in it. Declared with a reason, never widened silently: a gate so
+#: strict that the manager's own `pytest` verification has to use the escape hatch
+#: is a gate that gets routed around, and the escape hatch caps the verdict.
+#:
+#: ⚠️ **This is a deviation from the dispatch's literal §5.1**, which says the
+#: entry point must be "a repo-relative path existing at the recorded sha". It is
+#: recorded here rather than argued in prose so it can be reversed in one line.
+TOOL_ENTRY_POINTS = {
+    "pytest": "the code it runs is tests/ and src/, both committed; the runner "
+              "itself is pinned in pyproject.toml",
+    "ruff": "reads pyproject.toml's [tool.ruff] and the committed tree; the "
+            "invocation carries no code of its own",
+}
+
 #: `status` vocabulary. "unknown" is deliberately absent -- it is the silent-fail
 #: shape this field exists to remove.
 STATUSES = ("ok", "partial", "crashed", "did_not_run")
@@ -333,7 +348,9 @@ class Ledger:
         """
         ep = entry_point(argv)
         sha = self._sha
-        if ep is None:
+        if ep in TOOL_ENTRY_POINTS:
+            why = ""
+        elif ep is None:
             why = "names no file in this repository"
         elif sha is None:
             why = (f"the sha is unknown ("

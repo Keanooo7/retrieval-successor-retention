@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**32/32 gates proven.**
+**33/33 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -30,6 +30,7 @@
 | rank shift counts the sliding window | `test_evicting_the_oldest_displaces_nothing` | **PROVEN** | 4 | 4 |
 | underfull steps are not rescaled | `test_underfull_steps_are_rescaled_not_masked` | **PROVEN** | 0 | 0 |
 | ledger accepts an unreproducible entry point | `test_command_refuses` | **PROVEN** | 0 | 0 |
+| any console script counts as a committed entry point | `test_command_refuses_an_undeclared_tool_entry_point` | **PROVEN** | 0 | 0 |
 | an unreproducible command stops capping the verdict | `test_the_escape_hatch_caps_the_verdict_at_inconclusive` | **PROVEN** | 0 | 0 |
 | a git failure reads as a clean tree again | `test_a_git_failure_is_not_recorded_as_a_clean_tree` | **PROVEN** | 0 | 0 |
 | write() tolerates uncommitted source | `test_write_refuses_a_dirty_source_tree` | **PROVEN** | 0 | 0 |
@@ -229,6 +230,14 @@ Reddened nothing else.
 **Gate:** `test_command_refuses` — **PROVEN**
 
 5.1: the scratch-dir argv goes back in, and 9 of 13 ledgers become un-re-executable again with nothing saying so
+
+Reddened nothing else.
+
+### any console script counts as a committed entry point
+
+**Gate:** `test_command_refuses_an_undeclared_tool_entry_point` — **PROVEN**
+
+5.1: the declared-tool allowlist stops being an allowlist and every bare command name passes
 
 Reddened nothing else.
 

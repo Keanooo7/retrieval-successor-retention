@@ -330,6 +330,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "un-re-executable again with nothing saying so",
     ),
     Mutation(
+        "any console script counts as a committed entry point",
+        "test_command_refuses_an_undeclared_tool_entry_point",
+        "scripts/ledger.py",
+        "        if ep in TOOL_ENTRY_POINTS:",
+        "        if ep is not None and not ep.endswith(\".py\"):",
+        "5.1: the declared-tool allowlist stops being an allowlist and every bare "
+        "command name passes",
+    ),
+    Mutation(
         "an unreproducible command stops capping the verdict",
         "test_the_escape_hatch_caps_the_verdict_at_inconclusive",
         "scripts/ledger.py",

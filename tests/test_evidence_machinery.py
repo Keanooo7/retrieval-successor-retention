@@ -79,6 +79,20 @@ def test_command_accepts_a_committed_entry_point(led):
     assert led.doc["commands"][0]["reproducible"] is True
 
 
+def test_a_declared_tool_entry_point_is_accepted(led):
+    """`pytest` carries no code of its own; tests/ and src/ are committed. A gate
+    that forces the manager's own verification through the escape hatch -- which
+    caps the verdict -- is a gate that gets routed around."""
+    led.command("uv run pytest -rs", exit_code=0)
+    assert led.doc["commands"][0]["reproducible"] is True
+    assert "pytest" in ledger_mod.TOOL_ENTRY_POINTS
+
+
+def test_command_refuses_an_undeclared_tool_entry_point(led):
+    with pytest.raises(Unreproducible):
+        led.command("uv run some-other-tool --go", exit_code=0)
+
+
 def test_the_escape_hatch_caps_the_verdict_at_inconclusive(led):
     """A number you cannot re-run is not evidence that survived."""
     led.command(HISTORICAL_SCRATCH_ARGV, exit_code=0, allow_unreproducible=True)
@@ -296,7 +310,9 @@ def test_a_first_canary_reading_exits_3_not_0():
 def test_a_length_mismatch_is_a_move():
     """Compared over the overlap only, a run that produced 2 of 6 beats reports
     "held"."""
-    verdict, moved, detail = canary.compare([1.0, 0.9, 0.8, 0.7, 0.6, 0.5], [1.0, 0.9])
+    verdict, _moved, detail = canary.compare(
+        [1.0, 0.9, 0.8, 0.7, 0.6, 0.5], [1.0, 0.9]
+    )
     assert verdict == "MOVED"
     assert "length" in detail.lower()
 
