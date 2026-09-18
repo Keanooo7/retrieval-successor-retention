@@ -178,17 +178,29 @@ def measure_pytest_count() -> int | None:
     one digit changes. If the suite reports failures the count is refused outright: a passing count
     measured on a red suite is not a floor.
     """
-    try:
-        out = subprocess.run(
-            ["uv", "run", "pytest", "-q", "--tb=no"],
-            cwd=repo_root(), capture_output=True, text=True, timeout=1800,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    text = out.stdout + out.stderr
-    import re
+    # Parse pytest's JUnit XML, not its human summary. pyproject sets addopts="-q" and an
+    # explicit -q made -qq, which suppresses the summary line entirely -- so this function
+    # returned None on every machine and the ratchet reported DID_NOT_RUN forever. The XML
+    # attributes exist at any verbosity, and `skipped` becomes a first-class field instead
+    # of being invisible.
+    import tempfile
+    import xml.etree.ElementTree as ET
 
-    if re.search(r"\b(\d+) failed", text):
-        return None
-    m = re.search(r"\b(\d+) passed", text)
-    return int(m.group(1)) if m else None
+    with tempfile.TemporaryDirectory() as td:
+        xml = Path(td) / "report.xml"
+        try:
+            subprocess.run(
+                ["uv", "run", "pytest", "--tb=no", f"--junitxml={xml}"],
+                cwd=repo_root(), capture_output=True, text=True, timeout=1800,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if not xml.exists():
+            return None
+        suite = ET.parse(xml).getroot().find("testsuite")
+        if suite is None:
+            return None
+        g = lambda k: int(suite.get(k, 0))  # noqa: E731
+        if g("failures") or g("errors"):
+            return None  # a passing count measured on a red suite is not a floor
+        return g("tests") - g("skipped") - g("failures") - g("errors")
