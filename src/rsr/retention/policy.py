@@ -61,10 +61,16 @@ class MemoryState:
     """Index of the current sentence step within the stream."""
 
     accum: dict[str, Tensor] = field(default_factory=dict)
-    """Per-slot accumulators owned by whichever policy needs them. H2O keeps
-    accumulated attention here; Expire-Span keeps its learned span; the anti-
-    collapse loop keeps `u_bar` and `b`. Keyed by policy name to keep arms from
-    reading each other's state."""
+    """Scratch space for accumulators whose lifetime is a single step.
+
+    🔴 **Not for state that must survive a step.** Gauntlet 0.4: a training loop
+    builds a fresh `MemoryState` per step, so anything left here is erased, and the
+    policy that depended on it degrades **silently into a different policy**. LRU
+    kept `last_used` here and became FIFO.
+
+    Cross-step per-slot state belongs on the policy object, keyed by slot index and
+    invalidated through `on_write`. Anything that must survive a *stream* boundary
+    belongs on the policy object too, cleared in `reset`."""
 
     @property
     def capacity(self) -> int:
@@ -85,6 +91,27 @@ class MemoryState:
             self.step - self.written_at,
             torch.full_like(self.written_at, -1),
         )
+
+    def ranks(self) -> Tensor:
+        """`[M]` int64. Each live slot's position in the memory ordering, oldest
+        first, 1-based. Dead slots are -1.
+
+        [P2] section 2.2 adds `P^(sent)_{1:Mt}` to the memory **keys** over a
+        memory "ordered from oldest to most recent", so this is the index the
+        positional encoding actually uses -- **rank, not age**. Under FIFO the two
+        orderings coincide and the distinction is invisible; under RSR, evicting a
+        middle slot shifts every slot behind it. See ADR-0006.
+        """
+        order = torch.where(
+            self.live, self.written_at, torch.full_like(self.written_at, 2**62)
+        )
+        rank = torch.empty_like(self.written_at)
+        rank.fill_(-1)
+        live_idx = order.argsort()[: self.n_live]
+        rank[live_idx] = torch.arange(
+            1, self.n_live + 1, dtype=self.written_at.dtype, device=rank.device
+        )
+        return rank
 
     def fill_fraction(self) -> float:
         """`|memory_t| / M`. Section 5.2 requires this be reported per experiment
@@ -122,7 +149,12 @@ class AttentionTrace:
     """
 
     alpha: Tensor
-    """`[L, H, M]` attention probability over slots, per layer and head."""
+    """`[L, H, M]` attention probability over slots, per layer and head.
+
+    `L` is the number of **cross-attention** layers, which is **six**, not twelve
+    (D-E): TG alternates self/cross blocks `S,C,S,C,...` over 12 layers, so cross
+    attention lives at `l in {2,4,6,8,10,12}`. A twelve-entry profile would be six
+    real rows and six zeros, and the zeros would be read as a depth finding."""
 
     wo_v: Tensor
     """`[L, H, M, d_model]` the value vector after the head's output projection."""
@@ -131,6 +163,29 @@ class AttentionTrace:
     """`[M]` bool, matching the `MemoryState` at capture time."""
 
     step: int
+
+    eval_mode: bool
+    """Whether the forward pass that produced this trace ran with dropout off.
+
+    **Required, not defaulted** (D-F). `attn_dropout = 0.2` in the reference
+    `tg_config.py`, so during training `alpha` is stochastically zeroed -- and the
+    zeroing is *policy relevant*: a slot can score zero demand because a mask fell
+    on it, and an on-policy `r_i` would be noisy in exactly the direction that
+    matters. The retention target is collected in **eval** mode; the LM loss is
+    computed in **train** mode. Making this a required field is the point: an
+    ambient default is how the two get confused."""
+
+    gate: Tensor | None = None
+    """`[L]` TG's learnable per-layer memory gate `g_mem`, or None if not captured.
+
+    **`r_i` includes it** (D-E). [P2] puts a learnable scalar on each
+    cross-attention layer scaling the increment *before* the residual add, and
+    App. C measures it growing over training and larger in deeper layers. D-6's
+    argument for keeping `W_O` -- "precisely where head-specific rescaling lives"
+    -- applies verbatim to `g_mem`, which is where *layer*-specific rescaling
+    lives, and because the gates grow over training the weighting is
+    **non-stationary**: `r_i` at epoch 1 and at epoch 12 are not the same
+    measurement. Computed both ways and reported both against LOO in E0d."""
 
 
 @runtime_checkable
@@ -166,6 +221,30 @@ class RetentionPolicy(Protocol):
         step, including steps where nothing is evicted, and including steps before
         `T_warm` where the policy is inert but `psi_hat` still trains passively on
         realized `r_i` (section 3.4).
+        """
+        ...
+
+    def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
+        """A gestalt was just written into `slot`. **Called on every write.**
+
+        Gauntlet 0.4's root cause. Without this hook the protocol never tells a
+        policy that a slot changed occupant, so per-slot accumulated state silently
+        describes the *previous* tenant. Three consequences, all of which bite:
+
+        1. **LRU was silently FIFO.** Its `last_used` lived in `MemoryState.accum`,
+           and a training loop that builds a fresh `MemoryState` per step erased it
+           every step. Under the natural call order -- evict, write, forward,
+           observe -- LRU's eviction sequence was byte-identical to FIFO's. Section
+           7.1 makes "RSR must beat LRU" the behavioural vacuity test and section
+           10.1 makes LRU one of E7's two legitimate controls, so the comparator was
+           crippled in RSR's favour.
+        2. **H2O would have inherited it.** Its accumulated attention must reset to
+           zero for a new occupant, or a slot inherits the heat of whatever used to
+           live there and the heavy-hitter set is an artifact of slot reuse.
+        3. Expire-Span's learned span, and the anti-collapse loop's `u_bar`, have
+           the same shape.
+
+        A policy with no per-slot state implements this as a no-op, and says so.
         """
         ...
 

@@ -78,21 +78,38 @@ and it would be one made on the basis of an argument rather than a measurement.
 
 ### 1. Per-eviction rank-shift logging — mandatory, every RSR run
 
-At every eviction, record how many live slots had their rank changed by it:
+> **Corrected on implementation, 2026-09-17.** The first draft of this section
+> defined the statistic as *"how many live slots had their rank changed"* and
+> asserted it is 0 under FIFO. **That is wrong, and the implementation caught it:**
+> the memory is a sliding window, so under stock TG every surviving slot's rank
+> drops by one at every step. Measured on the §3.7 reduction at `M = 8`, the
+> as-drafted metric reported 7 shifted slots on 100 of 100 evictions — it measures
+> the window, not the policy. The definition below is what shipped.
+
+At every eviction, record the **displacement from the FIFO counterfactual**:
 
 ```
-shift_count(t) = |{ j : j is live, rank_after(j) ≠ rank_before(j) }|
+displacement(t) = victim_rank(t) − 1
+                = |{ j : j is live, age(j) > age(victim) }|
 ```
 
-Under FIFO this is identically 0: the victim is at rank 1 and everything behind it
-keeps its place in the ordering. Under RSR it is the number of slots behind the
-victim. **Report the distribution, not the mean** — a policy that evicts the oldest
-slot 95% of the time and the newest 5% of the time has a small mean and a real
-confound.
+the number of slots **older than the victim** that survive an eviction FIFO would
+have spent on the oldest. Each of them, and everything behind them, now carries a
+`P^(sent)` index that no longer follows from its age.
+
+Under FIFO the victim is always at rank 1, so this is **identically 0** — which is
+the property that makes it a measure of the confound rather than of the sliding
+window. Measured, after the correction: `{0: 100}` under the reduction, and
+`fraction_shifting = 0.93` with the learned head switched on.
+
+**Report the distribution, not the mean** — a policy that evicts the oldest slot
+95% of the time and the newest 5% of the time has a small mean and a real
+confound. The victim-rank histogram is reported beside it, since it is the richer
+object and the displacement is a function of it.
 
 Two derived quantities go in the heartbeat (Phase 3.8):
 
-- the fraction of evictions with `shift_count > 0` — how often the confound fires;
+- the fraction of evictions with `displacement > 0` — how often the confound fires;
 - the mean rank displacement per surviving slot per stream — how far a slot's key
   drifts over its lifetime for reasons unrelated to itself.
 

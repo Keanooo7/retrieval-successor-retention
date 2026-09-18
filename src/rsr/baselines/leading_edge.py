@@ -33,6 +33,11 @@ class LeadingEdgePolicy:
             "leading_edge: Sprint 2. See spec section 11, defect S-1."
         )
 
+    def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
+        """Kintsch & van Dijk's buffer state is per slot; a new occupant starts
+        fresh (gauntlet 0.4)."""
+        raise NotImplementedError("Sprint 2.")
+
     def reset(self) -> None:
         raise NotImplementedError(
             "leading_edge: Sprint 2. See spec section 11, defect S-1."

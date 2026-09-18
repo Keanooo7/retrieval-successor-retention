@@ -31,6 +31,11 @@ class ExpireSpanPolicy:
             "expire_span: Sprint 2. See spec section 5.4, defect D-4."
         )
 
+    def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
+        """Expire-Span's learned span is per slot and must reset on admission
+        (gauntlet 0.4)."""
+        raise NotImplementedError("Sprint 2.")
+
     def reset(self) -> None:
         raise NotImplementedError(
             "expire_span: Sprint 2. See spec section 5.4, defect D-4."

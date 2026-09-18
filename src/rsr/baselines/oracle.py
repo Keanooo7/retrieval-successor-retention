@@ -27,5 +27,10 @@ class OraclePolicy:
     def observe(self, slots: MemoryState, attn: AttentionTrace, step: int) -> None:
         raise NotImplementedError("oracle: Sprint 2. See spec section 5.4, E-feas.")
 
+    def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
+        """The oracle's per-slot true demand is re-derived for the new occupant
+        (gauntlet 0.4)."""
+        raise NotImplementedError("Sprint 2.")
+
     def reset(self) -> None:
         raise NotImplementedError("oracle: Sprint 2. See spec section 5.4, E-feas.")

@@ -347,3 +347,87 @@ measure, don't extrapolate.
    The normalization is TG's, the hinge penalty is in TG's loss, and section 3.1
    requires the base model be unmodified. Changing it would make E0b's reduction
    test a comparison against something that is not TG.
+
+## 16 — §3.7's `T_warm = ∞` makes E0b vacuous; the reduction uses `T_warm = 0`
+
+**Supersedes:** §3.7's *"warmup irrelevant (`T_warm = ∞`)"*.
+
+Eviction dispatch is `t < T_warm → FIFO`. At `∞` that branch is taken forever, so
+**under the §3.7 reduction no eviction ever reaches the score** and E0b certifies
+FIFO against FIFO — the gate that exists to prove RSR reduces to TG passes without
+executing the thing being reduced.
+
+The spec's word "irrelevant" is right about the *outcome* and wrong about the
+*path*: with `ψ̂ ≡ −a_i` the score already selects the oldest slot, so the warmup
+changes nothing — which is exactly why the reduction should run through the score.
+
+**`T_warm = 0.0` in `reduction_to_tg()`.** Gauntlet 0.1. Verified: 100 evictions,
+all attributed to `neg_age`, victim sequence identical to `FIFOPolicy`, and
+switching `psi_override` to the learned head breaks it.
+
+## 17 — §3.2.1's `r_i` omits TG's memory gate
+
+**Supersedes:** `r_i(t) = Σ_{l,h} ‖ α_{l,h,i} · W_O^{(l,h)} v_{l,h,i} ‖₂`.
+
+```
+r_i(t) = Σ_{l,h} ‖ g_mem^(l) · α_{l,h,i} · W_O^(l,h) v_{l,h,i} ‖₂
+```
+
+[P2] puts a learnable scalar `g_mem` on each cross-attention layer, scaling the
+increment **before** the residual add. D-6's argument for keeping `W_O` —
+*"precisely where head-specific rescaling lives"* — applies verbatim to `g_mem`,
+which is where **layer**-specific rescaling lives.
+
+App. C measures the gates **growing over training and larger in deeper layers**, so
+the weighting is **non-stationary**: `r_i` at epoch 1 and at epoch 12 are not the
+same measurement. **Compute both ways (gated and raw) and report both against LOO
+Δloss in E0d.** §3.2.1's truth rule is unchanged: if they disagree, **LOO is
+truth.** D-E; brief finding B-1.
+
+## 18 — the per-layer `r_i` profile has six entries, not twelve
+
+**Clarifies:** §3.2.1's *"report the per-layer profile once before collapsing to a
+scalar."*
+
+TG alternates self/cross blocks `S,C,S,C,…` over 12 layers, so cross-attention
+lives at `ℓ ∈ {2,4,6,8,10,12}` — **six layers.** A twelve-entry profile is six real
+rows and six zeros, and the zeros would be read as a depth finding. D-E.
+
+## 19 — `c_t` is the current sentence gestalt; the running-context variant is an ablation
+
+**Resolves:** §3.2.2's *"where `c_t` is the current sentence gestalt (or a running
+context vector)"* — a parenthesis that reads as a second specification.
+
+**Decided: the current sentence gestalt** (D-C). Three reasons: it is the simplest
+reading of §3.2.2; it makes **both arguments to the bilinear form unit-norm** (with
+correction 15, the reference L2-normalizes every gestalt), so the μP analysis is
+single-valued instead of forked; and it keeps `ψ̂` positionally blind, which
+ADR-0006 arrives at independently.
+
+Written into the config as a named enum with one value implemented and the other
+raising. The running-context version is a clean ablation, not a branch in the
+critical path.
+
+## 20 — `r_i` is collected in eval mode
+
+**Adds to:** §3.2.1, which does not say.
+
+`attn_dropout: float = 0.2` in the reference `tg_config.py`, so during training `α`
+is stochastically zeroed and a slot can score zero demand because a mask fell on
+it — noise in a *policy-relevant* direction. **Eval mode for the retention target;
+train mode for the LM loss**, as an explicit mode switch in the code rather than an
+ambient default. D-F. Enforced by `AttentionTrace.eval_mode` being a required
+field, and by `rsr.retention.reward` refusing a train-mode trace.
+
+## 21 — `T_warm` is a float number of steps, everywhere
+
+**Supersedes:** the registry's `"one_epoch"` string.
+
+§3.4 states the warmup as one epoch and requires it be *reported* as a fraction of
+total epochs; the dispatch compares it against `t`. Those are two representations
+with nothing converting between them, which is how the registry came to hold a
+string while `RSRConfig` held a float.
+
+**One representation: a float number of steps.** `T_warm` is CONDITIONAL on
+`steps_per_epoch` and returns steps; `T_warm_epochs` (FROZEN, 1.0) stays for the
+report. The string is deleted. D-I.

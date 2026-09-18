@@ -24,5 +24,10 @@ class RandomPolicy:
     def observe(self, slots: MemoryState, attn: AttentionTrace, step: int) -> None:
         return None
 
+    def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
+        """No-op. Random holds no per-slot state -- that is the whole point of it
+        as the sanity floor."""
+        return None
+
     def reset(self) -> None:
         return None

@@ -1,4 +1,4 @@
-"""The RSR policy (spec sections 3.3, 3.4). **Sprint 2 -- typed stub.**
+"""The RSR policy (spec sections 3.3, 3.4).
 
 Eviction rule:
 
@@ -43,54 +43,372 @@ produces this" -- **is false under MC and is withdrawn**: MC *is* a regression.
 What distinguishes it from v0.1 is the target, not the estimator class. Anyone
 re-deriving this must check the target, not the presence of a bootstrap.
 
-**Section 3.7 reduction, reachable by configuration alone:** `psi_override="neg_age"`,
-`b_enabled=False`, `nu=0.0`, `beta=0.0`, `A_max=M`, `T_warm=inf`, `shadow=False`.
-Eviction becomes `argmin(-a_i)` = the oldest slot. Bit-exact TG.
+---
+
+## Gauntlet 0.1 and 0.2 -- `T_warm = inf` made the whole apparatus decorative
+
+Dispatch is `t < T_warm -> FIFO`. `inf` makes that true forever.
+
+* `reduction_to_tg()` set it, so **under the section 3.7 reduction no eviction ever
+  reached the score** and E0b certified FIFO against FIFO. The gate that exists to
+  prove RSR reduces to TG was passing without ever executing the thing being
+  reduced. It is now `0.0`, so the reduction runs **through the score path** and
+  `psi_hat == -a_i` has to actually produce the oldest slot.
+* The **default** `RSRConfig` set it too, so a default-constructed RSR policy was
+  stock TG forever while reporting `name = "rsr"` -- arm and control silently one
+  arm.
+
+The default is fixed by **removing it**. `nu`, `beta`, `gamma`, `t_warm` and
+`a_max` have no defaults at all now: they are MEASURED or CONDITIONAL constants
+(gauntlet 0.3), and a dataclass default is exactly the "frozen unmeasured constant"
+that section 4.5 forbids and that defect D-1 was. Build configs with
+`RSRConfig.from_registry()`, which raises `UnmeasuredConstant` on an empty ledger.
+
+## Section 3.7 reduction, reachable by configuration alone
+
+`psi_override="neg_age"`, `b_enabled=False`, `nu=0.0`, `beta=0.0`, `gamma=0.0`,
+`t_warm=0.0`, `shadow_enabled=False`, `a_max=M`, `sent_pos_index="rank"`,
+`context_source="current_sentence_gestalt"`. Eviction becomes `argmin(-a_i)` = the
+oldest slot. Bit-exact TG.
+
+**`REDUCTION_SWITCHES` below is the single enumeration of that set**, and a test
+asserts it covers every field of `RSRConfig`. Add a term without an off-switch and
+the test reddens -- which is the mechanical form of "every term added to the
+eviction score ships a documented off-switch, or section 3.7 stops being a
+reduction and E0b stops testing what it claims to test."
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
+from typing import Any
 
-__all__ = ["RSRConfig", "RSRPolicy"]
+import torch
+from torch import Tensor
+
+from rsr import constants as C
+from rsr.baselines.fifo import FIFOPolicy
+from rsr.retention.instrumentation import EvictionRecord, RankShiftLog, rank_shift
+from rsr.retention.policy import AttentionTrace, MemoryState
+from rsr.retention.value_head import BilinearValueHead
+
+__all__ = [
+    "CAPACITY",
+    "REDUCTION_SWITCHES",
+    "ContextSource",
+    "RSRConfig",
+    "RSRPolicy",
+    "SentPosIndex",
+]
+
+
+class ContextSource(StrEnum):
+    """What `c_t` is (D-C).
+
+    **Decided: the current sentence gestalt.** Three reasons, in the order they
+    carry weight:
+
+    1. It is the simplest reading of section 3.2.2, whose own text is *"`c_t` is
+       the current sentence gestalt (or a running context vector)"* -- the
+       parenthesis is an aside, not a second specification.
+    2. It makes **both arguments to the bilinear form unit-norm** (correction 15 /
+       D-B: the reference L2-normalizes every gestalt), so the muP analysis is
+       single-valued instead of forked. A running context vector has no norm
+       guarantee at all, and section 4.3's multiplier would need a different
+       derivation for each branch.
+    3. It keeps `psi_hat` positionally blind. A running context accumulates over
+       the stream and is therefore weakly time-indexed, which would hand the
+       estimator an indirect age channel -- see ADR-0006, where that is the
+       independent argument for the same decision.
+
+    The running-context version is a clean **ablation**, not a branch in the
+    critical path. It is named here, and it raises.
+    """
+
+    CURRENT_SENTENCE_GESTALT = "current_sentence_gestalt"
+    RUNNING_CONTEXT = "running_context"
+
+
+class SentPosIndex(StrEnum):
+    """How `P^(sent)` indexes the memory (ADR-0006 / D-D).
+
+    `RANK` is [P2] section 2.2's own indexing -- position in a memory "ordered from
+    oldest to most recent" -- and is what the released code does, so it is what the
+    fidelity harness compares against (D-A). It is the default and it is what the
+    section 3.7 reduction pins.
+
+    `ABSOLUTE_AGE` indexes by `t - written_at` instead, so a slot's key depends only
+    on the slot. It is a **research variant, not a fix**: it changes TG, it breaks
+    fidelity against the pinned reference, and anything run under it must be
+    reported as a modified base model. Default off; **must** be `RANK` in the
+    reduction, or E0b tests a model the fidelity harness never saw.
+    """
+
+    RANK = "rank"
+    ABSOLUTE_AGE = "absolute_age"
+
+
+CAPACITY = object()
+"""Sentinel in `REDUCTION_SWITCHES` for "whatever `M` is in this configuration"."""
+
+REDUCTION_SWITCHES: dict[str, Any] = {
+    "psi_override": "neg_age",
+    "b_enabled": False,
+    "nu": 0.0,
+    "beta": 0.0,
+    "gamma": 0.0,
+    "t_warm": 0.0,
+    "shadow_enabled": False,
+    "a_max": CAPACITY,
+    "context_source": ContextSource.CURRENT_SENTENCE_GESTALT,
+    "sent_pos_index": SentPosIndex.RANK,
+}
+"""Section 3.7's switch set, enumerated once.
+
+`tests/test_reduction.py` asserts this dict's keys are **exactly** the fields of
+`RSRConfig`. A new term with no entry here reddens that test, which is the only
+mechanical guarantee that section 3.7 stays a reduction.
+
+`t_warm = 0.0`, not `inf`: gauntlet 0.1. With `inf` the dispatch routed every
+eviction to FIFO and the reduction never exercised the score path at all.
+"""
 
 
 @dataclass(frozen=True)
 class RSRConfig:
-    """Every term in the eviction score has an off-switch here.
+    """Every term in the eviction score has an off-switch in `REDUCTION_SWITCHES`.
 
-    Without one, section 3.7 silently stops being a reduction to TG and E0b stops
-    testing what it claims to test. `reduction_to_tg()` returns the exact config.
+    **No defaults for registry-owned values** (gauntlet 0.3). `nu`, `beta` and
+    `gamma` are MEASURED from E1; `t_warm` and `a_max` are CONDITIONAL. A dataclass
+    default for any of them is a frozen unmeasured constant one import away from the
+    module built to prevent exactly that -- and `nu = 0.0` is additionally the
+    section 3.7 *disabled* value, so the default arm shipped the off-switch.
     """
 
+    nu: float
+    beta: float
+    gamma: float
+    t_warm: float
+    a_max: int
     psi_override: str | None = None
     """None = use the learned head. "neg_age" = section 3.7's `psi_hat == -a_i`."""
 
     b_enabled: bool = True
-    nu: float = 0.0
-    beta: float = 1.0
-    gamma: float | None = None
-    t_warm: float = float("inf")
     shadow_enabled: bool = True
-    a_max: int | None = None
+    context_source: ContextSource = ContextSource.CURRENT_SENTENCE_GESTALT
+    sent_pos_index: SentPosIndex = SentPosIndex.RANK
 
     @classmethod
     def reduction_to_tg(cls, capacity: int) -> RSRConfig:
-        """Section 3.7's settings. Consumed by `tests/test_reduction.py`."""
-        return cls(
-            psi_override="neg_age",
-            b_enabled=False,
-            nu=0.0,
-            beta=0.0,
-            gamma=0.0,
-            t_warm=float("inf"),
-            shadow_enabled=False,
-            a_max=capacity,
-        )
+        """Section 3.7's settings. Consumed by `tests/test_reduction.py`.
+
+        Built **from** `REDUCTION_SWITCHES` rather than repeating it, so the
+        enumeration and the config cannot drift apart.
+        """
+        kw = {
+            k: (capacity if v is CAPACITY else v) for k, v in REDUCTION_SWITCHES.items()
+        }
+        return cls(**kw)
+
+    @classmethod
+    def from_registry(
+        cls,
+        scope: str,
+        *,
+        steps_per_epoch: float,
+        registry: C.Registry | None = None,
+        **overrides: Any,
+    ) -> RSRConfig:
+        """Read every measured/conditional value from the constants registry.
+
+        **This is the only supported way to build a training config** (gauntlet 0.3
+        and 0.5). On an empty ledger it raises `UnmeasuredConstant`, naming E1 --
+        which is the point: the registry refusing the read is what stops an
+        unmeasured constant being frozen by a default.
+
+        `overrides` exists for ablation arms that deliberately depart from the
+        frozen value (A2's `A_max = M`, the `gamma = 0` control arm). Every override
+        is a deliberate, visible departure -- not a default.
+        """
+        reg = registry or C.REGISTRY
+        s = reg.get("S", scope)
+        kw: dict[str, Any] = {
+            "nu": reg.get("nu", scope),
+            "beta": reg.get("beta", scope),
+            "gamma": reg.get("gamma", scope),
+            "t_warm": reg.get("T_warm", steps_per_epoch=steps_per_epoch),
+            "a_max": reg.get("A_max", scope, S=s),
+        }
+        kw.update(overrides)
+        cfg = cls(**kw)
+        C.check_gamma_horizon(cfg.gamma, s=s, a_max=cfg.a_max)
+        return cfg
+
+    def is_reduction(self, capacity: int) -> bool:
+        """True iff every switch sits at its section 3.7 off value."""
+        return self == RSRConfig.reduction_to_tg(capacity)
 
 
 class RSRPolicy:
+    """Learned eviction (sections 3.3-3.5), with section 3.4 decision attribution.
+
+    Every eviction produces an `EvictionRecord`. That is not instrumentation added
+    for comfort: section 3.4 requires per-eviction attribution **from the first
+    policy run**, gauntlet 0.2 is a run whose records would all have read
+    `fifo_warmup`, and ADR-0006 needs the rank-shift field on the same record.
+    """
+
     name = "rsr"
 
-    def __init__(self, config: RSRConfig, d_model: int) -> None:
-        raise NotImplementedError("Sprint 2. Spec sections 3.3-3.5.")
+    def __init__(
+        self,
+        config: RSRConfig,
+        d_model: int,
+        *,
+        value_head: BilinearValueHead | None = None,
+        bias: object | None = None,
+        generator: torch.Generator | None = None,
+    ) -> None:
+        if config.context_source is not ContextSource.CURRENT_SENTENCE_GESTALT:
+            raise NotImplementedError(
+                f"context_source={config.context_source.value!r} is an ablation "
+                f"(D-C), not the critical path. c_t is the current sentence "
+                f"gestalt: it is section 3.2.2's simplest reading, it makes both "
+                f"arguments to the bilinear form unit-norm so the muP analysis is "
+                f"single-valued, and it keeps psi_hat positionally blind "
+                f"(ADR-0006). Implement the ablation deliberately, in its own arm."
+            )
+        if config.b_enabled and bias is None:
+            raise ValueError(
+                "b_enabled=True needs the anti-collapse bias (section 3.5), whose "
+                "gamma_b and tau are measured by E0e. Pass one, or set "
+                "b_enabled=False and say so -- b == 0 is also the section 3.7 "
+                "reduction condition, so a silently absent b is defect D-1's shape."
+            )
+        self.config = config
+        self.d_model = d_model
+        self.bias = bias
+        self.head: BilinearValueHead | None = None
+        if config.psi_override is None:
+            self.head = value_head or BilinearValueHead(d_model, generator=generator)
+        elif config.psi_override != "neg_age":
+            raise ValueError(
+                f"psi_override={config.psi_override!r} is not a known override. "
+                f"Section 3.7 defines exactly one: 'neg_age'."
+            )
+        self._fifo = FIFOPolicy()
+        self.records: list[EvictionRecord] = []
+        self.rank_shifts = RankShiftLog()
+
+    # -- the eviction rule --------------------------------------------------- #
+
+    def _psi(self, slots: MemoryState, context: Tensor) -> Tensor:
+        """`[M]` raw `psi_hat` per slot, before z-scoring. Dead slots are +inf."""
+        dead = torch.full((slots.capacity,), float("inf"))
+        if self.config.psi_override == "neg_age":
+            # Section 3.7: psi_hat == -a_i. argmin(-a) = the oldest slot = FIFO.
+            psi = -slots.ages().to(torch.float32)
+        else:
+            assert self.head is not None
+            # Section 3.3: only phi receives gradient. The policy is the caller, so
+            # the policy applies the stop-gradient -- the head deliberately does
+            # not, so that a caller who meant to backpropagate cannot do it
+            # silently.
+            psi = self.head(slots.gestalts.detach(), context.detach())
+        return torch.where(slots.live, psi, dead)
+
+    def _score(self, slots: MemoryState, context: Tensor) -> tuple[Tensor, str]:
+        psi = self._psi(slots, context)
+        live = slots.live
+        finite = psi[live]
+        # Section 3.5 item 1: z-scored across live slots, which is what makes
+        # b_max = 1.0 mean one standard deviation. Monotone, so it cannot change
+        # the argmin -- it exists to put b on a common scale.
+        sd = finite.std(unbiased=False)
+        if sd > 0:
+            psi = torch.where(live, (psi - finite.mean()) / sd, psi)
+        terms = "neg_age" if self.config.psi_override else "psi"
+
+        score = psi
+        if self.config.b_enabled:
+            assert self.bias is not None
+            score = score + self.bias.b(slots)  # type: ignore[attr-defined]
+            terms += "+b"
+        if self.config.nu != 0.0:
+            score = score - self.config.nu * self._max_cosine(slots)
+            terms += "-nu"
+        return torch.where(live, score, torch.full_like(score, float("inf"))), terms
+
+    def _max_cosine(self, slots: MemoryState) -> Tensor:
+        """`[M]` `max_{j != i} cos(s_i, s_j)` over live slots (defect D-3)."""
+        g = torch.nn.functional.normalize(slots.gestalts.detach(), dim=-1)
+        sim = g @ g.T
+        sim.fill_diagonal_(-1.0)
+        sim = torch.where(slots.live.unsqueeze(0), sim, torch.full_like(sim, -1.0))
+        return torch.where(slots.live, sim.max(dim=1).values, torch.zeros(slots.capacity))
+
+    def select_eviction(self, slots: MemoryState, context: Tensor, step: int) -> int:
+        warm = step < self.config.t_warm
+        if warm:
+            victim = self._fifo.select_eviction(slots, context, step)
+            attribution, margin = "fifo_warmup", None
+        else:
+            # Section 3.5: `b` never enters psi_hat "or any differentiable path --
+            # eviction argmin only". The whole selection is therefore under
+            # no_grad. psi_hat's gradient comes from the retention loss in
+            # `observe`, never from the decision.
+            with torch.no_grad():
+                score, attribution = self._score(slots, context)
+                victim = int(score.argmin().item())
+                ordered = score[slots.live].sort().values
+                margin = float(ordered[1] - ordered[0]) if ordered.numel() > 1 else None
+
+        victim_rank, shifted = rank_shift(slots, victim)
+        record = EvictionRecord(
+            step=step,
+            victim=victim,
+            victim_rank=victim_rank,
+            rank_shift=shifted,
+            n_live=slots.n_live,
+            policy=self.name,
+            warm=warm,
+            attribution=attribution,
+            score_margin=margin,
+        )
+        self.records.append(record)
+        self.rank_shifts.add(record)
+        return victim
+
+    # -- bookkeeping --------------------------------------------------------- #
+
+    def observe(self, slots: MemoryState, attn: AttentionTrace, step: int) -> None:
+        """Realized `r_i` lands here. Sprint 2 wires it to the MC return.
+
+        The trace must be an eval-mode capture (D-F); `rsr.retention.reward`
+        refuses a train-mode one rather than quietly averaging over dropout masks.
+        """
+        raise NotImplementedError(
+            "Sprint 2: the MC return and the shadow buffer (sections 3.3-3.4). "
+            "r_i itself is implemented in rsr.retention.reward."
+        )
+
+    def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
+        """No per-slot accumulator yet; the MC return keyed by slot arrives with
+        `observe` in Sprint 2, and it resets here (gauntlet 0.4)."""
+        return None
+
+    def reset(self) -> None:
+        """Stream boundary. The eviction log persists -- it is the run's record, not
+        per-stream state -- but anything keyed by slot does not."""
+        self._fifo.reset()
+
+    # -- reporting ----------------------------------------------------------- #
+
+    def attribution_counts(self) -> dict[str, int]:
+        """How many evictions each term selected. **A run that is all
+        `fifo_warmup` is stock TG reporting itself as RSR** (gauntlet 0.2)."""
+        out: dict[str, int] = {}
+        for r in self.records:
+            out[r.attribution] = out.get(r.attribution, 0) + 1
+        return out

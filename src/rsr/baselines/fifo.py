@@ -35,5 +35,11 @@ class FIFOPolicy:
     def observe(self, slots: MemoryState, attn: AttentionTrace, step: int) -> None:
         return None
 
+    def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
+        """No-op, and genuinely so: FIFO's only state is `written_at`, which the
+        memory owns and the write updates. Stated rather than omitted -- gauntlet
+        0.4 was a policy whose state quietly did not survive the write."""
+        return None
+
     def reset(self) -> None:
         return None
