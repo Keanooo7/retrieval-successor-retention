@@ -121,3 +121,90 @@ explicit "do not cite as a constant" and an instruction that neither number ente
 `constants.py`. No multiplier, no `srep_norm_target`, and no frozen constant was touched.
 
 ---
+
+## Cycle 2 — do `ProtectionBias` and `_score()` describe the same object?
+
+| | |
+|---|---|
+| **Falsifier** | *"`ProtectionBias`'s declared interface and `RSRPolicy._score()`'s call site describe the same object."* |
+| **Dispatched** | fresh researcher, retired on hand-back |
+| **Verdict** | **falsified.** They reconcile only if one side changes shape. |
+| **Verified by re-execution** | ✅ **Their headline claim, re-derived by me in my own code** (not their harness). A class exposing *exactly* `ProtectionBias`'s four declared members — `__init__`/`update`/`values`/`reset` — fails one eviction with `AttributeError: 'Bias' object has no attribute 'b'` at **`src/rsr/retention/rsr.py:377`**, and adding **only** `b(slots)` to the identical class makes the same call succeed with `attribution = psi+b`, victim 0. (My first attempt errored on my own wrong `MemoryState` signature — mine, not theirs.) I also audited all 58 ledger rows: every number in their report resolves to a row, all five-seed statistics carry real sds, and every `sd = 0.0000` row is itemized with a reason I could check independently. |
+| **Ledger** | `runs/cycle-bias-interface/ledger.json` — 58 rows, 5 seeds × 480 evictions. |
+
+**The interface.** Their smallest faithful `ProtectionBias` works on its own terms (20 updates
+drive a concentrated slot to `b = −1.0` while the rest rise to `+0.90`) and still cannot take one
+eviction. **Which side is self-consistent: `ProtectionBias`'s.** §3.5 verbatim — *"A scalar bias
+`b_i`, added inside the eviction argmin only"* — updated from `ū_i` and `b_i`'s previous value.
+**Nothing in §3.5 makes `b` a function of the memory state**, so a zero-argument `values()` is the
+faithful surface, and correction 4 touches `γ_b`'s magnitude and not the signature. The one
+engineering argument for passing `slots` (device/liveness) does not hold: `_score` masks dead
+slots itself one line later at `rsr.py:382` and the policy already has `_device_of(slots)`.
+**The spec names no accessor**, so the code-shape choice is Brendan's — correctly left to him.
+
+**Two further incompletenesses in the same interface**, found by building it: `update(u_bar)`'s
+signature puts the EMA in the caller, which makes §3.5 item 2's half-life requirement
+unenforceable from inside the class, and `__init__` has no half-life parameter at all. And
+**`ProtectionBias` declares no per-slot invalidation hook**, though `RetentionPolicy.on_write`'s
+own docstring names *"the anti-collapse loop's `ū`"* as having exactly gauntlet 0.4's shape —
+without one, **a new occupant inherits the previous tenant's `b`.**
+
+🔴 **They corrected my brief, and they were right.** I wrote *"the `ū` EMA with half-life `τ`"*.
+`τ` is the **dead band** (§3.5 item 3); the EMA half-life is `E[lifetime]/4` (item 2), a separate
+derived quantity. My error, recorded so it does not propagate into a later brief.
+
+### The `γ_b` result — correction 4's arithmetic confirmed, its operational claim refined
+
+Controlled so the comparison is clean: one `b_enabled=False` driver owns the memory, so the
+`MemoryState` sequence is **identical** across every `γ_b`, and every arm shares one value-head
+object so `ψ̂` is bit-identical. `M=40`, `S=80` (both FROZEN registry reads), `d=384`, 5 seeds ×
+480 evictions, `attribution` all `psi` / `psi+b`, **zero `fifo_warmup`**.
+
+| `γ_b` | fraction of evictions changed | max \|b\| |
+|---|---|---|
+| 0.0 (control) | 0.0 ± 0.0 | 0.0 |
+| **0.001** | **0.02125 ± 0.00539** | 0.079 |
+| 0.01 | 0.25083 ± 0.00731 | 0.79 |
+| **0.05** | 0.56417 ± 0.01313 | 1.0 (clip) |
+| 0.075 | 0.58667 ± 0.01264 | 1.0 (clip) |
+| **0.1** | 0.59500 ± 0.01289 | 1.0 (clip) |
+
+**Correction 4's arithmetic is confirmed to the digit**: predicted max \|b\| = `0.001 × 80 = 0.08`,
+measured **0.079** = `0.001 × 79`. **Its operational claim is not exactly true.** Correction 4 says
+that at `γ_b = 0.001` the control loop *"cannot move the argmin, and is operationally identical to
+`b ≡ 0`"*. Measured, it **does** move it — on **2.1% ± 0.5%** of evictions, against **0.0% ± 0.0%**
+for `b ≡ 0`. The mechanism is visible: 15.0% ± 1.3% of driver evictions have a top-2 score margin
+below 0.079, and the median margin *of the evictions 0.001 actually flipped* is **0.0164 ± 0.0072**
+versus **0.271 ± 0.025** at `γ_b = 0.1`. So at 0.001 the loop is **not inert — it is near-tie
+noise**, perturbing exactly the decisions `ψ̂` had no opinion about. Arguably worse than inert,
+because A5 would have measured a small non-zero effect of the wrong kind and had something to
+report.
+
+🔴 **And correction 4's own recommended range makes `b` the policy.** At 0.05–0.1, `b` decides
+**56–60%** of evictions with `b` saturated at `±b_max` simultaneously at essentially every
+eviction. §3.4's *"if `b` flips a large share of decisions, the balance controller is the policy"*
+and §3.5 item 1's *"if `ψ̂ ≪ b`, the policy is the balance controller, not the value estimate"* are
+both **realized at the range correction 4 prescribes**. The curve is **flat from 0.05 to 0.1**
+(0.564 → 0.595) because both ends clip, so **A5's sweep cannot separate 0.05 from 0.1 on this
+`ū`** — the discriminating variation lies *below* correction 4's range. This is not an argument
+for 0.001. It is an argument that correction 4 fixed the magnitude and reopened the takeover
+question that item 1's z-scoring was introduced to close.
+
+Two side measurements: updates fired on **0.4926 ± 0.0106** of slot-steps at `τ = 0.25`, not the
+~0.25 the `γ_b` formula divides by; and realized mean slot lifetime under the *learned-head*
+driver is **26.49 ± 0.53**, not `M = 40` — so **`E[lifetime]` is policy-dependent, and a `γ_b`
+derived from a FIFO E0e run is not the one the RSR arm's own lifetimes imply.**
+
+**Boundary — and it is the whole caveat.** ⚠️ **`ū` is synthetic** (log-normal per-slot salience,
+softmaxed). `observe()` still raises, no `AttentionTrace` capture exists, and
+`rsr.retention.reward`'s `r_i` never entered this loop, so **every fraction above is conditional
+on that generator and on `τ = 0.25`.** Nothing here measures `γ_b`/`τ`/`b_max`/`E[lifetime]` as
+constants — that is E0e's job and the supplied values are labelled bypasses. Nothing about loss
+or whether `b` helps (`φ` random, no LM ran). Collapse was never induced — imbalance was imposed
+rather than arising from the closed loop. CPU only, so `_score`'s missing device alignment for
+the bias is untested and remains a live suspect. The other four cycle-1 walls all stand.
+
+**I did not touch correction 4.** A synthetic-`ū` measurement is not grounds for editing an
+authoritative document; it is grounds for escalating. Both findings are in `for-brendan`.
+
+---

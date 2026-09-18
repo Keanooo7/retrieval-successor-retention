@@ -1,0 +1,769 @@
+{
+  "run_id": "cycle-bias-interface",
+  "cycle": 2,
+  "question": "Do ProtectionBias's declared interface and RSRPolicy._score()'s call site describe the same object; and with a working bias, does gamma_b move the eviction argmin -- at 0.001 (defect D-1) versus correction 4's 0.05-0.1?",
+  "started_utc": "2026-09-18T07:54:06Z",
+  "provenance": {
+    "git_sha": "f1ea1a0c3776e80cb8347e04035da87026c00435",
+    "git_dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "commands": [
+    {
+      "argv": ".venv/bin/python /private/tmp/claude-501/-Users-keanooo7-second-brain/1bdd6660-ee4c-49c5-99a7-28bf139ef2c9/scratchpad/run_bias_interface.py",
+      "exit_code": null,
+      "note": "single entry point; all rows below are written by this process",
+      "at_utc": "2026-09-18T07:54:06Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "M",
+      "kind": "observation",
+      "value": 40,
+      "how": "rsr.constants.get('M','pg19_e3') -- FROZEN, registry read"
+    },
+    {
+      "key": "S",
+      "kind": "observation",
+      "value": 80,
+      "how": "rsr.constants.get('S','pg19_e3') -- FROZEN, registry read"
+    },
+    {
+      "key": "b_max",
+      "kind": "observation",
+      "value": 1.0,
+      "how": "rsr.constants.get('b_max') -- FROZEN, registry read"
+    },
+    {
+      "key": "bypass_gamma_b_values",
+      "kind": "observation",
+      "value": [
+        0.0,
+        0.001,
+        0.01,
+        0.05,
+        0.075,
+        0.1
+      ],
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e), and measurements/ledger.json does not exist, so the registry refuses the read (cycle-1 wall 1). Values supplied by hand to make the sweep runnable."
+    },
+    {
+      "key": "bypass_tau",
+      "kind": "observation",
+      "value": 0.25,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e), and measurements/ledger.json does not exist, so the registry refuses the read (cycle-1 wall 1). Values supplied by hand to make the sweep runnable. tau = 0.25 is section 3.5 item 3's +/-25% band."
+    },
+    {
+      "key": "bypass_ema_half_life_steps",
+      "kind": "observation",
+      "value": 10.0,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e), and measurements/ledger.json does not exist, so the registry refuses the read (cycle-1 wall 1). Values supplied by hand to make the sweep runnable. = E[lifetime]/4 with E[lifetime] assumed = M = 40 under FIFO."
+    },
+    {
+      "key": "bypass_rsrconfig_hand_built",
+      "kind": "observation",
+      "value": true,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e), and measurements/ledger.json does not exist, so the registry refuses the read (cycle-1 wall 1). Values supplied by hand to make the sweep runnable. RSRConfig built by hand, not RSRConfig.from_registry (nu/beta/gamma/T_warm/A_max all unmeasured)."
+    },
+    {
+      "key": "d_model",
+      "kind": "observation",
+      "value": 384,
+      "how": "chosen in scratch; psi_hat is z-scored so d affects scale only. Matches correction 23's E3 width."
+    },
+    {
+      "key": "measurements_ledger_exists",
+      "kind": "observation",
+      "value": false,
+      "how": "os.path.exists -- re-checked this cycle"
+    },
+    {
+      "key": "part1a_real_ProtectionBias",
+      "kind": "observation",
+      "value": {
+        "exc_type": "NotImplementedError",
+        "at": "src/rsr/retention/bias.py:60",
+        "message": "Sprint 2. Spec section 3.5; gamma_b and tau from rsr.constants (E0e)."
+      },
+      "how": "try/except around ProtectionBias(...); file:line from traceback"
+    },
+    {
+      "key": "part1b_declared_surface_members_present",
+      "kind": "observation",
+      "value": [
+        "reset",
+        "update",
+        "values"
+      ],
+      "how": "hasattr on the scratch object"
+    },
+    {
+      "key": "part1b_declared_surface_has_b",
+      "kind": "observation",
+      "value": false,
+      "how": "hasattr(obj,'b') -- ProtectionBias declares no 'b'"
+    },
+    {
+      "key": "part1b_selftest_values_after_20_updates",
+      "kind": "observation",
+      "value": {
+        "b_slot0_over_utilised": -1.0,
+        "b_slot1": 0.9000000953674316,
+        "min": -1.0,
+        "max": 0.9000000953674316
+      },
+      "how": "20 update() calls with a share concentrated on slot 0, then values()"
+    },
+    {
+      "key": "part1b_eviction_with_declared_surface",
+      "kind": "observation",
+      "value": {
+        "outcome": "raised",
+        "exc_type": "AttributeError",
+        "at": "src/rsr/retention/rsr.py:377",
+        "message": "'DeclaredSurfaceBias' object has no attribute 'b'",
+        "source_line": "score = score + self.bias.b(slots)  # type: ignore[attr-defined]"
+      },
+      "how": "try/except around RSRPolicy.select_eviction with b_enabled=True and a bias exposing exactly ProtectionBias's declared surface"
+    },
+    {
+      "key": "part1c_eviction_after_adding_b_accessor",
+      "kind": "observation",
+      "value": {
+        "outcome": "succeeded",
+        "victim": 12,
+        "attribution": "psi+b"
+      },
+      "how": "identical call after adding ONE member, b(slots), to the same class; this is the 'one side changes its shape' branch"
+    },
+    {
+      "key": "part1d_score_masks_dead_slots_itself",
+      "kind": "observation",
+      "value": "rsr.py:382 returns torch.where(live, score, +inf) after the b add",
+      "how": "read of src/rsr/retention/rsr.py lines 374-382"
+    },
+    {
+      "key": "seeds",
+      "kind": "observation",
+      "value": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "how": "explicit seed list; torch.Generator().manual_seed(seed) drives phi init, gestalts, salience and the u_bar noise"
+    },
+    {
+      "key": "n_streams_per_seed",
+      "kind": "observation",
+      "value": 12,
+      "how": "scratch harness constant"
+    },
+    {
+      "key": "n_evictions_per_seed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        480.0,
+        480.0,
+        480.0,
+        480.0,
+        480.0
+      ],
+      "mean": 480.0,
+      "sd": 0.0,
+      "how": "count of driver.select_eviction calls where memory was full",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "driver_top2_score_margin_median",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.31433945894241333,
+        0.35439354181289673,
+        0.3115962743759155,
+        0.3290451169013977,
+        0.3536638617515564
+      ],
+      "mean": 0.33260765075683596,
+      "sd": 0.02065118330520746,
+      "how": "median of EvictionRecord.score_margin over the b_enabled=False driver; z-scored psi_hat units, gamma_b-independent",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "realized_mean_slot_lifetime_steps",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        25.566666666666666,
+        26.625,
+        26.629166666666666,
+        26.839583333333334,
+        26.8125
+      ],
+      "mean": 26.49458333333333,
+      "sd": 0.5282628436152259,
+      "how": "step - written_at at eviction, driver arm (b_enabled=False, learned head)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "frac_slot_steps_update_fired",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.48473958333333333,
+        0.5066666666666667,
+        0.48494791666666665,
+        0.5012760416666666,
+        0.4853125
+      ],
+      "mean": 0.49258854166666666,
+      "sd": 0.010566365735314616,
+      "how": "fraction of (step x live slot) pairs where u_bar was outside the tau band. Property of the SYNTHETIC u_bar generator and tau=0.25, NOT a measurement of the 0.25 in section 3.5 item 4's formula.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "attribution_driver",
+      "kind": "observation",
+      "value": {
+        "psi": 480
+      },
+      "how": "RSRPolicy.attribution_counts() on the b_enabled=False driver, seed 0"
+    },
+    {
+      "key": "attribution_b_arm",
+      "kind": "observation",
+      "value": {
+        "psi+b": 480
+      },
+      "how": "RSRPolicy.attribution_counts() on the b_enabled=True arm at gamma_b=0.1, seed 0"
+    },
+    {
+      "key": "frac_evictions_changed_gamma_b_0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "victim under b_enabled=True vs the b_enabled=False driver on the IDENTICAL MemoryState and the SAME shared value head, per eviction",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "max_abs_b_attained_gamma_b_0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "max |b_i| over the whole seed run, from bias.values()",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "mean_b_spread_over_live_at_eviction_gamma_b_0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "mean of (max b_i - min b_i) over live slots at eviction time",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "frac_evictions_b_uniform_over_live_gamma_b_0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where b was identical across all live slots (spread exactly 0) and so could not move the argmin",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "frac_evictions_changed_gamma_b_0p001",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.014583333333333334,
+        0.022916666666666665,
+        0.016666666666666666,
+        0.027083333333333334,
+        0.025
+      ],
+      "mean": 0.021249999999999998,
+      "sd": 0.005392574627310328,
+      "how": "victim under b_enabled=True vs the b_enabled=False driver on the IDENTICAL MemoryState and the SAME shared value head, per eviction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "max_abs_b_attained_gamma_b_0p001",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.07899998128414154,
+        0.07899998128414154,
+        0.07899998128414154,
+        0.07899998128414154,
+        0.07899998128414154
+      ],
+      "mean": 0.07899998128414154,
+      "sd": 0.0,
+      "how": "max |b_i| over the whole seed run, from bias.values()",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "mean_b_spread_over_live_at_eviction_gamma_b_0p001",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0955478694367533,
+        0.09678745158792784,
+        0.09393745568425706,
+        0.09257912278020133,
+        0.09750828402272115
+      ],
+      "mean": 0.09527203670237214,
+      "sd": 0.0020252320815540214,
+      "how": "mean of (max b_i - min b_i) over live slots at eviction time",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "frac_evictions_b_uniform_over_live_gamma_b_0p001",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where b was identical across all live slots (spread exactly 0) and so could not move the argmin",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "frac_evictions_changed_gamma_b_0p01",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.25833333333333336,
+        0.25,
+        0.23958333333333334,
+        0.25,
+        0.25625
+      ],
+      "mean": 0.25083333333333335,
+      "sd": 0.007306532465312575,
+      "how": "victim under b_enabled=True vs the b_enabled=False driver on the IDENTICAL MemoryState and the SAME shared value head, per eviction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "max_abs_b_attained_gamma_b_0p01",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.7899995446205139,
+        0.7899995446205139,
+        0.7899995446205139,
+        0.7899995446205139,
+        0.7899995446205139
+      ],
+      "mean": 0.7899995446205139,
+      "sd": 0.0,
+      "how": "max |b_i| over the whole seed run, from bias.values()",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "mean_b_spread_over_live_at_eviction_gamma_b_0p01",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9554788246750832,
+        0.9678746475527684,
+        0.9393746723731359,
+        0.9257913472751776,
+        0.9750829771161079
+      ],
+      "mean": 0.9527204937984546,
+      "sd": 0.020252328923825554,
+      "how": "mean of (max b_i - min b_i) over live slots at eviction time",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "frac_evictions_b_uniform_over_live_gamma_b_0p01",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where b was identical across all live slots (spread exactly 0) and so could not move the argmin",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "frac_evictions_changed_gamma_b_0p05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.575,
+        0.5416666666666666,
+        0.5645833333333333,
+        0.5708333333333333,
+        0.56875
+      ],
+      "mean": 0.5641666666666667,
+      "sd": 0.013126653335019473,
+      "how": "victim under b_enabled=True vs the b_enabled=False driver on the IDENTICAL MemoryState and the SAME shared value head, per eviction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "max_abs_b_attained_gamma_b_0p05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "max |b_i| over the whole seed run, from bias.values()",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "mean_b_spread_over_live_at_eviction_gamma_b_0p05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.9948958377043406,
+        1.9970833361148834,
+        1.9973958358168602,
+        1.9884375077982743,
+        1.9993750008443991
+      ],
+      "mean": 1.9954375036557515,
+      "sd": 0.004223181781991754,
+      "how": "mean of (max b_i - min b_i) over live slots at eviction time",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "frac_evictions_b_uniform_over_live_gamma_b_0p05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where b was identical across all live slots (spread exactly 0) and so could not move the argmin",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "frac_evictions_changed_gamma_b_0p075",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5916666666666667,
+        0.5666666666666667,
+        0.5833333333333334,
+        0.6,
+        0.5916666666666667
+      ],
+      "mean": 0.5866666666666667,
+      "sd": 0.012638125740085916,
+      "how": "victim under b_enabled=True vs the b_enabled=False driver on the IDENTICAL MemoryState and the SAME shared value head, per eviction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "max_abs_b_attained_gamma_b_0p075",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "max |b_i| over the whole seed run, from bias.values()",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "mean_b_spread_over_live_at_eviction_gamma_b_0p075",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.999739582836628,
+        2.0,
+        2.0,
+        1.998802082488934,
+        2.0
+      ],
+      "mean": 1.9997083330651122,
+      "sd": 0.0005190075764773259,
+      "how": "mean of (max b_i - min b_i) over live slots at eviction time",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "frac_evictions_b_uniform_over_live_gamma_b_0p075",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where b was identical across all live slots (spread exactly 0) and so could not move the argmin",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "frac_evictions_changed_gamma_b_0p1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6,
+        0.575,
+        0.5895833333333333,
+        0.6041666666666666,
+        0.60625
+      ],
+      "mean": 0.595,
+      "sd": 0.012893123705638165,
+      "how": "victim under b_enabled=True vs the b_enabled=False driver on the IDENTICAL MemoryState and the SAME shared value head, per eviction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "max_abs_b_attained_gamma_b_0p1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "max |b_i| over the whole seed run, from bias.values()",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "mean_b_spread_over_live_at_eviction_gamma_b_0p1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.0,
+        2.0,
+        2.0,
+        2.0,
+        2.0
+      ],
+      "mean": 2.0,
+      "sd": 0.0,
+      "how": "mean of (max b_i - min b_i) over live slots at eviction time",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "frac_evictions_b_uniform_over_live_gamma_b_0p1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where b was identical across all live slots (spread exactly 0) and so could not move the argmin",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "correction4_predicted_max_abs_b_at_gamma_b_0.001",
+      "kind": "observation",
+      "value": 0.08,
+      "how": "correction 4's own arithmetic: gamma_b * S = 0.001 * 80 = 0.08 SD, computed here rather than quoted"
+    },
+    {
+      "key": "harness_selftest_frac_changed_gamma_b_zero",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "internal control: gamma_b=0 makes b identically 0, so a b_enabled=True arm MUST agree with the driver on every eviction. Non-zero = broken harness",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "summary_mean_frac_changed",
+      "kind": "observation",
+      "value": {
+        "0.001": 0.021249999999999998,
+        "0.05": 0.5641666666666667,
+        "0.1": 0.595
+      },
+      "how": "means of the per-gamma_b statistic rows above, recomputed here"
+    },
+    {
+      "key": "sd_zero_rows_investigated",
+      "kind": "observation",
+      "value": {
+        "n_evictions_per_seed": "structural: N_STREAMS * (S - M) = 12 * 40 = 480, no RNG involved",
+        "max_abs_b_attained_gamma_b_0p001/0p01": "CEILING, not a dead seed: 0.079 = 0.001 * 79 and 0.79 = 0.01 * 79. Some slot survives from step 0 to step 79 of a stream in every seed and fires a down-step every step, so the max is pinned at gamma_b * (S - 1) in all five seeds.",
+        "max_abs_b_attained_gamma_b_0p05/0p075/0p1": "CLIP at b_max = 1.0.",
+        "mean_b_spread_gamma_b_0p1": "SATURATION: b sits at -b_max and +b_max simultaneously at essentially every eviction, so the spread is 2.0 = 2 * b_max identically.",
+        "frac_evictions_b_uniform_over_live": "0.0 for every gamma_b > 0 and 1.0 at gamma_b = 0; both are structural, not sampled.",
+        "harness_selftest_frac_changed_gamma_b_zero": "the control; 0.0 is the required value.",
+        "seed_does_reach_the_rng": "driver_top2_score_margin_median sd=0.021, realized_mean_slot_lifetime_steps sd=0.53, frac_slot_steps_update_fired sd=0.011 and every frac_evictions_changed row at gamma_b > 0 has sd > 0. phi init, gestalts, salience and the u_bar noise all move with the seed."
+      },
+      "how": "per-row inspection of the sd=0.0 statistics written by this same process"
+    },
+    {
+      "key": "frac_driver_margin_below_0p079",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.14166666666666666,
+        0.15416666666666667,
+        0.16875,
+        0.15,
+        0.13541666666666666
+      ],
+      "mean": 0.15,
+      "sd": 0.012757759076995728,
+      "how": "fraction of driver evictions whose top-2 z-scored psi_hat margin is below the max |b| attainable at gamma_b = 0.001; the structural ceiling on how often a 0.08-SD bias could flip anything",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "frac_driver_margin_below_0p158",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.30625,
+        0.29791666666666666,
+        0.30416666666666664,
+        0.26666666666666666,
+        0.2708333333333333
+      ],
+      "mean": 0.2891666666666667,
+      "sd": 0.018945737573982768,
+      "how": "same, at twice that (two slots can move in opposite directions)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "flip_margin_median_gamma_b_0p001",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.01570439338684082,
+        0.021356821060180664,
+        0.008833527565002441,
+        0.01039886474609375,
+        0.025755882263183594
+      ],
+      "mean": 0.016409897804260255,
+      "sd": 0.007173756270568494,
+      "how": "median top-2 driver margin over exactly those evictions gamma_b=0.001 flipped -- shows whether it only moves near-ties",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "flip_margin_median_gamma_b_0p1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.23824656009674072,
+        0.2758346199989319,
+        0.2706446647644043,
+        0.30822163820266724,
+        0.26412177085876465
+      ],
+      "mean": 0.27141385078430175,
+      "sd": 0.025140563157034716,
+      "how": "same at gamma_b = 0.1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "d1_claim_under_test",
+      "kind": "observation",
+      "value": {
+        "correction_4_text": "at gamma_b = 0.001 the control loop cannot move the argmin, and is operationally identical to b == 0",
+        "measured_max_abs_b": 0.079,
+        "correction_4_predicted_max_abs_b": 0.08,
+        "frac_changed_at_0.001": 0.021249999999999998,
+        "frac_changed_at_b_identically_zero": 0.0
+      },
+      "how": "assembled from the statistic rows above, all written by this process"
+    },
+    {
+      "key": "saturation_finding",
+      "kind": "observation",
+      "value": {
+        "frac_slot_steps_u_bar_outside_tau_band": 0.49258854166666666,
+        "formula_assumes": 0.25,
+        "comment": "section 3.5 item 4's gamma_b formula divides E[lifetime] by 4 because updates fire 'on order a quarter of steps'. Under this synthetic heavy-tailed u_bar with tau = 0.25 they fire on ~half of slot-steps, so the formula's 0.25 is not a property of tau alone. This measures the SYNTHETIC generator, not reality."
+      },
+      "how": "frac_slot_steps_update_fired row, averaged"
+    }
+  ],
+  "verdict": {
+    "falsifier": "ProtectionBias's declared interface and RSRPolicy._score()'s call site describe the same object.",
+    "outcome": "falsified",
+    "detail": "See part1a/part1b/part1c rows. part1b drives one eviction with a fully working object exposing exactly ProtectionBias's four declared members; part1c repeats it after adding one member, b(slots). Whichever way it reconciles, one side changed shape."
+  },
+  "finished_utc": "2026-09-18T07:54:07Z"
+}
