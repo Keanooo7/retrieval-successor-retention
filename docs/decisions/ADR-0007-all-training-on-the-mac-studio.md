@@ -89,6 +89,20 @@ analogue, and a number measured here is not a claim about anything else.
   purchase from weeks 1–4; it says nothing about weeks 5–7, which remain a
   projection.
 
+## Measured, 2026-09-17 (E0C)
+
+`experiments/e0c/RESULTS.md` carries the table. Two things it changed about how the
+question is asked:
+
+1. **`ru_maxrss` is a process high-water mark.** Measuring a grid in one process
+   makes every row inherit the peak of the row before it. One subprocess per point.
+2. **RSS does not measure MPS allocations.** The first MPS run reported 0.44 GB for
+   a configuration that needs ~26 GB on CPU, because Metal memory does not appear in
+   the process's resident size. On unified memory it is the same 64 GB either way,
+   so `torch.mps.driver_allocated_memory()` is the figure that competes with
+   everything else. A number that low should have been read as a broken metric, not
+   as good news, and it nearly was not.
+
 ## Consequence for §13
 
 §13 gains an entry, replacing the rental one: **every throughput and capacity number

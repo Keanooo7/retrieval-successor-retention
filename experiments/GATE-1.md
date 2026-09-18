@@ -11,7 +11,7 @@ Every criterion carries pass / fail / not-run **with an evidence link**. Per
 | T2 | Pre-register E0i's threshold | committed **before** any histogram is computed | ☐ **drafted, unsigned** | `preregistration/e0i_threshold.md` |
 | T3 | E0i — coref histogram + 100-item precision/recall | histogram vs the T2 threshold | ☐ | `experiments/e0i/RESULTS.md` |
 | T4 | E0g — name and obtain the E7 stimulus set | availability, licensing, position-independence; **report regardless of outcome** | ☐ | [ADR-0005](../docs/decisions/ADR-0005-e7-stimulus-set.md) |
-| T5 | E0c — memory and throughput **on the Mac Studio** | a committed `(S, d, batch)` triple, measured on the machine that will run it | ☐ | `experiments/e0c/RESULTS.md` |
+| T5 | E0c — memory and throughput **on the Mac Studio** | a committed `(S, d, batch)` triple, measured on the machine that will run it | ◐ measured, writing up | `experiments/e0c/RESULTS.md` |
 | T6 | E0d — `r_i` vs LOO Δloss | per-layer profile, then Spearman ρ | ☐ | `experiments/e0d/RESULTS.md` |
 | T7 | E0a — μP coordinate check ×2 | activation RMS width-invariant; `ψ̂` output scale checked specifically | ☐ | `experiments/e0a/RESULTS.md` |
 | ~~T8~~ | ~~GPU procurement~~ | **DROPPED** — no GPU is rented; everything runs on the Mac Studio | ✔ n/a | [ADR-0007](../docs/decisions/ADR-0007-all-training-on-the-mac-studio.md) |
@@ -48,33 +48,30 @@ candidates fail the spec's own criterion.
 
 ## Schedule honesty
 
-T5, T6 and T7 sit behind the PyTorch TG transcription. The golden-tensor
-extraction is **done** (gauntlet 2.3); T8 is **dropped** (ADR-0007). If they have not completed they are
+T6 and T7 sat behind the PyTorch TG transcription, which is **done** (gauntlet 2.4),
+as is the golden-tensor extraction (2.3) and E0b (2.6). T8 is **dropped**
+(ADR-0007). If they have not completed they are
 reported here as **in progress with a dated forecast**, not passed on a forecast.
 The kickoff's own note is that the week-4 gate is the milestone whose slip slips
 everything, so a slip is stated rather than absorbed.
 
 ## Tests currently skipped, and therefore NOT passing
 
-Current suite, literal, at `33f5ad6`:
+Current suite, literal, at `3e19dcb`:
 
 ```
-passed=199 failed=0 skipped=7 errors=0
+passed=239 failed=0 skipped=0 errors=0
 ```
 
-**Seven skips, both reasons true for their tests:**
+**Zero skips.** Both former blockers are closed:
 
-- `tests/test_fidelity.py` (6) — blocked on the **golden-tensor extraction**, which
-  is behind T8. ADR-0002's tolerance half is now **closed** (committed `0c200d3`,
-  before any fixture exists — gauntlet 2.2), so the remaining blocker is the
-  extraction and the transcription, not the tolerance.
-- `tests/test_reduction.py::test_loss_curve_is_bit_exact_against_stock_tg` (1) —
-  blocked on the PyTorch TG transcription.
-
-**The rest of `test_reduction.py` now runs.** It was skipped at module level under a
-reason false for most of it (gauntlet 0.6): the §3.7 off-switch contract and the
-eviction-rule reduction need no TG, and were therefore enforced by nothing. Twelve
-tests there are live, including the mutation that reddens the reduction.
+- `tests/test_fidelity.py` — the golden tensors were extracted on **this machine's
+  CPU** (gauntlet 2.3, ADR-0007) and the PyTorch transcription is green against
+  them, forward and gradients, within ADR-0002's committed tolerance. Worst
+  quantity uses 11.5% of its allowance; the loss is bit-identical.
+- `tests/test_reduction.py` — E0b is green and **bit-exact**: stock TG, the §3.7
+  reduction and the explicit FIFO policy all give `125.310546875`, and the learned
+  head does not.
 
 ## Exit codes — `3` is not `0`
 
