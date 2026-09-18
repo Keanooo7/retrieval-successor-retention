@@ -99,8 +99,10 @@ All raised by Brendan, all examined, all resolve **in favour of the plan as writ
 1. **Pin `c_t`: raw sentence gestalt, or running context vector?** §3.2.2 allows either. TG L2-normalises
    gestalts to unit length, so the two have **different norms and therefore different correct μP
    multipliers**. **E0a cannot run until this is pinned** — it would be measuring an underspecified object.
-2. **ADR-0002 (rented hardware) is a draft with every decision cell empty.** It gates the fidelity
-   tolerance, the VRAM number E0c sizes against, and §16 condition 8.
+2. ~~ADR-0002 (rented hardware)~~ — **RESOLVED 2026-09-17, no longer a decision.** The fidelity
+   tolerance is fixed by D-H (float32; forward `atol=1e-5, rtol=1e-4`; gradients `atol=1e-4,
+   rtol=1e-3`), the VRAM number is now simply the Studio's, and §16 condition 8 is moot because
+   **no compute is rented.** The ADR should be superseded, not filled in.
 3. **Sign the E0i pre-registration** — and reconcile first: the MacBook derivation says ≥150 events per
    bin from a stated `σ_d`; the Studio says `N × p² ≥ 400`. They agree the attenuation exponent is
    **`p²` not `p`** (the MacBook version was wrong and has an errata). They disagree on the number.
