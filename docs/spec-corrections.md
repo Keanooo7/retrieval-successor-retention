@@ -327,3 +327,72 @@ pinned, E0a is measuring an underspecified object.
 *Resolved by them while checking this, and worth recording so nobody re-opens it:* §5.1's "gestalt
 layer 7" and the config's `srep_extraction_layer = 6` **agree** — `tg_model.py` enumerates blocks from
 zero, so index 6 is the 7th block. No discrepancy.
+
+---
+
+### S-7 · Sentence length is an uncontrolled confound in E7 ⚠️ **new 2026-09-17, raised by Brendan**
+
+**Origin:** noticed while reading D-15 (unit-norm gestalts). The route there was wrong and the
+destination is right, so both are recorded.
+
+**Where the intuition does not hold.** `‖s‖₂ = 1` is not a capacity limit. A unit vector in `d`
+dimensions carries its information in its *direction*; normalising discards exactly one scalar
+degree of freedom out of `d`. "Length 1" is not "holds about eight words."
+
+**Where it does.** Normalising discards **magnitude** — and magnitude is where *how much was
+successfully encoded* would live. TG cites **St. John & McClelland (1990)**, the original Sentence
+Gestalt model, as its ancestor; in that lineage the gestalt is a distributed activation pattern in
+which magnitude carries **strength**. Forcing `srep_norm_target = 1.0` removes that channel. So:
+
+> **TG writes every sentence into memory at identical strength regardless of how much was
+> compressed into it.** A 4-word sentence and a 43-word sentence produce equally loud entries.
+
+**Humans demonstrably do not.** Comprehension falls with sentence length. The widely-circulated
+figures — 8 words ≈ 100%, 14 ≈ 90%, 21 ≈ 50–60%, 43+ ≈ <10% — come from an **American Press
+Institute** study correlating length against comprehension across 410 newspapers.
+⚠️ **That is correlational readability research, not a controlled psycholinguistic experiment.**
+The *shape* is well supported; the specific percentages are one press study and must not be cited as
+a measured constant.
+
+### Why this lands on E7 specifically
+
+E7 asks whether RSR's retention tracks human recall. **It assumes both systems encoded the material
+comparably.** They do not:
+
+| | encodes long sentences | so it "forgets" them because |
+|---|---|---|
+| human | **poorly** — degraded at encoding | it never represented them well |
+| TG | **equally well** at any length | the retention policy chose to drop them |
+
+So a correlation between *what RSR drops* and *what people fail to recall* can be produced by
+**sentence length alone**, with no retention policy involved. That is a confound in the project's
+**primary** claim.
+
+📌 And the regime is not hypothetical: **[P2]'s own training corpus averages ~25 words per
+sentence** — the paper states it directly, deriving `~25 × 30 ≈ 750` tokens per stream. On the API
+curve that is the 50–60% band. The model was trained where human comprehension is already halved,
+while treating every one of those sentences as a clean unit.
+
+### The fix — cheap, and it is a move §10.1 already makes
+
+**Partial sentence length out of the E7 correlation**, exactly as §10.1 partials out serial position.
+One extra regressor.
+
+- If the correlation **survives**, the result is stronger than it would otherwise have been.
+- If it **does not**, RSR is tracking sentence length rather than structural importance — a form of
+  the §7.1 vacuity failure that no falsifier currently names, and which the age-based vacuity gate
+  cannot see.
+
+### Two reasons this is invisible today
+
+1. **The synthetic corpus cannot show it.** Measured over 1,536 sentences: mean **4.1** words, max
+   **6**, and **zero** sentences over 8. Every one sits in the 100% band. E1 and E2 test the
+   mechanism and are correct to; the length effect simply cannot appear there.
+2. **`max_sentence_tokens = 64`** (~45–50 words) truncates rather than degrades. That is a length
+   effect of a different shape — a cliff, where the human curve is a gradient.
+
+### Also worth recording
+
+Normalising away magnitude is a **departure from the Sentence Gestalt lineage TG names as its
+ancestor**, not an implementation detail. If there is ever an exchange with the authors, it is a
+better question than most: *was discarding magnitude deliberate, and what happened to strength?*
