@@ -56,5 +56,40 @@ everything, so a slip is stated rather than absorbed.
 
 ## Tests currently skipped, and therefore NOT passing
 
-- `tests/test_reduction.py` — blocked on the transcription.
-- `tests/test_fidelity.py` — blocked on ADR-0002's tolerance and the extraction.
+Current suite, literal, at `33f5ad6`:
+
+```
+passed=199 failed=0 skipped=7 errors=0
+```
+
+**Seven skips, both reasons true for their tests:**
+
+- `tests/test_fidelity.py` (6) — blocked on the **golden-tensor extraction**, which
+  is behind T8. ADR-0002's tolerance half is now **closed** (committed `0c200d3`,
+  before any fixture exists — gauntlet 2.2), so the remaining blocker is the
+  extraction and the transcription, not the tolerance.
+- `tests/test_reduction.py::test_loss_curve_is_bit_exact_against_stock_tg` (1) —
+  blocked on the PyTorch TG transcription.
+
+**The rest of `test_reduction.py` now runs.** It was skipped at module level under a
+reason false for most of it (gauntlet 0.6): the §3.7 off-switch contract and the
+eviction-rule reduction need no TG, and were therefore enforced by nothing. Twelve
+tests there are live, including the mutation that reddens the reduction.
+
+## Exit codes — `3` is not `0`
+
+`did not run` must never be reported as `found nothing`. In ML a run that produced
+no metric looks exactly like a run that produced a bad one.
+
+| Item | Code | Meaning here |
+|---|---|---|
+| E0i threshold | **3** | `p` unmeasured until T3; the gate **cannot be evaluated**, and that is not a pass. See `preregistration/e0i_threshold.md` §1. |
+| `test_fidelity.py` | **3** | unrun, pending the extraction |
+| E0b loss curve | **3** | unrun, pending the transcription |
+| E0b reduction + off-switch contract | **0** | passing, and mutation-proven |
+
+## Mutation battery
+
+`docs/mutation-battery.md`, **17/17 gates proven**. Two came back UNPROVEN on the
+first run and are recorded there rather than fixed away — a gate no mutation reddens
+adds nothing, and saying so is the finding.
