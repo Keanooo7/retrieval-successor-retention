@@ -8,8 +8,8 @@ Every criterion carries pass / fail / not-run **with an evidence link**. Per
 | # | Task | Exit criterion | Status | Evidence |
 |---|---|---|---|---|
 | T1 | Scaffold, CLAUDE.md, CI, constants registry, policy protocol | CI green; `pytest` passes; `docs/spec-corrections.md` committed | ☐ | |
-| T2 | Pre-register E0i's threshold | committed **before** any histogram is computed | ☐ **drafted, unsigned** | `preregistration/e0i_threshold.md` |
-| T3 | E0i — coref histogram + 100-item precision/recall | histogram vs the T2 threshold | ☐ | `experiments/e0i/RESULTS.md` |
+| T2 | Pre-register E0i's threshold | committed **before** any histogram is computed | ☐ **final, UNSIGNED** — numbers reconciled (D-G) and corrected (DEFF, `p_LCB`); awaiting a human signature | `preregistration/e0i_threshold.md` §6 |
+| T3 | E0i — coref histogram + 100-item precision/recall | histogram vs the T2 threshold | ☐ **exit 3 — did not run** | `experiments/e0i/RESULTS.md` |
 | T4 | E0g — name and obtain the E7 stimulus set | availability, licensing, position-independence; **report regardless of outcome** | ☐ | [ADR-0005](../docs/decisions/ADR-0005-e7-stimulus-set.md) |
 | T5 | E0c — memory and throughput **on the Mac Studio** | a committed `(S, d, batch)` triple, measured on the machine that will run it | ◐ measured, writing up | `experiments/e0c/RESULTS.md` |
 | T6 | E0d — `r_i` vs LOO Δloss | per-layer profile, then Spearman ρ | ☐ | `experiments/e0d/RESULTS.md` |
@@ -80,7 +80,7 @@ no metric looks exactly like a run that produced a bad one.
 
 | Item | Code | Meaning here |
 |---|---|---|
-| E0i threshold | **3** | `p` unmeasured until T3; the gate **cannot be evaluated**, and that is not a pass. See `preregistration/e0i_threshold.md` §1. |
+| E0i threshold | **3** | `p` unmeasured until T3; the gate **cannot be evaluated**, and that is not a pass. See `preregistration/e0i_threshold.md` §1. 🔴 **Signed will not change this.** A signature records that a number was committed to before the data; it supplies no measurement. E0i stays exit 3 until T3 reports `p`, signed or not. |
 | `test_fidelity.py` | **3** | unrun, pending the extraction |
 | E0b loss curve | **3** | unrun, pending the transcription |
 | E0b reduction + off-switch contract | **0** | passing, and mutation-proven |
