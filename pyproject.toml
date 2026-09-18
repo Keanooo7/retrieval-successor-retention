@@ -43,12 +43,17 @@ packages = ["src/rsr"]
 [tool.ruff]
 line-length = 90
 src = ["src", "tests"]
+# third_party/ is a pinned, READ-ONLY source reference (ADR-0001, PINS.md). It must
+# never be reformatted or "fixed": the fidelity harness compares against tensors
+# from exactly this tree, and D-A makes the code the reference by construction.
+extend-exclude = ["third_party"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+norecursedirs = ["third_party", ".venv"]
 addopts = "-q --strict-markers"
 markers = [
   "slow: needs a trained model or a corpus pass; excluded from the fast loop",

@@ -1,0 +1,69 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# Copied from github.com/google/jax-md and github.com/google/jax
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: build
+
+on:
+  push:
+    branches:
+    - main
+    - 'test_*'
+
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  Linux:
+
+    timeout-minutes: 120
+
+    strategy:
+      matrix:
+        python-version: ['3.10', 3.11]
+        JAX_ENABLE_X64: [0, 1]
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Cancel previous
+      uses: styfle/cancel-workflow-action@0.12.1
+      with:
+        access_token: ${{ github.token }}
+    - uses: actions/checkout@v4.1.1
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5.0.0
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install
+      run: |
+        pip install --upgrade pip
+        pip install -e .
+
+    - name: Import check
+      run: |
+        JAX_ENABLE_X64=${{ matrix.JAX_ENABLE_X64 }} python -c "
+        from tg.models import factory, tg_model, tg_config
+        from tg.data import tg as tg_data
+        from tg.training import tg_train, tg_loss, tg_optimizer
+        from tg.inference import tg as tg_infer, probes
+        from tg.configs import tg_default
+        cfg = tg_config.TgConfig(**tg_default.get_config().model, V=50261)
+        assert cfg.L == 66, cfg.L
+        print('import + config OK')
+        "
+
+    - name: Config check
+      run: |
+        python -c "
+        from tg.configs import tg_default, default, gpt2_boundary, gpt2_gist
+        from tg.models import factory
+        for name, mod in [('tg', tg_default), ('do', default),
+                          ('boundary', gpt2_boundary), ('gist', gpt2_gist)]:
+            factory.get_model_and_loss(mod.get_config(), 50261)
+            print(name, 'OK')
+        "

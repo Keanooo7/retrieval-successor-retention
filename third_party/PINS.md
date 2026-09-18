@@ -8,7 +8,7 @@ The reference implementation of [P2], Thought Gestalt.
 |---|---|
 | Upstream | https://github.com/jlmcc94303/ThoughtGestaltCode |
 | Licence | Apache-2.0 |
-| Pinned commit | `f220b109` — "Add corpus preprocessing and dataset subset scripts.", 2026-09-02 |
+| Pinned commit | `f220b1098d24a02c94907043d6205c113b31ebb6` — "Add corpus preprocessing and dataset subset scripts.", 2026-09-02 |
 | Release commit | `a0079d08` — "Release Thought Gestalt: sentence-level recurrent LM built on NanoDO", 2026-08-21 |
 | Framework | **JAX / Flax**, built on [`google-deepmind/nanodo`](https://github.com/google-deepmind/nanodo) (Apache-2.0) |
 | Paper | https://arxiv.org/abs/2512.25026 |
@@ -54,20 +54,63 @@ peak LR 2.5e-4, cosine decay, linear warmup from 0 · token-budget bucketing at
 20,000 supervised tokens/step · stream curriculum 30 sentences, **+12 every 5
 epochs**.
 
-Note the spec says the gestalt layer is **7** (§5.1, citing [P2]) while the
-reference README says **6**. Resolve during transcription against `tg_srep_head.py`
-and record the answer here. Off-by-one in layer indexing is the likely explanation
-and it must not be guessed.
+### RESOLVED — the gestalt layer is 6 **0-indexed**, which is the spec's 7
+
+`tg/models/tg_config.py:146`:
+
+```python
+srep_extraction_layer: int = 6  # 0-indexed block whose output feeds the head
+```
+
+and `srep_layer_idx` returns `min(srep_extraction_layer, N - 1)`. **The spec's
+"layer 7" (§5.1, 1-indexed) and the README's "layer 6" (0-indexed) are the same
+block.** The off-by-one was the explanation; it was verified against the source, not
+guessed. The transcription indexes from 0 and extracts at block 6.
 
 **Sprint 1 transcribes `d = 128` only** (ADR-0001 D5). `d` stays a config axis;
 other widths instantiate at E0a and E5.
 
-### Vendoring
-
-Not yet vendored — pending the first step of the Sprint 1 critical path. Vendor with:
+### Vendoring — DONE, 2026-09-17 (gauntlet 2.1)
 
 ```bash
 git clone https://github.com/jlmcc94303/ThoughtGestaltCode third_party/ThoughtGestaltCode
 git -C third_party/ThoughtGestaltCode checkout f220b109
 rm -rf third_party/ThoughtGestaltCode/.git
 ```
+
+**Verified against the pin before `.git` was removed:**
+
+```
+$ git -C third_party/ThoughtGestaltCode rev-parse HEAD
+f220b1098d24a02c94907043d6205c113b31ebb6
+```
+
+42 tracked files, 292 KB after removing `.git`. **Read-only.** JAX is not installed
+here and is not a dependency; this tree is a source reference and the origin of a
+one-time tensor extraction that runs on rented hardware.
+
+Because `.git` is gone, the sha cannot be re-derived from the tree. It is recorded
+above and in the vendoring commit message; re-verify by re-cloning if it ever
+matters.
+
+### What the vendored source settled
+
+Six claims that were previously **relayed** from a session that had the tree are now
+read directly here. See `docs/code-vs-paper.md`, where each row carries its
+provenance mark:
+
+| Claim | Where | Verdict |
+|---|---|---|
+| Gestalt is L2-normalized, `srep_norm_target = 1.0` | `tg_srep_head.py`, `tg_config.py:149` | confirmed |
+| `P^(sent)` is rank-indexed, keys only | `tg_cross_attention.py:65-70,158` | confirmed |
+| `memory_gate` is a per-layer learnable scalar, applied before the residual add | `tg_model.py:311-314` | confirmed |
+| `attn_dropout = 0.2` | `tg_config.py:134` | confirmed |
+| Cross-attention on six layers | `DEFAULT_BLOCK_CONFIG = ('S','C') * 6` | confirmed — blocks 1,3,5,7,9,11 (0-indexed) |
+| Gestalt layer 6 vs 7 | `tg_config.py:146` | resolved: same block, different base |
+
+And four the audit had not seen at all, now recorded as new rows in
+`docs/code-vs-paper.md`: the S_REP head is `LayerNorm -> dropout -> MLP -> L2
+normalize` rather than a bare `W_sent`; there is an auxiliary **norm hinge penalty**
+on the *pre*-normalization norm; the sinusoidal positional encoding is **itself**
+L2-normalized; and `stm_cross_pos_mode`/`stm_positional_weight` give D-D's
+`P^(sent)`-ablated arm as a config flag rather than new code.
