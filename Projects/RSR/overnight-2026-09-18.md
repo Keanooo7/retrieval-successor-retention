@@ -208,3 +208,88 @@ the bias is untested and remains a live suspect. The other four cycle-1 walls al
 authoritative document; it is grounds for escalating. Both findings are in `for-brendan`.
 
 ---
+
+## Cycle 3 — can `attribution` tell an eviction `b` decided from one it didn't?
+
+| | |
+|---|---|
+| **Falsifier** | *"`EvictionRecord.attribution` distinguishes evictions that `b` decided from evictions that `b` did not."* |
+| **Dispatched** | fresh researcher, retired on hand-back |
+| **Verdict** | **falsified, decisively.** `attribution` is a config echo with a timestamp. |
+| **Verified by re-execution** | ✅ **Their headline claim, re-run by me.** Their construction is sharper than my brief asked for: a bias whose `b()` returns `torch.zeros(M)` is **provably** incapable of changing any argmin. Printed `same victim (b provably inert): True`, `attribution, b disabled: psi`, `attribution, b enabled but 0: psi+b`. So the tag is wrong even when the term is mathematically inert. I audited all 254 ledger rows; every reported number resolves, and `sd_zero_rows_unclassified` is `[]` — all 87 zero-sd rows classified in-process. |
+| **Ledger** | `runs/cycle-attribution-instrument/ledger.json` — 254 rows, 16 arms × 5 seeds × 480 evictions. |
+
+**The measurement.** `attribution` carries `"+b"` on **1.0000 ± 0.0000** of evictions in *every*
+`b_enabled=True` arm — including `γ_b = 0.0`, where `b` is identically zero and changed **0 of
+2400** victims. Two of the four confusion cells are empty in every arm and every seed.
+`I(attribution ; b-changed-victim) = 0.0000 ± 0.0000 bits` against a ground truth carrying
+**0.97340 ± 0.00683 bits** at correction 4's own `γ_b = 0.1`. `H(changed | attribution) =
+H(changed)` to every digit: conditioning on `attribution` removes **nothing**. And the mechanism
+is measured rather than argued — `n_distinct_attribution_strings_max_over_arms = 1.0000 ±
+0.0000` over all 16 runs: **no arm ever emitted a second attribution string across 480
+evictions.** At `γ_b = 0.001`, `"psi+b"` on 2400/2400 while 51 victims changed → **97.875% false
+labels.**
+
+🔴 **The consequence is release-relevant.** §3.4's *"if `b` flips a large share of decisions, the
+balance controller is the policy"* and §3.5 item 1's `ψ̂ ≪ b` are the two tests that would catch
+the takeover cycle 2 documented. **Neither is computable from a run's log today**, and the field
+that exists to compute them returns a constant.
+
+**`ν` has the same defect with an instructive asymmetry.** `ν`'s guard is `config.nu != 0.0`, and
+`0.0` *is* §3.7's off value, so the `ν = 0` control correctly emits no `"-nu"`. `b`'s guard is
+`config.b_enabled` — **a different knob from `γ_b`** — so `b_enabled=True, γ_b=0` is a provably
+inert bias reported as active, and **no value of `b_enabled` can express that state.** `ν`'s tag
+is wrong about *effect*; `b`'s tag is wrong about *presence*. `b` is the worse one, and it is the
+one §3.4 depends on.
+
+**`score_margin` is not a sufficient substitute — four ways, all measured.** No threshold
+separates the classes (0.947–0.996 of flipped evictions have a margin inside the unflipped
+range). In correction 4's range the best possible margin rule still misreads ~30% of decisions
+(0.295–0.320 error vs a 0.405–0.436 base rate). The high AUC at small `γ_b` is a **base-rate
+illusion** — AUC 0.972 at `γ_b = 0.001` yet threshold error 0.01875 barely beats "assume nothing
+flipped" (0.02125). The one sound use is a one-sided bound: `margin > 2·b_max` ⇒ `b` did not
+decide it (`0.0000 ± 0.0000` violations across all six arms), and the converse — the direction
+§3.4 needs — is worthless. **And they pre-empted the obvious fix**: logging the *pre-bias* margin
+is **worse** (AUC 0.643 ± 0.031 vs the arm's own 0.686 ± 0.029 at `γ_b = 0.05`). Margins are the
+wrong object; the counterfactual **victim** is the right one.
+
+**The specification they produced is the actionable deliverable.** One field does almost all the
+work: **`victim_without: dict[str, int]`** — the argmin with each optional term omitted, on the
+same state. Then `b` decided it **iff** `victim != victim_without["b"]`. Cost is one extra
+`argmin` over a `[M]` tensor already in registers inside `_score`, **not** a second forward pass.
+Plus: `attribution` becomes effect-derived (a `γ_b = 0` run then reports `"psi"`) with the
+configured set kept as a separate `terms_enabled` field — *the defect is the name, not the data*;
+six post-z-scoring per-term scalars so `ψ̂ ≪ b` becomes computable at all; `b_spread_live`; and
+`runner_up` beside `score_margin`, since a margin without the identity of the slot it is a margin
+*to* cannot be joined to anything. `warm` is the one existing field that is already effect-true,
+because the warmup branch genuinely bypasses the score.
+
+**Unplanned cross-cycle replication.** Their `iid` regime reproduced cycle 2's numbers to every
+reported digit — `0.02125 ± 0.00539`, `0.56417 ± 0.01313`, `0.59500 ± 0.01289` at `γ_b =
+0.001/0.05/0.1` — from a separately written harness. That is stronger evidence the cycle-2 result
+is real than either cycle alone, and it is an unplanned canary on the `γ_b` finding.
+
+**Secondary finding, and it bears on E1's design.** In `iid`, `ν = 1.0` changes only **2.46% ±
+0.68%** of victims, because 40 iid unit gestalts in `d = 384` have `mean_max_cosine 0.16514 ±
+0.00478`; in a `redundant` regime (0.38087 ± 0.00467) the same `ν` is **4.6× more active**. So
+**an E1 `ν` sweep on a corpus without near-duplicate gestalts will measure `ν ≈ inert`, and that
+will be a property of the corpus rather than of `ν`.**
+
+**Boundary.** ⚠️ `ū` is still synthetic and `observe()` still raises, so every rate is conditional
+on that generator and `τ = 0.25`. Nothing about `γ_b`/`ν`/`τ`/`b_max`/`E[lifetime]` as constants.
+Nothing about whether `b` or `ν` *helps* — "changed the victim" ≠ "made it worse", `φ` is random,
+no LM ran. `"fifo_warmup"` and `"neg_age"` were never exercised, so gauntlet 0.2's mode is
+untouched. One definition of "decided" (counterfactual victim change — the notion §3.4's own
+sentence uses); a weaker "reinforced" notion would score higher and was not measured. CPU only.
+
+**Two process notes.**
+- 🔴 **My error, second of the same class.** My brief named baseline `4866e7b`; `HEAD` was already
+  `026bef1` — I quoted the sha from an earlier `git log` instead of re-reading after committing
+  the timestamp fix. They caught it and verified the delta was `docs`/`src`/`tests`-empty. Cycle 1
+  was a stale *dirty-tree* claim, this was a stale *sha*. **Fix applied: the brief's baseline is
+  now read from `git rev-parse HEAD` at the moment of writing, not recalled.**
+- Minor, theirs: the report says the ledger stamped `git_dirty: false` at process start; the
+  ledger row says `true`. Cause is their own untracked `runs/` directory, so immaterial — but the
+  artifact and the prose disagree and the artifact wins.
+
+---
