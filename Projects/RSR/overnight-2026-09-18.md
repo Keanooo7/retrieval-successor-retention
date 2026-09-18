@@ -340,3 +340,94 @@ learning the corpus is **5.075 → 1.107**, not 10.82 → 1.11.
 cycles 8, 12, 16.
 
 ---
+
+## Cycle 5 — is `b_max = 1.0` really one SD of `ψ̂`?
+
+| | |
+|---|---|
+| **Falsifier** | *"`_score`'s z-scoring puts `b` on the scale §3.5 item 1 claims it does — `b_max = 1.0` really is one standard deviation of `ψ̂` as the policy sees it."* |
+| **Dispatched** | fresh researcher, retired on hand-back |
+| **Verdict** | **survived.** The normalizer is **0.98038 ± 0.01012** of `ψ̂`'s true sd, against a normal-theory prediction of **0.98111**. Item 1's sentence is off by 2.0%. |
+| **Verified by re-execution** | ✅ **Their headline claim, re-run by me.** Printed `n_live= 2 measured 0.56298 ± 0.01165 theory 0.56419` and `n_live=40 measured 0.98104 ± 0.00232 theory 0.98111` — within sd of their 5-seed rows, with independent RNG ordering. I also read `policy_loop.py:145` myself and confirmed the premise-killer below. 229 ledger rows audited, `sd_zero_rows_unclassified` is `[]`. |
+| **Ledger** | `runs/cycle-zscore-denominator/ledger.json` — 229 rows, CPU, 11.5 s. |
+
+🔴 **My brief's premise was false, and that is the load-bearing finding.**
+`src/rsr/model/tg/policy_loop.py:145` reads `if bool(mem.valid[row].all()): victim =
+policy.select_eviction(...)` — **the policy is consulted only when the row's memory is full.**
+Measured through the *real* `run_policy_loop` with a real `TGModel`:
+`part0_distinct_n_live_over_real_evictions = [8]` — one value, `= M`;
+`part0_frac_real_evictions_at_n_live_eq_M = 1.0000 ± 0.0000`. Memory fills 0→M monotonically and
+never un-fills, so `n = n_live` is **never** "small early in a stream" *at a decision*. The
+small-`n` bias is real in the estimator and **unreachable by the argmin.** I wrote that premise
+into the brief from reading `_score` in isolation without checking its one call site.
+
+**Side finding: `EvictionRecord.n_live` is a third config-echo field**, alongside cycle 3's
+`attribution` and the `b_enabled`/`γ_b` mismatch. It cannot vary.
+
+**They also declined to let me have the conclusion I'd set up for them.** The per-step-vs-pooled
+ratio *is* systematically ≠ 1 — `0.93260 ± 0.00665` — which is what my item 1 was fishing for. But
+`part1_frac_pooled_variance_from_between_step_means = 0.11833 ± 0.01237` and `1 − 0.9326² =
+0.1303`: **the entire gap is variance of the per-step *mean*, a constant added to all live slots,
+which `_score` subtracts one operation earlier** at `rsr.py:371`. A common additive offset cannot
+move an argmin. Pooling across steps measures a quantity the argmin is blind to. Variance
+decomposition residual `0.000000 ± 0.000000`.
+
+### The real explanation of cycle 2's 56–60% takeover — and it is not a bug
+
+**Two numbers, and conflating them is how item 1 reads as a protection when it is not one.**
+
+- **In `ψ̂`-sd units, item 1's literal claim is right**: `b_max` = **0.98280 ± 0.00360** true SDs.
+- **In decision units it is `3.24786 ± 0.04523`** — `b_max` is **3.25× the median top-2 z-margin**,
+  and **92.278% ± 0.453%** of decisions have a margin `b_max` alone could cross.
+
+🔴 **§3.5 item 1's argument is a true statement that does no protective work.** The quantity the
+argmin turns on is not `ψ̂`'s spread — it is the *gap between the two smallest of `M` draws*, which
+for `M = 40` is ~0.31 SD. One SD of protection against a 0.31 SD gap is not protection.
+
+**So correction 4's `γ_b` range was derived against the right denominator.** Forcing the "correct"
+`unbiased=True` denominator moves **0.4%** of victims (`0.00333 ± 0.00186` at `γ_b = 0.1`), and
+0.08 SD of a denominator 2% low is still 0.08 SD. **Cycle 2's takeover is order statistics, not a
+scaling error** — correcting the normalizer in either direction moves it ~1%, not by the factor
+that would explain 56%.
+
+**Honest residue they refused to over-claim.** Swapping the per-step sd for a *fixed global*
+normalizer changes **5.792% ± 0.925%** of victims at `γ_b = 0.05`. Not the between-step mean (that
+cancels) but the per-step sd's own wobble, `CV = 0.11698 ± 0.00479` — of which `σ_true`'s genuine
+drift with `c_t` is only `CV = 0.03574 ± 0.00043`, the rest being sampling noise in a 40-sample
+sd. Per-step normalization makes `b` stationary against the *local* spread; a global one would
+make it stationary in raw units. **Neither is mis-scaled; they differ on ~5% of victims. A design
+question for Brendan, and they explicitly declined to call it.**
+
+**Methodological quality worth noting.** `σ_true` is not Monte-Carlo'd: `ψ̂` is a *linear
+functional* of `s`, and `E[s sᵀ] = I/d` for the unit-norm gestalts of correction 15, so
+`σ_true = ‖w_eff‖/√d` **exactly** — MC-checked at N=200k to `0.00107 ± 0.00073` against a 0.00158
+noise floor. And `part3_selftest_hand_score_matches_policy_victim_* = 1.0000 ± 0.0000` on all 2400
+evictions: the hand-recomputed score **is** `_score`, which is what licenses the counterfactuals.
+Cross-cycle replication again: driver top-2 margin median `0.33388 ± 0.02135` vs cycle 2's
+`0.3326 ± 0.0207`.
+
+### 🔴 A correction to cycle 3, found in passing
+
+Cycle 3's "redundant" regime used `gest[idx] + 0.15*randn(d)`, whose **noise norm is
+`0.15·√384 = 2.94` — it dominates the unit-norm gestalt**, giving pair cosine ≈0.32 rather than
+≈1. So that construction does not build near-duplicates the way it was described. Cycle 5
+reproduced it (`loose` arm, mean-max-cosine `0.18332 ± 0.00026`) and confirms it perturbs nothing.
+**Cycle 3's measured `0.38087` still stands** — it arose from duplicates *accumulating over a
+stream*, which a per-group construction does not model — but the mechanism was mis-described.
+**Cycle 3's directional conclusion survives on cycle 5's own evidence**: a genuinely tight arm
+(mean-max-cosine `0.42423 ± 0.00098`) shows median margin **−26%** and `b_max`/margin **+36%**. So
+corpus redundancy does change `b`'s strength; the number attached to it in cycle 3 came from a
+different mechanism than claimed.
+
+**Boundary.** `φ` is untrained — but they bounded what training *provably cannot* change while the
+head keeps this form: `ψ̂` is linear in `s`, so uniform scaling of `φ` is **exactly** invariant
+(`part4_alpha_invariance_max_abs_deviation = 0.0`, by degree-1 homogeneity), and rank-1 drift at
+parity with the base term moves the conversion only 0.98144→0.97691. What training *could* change
+is the **gestalt distribution**, which they showed is the real lever. `ū` is synthetic, so only
+part 3's victim-change fractions are conditional; parts 0, 1, 2, 4 are unconditional. One gestalt
+family (iid spherical + two duplicate arms) — **real PG-19 gestalts are neither iid nor isotropic,
+and that is the axis that matters.** CPU only. And: **if a future change ever lets slots die
+mid-stream or queries the policy on an underfull memory, the `n_live` curve becomes live and
+`b_max` drops toward 0.56 true SD.** Today it cannot.
+
+---

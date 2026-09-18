@@ -1,0 +1,3436 @@
+{
+  "run_id": "cycle-zscore-denominator",
+  "cycle": 4,
+  "question": "Does `_score`'s per-step `finite.std(unbiased=False)` over live slots put `b` on the scale section 3.5 item 1 claims -- is b_max = 1.0 one standard deviation of psi_hat as the policy actually sees it?",
+  "started_utc": "2026-09-18T08:31:52Z",
+  "provenance": {
+    "git_sha": "bc8441a1fed120f3bcb56375645c7ba5242dd7bc",
+    "git_dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "commands": [
+    {
+      "argv": ".venv/bin/python /private/tmp/claude-501/-Users-keanooo7-second-brain/1bdd6660-ee4c-49c5-99a7-28bf139ef2c9/scratchpad/run_zscore_denominator.py",
+      "exit_code": null,
+      "note": "single entry point; every row in this ledger is written by this process",
+      "at_utc": "2026-09-18T08:31:52Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "M",
+      "kind": "observation",
+      "value": 40,
+      "how": "rsr.constants.get('M','pg19_e3') -- FROZEN, registry read"
+    },
+    {
+      "key": "S",
+      "kind": "observation",
+      "value": 80,
+      "how": "rsr.constants.get('S','pg19_e3') -- FROZEN, registry read"
+    },
+    {
+      "key": "b_max",
+      "kind": "observation",
+      "value": 1.0,
+      "how": "rsr.constants.get('b_max') -- FROZEN, registry read"
+    },
+    {
+      "key": "bypass_gamma_b_values",
+      "kind": "observation",
+      "value": [
+        0.001,
+        0.05,
+        0.1
+      ],
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable."
+    },
+    {
+      "key": "bypass_tau",
+      "kind": "observation",
+      "value": 0.25,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. section 3.5 item 3's +/-25% band."
+    },
+    {
+      "key": "bypass_ema_half_life_steps",
+      "kind": "observation",
+      "value": 10.0,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. = E[lifetime]/4 with E[lifetime] assumed = M under FIFO."
+    },
+    {
+      "key": "bypass_rsrconfig_hand_built",
+      "kind": "observation",
+      "value": true,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. RSRConfig built by hand, not RSRConfig.from_registry."
+    },
+    {
+      "key": "bypass_bias_object_has_b_accessor",
+      "kind": "observation",
+      "value": true,
+      "how": "Carried from cycles 2-3: the real ProtectionBias raises NotImplementedError and its DECLARED surface raises AttributeError at rsr.py:377. scratch_bias.CallSiteBias adds b(slots) -- one side changing shape, labelled as such. Without it no b_enabled=True eviction can run at all."
+    },
+    {
+      "key": "bypass_alphas_phi_weight_scale",
+      "kind": "observation",
+      "value": [
+        0.25,
+        1.0,
+        4.0
+      ],
+      "how": "phi weight-scale multipliers, part 4. phi is UNTRAINED; a cheap perturbation standing in for scale drift, NOT training."
+    },
+    {
+      "key": "bypass_kappas_rank1_drift",
+      "kind": "observation",
+      "value": [
+        0.0,
+        20.0,
+        80.0
+      ],
+      "how": "rank-1 additions W += kappa * a b^T, part 4. A proxy for a low-rank correlated regime, NOT a trained phi. src/rsr/mup/coord_check.py's own note says a synthetic correlated regime does not substitute for real optimizer steps, and that limit is accepted here."
+    },
+    {
+      "key": "measurements_ledger_exists",
+      "kind": "observation",
+      "value": false,
+      "how": "os.path.exists -- re-checked this cycle"
+    },
+    {
+      "key": "phi_is_untrained",
+      "kind": "observation",
+      "value": true,
+      "how": "RSRPolicy.observe() raises NotImplementedError (src/rsr/retention/rsr.py:433) and run_policy_loop never calls it (cycle-2/3 finding), so no trained phi exists anywhere. Every number here is for a randomly initialised BilinearValueHead."
+    },
+    {
+      "key": "d_model",
+      "kind": "observation",
+      "value": 384,
+      "how": "chosen in scratch; correction 23's E3 width."
+    },
+    {
+      "key": "sigma_true_definition",
+      "kind": "observation",
+      "value": "sd of psi_hat(s, c_t) over the gestalt-generating distribution at fixed (phi, c_t); closed form ||w_eff||/sqrt(d) with w_eff = bilinear_multiplier*(W c) + linear_multiplier*u[:d]",
+      "how": "psi_hat is a LINEAR functional of s, and E[s s^T] = I/d for s uniform on the unit sphere, so Var(s.w) = ||w||^2/d exactly. MC-checked below."
+    },
+    {
+      "key": "gestalt_distribution",
+      "kind": "observation",
+      "value": "iid uniform on the unit sphere in R^384 (torch.randn then L2-normalize)",
+      "how": "matches correction 15: the reference TG L2-normalizes every gestalt to srep_norm_target = 1.0. This is cycle 2/3's `iid` stream."
+    },
+    {
+      "key": "selftest_sigma_true_closed_form_vs_monte_carlo_rel_dev",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0010538262248612296,
+        0.0018112268480925053,
+        0.00035205087461111164
+      ],
+      "mean": 0.0010723679825216156,
+      "sd": 0.0007297646730139762,
+      "how": "|MC - closed form| / closed form, N_REF=200000 fresh gestalts, 3 seeds. Expected MC noise ~1/sqrt(2*N_REF) = 0.00158",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part0_tg_M",
+      "kind": "observation",
+      "value": 8,
+      "how": "TGConfig(max_sentences_in_short_term=8).M"
+    },
+    {
+      "key": "part0_distinct_n_live_over_real_evictions",
+      "kind": "observation",
+      "value": [
+        8
+      ],
+      "how": "EvictionRecord.n_live over every record produced by the REAL rsr.model.tg.policy_loop.run_policy_loop with a real TGModel, 3 seeds, batch 2, 24 sentences, M=8"
+    },
+    {
+      "key": "part0_n_evictions_per_seed",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        32.0,
+        32.0,
+        32.0
+      ],
+      "mean": 32.0,
+      "sd": 0.0,
+      "how": "len(policy.records) from run_policy_loop, 3 seeds",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part0_min_n_live_at_a_real_eviction",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        8.0,
+        8.0,
+        8.0
+      ],
+      "mean": 8.0,
+      "sd": 0.0,
+      "how": "min(EvictionRecord.n_live), real run_policy_loop, 3 seeds",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part0_frac_real_evictions_at_n_live_eq_M",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of real EvictionRecords with n_live == M, 3 seeds",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part0_gate_source",
+      "kind": "observation",
+      "value": "src/rsr/model/tg/policy_loop.py:145  `if bool(mem.valid[row].all()):`",
+      "how": "read from the file; the policy is consulted only when the row's memory is FULL, so n_live == M at every decision and the fill period never reaches the score"
+    },
+    {
+      "key": "part1_design",
+      "kind": "observation",
+      "value": "5 seeds x 12 streams x S=80 steps; raw (pre-z) psi_hat collected at every step with n_live>=2; sigma_true from the closed form at that step's c_t. Memory fills 0->M then rolls FIFO, which is the same fill/roll shape as policy_loop.",
+      "how": "harness source, this file, part1_stream()"
+    },
+    {
+      "key": "part1_n_steps_scored_per_seed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        936.0,
+        936.0,
+        936.0,
+        936.0,
+        936.0
+      ],
+      "mean": 936.0,
+      "sd": 0.0,
+      "how": "steps with n_live>=2, per seed",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part1_n_steps_at_full_memory_per_seed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        480.0,
+        480.0,
+        480.0,
+        480.0,
+        480.0
+      ],
+      "mean": 480.0,
+      "sd": 0.0,
+      "how": "steps with n_live==M, per seed",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part1_n_steps_with_sd_exactly_zero",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "steps where finite.std(unbiased=False)==0, i.e. rsr.py:370's `if sd>0` guard is skipped and NO z-scoring (not even mean-centring) happens",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part1_perstep_sd_pop_mean_full_memory",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.00013819165064887784,
+        0.00013720208213878018,
+        0.00013558565769926644,
+        0.00013956930720269157,
+        0.00013884954522230448
+      ],
+      "mean": 0.0001378796485823841,
+      "sd": 1.5503613685307003e-06,
+      "how": "mean over full-memory steps of finite.std(unbiased=False) -- the exact quantity rsr.py:369 computes",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_pooled_raw_sd_across_steps_full_memory",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.000149336558033082,
+        0.00014751985493198334,
+        0.00014527585578554187,
+        0.00014992289063342105,
+        0.00014719065738557794
+      ],
+      "mean": 0.00014784916335392124,
+      "sd": 1.849099358466098e-06,
+      "how": "population sd of ALL raw psi_hat values pooled over (step, live slot) at full memory -- the thing the brief asks it be compared against",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_ratio_perstep_over_pooled_full_memory",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9253705353130258,
+        0.9300584128288334,
+        0.9332979452512726,
+        0.9309406096228147,
+        0.9433312391463594
+      ],
+      "mean": 0.9325997484324612,
+      "sd": 0.006654416246118817,
+      "how": "BRIEF ITEM 1 HEADLINE: per-step normalizer / pooled across-step sd, full-memory steps",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_ratio_perstep_over_pooled_all_steps",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9060815535465794,
+        0.8990165396250877,
+        0.917804125929834,
+        0.9060118616728811,
+        0.9208164553881744
+      ],
+      "mean": 0.9099461072325112,
+      "sd": 0.009079942707321511,
+      "how": "same ratio including the stream-initial fill period (n_live>=2)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_between_step_mean_sd_full",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        5.405400962901134e-05,
+        5.205666320368435e-05,
+        4.9518545984847966e-05,
+        5.227054912174056e-05,
+        4.616607999489545e-05
+      ],
+      "mean": 5.081316958683594e-05,
+      "sd": 3.0596064946825654e-06,
+      "how": "sd across steps of the per-step MEAN of raw psi_hat -- the component z-scoring removes exactly by subtracting finite.mean()",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_pooled_variance_from_between_step_means",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.1310157642935858,
+        0.12452360928530858,
+        0.1161846845262498,
+        0.1215565122858106,
+        0.09837517311584629
+      ],
+      "mean": 0.11833114870136022,
+      "sd": 0.012374341205523281,
+      "how": "between_var / pooled_var at full memory. This is what makes the ratio above differ from 1, and it is a per-step ADDITIVE CONSTANT shared by every live slot, so it cannot change any argmin.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_variance_decomposition_relative_residual",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        8.887535507589159e-10,
+        4.1731021360835367e-10,
+        4.887052869857021e-10,
+        1.5811638740347275e-09,
+        8.99128205064985e-10
+      ],
+      "mean": 8.550122260905367e-10,
+      "sd": 4.626404483426144e-10,
+      "how": "|pooled_var - (mean within_var + var of step means)| / pooled_var; near zero confirms the pooled sd differs from the per-step sd ONLY by the between-step mean drift",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_perstep_sd_coefficient_of_variation_full",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.12178318202495575,
+        0.1101207360625267,
+        0.12120833247900009,
+        0.11677349358797073,
+        0.11503396183252335
+      ],
+      "mean": 0.11698394119739533,
+      "sd": 0.004791359062522013,
+      "how": "sd across steps of the per-step normalizer / its mean -- how much the denominator itself wobbles step to step at full memory",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_sigma_true_coefficient_of_variation_full",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.035674937069416046,
+        0.035724688321352005,
+        0.03509488329291344,
+        0.035970255732536316,
+        0.036240871995687485
+      ],
+      "mean": 0.03574112728238106,
+      "sd": 0.00042559584784257714,
+      "how": "same for sigma_true: how much psi_hat's TRUE spread moves with c_t",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_ratio_perstep_sd_over_sigma_true_full_memory",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9777815442464775,
+        0.9727192732921917,
+        0.9698075587929008,
+        0.9935579010491821,
+        0.9880269192124601
+      ],
+      "mean": 0.9803786393186424,
+      "sd": 0.010116170956925451,
+      "how": "THE CALIBRATION NUMBER: mean over full-memory steps of finite.std(unbiased=False)/sigma_true. A shift of 1.0 in z-space is a shift of sd_pop in raw space, so b_max=1.0 buys exactly this many TRUE sd of psi_hat.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_ratio_perstep_sd_over_sigma_true_all_steps",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9580740840548829,
+        0.9447671654965225,
+        0.9575369191993719,
+        0.9652673232701015,
+        0.9662037942089778
+      ],
+      "mean": 0.9583698572459713,
+      "sd": 0.008584289375,
+      "how": "same, averaged over every step with n_live>=2 (fill period included) -- steps that never reach the score under policy_loop",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_ratio_unbiased_sd_over_sigma_true_full_memory",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9902378635415172,
+        0.9851111007403602,
+        0.9821622940916883,
+        1.006215202002195,
+        1.0006137583887333
+      ],
+      "mean": 0.9928680437528989,
+      "sd": 0.010245045353781517,
+      "how": "same with unbiased=True, for the brief item 3 comparison",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_theory_pop_ratio_at_n_eq_M",
+      "kind": "observation",
+      "value": 0.9811121944366917,
+      "how": "closed form c4(n)*sqrt((n-1)/n) at n=40 for normal data (math.lgamma) -- the prediction the calibration row is tested against"
+    },
+    {
+      "key": "part2_design",
+      "kind": "observation",
+      "value": "5 seeds x N_CTX=96 contexts x up to 30 DISJOINT slot groups per n (drawn from one randperm of a pool of 8192 gestalts whose psi_hat is precomputed at that context), n = 2..40. Disjoint groups, so no within-group duplicate can manufacture a tie.",
+      "how": "harness source, this file, sweep()"
+    },
+    {
+      "key": "part2_trials_per_seed_at_nM",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2880.0,
+        2880.0,
+        2880.0,
+        2880.0,
+        2880.0
+      ],
+      "mean": 2880.0,
+      "sd": 0.0,
+      "how": "groups of size n=40 per seed",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n02",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5663650942369786,
+        0.5594063011032374,
+        0.571623861274236,
+        0.5579834922533645,
+        0.5649059243578082
+      ],
+      "mean": 0.564056934645125,
+      "sd": 0.005518646973466872,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=2 live slots] / sigma_true. Normal-theory closed form = 0.564190",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n03",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.737715058026101,
+        0.7415498881697744,
+        0.7248354105583265,
+        0.7144859193346424,
+        0.7137035113075314
+      ],
+      "mean": 0.7264579574792751,
+      "sd": 0.012875625593377108,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=3 live slots] / sigma_true. Normal-theory closed form = 0.723601",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n04",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8063460363209481,
+        0.7897098404737224,
+        0.8075756482657913,
+        0.7939595715521166,
+        0.7981899195240143
+      ],
+      "mean": 0.7991562032273185,
+      "sd": 0.007741983093911199,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=4 live slots] / sigma_true. Normal-theory closed form = 0.797885",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8380732943563436,
+        0.8423191778158745,
+        0.8443709759887287,
+        0.8486246319082288,
+        0.8411931572453486
+      ],
+      "mean": 0.8429162474629048,
+      "sd": 0.003920510646365349,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=5 live slots] / sigma_true. Normal-theory closed form = 0.840749",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n06",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8674910103533935,
+        0.8684011684409402,
+        0.8706203093561931,
+        0.8795032710785856,
+        0.8684218284489118
+      ],
+      "mean": 0.8708875175356049,
+      "sd": 0.004952282929521509,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=6 live slots] / sigma_true. Normal-theory closed form = 0.868627",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n07",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8900447444556819,
+        0.8896822927827751,
+        0.8886826904800854,
+        0.8898885668810355,
+        0.887346251877759
+      ],
+      "mean": 0.8891289092954674,
+      "sd": 0.0011290533282503725,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=7 live slots] / sigma_true. Normal-theory closed form = 0.888203",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9050665096124417,
+        0.9046474225116212,
+        0.9035944683466043,
+        0.9023474066817694,
+        0.9027898871230533
+      ],
+      "mean": 0.903689138855098,
+      "sd": 0.0011654740641959967,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=8 live slots] / sigma_true. Normal-theory closed form = 0.902703",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n09",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9150574744120624,
+        0.9164756013260592,
+        0.913292685764047,
+        0.918057432498348,
+        0.9169172433169245
+      ],
+      "mean": 0.9159600874634883,
+      "sd": 0.0018378316171719497,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=9 live slots] / sigma_true. Normal-theory closed form = 0.913875",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9231474274811506,
+        0.925082248060596,
+        0.9197582876154301,
+        0.9216959964278786,
+        0.9293909851375965
+      ],
+      "mean": 0.9238149889445303,
+      "sd": 0.0036773044638321642,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=10 live slots] / sigma_true. Normal-theory closed form = 0.922746",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n11",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9274176569847138,
+        0.9308546707296981,
+        0.9275407884580515,
+        0.9347171136897565,
+        0.9313036969169831
+      ],
+      "mean": 0.9303667853558405,
+      "sd": 0.003030049860975749,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=11 live slots] / sigma_true. Normal-theory closed form = 0.929960",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n12",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9407959512382909,
+        0.9438459280010237,
+        0.9414057500692963,
+        0.9358963700783295,
+        0.9302157597576951
+      ],
+      "mean": 0.938431951828927,
+      "sd": 0.005423976726979576,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=12 live slots] / sigma_true. Normal-theory closed form = 0.935942",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n13",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.94157181378658,
+        0.9480054585267694,
+        0.9421630822740389,
+        0.9469514655364479,
+        0.9415856131208892
+      ],
+      "mean": 0.9440554866489451,
+      "sd": 0.0031559100114891547,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=13 live slots] / sigma_true. Normal-theory closed form = 0.940982",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n14",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9437879925119702,
+        0.9437467281545707,
+        0.9514968367735681,
+        0.9500021631302109,
+        0.9442471219613628
+      ],
+      "mean": 0.9466561685063365,
+      "sd": 0.003778972454496429,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=14 live slots] / sigma_true. Normal-theory closed form = 0.945288",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n15",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9524052532466994,
+        0.9462481101845088,
+        0.9521915552473964,
+        0.9526233462367807,
+        0.9474850771334472
+      ],
+      "mean": 0.9501906684097665,
+      "sd": 0.0030696027862356385,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=15 live slots] / sigma_true. Normal-theory closed form = 0.949008",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9515490394115257,
+        0.9548888466296267,
+        0.9548114791090553,
+        0.9530446066360033,
+        0.9496579864724983
+      ],
+      "mean": 0.9527903916517418,
+      "sd": 0.0022307986604456127,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=16 live slots] / sigma_true. Normal-theory closed form = 0.952254",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n17",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9525745846970208,
+        0.9606579238394672,
+        0.9558389999155507,
+        0.9566608694400945,
+        0.9535106270138289
+      ],
+      "mean": 0.9558486009811924,
+      "sd": 0.0031612799419698454,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=17 live slots] / sigma_true. Normal-theory closed form = 0.955112",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n18",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.959095559871096,
+        0.9559952220920348,
+        0.9591660701678367,
+        0.9623130937569472,
+        0.9602109765903356
+      ],
+      "mean": 0.9593561844956501,
+      "sd": 0.002284410144641321,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=18 live slots] / sigma_true. Normal-theory closed form = 0.957646",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n19",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9588223974579305,
+        0.9614234512468264,
+        0.9662603309339765,
+        0.9664125768222738,
+        0.9597856203399072
+      ],
+      "mean": 0.9625408753601828,
+      "sd": 0.0035878812258206354,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=19 live slots] / sigma_true. Normal-theory closed form = 0.959910",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.960621342099986,
+        0.9627661642834787,
+        0.9615266617078216,
+        0.9611915567181113,
+        0.9632304748547477
+      ],
+      "mean": 0.961867239932829,
+      "sd": 0.0010944493118017192,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=20 live slots] / sigma_true. Normal-theory closed form = 0.961945",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n21",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9674936054473348,
+        0.9626419855445045,
+        0.9672937459010686,
+        0.9677322153541013,
+        0.9675268654424395
+      ],
+      "mean": 0.9665376835378897,
+      "sd": 0.0021833040872647857,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=21 live slots] / sigma_true. Normal-theory closed form = 0.963782",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n22",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9663860140881179,
+        0.9675859208347163,
+        0.9710971862783129,
+        0.9673297278384319,
+        0.9673399537408643
+      ],
+      "mean": 0.9679477605560887,
+      "sd": 0.001819358125735351,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=22 live slots] / sigma_true. Normal-theory closed form = 0.965451",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n23",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9703558268581957,
+        0.9703477053412665,
+        0.9651236662533664,
+        0.9707308112426307,
+        0.9668208093680586
+      ],
+      "mean": 0.9686757638127036,
+      "sd": 0.0025445762571481624,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=23 live slots] / sigma_true. Normal-theory closed form = 0.966972",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n24",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9716166319323156,
+        0.9704681489424344,
+        0.9689275006139201,
+        0.9691326569391694,
+        0.9709557024858777
+      ],
+      "mean": 0.9702201281827435,
+      "sd": 0.0011625711066985298,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=24 live slots] / sigma_true. Normal-theory closed form = 0.968365",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n25",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.96920553204718,
+        0.9714110549045045,
+        0.9691630858779678,
+        0.967772145561125,
+        0.9725793981116653
+      ],
+      "mean": 0.9700262433004886,
+      "sd": 0.0019323474703334222,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=25 live slots] / sigma_true. Normal-theory closed form = 0.969646",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n26",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9691496383320004,
+        0.9710807525964575,
+        0.9757617881352115,
+        0.9714132600020255,
+        0.9725175908131659
+      ],
+      "mean": 0.9719846059757721,
+      "sd": 0.0024357548417649902,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=26 live slots] / sigma_true. Normal-theory closed form = 0.970826",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n27",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9718577220670664,
+        0.9739896513116058,
+        0.9720386858728031,
+        0.9725935141695925,
+        0.9734518697861282
+      ],
+      "mean": 0.9727862886414392,
+      "sd": 0.0009150666308835691,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=27 live slots] / sigma_true. Normal-theory closed form = 0.971919",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n28",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9680396561116237,
+        0.9721737334753568,
+        0.9730121085857542,
+        0.9734938169487599,
+        0.970556351733266
+      ],
+      "mean": 0.971455133370952,
+      "sd": 0.0022119042701489646,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=28 live slots] / sigma_true. Normal-theory closed form = 0.972932",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n29",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9727129511902769,
+        0.9745759234079536,
+        0.9795275821472605,
+        0.9768493540988855,
+        0.977522127469347
+      ],
+      "mean": 0.9762375876627447,
+      "sd": 0.0026472889318121073,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=29 live slots] / sigma_true. Normal-theory closed form = 0.973875",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n30",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.970635261938008,
+        0.9718212229067891,
+        0.9775606480174401,
+        0.9738508512249026,
+        0.9741765027332318
+      ],
+      "mean": 0.9736088973640744,
+      "sd": 0.002647420365404315,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=30 live slots] / sigma_true. Normal-theory closed form = 0.974754",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n31",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.971393476199949,
+        0.9749769016025359,
+        0.9831170382367503,
+        0.9760078006301297,
+        0.9737870685890199
+      ],
+      "mean": 0.975856457051677,
+      "sd": 0.004407752502811469,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=31 live slots] / sigma_true. Normal-theory closed form = 0.975576",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n32",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9749398447157501,
+        0.9727634405420937,
+        0.9772460946935035,
+        0.9770727789356058,
+        0.9784660234868053
+      ],
+      "mean": 0.9760976364747517,
+      "sd": 0.002254798240009987,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=32 live slots] / sigma_true. Normal-theory closed form = 0.976347",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n33",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9788996621913222,
+        0.9767060129905262,
+        0.9790360576886737,
+        0.9754698832758164,
+        0.9828663196111729
+      ],
+      "mean": 0.9785955871515023,
+      "sd": 0.0028225053983273406,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=33 live slots] / sigma_true. Normal-theory closed form = 0.977070",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n34",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9773104049354752,
+        0.9801450925915772,
+        0.9790399572941773,
+        0.9775435048086656,
+        0.9772367181717979
+      ],
+      "mean": 0.9782551355603386,
+      "sd": 0.001286855760312459,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=34 live slots] / sigma_true. Normal-theory closed form = 0.977750",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n35",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9801243937433174,
+        0.9781144125123731,
+        0.9774581090046635,
+        0.9839646010766568,
+        0.9777925428415186
+      ],
+      "mean": 0.9794908118357059,
+      "sd": 0.0027077061176999026,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=35 live slots] / sigma_true. Normal-theory closed form = 0.978391",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n36",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9810470862959194,
+        0.9809033680126376,
+        0.9819447486816995,
+        0.9810608928756698,
+        0.9796783085796057
+      ],
+      "mean": 0.9809268808891064,
+      "sd": 0.0008105475098628956,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=36 live slots] / sigma_true. Normal-theory closed form = 0.978996",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n37",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9809086450005493,
+        0.9816849269846889,
+        0.9796818858633941,
+        0.9776280987943653,
+        0.9805607324927139
+      ],
+      "mean": 0.9800928578271423,
+      "sd": 0.001554271104250571,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=37 live slots] / sigma_true. Normal-theory closed form = 0.979569",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n38",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9828800699597219,
+        0.9803749669740085,
+        0.9821402082840466,
+        0.9813088052494479,
+        0.9807216332193716
+      ],
+      "mean": 0.9814851367373192,
+      "sd": 0.0010273101704447896,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=38 live slots] / sigma_true. Normal-theory closed form = 0.980110",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n39",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.976165923294274,
+        0.9791134591022078,
+        0.9821476111071208,
+        0.9839733504413103,
+        0.9813816145499096
+      ],
+      "mean": 0.9805563916989645,
+      "sd": 0.0030102676914552447,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=39 live slots] / sigma_true. Normal-theory closed form = 0.980624",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sigma_true_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9781983295791237,
+        0.9821989917069808,
+        0.9839122829685678,
+        0.9880590090131932,
+        0.9816254116540237
+      ],
+      "mean": 0.9827988049843779,
+      "sd": 0.003598978378507263,
+      "how": "BRIEF ITEM 2: E[std(unbiased=False) over n=40 live slots] / sigma_true. Normal-theory closed form = 0.981112",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n02",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.7071067811865475,
+        0.7071067811865475,
+        0.7071067811865476,
+        0.7071067811865476,
+        0.7071067811865476
+      ],
+      "mean": 0.7071067811865476,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=2. sqrt((n-1)/n) = 0.707107",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n03",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8164965809277259,
+        0.816496580927726,
+        0.816496580927726,
+        0.816496580927726,
+        0.816496580927726
+      ],
+      "mean": 0.816496580927726,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=3. sqrt((n-1)/n) = 0.816497",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n04",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8660254037844386,
+        0.8660254037844387,
+        0.8660254037844386,
+        0.8660254037844386,
+        0.8660254037844387
+      ],
+      "mean": 0.8660254037844386,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=4. sqrt((n-1)/n) = 0.866025",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8944271909999157,
+        0.8944271909999159,
+        0.8944271909999157,
+        0.894427190999916,
+        0.8944271909999159
+      ],
+      "mean": 0.894427190999916,
+      "sd": 1.7554167342883506e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=5. sqrt((n-1)/n) = 0.894427",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n06",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9128709291752768,
+        0.9128709291752768,
+        0.9128709291752768,
+        0.9128709291752769,
+        0.9128709291752769
+      ],
+      "mean": 0.9128709291752768,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=6. sqrt((n-1)/n) = 0.912871",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n07",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9258200997725514,
+        0.9258200997725514,
+        0.9258200997725514,
+        0.9258200997725513,
+        0.9258200997725515
+      ],
+      "mean": 0.9258200997725513,
+      "sd": 1.4686870114880517e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=7. sqrt((n-1)/n) = 0.925820",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9354143466934853,
+        0.9354143466934853,
+        0.9354143466934853,
+        0.9354143466934853,
+        0.9354143466934853
+      ],
+      "mean": 0.9354143466934854,
+      "sd": 1.2412670766236366e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=8. sqrt((n-1)/n) = 0.935414",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n09",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9428090415820634,
+        0.9428090415820634,
+        0.9428090415820634,
+        0.9428090415820632,
+        0.9428090415820632
+      ],
+      "mean": 0.9428090415820634,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=9. sqrt((n-1)/n) = 0.942809",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9486832980505139,
+        0.9486832980505138,
+        0.9486832980505138,
+        0.9486832980505139,
+        0.9486832980505138
+      ],
+      "mean": 0.9486832980505138,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=10. sqrt((n-1)/n) = 0.948683",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n11",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9534625892455922,
+        0.9534625892455924,
+        0.9534625892455922,
+        0.9534625892455924,
+        0.9534625892455922
+      ],
+      "mean": 0.9534625892455922,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=11. sqrt((n-1)/n) = 0.953463",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n12",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.957427107756338,
+        0.957427107756338,
+        0.957427107756338,
+        0.9574271077563381,
+        0.9574271077563381
+      ],
+      "mean": 0.9574271077563381,
+      "sd": 9.614813431917819e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=12. sqrt((n-1)/n) = 0.957427",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n13",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9607689228305228,
+        0.9607689228305227,
+        0.9607689228305227,
+        0.9607689228305228,
+        0.9607689228305227
+      ],
+      "mean": 0.9607689228305227,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=13. sqrt((n-1)/n) = 0.960769",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n14",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9636241116594314,
+        0.9636241116594315,
+        0.9636241116594315,
+        0.9636241116594315,
+        0.9636241116594315
+      ],
+      "mean": 0.9636241116594315,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=14. sqrt((n-1)/n) = 0.963624",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n15",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9660917830792959,
+        0.9660917830792959,
+        0.966091783079296,
+        0.9660917830792959,
+        0.9660917830792959
+      ],
+      "mean": 0.9660917830792959,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=15. sqrt((n-1)/n) = 0.966092",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9682458365518543,
+        0.9682458365518541,
+        0.9682458365518544,
+        0.9682458365518541,
+        0.9682458365518541
+      ],
+      "mean": 0.9682458365518543,
+      "sd": 1.1102230246251565e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=16. sqrt((n-1)/n) = 0.968246",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n17",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.970142500145332,
+        0.9701425001453319,
+        0.9701425001453319,
+        0.9701425001453319,
+        0.9701425001453319
+      ],
+      "mean": 0.970142500145332,
+      "sd": 1.1102230246251565e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=17. sqrt((n-1)/n) = 0.970143",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n18",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.97182531580755,
+        0.97182531580755,
+        0.97182531580755,
+        0.9718253158075499,
+        0.97182531580755
+      ],
+      "mean": 0.97182531580755,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=18. sqrt((n-1)/n) = 0.971825",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n19",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9733285267845753,
+        0.9733285267845754,
+        0.9733285267845753,
+        0.9733285267845752,
+        0.9733285267845752
+      ],
+      "mean": 0.9733285267845753,
+      "sd": 9.614813431917819e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=19. sqrt((n-1)/n) = 0.973329",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9746794344808966,
+        0.9746794344808964,
+        0.9746794344808964,
+        0.9746794344808964,
+        0.9746794344808963
+      ],
+      "mean": 0.9746794344808964,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=20. sqrt((n-1)/n) = 0.974679",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n21",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9759000729485332,
+        0.9759000729485332,
+        0.975900072948533,
+        0.9759000729485332,
+        0.9759000729485333
+      ],
+      "mean": 0.9759000729485331,
+      "sd": 1.5700924586837752e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=21. sqrt((n-1)/n) = 0.975900",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n22",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9770084209183943,
+        0.9770084209183943,
+        0.9770084209183945,
+        0.9770084209183945,
+        0.9770084209183945
+      ],
+      "mean": 0.9770084209183943,
+      "sd": 9.614813431917819e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=22. sqrt((n-1)/n) = 0.977008",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n23",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9780192938436515,
+        0.9780192938436514,
+        0.9780192938436515,
+        0.9780192938436516,
+        0.9780192938436516
+      ],
+      "mean": 0.9780192938436516,
+      "sd": 1.3597399555105182e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=23. sqrt((n-1)/n) = 0.978019",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n24",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9789450103725608,
+        0.9789450103725609,
+        0.978945010372561,
+        0.9789450103725609,
+        0.9789450103725608
+      ],
+      "mean": 0.9789450103725608,
+      "sd": 1.3597399555105182e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=24. sqrt((n-1)/n) = 0.978945",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n25",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9797958971132713,
+        0.9797958971132713,
+        0.9797958971132712,
+        0.9797958971132712,
+        0.9797958971132712
+      ],
+      "mean": 0.9797958971132712,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=25. sqrt((n-1)/n) = 0.979796",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n26",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9805806756909201,
+        0.9805806756909202,
+        0.9805806756909202,
+        0.9805806756909201,
+        0.9805806756909202
+      ],
+      "mean": 0.9805806756909202,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=26. sqrt((n-1)/n) = 0.980581",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n27",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9813067629253163,
+        0.9813067629253164,
+        0.9813067629253164,
+        0.9813067629253164,
+        0.9813067629253164
+      ],
+      "mean": 0.9813067629253164,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=27. sqrt((n-1)/n) = 0.981307",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n28",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9819805060619657,
+        0.9819805060619657,
+        0.9819805060619656,
+        0.9819805060619657,
+        0.9819805060619657
+      ],
+      "mean": 0.9819805060619657,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=28. sqrt((n-1)/n) = 0.981981",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n29",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9826073688810351,
+        0.9826073688810351,
+        0.9826073688810351,
+        0.982607368881035,
+        0.982607368881035
+      ],
+      "mean": 0.9826073688810351,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=29. sqrt((n-1)/n) = 0.982607",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n30",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.983192080250175,
+        0.983192080250175,
+        0.9831920802501751,
+        0.9831920802501751,
+        0.9831920802501751
+      ],
+      "mean": 0.983192080250175,
+      "sd": 9.614813431917819e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=30. sqrt((n-1)/n) = 0.983192",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n31",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9837387536759294,
+        0.9837387536759294,
+        0.9837387536759293,
+        0.9837387536759293,
+        0.9837387536759294
+      ],
+      "mean": 0.9837387536759294,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=31. sqrt((n-1)/n) = 0.983739",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n32",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9842509842514764,
+        0.9842509842514763,
+        0.9842509842514764,
+        0.9842509842514764,
+        0.9842509842514764
+      ],
+      "mean": 0.9842509842514764,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=32. sqrt((n-1)/n) = 0.984251",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n33",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9847319278346617,
+        0.9847319278346619,
+        0.9847319278346618,
+        0.9847319278346619,
+        0.9847319278346618
+      ],
+      "mean": 0.9847319278346618,
+      "sd": 9.614813431917819e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=33. sqrt((n-1)/n) = 0.984732",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n34",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.985184366143778,
+        0.985184366143778,
+        0.9851843661437781,
+        0.9851843661437779,
+        0.9851843661437779
+      ],
+      "mean": 0.985184366143778,
+      "sd": 9.614813431917819e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=34. sqrt((n-1)/n) = 0.985184",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n35",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9856107606091623,
+        0.9856107606091623,
+        0.9856107606091623,
+        0.9856107606091622,
+        0.9856107606091623
+      ],
+      "mean": 0.9856107606091623,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=35. sqrt((n-1)/n) = 0.985611",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n36",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9860132971832694,
+        0.9860132971832695,
+        0.9860132971832694,
+        0.9860132971832692,
+        0.9860132971832694
+      ],
+      "mean": 0.9860132971832695,
+      "sd": 1.4686870114880517e-16,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=36. sqrt((n-1)/n) = 0.986013",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n37",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9863939238321437,
+        0.9863939238321437,
+        0.9863939238321436,
+        0.9863939238321437,
+        0.9863939238321437
+      ],
+      "mean": 0.9863939238321437,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=37. sqrt((n-1)/n) = 0.986394",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n38",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9867543820659301,
+        0.9867543820659302,
+        0.9867543820659302,
+        0.9867543820659302,
+        0.9867543820659301
+      ],
+      "mean": 0.9867543820659301,
+      "sd": 9.614813431917819e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=38. sqrt((n-1)/n) = 0.986754",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n39",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9870962335856491,
+        0.9870962335856491,
+        0.9870962335856492,
+        0.9870962335856491,
+        0.9870962335856491
+      ],
+      "mean": 0.9870962335856491,
+      "sd": 5.551115123125783e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=39. sqrt((n-1)/n) = 0.987096",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_sd_pop_over_sd_unbiased_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9874208829065748,
+        0.9874208829065749,
+        0.987420882906575,
+        0.9874208829065749,
+        0.9874208829065749
+      ],
+      "mean": 0.9874208829065749,
+      "sd": 7.850462293418876e-17,
+      "how": "BRIEF ITEM 3: measured ratio unbiased=False / unbiased=True at n=40. sqrt((n-1)/n) = 0.987421",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n02",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.0,
+        2.0,
+        2.0,
+        2.0,
+        2.0
+      ],
+      "mean": 2.0,
+      "sd": 0.0,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=2 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_top2_z_margin_median_n03",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.226645763515403,
+        1.2350022144903432,
+        1.2181936321243425,
+        1.237001376069273,
+        1.2312823075615813
+      ],
+      "mean": 1.2296250587521886,
+      "sd": 0.0075103936226186595,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=3 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n04",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8457779966015615,
+        0.8691414170222334,
+        0.8635291058935861,
+        0.8183767471643738,
+        0.8545627754730962
+      ],
+      "mean": 0.8502776084309701,
+      "sd": 0.01992309948473403,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=4 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6839937019060578,
+        0.696756532358801,
+        0.7115859536325151,
+        0.6971189883975122,
+        0.7009161364722447
+      ],
+      "mean": 0.6980742625534262,
+      "sd": 0.009893851536562939,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=5 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n06",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6165327131494102,
+        0.6103892405880164,
+        0.6237828003043816,
+        0.6088148046549711,
+        0.617348766298916
+      ],
+      "mean": 0.615373664999139,
+      "sd": 0.005996271968177381,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=6 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n07",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5486166222123408,
+        0.5622910919706994,
+        0.581816884050125,
+        0.5500110339993783,
+        0.5532407195636446
+      ],
+      "mean": 0.5591952703592377,
+      "sd": 0.013720752409549555,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=7 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5180422997443918,
+        0.5324556592955226,
+        0.49362766704580174,
+        0.5068731914511679,
+        0.5191293862763225
+      ],
+      "mean": 0.5140256407626413,
+      "sd": 0.0145695076587416,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=8 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n09",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.49195953342769805,
+        0.47157003941813236,
+        0.49001106036875286,
+        0.4901443576433684,
+        0.4889228711355742
+      ],
+      "mean": 0.4865215723987052,
+      "sd": 0.008428924804916516,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=9 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.45713960266488973,
+        0.468388980537908,
+        0.46912251249032577,
+        0.4737885766510206,
+        0.471946328850686
+      ],
+      "mean": 0.46807720023896604,
+      "sd": 0.006488661304234759,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=10 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n11",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.45415305829154273,
+        0.43584769346022245,
+        0.4495028010002744,
+        0.4430752905312729,
+        0.4468444808853971
+      ],
+      "mean": 0.4458846648337419,
+      "sd": 0.006910352105171829,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=11 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n12",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.43521339875867016,
+        0.4235158902293723,
+        0.42542249450101766,
+        0.4411173822608625,
+        0.4130910318529679
+      ],
+      "mean": 0.4276720395205781,
+      "sd": 0.0108695578899328,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=12 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n13",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.4456738106358469,
+        0.4248966612223777,
+        0.42806934915471295,
+        0.41068243748303934,
+        0.4252308618410119
+      ],
+      "mean": 0.42691062406739777,
+      "sd": 0.01248630751388764,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=13 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n14",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.4027382656968175,
+        0.40185984607095926,
+        0.40589787659132237,
+        0.41154483492752547,
+        0.4112674773318663
+      ],
+      "mean": 0.4066616601236982,
+      "sd": 0.004585105114118959,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=14 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n15",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.40036050844237914,
+        0.39362134540998106,
+        0.4027517550773321,
+        0.3958227117585391,
+        0.3990203959603371
+      ],
+      "mean": 0.3983153433297137,
+      "sd": 0.0036265816330426706,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=15 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3972002569297246,
+        0.3777005562580422,
+        0.3926878742550537,
+        0.36836501615349704,
+        0.40100503547029587
+      ],
+      "mean": 0.3873917478133227,
+      "sd": 0.013833953869203403,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=16 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n17",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.379518430460585,
+        0.3894082075205427,
+        0.377174542302255,
+        0.3939384719910852,
+        0.383126342628761
+      ],
+      "mean": 0.3846331989806458,
+      "sd": 0.0069543483677485095,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=17 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n18",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3874247330124603,
+        0.37469585984906795,
+        0.3764476677482016,
+        0.37523007897910365,
+        0.3754866339867291
+      ],
+      "mean": 0.3778569947151125,
+      "sd": 0.005386090616910221,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=18 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n19",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3601459209423603,
+        0.3677654407913502,
+        0.37567195676884224,
+        0.3595961275292796,
+        0.36985756819644977
+      ],
+      "mean": 0.3666074028456564,
+      "sd": 0.006800358344715477,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=19 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.35439112767607983,
+        0.3808038744549129,
+        0.3689903363244722,
+        0.3665975328352755,
+        0.36494868563055083
+      ],
+      "mean": 0.36714631138425824,
+      "sd": 0.009457204730886438,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=20 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n21",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.37342564157816893,
+        0.37154069558509883,
+        0.3557866307511772,
+        0.36318075769098934,
+        0.347004684153297
+      ],
+      "mean": 0.3621876819517463,
+      "sd": 0.011025580241360088,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=21 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n22",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.36498017365380475,
+        0.3505788424374192,
+        0.36353655398132956,
+        0.36395724879465097,
+        0.3550243202431451
+      ],
+      "mean": 0.3596154278220699,
+      "sd": 0.00643710497369032,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=22 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n23",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.341913126082525,
+        0.34894848545218915,
+        0.34681568177745126,
+        0.363497128891322,
+        0.3343370350459822
+      ],
+      "mean": 0.3471022914498939,
+      "sd": 0.010748959023980076,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=23 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n24",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.34286559090549806,
+        0.3466967602307047,
+        0.35947933680360733,
+        0.34074073466573473,
+        0.35200056626218235
+      ],
+      "mean": 0.34835659777354544,
+      "sd": 0.007548202068166961,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=24 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n25",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3391448544408209,
+        0.34274977703753984,
+        0.3500277883855749,
+        0.3315880359269334,
+        0.357745503454701
+      ],
+      "mean": 0.344251191849114,
+      "sd": 0.010051740636911322,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=25 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n26",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.33328305009053816,
+        0.3509801855275101,
+        0.3526558203797616,
+        0.34062814152757537,
+        0.34809932786871456
+      ],
+      "mean": 0.34512930507881995,
+      "sd": 0.008066853484090171,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=26 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n27",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.33497680928020435,
+        0.3399713184107669,
+        0.3368580376951591,
+        0.32922712470978155,
+        0.33325093731877486
+      ],
+      "mean": 0.33485684548293737,
+      "sd": 0.004014028273687126,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=27 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n28",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3432136535027275,
+        0.3415170640105978,
+        0.34755377096612117,
+        0.3370340475817517,
+        0.32990779677518356
+      ],
+      "mean": 0.3398452665672763,
+      "sd": 0.006712269276458498,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=28 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n29",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3245508823243024,
+        0.33687616012972965,
+        0.33673892080302203,
+        0.34276228625224325,
+        0.344871066921028
+      ],
+      "mean": 0.33715986328606506,
+      "sd": 0.007907178471820155,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=29 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n30",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.33708817296690485,
+        0.33417410633148625,
+        0.3481595864345257,
+        0.3367981742315016,
+        0.3162144669284588
+      ],
+      "mean": 0.33448690137857545,
+      "sd": 0.011543727887812312,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=30 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n31",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3140336249006086,
+        0.3257694314312314,
+        0.32090619018217015,
+        0.33092657953678484,
+        0.33913832070215144
+      ],
+      "mean": 0.32615482935058926,
+      "sd": 0.009565053443529302,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=31 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n32",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3247489152002847,
+        0.3217527461975316,
+        0.3252254479968144,
+        0.32700820178793766,
+        0.31853975887808916
+      ],
+      "mean": 0.3234550140121315,
+      "sd": 0.003335086539143892,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=32 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n33",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.33598598068393803,
+        0.32897212153068134,
+        0.3189238384778479,
+        0.3367252691322671,
+        0.3343489982494112
+      ],
+      "mean": 0.3309912416148291,
+      "sd": 0.007395946253538696,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=33 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n34",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.32867429532988,
+        0.3266354122070285,
+        0.30987361495558874,
+        0.3148827439630606,
+        0.32895873402526776
+      ],
+      "mean": 0.3218049600961651,
+      "sd": 0.008831358737960123,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=34 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n35",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.32400188101517946,
+        0.2951566602390412,
+        0.3352206581690691,
+        0.3088339020087907,
+        0.3260088900069902
+      ],
+      "mean": 0.31784439828781413,
+      "sd": 0.015830590852801755,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=35 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n36",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3454649427358405,
+        0.31127446779215506,
+        0.334202893968784,
+        0.3056120320916571,
+        0.32311717322296096
+      ],
+      "mean": 0.3239343019622795,
+      "sd": 0.016322202269606293,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=36 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n37",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3090985225301639,
+        0.3253654717404513,
+        0.32553679566877136,
+        0.3207305961614495,
+        0.30861879555806015
+      ],
+      "mean": 0.31787003633177924,
+      "sd": 0.008450864799848955,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=37 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n38",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3153465990850186,
+        0.3139167976819226,
+        0.31030172247406806,
+        0.31896646997196454,
+        0.31315449143790874
+      ],
+      "mean": 0.3143372161301765,
+      "sd": 0.003174493798192816,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=38 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n39",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.30546943194848586,
+        0.321919261609956,
+        0.31467385903680256,
+        0.32752473252418524,
+        0.31442800319418907
+      ],
+      "mean": 0.31680305766272376,
+      "sd": 0.008362943516073385,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=39 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_top2_z_margin_median_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3086529284348618,
+        0.30151312863826396,
+        0.30738726429548735,
+        0.313428851791564,
+        0.30873025024601697
+      ],
+      "mean": 0.3079424846812388,
+      "sd": 0.0042682085757803955,
+      "how": "median top-2 gap of the z-scored psi_hat at the argmin end, n_live=40 -- the quantity b has to beat. Same definition as EvictionRecord.score_margin (rsr.py:406).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_bmax_n02",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "fraction of draws at n_live=2 whose top-2 z-margin is below b_max=1.0",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_2bmax_n02",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "fraction below 2*b_max at n_live=2; 2*b_max is the maximum attainable spread of b, so this is the ceiling on what b can flip",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_bmax_in_true_psi_sd_at_n02",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5663650942369786,
+        0.5594063011032374,
+        0.571623861274236,
+        0.5579834922533645,
+        0.5649059243578082
+      ],
+      "mean": 0.564056934645125,
+      "sd": 0.005518646973466872,
+      "how": "BRIEF ITEM 4: what b_max=1.0 in z-units is worth in TRUE psi_hat sd at n_live=2 = b_max * E[sd_pop(n)]/sigma_true, because a shift of 1.0 in z-space is a shift of sd_pop in raw space",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_over_median_top2_z_margin_at_n02",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "mean": 0.5,
+      "sd": 0.0,
+      "how": "b_max in units of the median DECISION margin at n_live=2 -- the decision-relevant scale, as opposed to the sd-relevant one",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_bmax_n03",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.40555555555555556,
+        0.390625,
+        0.39861111111111114,
+        0.40243055555555557,
+        0.39479166666666665
+      ],
+      "mean": 0.3984027777777778,
+      "sd": 0.005936383098328773,
+      "how": "fraction of draws at n_live=3 whose top-2 z-margin is below b_max=1.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_2bmax_n03",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9065972222222223,
+        0.9069444444444444,
+        0.9072916666666667,
+        0.9111111111111111,
+        0.9065972222222223
+      ],
+      "mean": 0.9077083333333335,
+      "sd": 0.0019238743301659559,
+      "how": "fraction below 2*b_max at n_live=3; 2*b_max is the maximum attainable spread of b, so this is the ceiling on what b can flip",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_in_true_psi_sd_at_n03",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.737715058026101,
+        0.7415498881697744,
+        0.7248354105583265,
+        0.7144859193346424,
+        0.7137035113075314
+      ],
+      "mean": 0.7264579574792751,
+      "sd": 0.012875625593377108,
+      "how": "BRIEF ITEM 4: what b_max=1.0 in z-units is worth in TRUE psi_hat sd at n_live=3 = b_max * E[sd_pop(n)]/sigma_true, because a shift of 1.0 in z-space is a shift of sd_pop in raw space",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_over_median_top2_z_margin_at_n03",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8152312833446989,
+        0.8097151472822879,
+        0.8208875614102117,
+        0.8084065380570759,
+        0.8121614302900118
+      ],
+      "mean": 0.8132803920768572,
+      "sd": 0.0049847893871514904,
+      "how": "b_max in units of the median DECISION margin at n_live=3 -- the decision-relevant scale, as opposed to the sd-relevant one",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_bmax_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6659722222222222,
+        0.6642361111111111,
+        0.6618055555555555,
+        0.6642361111111111,
+        0.659375
+      ],
+      "mean": 0.663125,
+      "sd": 0.0025680364009861762,
+      "how": "fraction of draws at n_live=5 whose top-2 z-margin is below b_max=1.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_2bmax_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9770833333333333,
+        0.9770833333333333,
+        0.9725694444444445,
+        0.9701388888888889,
+        0.9701388888888889
+      ],
+      "mean": 0.9734027777777777,
+      "sd": 0.0035033328487859396,
+      "how": "fraction below 2*b_max at n_live=5; 2*b_max is the maximum attainable spread of b, so this is the ceiling on what b can flip",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_in_true_psi_sd_at_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8380732943563436,
+        0.8423191778158745,
+        0.8443709759887287,
+        0.8486246319082288,
+        0.8411931572453486
+      ],
+      "mean": 0.8429162474629048,
+      "sd": 0.003920510646365349,
+      "how": "BRIEF ITEM 4: what b_max=1.0 in z-units is worth in TRUE psi_hat sd at n_live=5 = b_max * E[sd_pop(n)]/sigma_true, because a shift of 1.0 in z-space is a shift of sd_pop in raw space",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_over_median_top2_z_margin_at_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.4620017658252409,
+        1.4352215638576047,
+        1.4053116069747926,
+        1.4344753430095618,
+        1.4267042060596056
+      ],
+      "mean": 1.432742897145361,
+      "sd": 0.020335732247821387,
+      "how": "b_max in units of the median DECISION margin at n_live=5 -- the decision-relevant scale, as opposed to the sd-relevant one",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_bmax_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8163194444444445,
+        0.8239583333333333,
+        0.8166666666666667,
+        0.8215277777777777,
+        0.8069444444444445
+      ],
+      "mean": 0.8170833333333334,
+      "sd": 0.006530178341107273,
+      "how": "fraction of draws at n_live=10 whose top-2 z-margin is below b_max=1.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_2bmax_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9892361111111111,
+        0.9895833333333334,
+        0.9881944444444445,
+        0.9892361111111111,
+        0.9927083333333333
+      ],
+      "mean": 0.9897916666666667,
+      "sd": 0.0017116329922036233,
+      "how": "fraction below 2*b_max at n_live=10; 2*b_max is the maximum attainable spread of b, so this is the ceiling on what b can flip",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_in_true_psi_sd_at_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9231474274811506,
+        0.925082248060596,
+        0.9197582876154301,
+        0.9216959964278786,
+        0.9293909851375965
+      ],
+      "mean": 0.9238149889445303,
+      "sd": 0.0036773044638321642,
+      "how": "BRIEF ITEM 4: what b_max=1.0 in z-units is worth in TRUE psi_hat sd at n_live=10 = b_max * E[sd_pop(n)]/sigma_true, because a shift of 1.0 in z-space is a shift of sd_pop in raw space",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_over_median_top2_z_margin_at_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.187515573296455,
+        2.1349776394217868,
+        2.131639333809677,
+        2.1106460756578604,
+        2.1188850063422766
+      ],
+      "mean": 2.136732725705611,
+      "sd": 0.03002904833444725,
+      "how": "b_max in units of the median DECISION margin at n_live=10 -- the decision-relevant scale, as opposed to the sd-relevant one",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_bmax_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8861111111111111,
+        0.8881944444444444,
+        0.8822916666666667,
+        0.8961805555555555,
+        0.8871527777777778
+      ],
+      "mean": 0.8879861111111111,
+      "sd": 0.00509482800264573,
+      "how": "fraction of draws at n_live=20 whose top-2 z-margin is below b_max=1.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_2bmax_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9961805555555555,
+        0.9940972222222222,
+        0.9958333333333333,
+        0.99375,
+        0.9965277777777778
+      ],
+      "mean": 0.9952777777777777,
+      "sd": 0.0012662904533896145,
+      "how": "fraction below 2*b_max at n_live=20; 2*b_max is the maximum attainable spread of b, so this is the ceiling on what b can flip",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_in_true_psi_sd_at_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.960621342099986,
+        0.9627661642834787,
+        0.9615266617078216,
+        0.9611915567181113,
+        0.9632304748547477
+      ],
+      "mean": 0.961867239932829,
+      "sd": 0.0010944493118017192,
+      "how": "BRIEF ITEM 4: what b_max=1.0 in z-units is worth in TRUE psi_hat sd at n_live=20 = b_max * E[sd_pop(n)]/sigma_true, because a shift of 1.0 in z-space is a shift of sd_pop in raw space",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_over_median_top2_z_margin_at_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.8217410705440087,
+        2.6260237016532764,
+        2.7100980745486205,
+        2.727787042825881,
+        2.740111252277072
+      ],
+      "mean": 2.7251522283697716,
+      "sd": 0.07002358786917944,
+      "how": "b_max in units of the median DECISION margin at n_live=20 -- the decision-relevant scale, as opposed to the sd-relevant one",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_bmax_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.91875,
+        0.9180555555555555,
+        0.9222222222222223,
+        0.9274305555555555,
+        0.9274305555555555
+      ],
+      "mean": 0.9227777777777778,
+      "sd": 0.004531216741044404,
+      "how": "fraction of draws at n_live=40 whose top-2 z-margin is below b_max=1.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_frac_top2_z_margin_below_2bmax_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9979166666666667,
+        0.9958333333333333,
+        0.9972222222222222,
+        0.9982638888888888,
+        0.9972222222222222
+      ],
+      "mean": 0.9972916666666667,
+      "sd": 0.0009316949906248946,
+      "how": "fraction below 2*b_max at n_live=40; 2*b_max is the maximum attainable spread of b, so this is the ceiling on what b can flip",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_in_true_psi_sd_at_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9781983295791237,
+        0.9821989917069808,
+        0.9839122829685678,
+        0.9880590090131932,
+        0.9816254116540237
+      ],
+      "mean": 0.9827988049843779,
+      "sd": 0.003598978378507263,
+      "how": "BRIEF ITEM 4: what b_max=1.0 in z-units is worth in TRUE psi_hat sd at n_live=40 = b_max * E[sd_pop(n)]/sigma_true, because a shift of 1.0 in z-space is a shift of sd_pop in raw space",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_bmax_over_median_top2_z_margin_at_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.2398850225425297,
+        3.3166051658060156,
+        3.25322521833147,
+        3.1905167449773213,
+        3.23907358998068
+      ],
+      "mean": 3.2478611483276034,
+      "sd": 0.04523199516359621,
+      "how": "b_max in units of the median DECISION margin at n_live=40 -- the decision-relevant scale, as opposed to the sd-relevant one",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_theory_pop_ratio_curve",
+      "kind": "observation",
+      "value": {
+        "2": 0.56419,
+        "3": 0.723601,
+        "4": 0.797885,
+        "5": 0.840749,
+        "6": 0.868627,
+        "7": 0.888203,
+        "8": 0.902703,
+        "9": 0.913875,
+        "10": 0.922746,
+        "11": 0.92996,
+        "12": 0.935942,
+        "13": 0.940982,
+        "14": 0.945288,
+        "15": 0.949008,
+        "16": 0.952254,
+        "17": 0.955112,
+        "18": 0.957646,
+        "19": 0.95991,
+        "20": 0.961945,
+        "21": 0.963782,
+        "22": 0.965451,
+        "23": 0.966972,
+        "24": 0.968365,
+        "25": 0.969646,
+        "26": 0.970826,
+        "27": 0.971919,
+        "28": 0.972932,
+        "29": 0.973875,
+        "30": 0.974754,
+        "31": 0.975576,
+        "32": 0.976347,
+        "33": 0.97707,
+        "34": 0.97775,
+        "35": 0.978391,
+        "36": 0.978996,
+        "37": 0.979569,
+        "38": 0.98011,
+        "39": 0.980624,
+        "40": 0.981112
+      },
+      "how": "closed form c4(n)*sqrt((n-1)/n), math.lgamma -- not a measurement"
+    },
+    {
+      "key": "part2_theory_pop_over_unbiased_curve",
+      "kind": "observation",
+      "value": {
+        "2": 0.707107,
+        "3": 0.816497,
+        "4": 0.866025,
+        "5": 0.894427,
+        "6": 0.912871,
+        "7": 0.92582,
+        "8": 0.935414,
+        "9": 0.942809,
+        "10": 0.948683,
+        "11": 0.953463,
+        "12": 0.957427,
+        "13": 0.960769,
+        "14": 0.963624,
+        "15": 0.966092,
+        "16": 0.968246,
+        "17": 0.970143,
+        "18": 0.971825,
+        "19": 0.973329,
+        "20": 0.974679,
+        "21": 0.9759,
+        "22": 0.977008,
+        "23": 0.978019,
+        "24": 0.978945,
+        "25": 0.979796,
+        "26": 0.980581,
+        "27": 0.981307,
+        "28": 0.981981,
+        "29": 0.982607,
+        "30": 0.983192,
+        "31": 0.983739,
+        "32": 0.984251,
+        "33": 0.984732,
+        "34": 0.985184,
+        "35": 0.985611,
+        "36": 0.986013,
+        "37": 0.986394,
+        "38": 0.986754,
+        "39": 0.987096,
+        "40": 0.987421
+      },
+      "how": "closed form sqrt((n-1)/n) -- not a measurement"
+    },
+    {
+      "key": "part2_within_step_excess_kurtosis_of_raw_psi",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.012237628300984701,
+        -0.011428691446781158,
+        -0.01359555870294571,
+        -0.02006083478530248,
+        -0.01157849778731664
+      ],
+      "mean": -0.013780242204666138,
+      "sd": 0.0036137611384062986,
+      "how": "excess kurtosis of raw psi_hat across the gestalt pool at a fixed context, averaged over contexts. Near 0 is why the normal-theory closed forms above are the right comparison: psi_hat is a linear functional of a near-Gaussian s.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_design",
+      "kind": "observation",
+      "value": "driver arm (b_enabled=False) owns the memory so the MemoryState sequence is identical across gamma_b arms; every arm shares one BilinearValueHead so psi_hat is bit-identical; u_bar synthetic exactly as cycles 2-3. The global normalizer is that seed's OWN part-1 pooled raw sd.",
+      "how": "harness source, this file, part3_decisions()"
+    },
+    {
+      "key": "u_bar_is_synthetic",
+      "kind": "observation",
+      "value": true,
+      "how": "policy.observe() raises NotImplementedError (src/rsr/retention/rsr.py:433); no real utilisation signal exists. u_bar is a per-slot log-normal salience assigned at write time plus N(0,0.5) noise, softmaxed over live slots. EVERY PART-3 RATE IS CONDITIONAL ON IT."
+    },
+    {
+      "key": "part3_n_evictions_per_seed_per_arm",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        480.0,
+        480.0,
+        480.0,
+        480.0,
+        480.0
+      ],
+      "mean": 480.0,
+      "sd": 0.0,
+      "how": "12 streams x (S-M) = 480 evictions/seed",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_gamma_b_0.001",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the two counterfactual rows below.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_changed_by_unbiased_sd_gamma_b_0.001",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "BRIEF ITEM 3, decision form: fraction of victims that change if rsr.py:369 used unbiased=True instead of unbiased=False -- same state, same b, same phi",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_changed_by_global_normalizer_gamma_b_0.001",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.00625,
+        0.0020833333333333333,
+        0.0020833333333333333,
+        0.008333333333333333,
+        0.0020833333333333333
+      ],
+      "mean": 0.004166666666666667,
+      "sd": 0.002946278254943948,
+      "how": "BRIEF ITEM 1, decision form: fraction of victims that change if the per-step sd were replaced by a FIXED global normalizer (that seed's pooled across-step raw sd) -- same state, same b, same phi",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_gamma_b_0.05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the two counterfactual rows below.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_changed_by_unbiased_sd_gamma_b_0.05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.008333333333333333,
+        0.004166666666666667,
+        0.008333333333333333
+      ],
+      "mean": 0.004166666666666667,
+      "sd": 0.004166666666666667,
+      "how": "BRIEF ITEM 3, decision form: fraction of victims that change if rsr.py:369 used unbiased=True instead of unbiased=False -- same state, same b, same phi",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_victims_changed_by_global_normalizer_gamma_b_0.05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.05416666666666667,
+        0.052083333333333336,
+        0.06041666666666667,
+        0.07291666666666667,
+        0.05
+      ],
+      "mean": 0.05791666666666667,
+      "sd": 0.009246808758821728,
+      "how": "BRIEF ITEM 1, decision form: fraction of victims that change if the per-step sd were replaced by a FIXED global normalizer (that seed's pooled across-step raw sd) -- same state, same b, same phi",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_gamma_b_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the two counterfactual rows below.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_changed_by_unbiased_sd_gamma_b_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.004166666666666667,
+        0.0020833333333333333,
+        0.0020833333333333333,
+        0.0020833333333333333,
+        0.00625
+      ],
+      "mean": 0.003333333333333333,
+      "sd": 0.0018633899812498247,
+      "how": "BRIEF ITEM 3, decision form: fraction of victims that change if rsr.py:369 used unbiased=True instead of unbiased=False -- same state, same b, same phi",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_victims_changed_by_global_normalizer_gamma_b_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.05416666666666667,
+        0.035416666666666666,
+        0.03958333333333333,
+        0.04375,
+        0.041666666666666664
+      ],
+      "mean": 0.042916666666666665,
+      "sd": 0.00700322346415484,
+      "how": "BRIEF ITEM 1, decision form: fraction of victims that change if the per-step sd were replaced by a FIXED global normalizer (that seed's pooled across-step raw sd) -- same state, same b, same phi",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_driver_top2_score_margin_median",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3147139549255371,
+        0.35666894912719727,
+        0.3127264976501465,
+        0.32967448234558105,
+        0.35559308528900146
+      ],
+      "mean": 0.33387539386749265,
+      "sd": 0.021349991178044925,
+      "how": "median EvictionRecord.score_margin of the b-free driver arm, in z-scored psi_hat units. Cycle 2 measured 0.3326 +/- 0.0207 on the same stream design -- a cross-cycle replication check.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_in_true_psi_sd_at_nM_alpha_0.25",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9781983295791237,
+        0.9821989917069808,
+        0.9839122829685678
+      ],
+      "mean": 0.9814365347515573,
+      "sd": 0.0029322894282181843,
+      "how": "b_max in true psi_hat sd at n_live=40 with W and u both scaled by alpha=0.25. Prediction: EXACTLY invariant -- psi_hat is homogeneous of degree 1 in phi and z-scoring divides the scale out.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_median_top2_z_margin_at_nM_alpha_0.25",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3086529284348618,
+        0.30151312863826396,
+        0.30738726429548735
+      ],
+      "mean": 0.30585110712287106,
+      "sd": 0.0038097269492852193,
+      "how": "median top-2 z-margin at n_live=40, alpha=0.25",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_in_true_psi_sd_at_nM_alpha_1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9781983295791237,
+        0.9821989917069808,
+        0.9839122829685678
+      ],
+      "mean": 0.9814365347515573,
+      "sd": 0.0029322894282181843,
+      "how": "b_max in true psi_hat sd at n_live=40 with W and u both scaled by alpha=1.0. Prediction: EXACTLY invariant -- psi_hat is homogeneous of degree 1 in phi and z-scoring divides the scale out.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_median_top2_z_margin_at_nM_alpha_1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3086529284348618,
+        0.30151312863826396,
+        0.30738726429548735
+      ],
+      "mean": 0.30585110712287106,
+      "sd": 0.0038097269492852193,
+      "how": "median top-2 z-margin at n_live=40, alpha=1.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_in_true_psi_sd_at_nM_alpha_4",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9781983295791237,
+        0.9821989917069808,
+        0.9839122829685678
+      ],
+      "mean": 0.9814365347515573,
+      "sd": 0.0029322894282181843,
+      "how": "b_max in true psi_hat sd at n_live=40 with W and u both scaled by alpha=4.0. Prediction: EXACTLY invariant -- psi_hat is homogeneous of degree 1 in phi and z-scoring divides the scale out.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_median_top2_z_margin_at_nM_alpha_4",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3086529284348618,
+        0.30151312863826396,
+        0.30738726429548735
+      ],
+      "mean": 0.30585110712287106,
+      "sd": 0.0038097269492852193,
+      "how": "median top-2 z-margin at n_live=40, alpha=4.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_alpha_invariance_max_abs_deviation",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "max over alpha and seed of |ratio(alpha) - ratio(1.0)|. Exactly 0 means a uniform drift in phi's weight scale CANNOT mis-scale b."
+    },
+    {
+      "key": "part4_bmax_in_true_psi_sd_at_nM_kappa_0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9781983295791237,
+        0.9821989917069808,
+        0.9839122829685678
+      ],
+      "mean": 0.9814365347515573,
+      "sd": 0.0029322894282181843,
+      "how": "b_max in true psi_hat sd at n_live=40 with W += kappa*a b^T, kappa=0.0 -- a rank-1 low-rank drift, NOT a trained phi",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_median_top2_z_margin_at_nM_kappa_0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3086529284348618,
+        0.30151312863826396,
+        0.30738726429548735
+      ],
+      "mean": 0.30585110712287106,
+      "sd": 0.0038097269492852193,
+      "how": "median top-2 z-margin at n_live=40, rank-1 drift kappa=0.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_within_step_excess_kurtosis_kappa_0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.012237628300984701,
+        -0.011428691446781158,
+        -0.01359555870294571
+      ],
+      "mean": -0.01242062615023719,
+      "sd": 0.0010949632807006817,
+      "how": "excess kurtosis of raw psi_hat across slots, kappa=0.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_in_true_psi_sd_at_nM_kappa_20",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9819201662857474,
+        0.9775312219017999,
+        0.9788315274983312
+      ],
+      "mean": 0.9794276385619595,
+      "sd": 0.002254377852419862,
+      "how": "b_max in true psi_hat sd at n_live=40 with W += kappa*a b^T, kappa=20.0 -- a rank-1 low-rank drift, NOT a trained phi",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_median_top2_z_margin_at_nM_kappa_20",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.31017429941913166,
+        0.31302992206854485,
+        0.3170661964667887
+      ],
+      "mean": 0.3134234726514884,
+      "sd": 0.0034627623041261885,
+      "how": "median top-2 z-margin at n_live=40, rank-1 drift kappa=20.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_within_step_excess_kurtosis_kappa_20",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.020637015501658123,
+        -0.01794842133919398,
+        -0.006105251610279083
+      ],
+      "mean": -0.014896896150377063,
+      "sd": 0.007731551909687021,
+      "how": "excess kurtosis of raw psi_hat across slots, kappa=20.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_in_true_psi_sd_at_nM_kappa_80",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9829405210968473,
+        0.9710257275257684,
+        0.9767599711055905
+      ],
+      "mean": 0.9769087399094021,
+      "sd": 0.005958789774618332,
+      "how": "b_max in true psi_hat sd at n_live=40 with W += kappa*a b^T, kappa=80.0 -- a rank-1 low-rank drift, NOT a trained phi",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_median_top2_z_margin_at_nM_kappa_80",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.30607895824659725,
+        0.30567371014676636,
+        0.32308884801763327
+      ],
+      "mean": 0.3116138388036656,
+      "sd": 0.009939714978362598,
+      "how": "median top-2 z-margin at n_live=40, rank-1 drift kappa=80.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_within_step_excess_kurtosis_kappa_80",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.044889996449152626,
+        -0.027244495848814648,
+        0.016874211529890697
+      ],
+      "mean": -0.01842009358935886,
+      "sd": 0.0318136276341939,
+      "how": "excess kurtosis of raw psi_hat across slots, kappa=80.0",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_mean_max_cosine_within_group_redundant_loose",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.18323571717366577,
+        0.18361039540916682,
+        0.18312103036791086
+      ],
+      "mean": 0.18332238098358114,
+      "sd": 0.00025593455777336795,
+      "how": "mean over slots of max_(j!=i) cos(s_i,s_j) within the group, `loose` duplicate arm -- the manipulation check for the rows below",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_in_true_psi_sd_at_nM_redundant_loose",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9821845271665118,
+        0.9816486518056475,
+        0.978251411261227
+      ],
+      "mean": 0.9806948634111289,
+      "sd": 0.0021329872027839223,
+      "how": "sd conversion at n_live=40, `loose` duplicate arm",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_median_top2_z_margin_at_nM_redundant_loose",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32067500051335096,
+        0.3106653660952854,
+        0.3114562805398624
+      ],
+      "mean": 0.3142655490494996,
+      "sd": 0.005564816930075962,
+      "how": "median top-2 z-margin at n_live=40, `loose` duplicate arm",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_over_median_top2_z_margin_at_nM_redundant_loose",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.118422073436205,
+        3.218897595727765,
+        3.2107235027229217
+      ],
+      "mean": 3.1826810572956306,
+      "sd": 0.055799791254962594,
+      "how": "b_max in decision-margin units, `loose` duplicate arm -- compare part2_bmax_over_median_top2_z_margin_at_n40 = iid",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_frac_top2_z_margin_below_bmax_at_nM_redundant_loose",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9315,
+        0.917,
+        0.9185
+      ],
+      "mean": 0.9223333333333333,
+      "sd": 0.007973915809270446,
+      "how": "compare part2_frac_top2_z_margin_below_bmax_n40, `loose` arm",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_mean_max_cosine_within_group_redundant_tight",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.42335638715326784,
+        0.425287582822144,
+        0.4240372470766306
+      ],
+      "mean": 0.42422707235068086,
+      "sd": 0.000979491911080793,
+      "how": "mean over slots of max_(j!=i) cos(s_i,s_j) within the group, `tight` duplicate arm -- the manipulation check for the rows below",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_in_true_psi_sd_at_nM_redundant_tight",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9764620458707011,
+        0.9760773127687574,
+        0.9728899918473165
+      ],
+      "mean": 0.975143116828925,
+      "sd": 0.001960722832782339,
+      "how": "sd conversion at n_live=40, `tight` duplicate arm",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_median_top2_z_margin_at_nM_redundant_tight",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.22340829377464755,
+        0.22484741116849705,
+        0.2326151819373008
+      ],
+      "mean": 0.2269569622934818,
+      "sd": 0.004952711567575326,
+      "how": "median top-2 z-margin at n_live=40, `tight` duplicate arm",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_bmax_over_median_top2_z_margin_at_nM_redundant_tight",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        4.476109562023254,
+        4.447460590287233,
+        4.298945544618581
+      ],
+      "mean": 4.407505232309689,
+      "sd": 0.09510044815391792,
+      "how": "b_max in decision-margin units, `tight` duplicate arm -- compare part2_bmax_over_median_top2_z_margin_at_n40 = iid",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_frac_top2_z_margin_below_bmax_at_nM_redundant_tight",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9345,
+        0.9265,
+        0.9355
+      ],
+      "mean": 0.9321666666666667,
+      "sd": 0.004932882862316252,
+      "how": "compare part2_frac_top2_z_margin_below_bmax_n40, `tight` arm",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_redundant_design",
+      "kind": "observation",
+      "value": "25% of each group of M=40 slots replaced by a near-copy of another member of the SAME group, 2000 groups/seed. Two arms: `loose` is cycle 3's literal construction g[src] + 0.15*randn(d), whose noise norm is 0.15*sqrt(384) = 2.94 and therefore DOMINATES the unit-norm gestalt; `tight` scales per coordinate, 0.15/sqrt(384)*randn(d), which is what actually produces near-duplicates.",
+      "how": "harness source, this file, redundant_groups(). Built per group, not by perturbing a shared pool: 40 draws from a pool of 8192 almost never contain a duplicated pair, so a pool perturbation tests nothing about ties. The mean_max_cosine rows are the manipulation check; cycle 3 measured 0.38087 +/- 0.00467 for its `redundant` LIVE MEMORY, where duplicates accumulate over a stream."
+    },
+    {
+      "key": "sd_zero_rows_count",
+      "kind": "observation",
+      "value": 16,
+      "how": "count of rows with sd == 0.0"
+    },
+    {
+      "key": "sd_zero_rows_reasons",
+      "kind": "observation",
+      "value": {
+        "part0_n_evictions_per_seed": "STRUCTURAL: batch 2 x (24 - 8) fixed-length sentences, no RNG in the count.",
+        "part0_min_n_live_at_a_real_eviction": "STRUCTURAL AND IT IS THE FINDING: policy_loop.py:145 consults the policy only when the row's memory is full, so n_live == M at every real eviction and no seed can move it.",
+        "part0_frac_real_evictions_at_n_live_eq_M": "STRUCTURAL, same reason: identically 1.0.",
+        "part1_n_steps_scored_per_seed": "STRUCTURAL: 12 streams x (S - 1) steps with n_live>=2, no RNG.",
+        "part1_n_steps_at_full_memory_per_seed": "STRUCTURAL: 12 x (S - M), no RNG.",
+        "part1_n_steps_with_sd_exactly_zero": "MEASURED zero: rsr.py:370's `if sd > 0` guard never fired; psi_hat over >=2 distinct gestalts is never exactly constant in float32.",
+        "part2_trials_per_seed_at_nM": "STRUCTURAL: min(N_TRIALS_PER_CTX, N_POOL//n) * N_CTX, no RNG.",
+        "part2_top2_z_margin_median_n02": "STRUCTURAL/ALGEBRAIC: exactly 2.0 at n_live=2, by the same identity.",
+        "part2_frac_top2_z_margin_below_bmax_n02": "STRUCTURAL/ALGEBRAIC, same identity: the margin at n_live=2 is exactly 2.0, never below b_max = 1.0, so the fraction is identically 0.",
+        "part2_frac_top2_z_margin_below_2bmax_n02": "STRUCTURAL/ALGEBRAIC: at n_live=2 the population sd is |x1-x2|/2, so the two z-scores are exactly -1 and +1, the top-2 margin is exactly 2.0 = 2*b_max, and the fraction strictly below 2*b_max is identically 0. An identity, not a sample.",
+        "part2_bmax_over_median_top2_z_margin_at_n02": "STRUCTURAL/ALGEBRAIC: b_max / 2.0 = 0.5 exactly at n_live=2.",
+        "part3_n_evictions_per_seed_per_arm": "STRUCTURAL: 12 x (S - M) = 480, no RNG.",
+        "part3_selftest_hand_score_matches_policy_victim_gamma_b_0.001": "SELF-TEST, required value 1.0: the hand-recomputed score reproduces _score exactly, which is what licenses the counterfactual rows.",
+        "part3_frac_victims_changed_by_unbiased_sd_gamma_b_0.001": "MEASURED zero, and it is a finding: at gamma_b = 0.001 the largest |b| a slot can reach in-stream is 0.079 z-units (cycle 2), while switching to unbiased=True rescales every z-gap by only sqrt(40/39) = 1.0127. The product never crossed a single top-2 gap in 2400 evictions across 5 seeds. Zero flips, not zero variance from a seed that failed to reach the RNG -- the same arm's frac_victims_changed_by_global_normalizer row has sd > 0 on the same 2400 evictions.",
+        "part3_selftest_hand_score_matches_policy_victim_gamma_b_0.05": "SELF-TEST, required value 1.0: the hand-recomputed score reproduces _score exactly, which is what licenses the counterfactual rows.",
+        "part3_selftest_hand_score_matches_policy_victim_gamma_b_0.1": "SELF-TEST, required value 1.0: the hand-recomputed score reproduces _score exactly, which is what licenses the counterfactual rows."
+      },
+      "how": "reason per key, produced by a classifier in this same process"
+    },
+    {
+      "key": "sd_zero_rows_unclassified",
+      "kind": "observation",
+      "value": [],
+      "how": "MUST be [] -- any key here is an unexplained zero sd"
+    },
+    {
+      "key": "wall_clock_seconds",
+      "kind": "observation",
+      "value": 11.51,
+      "how": "time.time() delta"
+    }
+  ],
+  "verdict": {
+    "falsifier": "_score's z-scoring puts b on the scale section 3.5 item 1 claims: b_max = 1.0 really is one standard deviation of psi_hat as the policy actually sees it.",
+    "outcome": "survived",
+    "detail": "At the only n_live a decision ever occurs at -- n_live = M = 40, because policy_loop.py:145 consults the policy only when the row's memory is full, and the measured min n_live over real evictions is M -- the per-step normalizer is 0.98038 +/- 0.01012 of psi_hat's true sd, against a normal-theory prediction of 0.98111. So b_max = 1.0 is 0.9804 true sd, i.e. item 1's claim is off by 2.0%, and switching to unbiased=True changes 0.0042 of victims at gamma_b = 0.05. The brief's predicted failure is real only in the fill period, where the ratio falls to 0.5641 +/- 0.0055 at n_live = 2 -- and no eviction ever happens there, so it is never exercised. The per-step/pooled ratio IS systematically < 1 (0.93260 +/- 0.00665), but essentially all of that gap is between-step drift in the per-step MEAN, an additive constant shared by every live slot that cannot move an argmin; replacing the per-step sd with a fixed pooled normalizer changes 0.0579 of victims at gamma_b = 0.05. Correction 4's gamma_b range was therefore derived against the right denominator, and cycle 2's 56-60% takeover is not a normalizer artifact: b_max = 1.0 is 3.248 +/- 0.045 times the MEDIAN top-2 z-margin at n_live = 40, which is an order-statistics property of 40 samples. phi is UNTRAINED; uniform weight-scale drift is exactly invariant and rank-1 drift moves nothing either, because psi_hat is a linear functional of s for any phi of this form -- only the GESTALT DISTRIBUTION can move the calibration."
+  },
+  "finished_utc": "2026-09-18T08:32:04Z"
+}
