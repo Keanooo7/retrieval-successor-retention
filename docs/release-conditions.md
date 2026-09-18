@@ -18,7 +18,7 @@ Conditions 1–4 and 8 decide whether the project finishes.
 | 5 | Marginal/redundancy scoring specified and ρ(score, LOO Δloss) reported with and without | D-3 | ☐ open | `experiments/e0d/RESULTS.md`, then E1's `ν` sweep |
 | 6 | §11 rewritten with the leading-edge strategy as named ancestor **and implemented baseline** | S-1 | ☐ open | `src/rsr/baselines/leading_edge.py` (stub) |
 | 7 | **§15.2 non-empty, derived by the author, defended under push-back in person** | §15 | ☐ open | **Brendan only.** §15 states it must not be filled by a reviewer, an advisor, or a model. Agents may schedule this work and may not do it |
-| 8 | **Parallel GPU capacity reserved, not just total hours priced** | §4.1 | ☐ open | [`ADR-0002`](decisions/ADR-0002-rented-hardware.md). Sprint 1 delivers a cancellable hold, not a reservation — see correction 7 |
+| 8 | ~~**Parallel GPU capacity reserved, not just total hours priced**~~ | §4.1 | **n/a — condition dissolved** | [`ADR-0007`](decisions/ADR-0007-all-training-on-the-mac-studio.md): no GPU is rented; everything runs on the Mac Studio. The condition guarded against pricing hours without securing capacity, and there is now no capacity to secure. Replaced by the `(S, d, batch)` ceiling **measured on this machine** — `experiments/e0c/RESULTS.md` |
 
 ## Notes that change how these are read
 

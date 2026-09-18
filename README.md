@@ -41,9 +41,15 @@ uv pip install --python .venv/bin/python -e ".[dev]"
 .venv/bin/ruff check
 ```
 
-PyTorch is the only project stack. **JAX is never installed here** — the TG
-reference under `third_party/` is a pinned source reference plus a one-time tensor
-extraction that runs on rented hardware. See [ADR-0001](docs/decisions/ADR-0001-tg-base.md).
+PyTorch is the only project stack. **JAX is not a project dependency and never
+enters `pyproject.toml`** — the TG reference under `third_party/` is a pinned,
+read-only source reference. The one-time golden-tensor extraction has run, on this
+machine's CPU, in a throwaway venv; the exact command is in
+[`third_party/PINS.md`](third_party/PINS.md). See
+[ADR-0001](docs/decisions/ADR-0001-tg-base.md) and
+[ADR-0007](docs/decisions/ADR-0007-all-training-on-the-mac-studio.md).
+
+**No GPU is rented.** Everything runs on the Mac Studio (ADR-0007).
 
 ## The two tests that matter
 

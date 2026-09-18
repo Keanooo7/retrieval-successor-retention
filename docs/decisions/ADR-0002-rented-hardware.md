@@ -1,13 +1,22 @@
 # ADR-0002 — Rented hardware: provider, capacity budget, and the fidelity tolerance
 
-- **Status:** Part A draft (pending T8); **Part B accepted — the tolerance is committed, 2026-09-17, and NO fixture exists yet**
+- **Status:** **Part A SUPERSEDED by [ADR-0007](ADR-0007-all-training-on-the-mac-studio.md)** — no GPU is rented and procurement is dropped. **Part B accepted and DONE** — the tolerance was committed 2026-09-17 before any fixture existed, and `tests/test_tolerances.py` proves the ordering against `git log`.
 - **Date:** 2026-09-17
 - **Relates to:** kickoff T5 (E0c), T8 (procurement); corrections 7, 8, 10, 14
 
 One ADR covers both because both concern the same rented box: what we rent, what
 we extract on it, and what we measure on it.
 
-## Part A — the capacity budget (correction 10)
+## Part A — the capacity budget (correction 10) — **SUPERSEDED**
+
+> 🔴 **Superseded by [ADR-0007](ADR-0007-all-training-on-the-mac-studio.md),
+> 2026-09-17.** No GPU is rented; everything runs on the Mac Studio. The asymmetry
+> this section reasons about — sizing against 64 GB for a run that would happen on
+> 48 GB — **no longer exists**, because the machine that sizes the run is now the
+> machine that runs it. Read the rest of Part A as historical.
+>
+> Part B, below, is unaffected and is in force.
+
 
 §4.2 fixes the maximum feasible `(S, d, batch)` triple from E0c "on 64 GB". **64 GB
 is the Mac Studio.** But E3, A2/A4 and the E7 model all run on rented commodity
@@ -135,6 +144,6 @@ cannot be generated against one number and asserted against another.
   half of the blocker is now closed; the extraction half is not. It must not be
   reported as passing in GATE-1.
 - The transcription is on the Sprint 1 critical path behind the extraction, which
-  is behind T8.
+  is **done** (gauntlet 2.3, on CPU in a throwaway venv — ADR-0007).
 - §13 gains an entry: the PyTorch TG is a transcription of a JAX reference that is
   itself not the paper's model. **Two hops from the published numbers.**

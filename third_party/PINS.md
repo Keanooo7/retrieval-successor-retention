@@ -19,10 +19,11 @@ The reference implementation of [P2], Thought Gestalt.
 This directory exists for two purposes:
 
 1. **A source reference** to transcribe the PyTorch TG from.
-2. **A one-time golden-tensor extraction**, which runs on rented hardware. JAX is
-   never installed on the development machine — `jax-metal`'s last release was
-   v0.1.1 on 2024-10-08 and current JAX requires Python ≥3.12, which the reference
-   forbids, so there is no working GPU path for it on Apple silicon anyway.
+2. **A one-time golden-tensor extraction**, which has **run, here, on CPU** — see
+   the extraction section below. `jax-metal` (the Metal *GPU* backend) is indeed
+   dead, but `jaxlib` ships `macosx_11_0_arm64` **CPU** wheels, and CPU is the
+   correct target because the fixtures must be byte-reproducible. JAX is installed
+   only in a throwaway venv and is never a project dependency.
 
 ### Known defects in the pinned tree
 
@@ -87,7 +88,7 @@ f220b1098d24a02c94907043d6205c113b31ebb6
 
 42 tracked files, 292 KB after removing `.git`. **Read-only.** JAX is not installed
 here and is not a dependency; this tree is a source reference and the origin of a
-one-time tensor extraction that runs on rented hardware.
+one-time tensor extraction, which has run here on CPU in a throwaway venv.
 
 Because `.git` is gone, the sha cannot be re-derived from the tree. It is recorded
 above and in the vendoring commit message; re-verify by re-cloning if it ever

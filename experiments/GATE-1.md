@@ -11,10 +11,10 @@ Every criterion carries pass / fail / not-run **with an evidence link**. Per
 | T2 | Pre-register E0i's threshold | committed **before** any histogram is computed | ☐ **drafted, unsigned** | `preregistration/e0i_threshold.md` |
 | T3 | E0i — coref histogram + 100-item precision/recall | histogram vs the T2 threshold | ☐ | `experiments/e0i/RESULTS.md` |
 | T4 | E0g — name and obtain the E7 stimulus set | availability, licensing, position-independence; **report regardless of outcome** | ☐ | [ADR-0005](../docs/decisions/ADR-0005-e7-stimulus-set.md) |
-| T5 | E0c — memory and throughput | a committed `(S, d, batch)` triple | ☐ | `experiments/e0c/RESULTS.md` |
+| T5 | E0c — memory and throughput **on the Mac Studio** | a committed `(S, d, batch)` triple, measured on the machine that will run it | ☐ | `experiments/e0c/RESULTS.md` |
 | T6 | E0d — `r_i` vs LOO Δloss | per-layer profile, then Spearman ρ | ☐ | `experiments/e0d/RESULTS.md` |
 | T7 | E0a — μP coordinate check ×2 | activation RMS width-invariant; `ψ̂` output scale checked specifically | ☐ | `experiments/e0a/RESULTS.md` |
-| T8 | GPU procurement | named provider, written quote, **cancellable hold**, movable start, ≥4 GPUs from **week 6** | ☐ | [ADR-0002](../docs/decisions/ADR-0002-rented-hardware.md) |
+| ~~T8~~ | ~~GPU procurement~~ | **DROPPED** — no GPU is rented; everything runs on the Mac Studio | ✔ n/a | [ADR-0007](../docs/decisions/ADR-0007-all-training-on-the-mac-studio.md) |
 | T9 | This report | | ☐ | |
 
 ## Task 0
@@ -42,14 +42,14 @@ candidates fail the spec's own criterion.
    prescription; `A_max = S = 48` on synthetic keeps `γ = 0.97` legal
    ([ADR-0004](../docs/decisions/ADR-0004-a-max-on-synthetic.md)).
 4. **Correction 10** — E0c was budgeted against 64 GB (the Mac) while E3 runs on
-   48 GB rentals. E0c moves to the rental card.
+   48 GB rentals. **Superseded by ADR-0007: nothing is rented, so E0c measures the ceiling on the Mac Studio — the machine that sizes the run is the machine that runs it.**
 5. **Correction 8** — §4.1's weeks-5–7 total is 768 GPU-h; §8 also schedules the
    E7 model and A1 into that window → 842, which breaks the stated floor of 3.
 
 ## Schedule honesty
 
-T5, T6 and T7 sit behind the PyTorch TG transcription, which is behind the
-golden-tensor extraction, which is behind T8. If they have not completed they are
+T5, T6 and T7 sit behind the PyTorch TG transcription. The golden-tensor
+extraction is **done** (gauntlet 2.3); T8 is **dropped** (ADR-0007). If they have not completed they are
 reported here as **in progress with a dated forecast**, not passed on a forecast.
 The kickoff's own note is that the week-4 gate is the milestone whose slip slips
 everything, so a slip is stated rather than absorbed.

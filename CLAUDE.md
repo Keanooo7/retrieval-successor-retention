@@ -30,10 +30,17 @@ tell Brendan** — do not silently pick a reading.
 ## Scope boundary — hard
 
 **Only weeks 1–4 are approved (§16). Everything downstream is a projection, not a
-permission.** Total compute envelope for weeks 1–4 is **~$100**. No billable GPU
-commitment: week 1 gets a named provider, a written quote, and a **cancellable
-hold with a movable start date**. The reservation *is* the four-figure commitment
-§16 declines to approve.
+permission.**
+
+**No GPU is rented. Everything runs on the Mac Studio** (M4 Max, 64 GB) —
+[ADR-0007](docs/decisions/ADR-0007-all-training-on-the-mac-studio.md). Do not name a
+provider, request a quote, take a hold, or price capacity. Compute spend for weeks
+1–4 is **zero**. Pricing capacity for weeks 5–7 is pricing unapproved work, which is
+the thing §16 declined; the honest response is to stop pricing it.
+
+Capacity questions are answered by **measuring this machine** — the `(S, d, batch)`
+ceiling at the widths actually run — not by sizing a card. §4.2's rule stands and now
+applies to hardware in hand: **if `S = 80` does not fit, `S` wins and `d` is cut.**
 
 ## Prohibitions — honor these literally
 
@@ -100,9 +107,16 @@ for a reason unrelated to retention.
 
 ## Stack
 
-PyTorch only. Python 3.12, `uv`, `ruff`, `pytest`. **JAX is never installed here**
-— `third_party/ThoughtGestaltCode` is a pinned read-only source reference plus a
-one-time tensor extraction that runs on rented hardware (ADR-0001).
+PyTorch only. Python 3.12, `uv`, `ruff`, `pytest`. **JAX is not a project
+dependency and never enters `pyproject.toml`** — `third_party/ThoughtGestaltCode`
+is a pinned read-only source reference (ADR-0001).
+
+The one-time golden-tensor extraction **has run, on this machine's CPU**, in a
+throwaway venv that was created, used and deleted. `jaxlib` ships
+`macosx_11_0_arm64` CPU wheels; only `jax-metal`, the Metal *GPU* backend, is dead.
+CPU is the right target regardless — the fixtures must be byte-reproducible, which
+is D3's own argument for running E0b on CPU. The exact regeneration command is in
+`third_party/PINS.md`. **If you need JAX again, make a throwaway venv again.**
 
 MPS is **best-effort, not required**. §4.4 gives the development machine only the
 coordinate check, the reduction test, the synthetic corpus and debugging; CPU

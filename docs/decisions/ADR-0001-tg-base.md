@@ -1,3 +1,10 @@
+> 🔴 **Amended 2026-09-17 by [ADR-0007](ADR-0007-all-training-on-the-mac-studio.md).**
+> Consequence 2 below says the golden-tensor extraction runs on rented hardware. It
+> does not — it ran here, on CPU, in a throwaway venv, in seconds. `jax-metal` is
+> the Metal *GPU* backend; `jaxlib` ships arm64 **CPU** wheels, and CPU is the right
+> target because the fixtures must be byte-reproducible, which is this ADR's own D3
+> argument for E0b. Everything else in ADR-0001 stands.
+
 # ADR-0001 — The TG base model: vendor the JAX reference, reimplement in PyTorch
 
 - **Status:** accepted

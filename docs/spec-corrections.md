@@ -78,6 +78,8 @@ d = 128`, priced in §4.1 at 6 runs × ~12 h = ~72 GPU-h.
 
 ## 7 — GPU procurement is a cancellable hold, not a reservation
 
+> 🔴 **SUPERSEDED by [ADR-0007](decisions/ADR-0007-all-training-on-the-mac-studio.md), 2026-09-17: no GPU is rented and procurement is dropped. Everything runs on the Mac Studio. Kept for the record; do not act on it.**
+
 **Supersedes:** §4.1 closing line (*"Name the provider and reserve in week 1"*,
 *"Reserve 4, floor 3, continuously, from week 5"*) and §8's week-1 row
 (*"Reserve 4 GPUs against §4.1, not just hours"*).
@@ -94,6 +96,8 @@ rederivation *and* §15.2, which is roughly 54 hours that cannot be delegated.
 Floor is **4, not 3** — see correction 8.
 
 ## 8 — §4.1's 768 GPU-h for weeks 5–7 is an undercount
+
+> 🔴 **SUPERSEDED by [ADR-0007](decisions/ADR-0007-all-training-on-the-mac-studio.md), 2026-09-17: no GPU is rented and procurement is dropped. Everything runs on the Mac Studio. Kept for the record; do not act on it.**
 
 **Supersedes:** §4.1's parallel-capacity table and the "Reserve 4, floor 3"
 conclusion drawn from it.
@@ -171,6 +175,8 @@ shorter than the generator's max gap (40), so the longest synthetic gaps are
 attenuated to ~0.30 weight. Attenuated, not invisible. Acceptable; state it.
 
 ## 10 — Activation memory is budgeted against the wrong card
+
+> 🔴 **SUPERSEDED by [ADR-0007](decisions/ADR-0007-all-training-on-the-mac-studio.md), 2026-09-17: no GPU is rented and procurement is dropped. Everything runs on the Mac Studio. Kept for the record; do not act on it.**
 
 **Supersedes:** §4.2's E0c budgeting protocol, and the 64 GB framing repeated in
 §5.2 and §7.6.
@@ -431,3 +437,23 @@ string while `RSRConfig` held a float.
 **One representation: a float number of steps.** `T_warm` is CONDITIONAL on
 `steps_per_epoch` and returns steps; `T_warm_epochs` (FROZEN, 1.0) stays for the
 report. The string is deleted. D-I.
+
+## 22 — No GPU is rented; everything runs on the Mac Studio
+
+**Supersedes:** corrections 7, 8 and 10, §4.1's procurement lines, and §4.2's
+"budget against the rental card" framing. See
+[ADR-0007](decisions/ADR-0007-all-training-on-the-mac-studio.md).
+
+The rental entered the plan for the golden-tensor extraction, the capacity budget,
+and weeks 5–7 parallel capacity. The first turned out not to need a GPU at all
+(`jax-metal` is the Metal *GPU* backend; `jaxlib` ships arm64 **CPU** wheels, and
+CPU is the right target for byte-reproducible fixtures anyway). The second
+dissolves once the sizing machine and the running machine are the same. The third
+prices work **outside the approved scope**, which is what §16 declined.
+
+**The replacement measurement:** the `(S, d, batch)` ceiling **on this machine**, at
+the widths the approved scope actually runs. §4.2's rule is unchanged — *if `S = 80`
+does not fit, `S` wins and `d` is cut*.
+
+§13 gains an entry: every throughput and capacity number in this project was
+measured on a single M4 Max, and nothing here supports a claim about other hardware.
