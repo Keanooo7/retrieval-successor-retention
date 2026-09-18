@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**34/34 gates proven.**
+**35/35 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -40,6 +40,7 @@
 | the scoreboard resolves a cycle number | `test_the_scoreboard_refuses_the_prose_verdict_for_cycle_4` | **PROVEN** | 0 | 0 |
 | a scoreboard count is typed rather than counted | `test_every_scoreboard_count_is_a_len_not_a_typed_number` | **PROVEN** | 0 | 0 |
 | the prose audit backs every number | `test_the_audit_flags_a_number_that_is_in_no_ledger` | **PROVEN** | 0 | 0 |
+| a mutated run writes the real census file | `test_a_mutated_suite_run_does_not_clobber_the_census` | **PROVEN** | 0 | 0 |
 | the board's own counts stop backing the prose | `test_the_rendered_artefact_passes_its_own_audit` | **PROVEN** | 0 | 0 |
 | off-gate failures stop counting | `test_an_off_gate_failure_makes_a_mutation_unproven` | **PROVEN** | 0 | 0 |
 | the coupling allowlist is ignored | `test_a_declared_coupling_does_not_make_a_mutation_unproven` | **PROVEN** | 0 | 0 |
@@ -313,6 +314,14 @@ Reddened nothing else.
 **Gate:** `test_the_audit_flags_a_number_that_is_in_no_ledger` — **PROVEN**
 
 5.2: `1.5476` goes back to passing an audit it should fail
+
+Reddened nothing else.
+
+### a mutated run writes the real census file
+
+**Gate:** `test_a_mutated_suite_run_does_not_clobber_the_census` — **PROVEN**
+
+5.3: every mutation overwrites the file CI asserts on, and the last mutated run is what survives on disk
 
 Reddened nothing else.
 

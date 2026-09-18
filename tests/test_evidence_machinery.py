@@ -283,6 +283,23 @@ def test_a_declared_coupling_does_not_make_a_mutation_unproven():
     assert mutation_battery.unproven(rows) == []
 
 
+def test_a_mutated_suite_run_does_not_clobber_the_census(monkeypatch):
+    """`tests/conftest.py` writes `test-count.json` every session, so an unredirected
+    battery leaves the *last mutated run's* census on disk -- `passed=315 failed=1`
+    after a green 316-test suite, which is what CI asserts on and what a ledger row
+    was written from before the mismatch was caught.
+
+    ⚠️ **The delenv is load-bearing.** Without it this test reads the redirect the
+    battery itself put in the subprocess environment, so its own mutation reddens
+    nothing and the gate scores `ADDS NOTHING` -- a check shadowed by the harness
+    that runs it.
+    """
+    monkeypatch.delenv("RSR_TEST_COUNT", raising=False)
+    env = mutation_battery._suite_env()
+    assert env.get("RSR_TEST_COUNT") == mutation_battery.SCRATCH_COUNT
+    assert env.get("RSR_TEST_COUNT") != "test-count.json"
+
+
 def test_the_mutation_table_is_well_formed_without_a_runtime_repair():
     """`MUTATIONS[7]` was field-shifted -- its `gate` was duplicated into `path`,
     and `_fix_derived_entry()` patched it back at runtime. Fix the literal or

@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -423,6 +424,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "5.2: `1.5476` goes back to passing an audit it should fail",
     ),
     Mutation(
+        "a mutated run writes the real census file",
+        "test_a_mutated_suite_run_does_not_clobber_the_census",
+        "scripts/mutation_battery.py",
+        '    return {**os.environ, "RSR_TEST_COUN' + 'T": SCRATCH_COUNT}',
+        "    return {**os.environ}",
+        "5.3: every mutation overwrites the file CI asserts on, and the last "
+        "mutated run is what survives on disk",
+    ),
+    Mutation(
         "the board's own counts stop backing the prose",
         "test_the_rendered_artefact_passes_its_own_audit",
         "scripts/render_scoreboard.py",
@@ -578,6 +588,23 @@ def unproven(rows: list[dict]) -> list[dict]:
     return out
 
 
+#: Where a mutated run is allowed to write its census.
+SCRATCH_COUNT = "runs/.mutation-census.json"
+
+
+def _suite_env() -> dict[str, str]:
+    """🔴 A mutated run must not write `test-count.json`.
+
+    `tests/conftest.py` writes the census on every session, so each mutation
+    overwrote the file CI asserts on -- and the battery's last mutated run is the
+    one that survives on disk. On 2026-09-18 that file read
+    `passed=315 failed=1` after a green 316-test suite, and a ledger row was
+    written from it before the mismatch was noticed. The census has to come from
+    the run that claims it.
+    """
+    return {**os.environ, "RSR_TEST_COUNT": SCRATCH_COUNT}
+
+
 def run_suite() -> set[str]:
     """Return the set of failing test node ids."""
     proc = subprocess.run(
@@ -585,6 +612,7 @@ def run_suite() -> set[str]:
         cwd=ROOT,
         capture_output=True,
         text=True,
+        env=_suite_env(),
     )
     failing = set()
     for line in (proc.stdout + proc.stderr).splitlines():
