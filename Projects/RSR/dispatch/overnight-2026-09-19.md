@@ -5,9 +5,18 @@ until the hard stop. Nobody will answer a question you ask tonight, so anything 
 answer goes in the escalations file and you keep working on what does not depend on it.
 
 ```bash
-export ORCH_PROJECT=rsr
-cd ~/retrieval-successor-retention
+cd ~/retrieval-successor-retention          # /opt/homebrew/bin/git, never bare git
 ```
+
+⚠️ **There is no orchestrator on this machine, and nothing here reads `ORCH_PROJECT`.**
+Earlier copies of this file and of the role files opened with `export ORCH_PROJECT=rsr`.
+That was carried over from the Cleaning-app adapter and it is inert here: the Studio has no
+`~/.claude/orchestrator`, no `~/.claude/helpers`, and this repo has no `.orchestrator/`.
+`grep -rn ORCH_PROJECT` over the whole repo returns **prose only** — four markdown files and
+not one consumer. There are no claims, no worktree dispatch and no outbox tick tonight.
+**The cycle protocol in §4 is the whole mechanism.** *Recorded because an instruction that
+looks operational and does nothing is precisely how a prompt bends: it was in last night's
+role files too.*
 
 | | |
 |---|---|

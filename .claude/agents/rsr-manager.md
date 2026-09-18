@@ -33,9 +33,13 @@ check them. That is verification, not production — you are re-running their me
 you get their number, never generating a new result to report.
 
 ```bash
-export ORCH_PROJECT=rsr
 cd ~/retrieval-successor-retention          # /opt/homebrew/bin/git, never bare git
 ```
+
+⚠️ **Nothing on the Mac Studio reads `ORCH_PROJECT`** — there is no orchestrator there, no
+`~/.claude/helpers`, and no `.orchestrator/` in this repo. `grep -rn ORCH_PROJECT` returns prose
+only, in four markdown files, with not one consumer. The line that used to open this block was
+inert; the cycle protocol is the whole mechanism.
 
 ## What you hold that the researcher does not
 
