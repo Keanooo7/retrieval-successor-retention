@@ -1,6 +1,6 @@
 # ADR-0002 — Rented hardware: provider, capacity budget, and the fidelity tolerance
 
-- **Status:** **DRAFT — the tolerance must be committed BEFORE the golden tensors are generated**
+- **Status:** Part A draft (pending T8); **Part B accepted — the tolerance is committed, 2026-09-17, and NO fixture exists yet**
 - **Date:** 2026-09-17
 - **Relates to:** kickoff T5 (E0c), T8 (procurement); corrections 7, 8, 10, 14
 
@@ -73,28 +73,67 @@ wrong graph passes a forward-only check and survives to week 7, where it surface
 as a gradient-flow difference in E3 that looks like a finding. Forward agreement is
 necessary and not sufficient.
 
-### The tolerance
-
-**☐ TO BE FILLED AND COMMITTED BEFORE GENERATING THE FIXTURES.**
+### The tolerance — committed 2026-09-17, before any fixture exists (D-H, gauntlet 2.2)
 
 A tolerance chosen after seeing the mismatch is not a tolerance — the same
-discipline as the E0i pre-registration.
+discipline as the E0i pre-registration. **`git log` must show this commit preceding
+the fixture commit**, and that ordering is the evidence, not this sentence.
+
+Both sides run in **float32**, with matched dtype and matched dropout
+(deterministic, `srep_dropout` disabled), before any tolerance is argued about.
 
 | Quantity | rtol | atol | Rationale |
 |---|---|---|---|
-| Per-layer activations | ☐ | ☐ | |
-| Gestalt vectors | ☐ | ☐ | unit-norm, so atol is directly interpretable |
-| Cross-attention weights | ☐ | ☐ | a simplex; atol dominates |
-| Logits | ☐ | ☐ | |
-| Gradients | ☐ | ☐ | expect looser than forwards; **say how much looser and why, in advance** |
+| Per-layer activations | `1e-4` | `1e-5` | the forward default |
+| Gestalt vectors | `1e-4` | `1e-5` | unit-norm by construction (`srep_norm_target = 1.0`), so `atol` is directly interpretable as a fraction of the vector's own length |
+| Cross-attention weights | `1e-4` | `1e-5` | a simplex; `atol` dominates, and at `M = 40` a uniform row sits at 0.025, so `1e-5` is ~0.04% of a typical entry |
+| Logits | `1e-4` | `1e-5` | the forward default |
+| **Gradients** | **`1e-3`** | **`1e-4`** | **one order looser, and here is why, in advance** |
 
-Both sides run in float32 with matched dtype and matched dropout (deterministic,
-`srep_dropout` disabled) before any tolerance is argued about.
+### Why gradients get exactly one order of magnitude more room
+
+Two reasons, and both are properties of the comparison rather than of the
+transcription:
+
+1. **Gradients accumulate error.** A gradient at layer 0 is a product of per-layer
+   Jacobians over 12 blocks *and* over `S` sentence steps, so float32 rounding
+   compounds along a path the forward never traverses. One order is the
+   conventional allowance and it is not tuned to anything observed.
+2. **JAX and PyTorch reduce in different orders.** Summation order is not specified
+   by either framework and differs by backend, and floating-point addition is not
+   associative. The backward pass performs far more reductions than the forward,
+   over longer axes, so the discrepancy is systematically larger — and it is a
+   discrepancy between two correct implementations, not an error in either.
+
+**One order, not two.** A looser allowance would start absorbing the very failure
+the gradient fixtures exist to catch: the retained-graph divergence, which shows up
+as a *structural* difference in which paths carry gradient at all, not as accumulated
+rounding. A wrong graph is off by a large factor or by everything, not by `1e-3`.
+
+### If the transcription cannot meet these
+
+🔴 **Record the achieved value here, with the reason. Do not silently relax.** D-H.
+
+The entry takes this form, and the ADR keeps both numbers:
+
+> **MISS — <quantity>.** Committed `rtol = X, atol = Y`. Achieved `rtol = X', atol =
+> Y'`. Cause: … . Why the achieved value is nonetheless sufficient for the claim
+> `test_fidelity.py` makes: … .
+
+A miss that cannot be explained mechanically is a transcription bug, not a tolerance
+problem, and the response is to fix the transcription.
+
+### Where the numbers live
+
+`src/rsr/model/tg/tolerances.py`, as a frozen dataclass, read by **both** the
+fixture generator and `tests/test_fidelity.py`. One definition, so the extraction
+cannot be generated against one number and asserted against another.
 
 ## Consequences
 
-- `tests/test_fidelity.py` is **skipped** until this ADR is filled and the fixtures
-  exist. It must not be reported as passing in GATE-1.
+- `tests/test_fidelity.py` is **skipped** until the fixtures exist. The tolerance
+  half of the blocker is now closed; the extraction half is not. It must not be
+  reported as passing in GATE-1.
 - The transcription is on the Sprint 1 critical path behind the extraction, which
   is behind T8.
 - §13 gains an entry: the PyTorch TG is a transcription of a JAX reference that is
