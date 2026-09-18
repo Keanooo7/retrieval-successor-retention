@@ -22,7 +22,7 @@ explicitly secondary**, and the spec says so.
 | | |
 |---|---|
 | **Mac Studio** — M4 Max, 64 GB, 16 cores, 736 GB free | `keanooo7@100.81.77.20`. The training machine. Repo at `~/retrieval-successor-retention`, pushed to `github.com/Keanooo7/retrieval-successor-retention` (private). |
-| **MacBook Pro** — 16 GB | This machine. Advisory only. **No memory or throughput number measured here transfers.** Second repo at `~/Documents/GitHub/retrieval-successor-retention` — ⚠️ **no GitHub remote.** |
+| **MacBook Pro** — 16 GB | This machine. Advisory only. **No memory or throughput number measured here transfers.** Second repo at `~/Documents/GitHub/retrieval-successor-retention` — ✅ **given a remote 2026-09-18**; its 13 commits are pushed to branch `macbook-local-2026-09-18`. It has an **unrelated history** to `main` and is not mergeable by fast-forward. |
 | Link | Tailscale + SSH key installed. `ssh keanooo7@100.81.77.20` works. Thunderbolt cable is plugged in but **unconfigured** (no address), so traffic relays the long way — ~218 ms between two machines on one desk. |
 
 🔴 **Use `/opt/homebrew/bin/git` on the Studio, never bare `git`.** Apple's git refuses to run until
@@ -33,30 +33,50 @@ than an error**. This has already produced one false "everything is clean" repor
 
 ## 3. Current state — measured
 
+> 🔄 **Re-measured 2026-09-18** by the MacBook co-researcher session, against Studio
+> `431b347` and MacBook `5c0fda7`. The figures below replace the 2026-09-17 ones, which
+> were taken before the Studio's overnight run and understated it by a wide margin
+> (they said Studio *1 commit / 66 files / 39 passed, 8 skipped*). Every number here is
+> from a command run on the machine it describes, not carried across.
+
 | | Studio | MacBook |
 |---|---|---|
-| tracked files | 66 | 46 |
-| commits | 1 | 5 |
-| tests | **39 passed, 8 skipped** | **43 passed, 1 skipped** |
-| on GitHub | yes | **no** |
-| TG reference vendored | **no** — `third_party/` is one markdown file | no |
+| tracked files | **176** | **50** |
+| commits | **37** | **13** |
+| tests | **287 passed, 0 failed, 0 skipped** | **43 passed, 1 skipped** |
+| on GitHub | yes — `main`, in sync | **yes, as of 2026-09-18** — branch `macbook-local-2026-09-18` |
+| TG reference vendored | **yes** — `third_party/ThoughtGestaltCode/`, 43 tracked files | no |
 | a trained model | **no** | no |
-| corpus / data module | **does not exist in either repo** | no |
+| corpus / data module | **yes** — `src/rsr/data/{synthetic,pg19,coref}.py` | no |
 
-**Nothing in either repository can train anything today.** That is not a criticism — Sprint 1 was
-scaffolding — but it is the honest baseline.
+**The two repos have unrelated histories.** Studio root `83bdf57`, MacBook root `05ec79c`;
+`git rev-list --left-right --count origin/main...HEAD` returns `37  13` with no common
+ancestor. They were scaffolded independently and **cannot be merged by fast-forward.** The
+MacBook's 13 commits are preserved as their own branch; trunk is the Studio's `main`.
 
-### What is real vs stub, on the Studio
+🔴 **The Studio can now train. The line "nothing in either repository can train anything
+today" was true on 2026-09-17 and is false now** — `src/rsr/train/loop.py` exists and runs.
+What it trains is a separate question, and a bad one: see the five confirmed defects in
+`Projects/RSR/HANDOFF-2026-09-18.md` §5.
+
+### What is real vs stub, on the Studio — re-measured 2026-09-18
+
+Measured by `wc -l` and `grep -c NotImplementedError` on each file at `431b347`.
 
 | Area | State |
 |---|---|
-| `constants.py` registry | **REAL and works.** Verified by execution: reading an unmeasured constant raises and names the experiment that owes it. `M`/`S` are correctly per-scope with no global value. `K` = 64/40, not `M`. |
-| `retention/value_head.py` | **REAL.** `forward()` computes; μP multipliers set. |
-| `retention/policy.py` | **REAL**, but data shapes only — no behaviour. |
-| `retention/{rsr,reward,shadow,bias}.py` | **STUBS.** Every entry point raises. **No eviction rule, no `r_i`, no return, no loss, no bias loop.** |
-| `baselines/` | fifo / lru / random implemented; **h2o, expire_span, leading_edge, oracle are stubs.** |
-| `mup/`, `metrics/` | stubs or thin. `build_param_groups` **raises** — so there is no optimizer-construction path at all. |
-| `experiments/e0*/run.py` | all 11-line stubs that raise. **Nothing writes to the measurement ledger**, so no refusal can currently be lifted by running anything. |
+| `constants.py` registry | **REAL.** 872 lines. Reading an unmeasured constant raises and names the experiment that owes it. |
+| `retention/value_head.py` | **REAL.** 173 lines. |
+| `retention/policy.py` | **REAL.** 260 lines. |
+| `retention/rsr.py` | **REAL**, 456 lines, 3 `NotImplementedError` remaining. Was a stub on 2026-09-17. |
+| `retention/reward.py` | **REAL.** 160 lines, 0 raises. |
+| `retention/{shadow,bias}.py` | **STILL STUBS.** 46 and 72 lines, 3 and 4 raises. No shadow buffer, no bias loop. |
+| `baselines/` | fifo / lru / random implemented. **h2o, expire_span, leading_edge, oracle are STILL STUBS** — 36–46 lines each, 4 raises each. |
+| `mup/param_groups.py` | **REAL.** 113 lines, 0 raises. `build_param_groups` no longer raises. |
+| `mup/coord_check.py` | **STUB** that raises — but its docstring carries the load-bearing E0a reading rule (read the coordinate scale after real optimizer steps, never at init). |
+| `data/synthetic.py` | **REAL.** 315 lines. ⚠️ But it stores each query's answer out of band and never puts it in the token stream — HANDOFF §4. |
+| `train/loop.py` | **REAL**, 228 lines, 0 raises — **and carries five confirmed defects** (HANDOFF §5). Nothing in `tests/` imports it except `checkpoint`. |
+| `experiments/e0*/run.py` | **e0a, e0f, e0g still 11-line stubs that raise.** e0c has `measure.py`, `sweep.py`, `confirm.py`. |
 
 ---
 
@@ -64,6 +84,8 @@ scaffolding — but it is the honest baseline.
 
 Found by a 10-agent survey, 2026-09-17. **The top four would invalidate the science silently**, which
 is worse than crashing.
+
+> ⚠️ **Re-read 2026-09-18: this ranking predates the Studio's overnight run and has NOT been re-verified as a whole.** Defect 7 is measured-and-fixed (above). The rest were true of the 2026-09-17 trees; several name files that have since been rewritten (`retention/rsr.py` went 165 → 456 lines). **Re-measure before acting on any row here.** Defect 10 *was* reproduced live on 2026-09-18 and is real: `uv run pytest -q` on the MacBook prints a progress line and **no summary**, because `addopts = "-q"` plus an explicit `-q` makes `-qq`.
 
 | # | Defect | Why it matters |
 |---|---|---|
@@ -73,7 +95,7 @@ is worse than crashing.
 | **4** | **LRU is silently FIFO** in both repos, by different causes. On the Studio its state lives in `MemoryState`, so a fresh state per step erases it. | §7.1 makes "RSR must beat LRU" the behavioural vacuity test, and §10.1 names LRU as one of E7's two legitimate controls. **The comparator is crippled in RSR's favour.** |
 | **5** | **The registry has no traffic.** Nothing in `src/` calls `constants.get()` — only the CLI and tests. | A gate with nothing passing through it. The mechanical guarantee is opt-in, and the training loop can bypass it by simply not calling it. |
 | 6 | `test_reduction.py`'s off-switch test is skipped under a reason that is **false for it** — it needs no TG and would pass today. | The §3.7 off-switch contract is enforced by nothing that runs. |
-| 7 | `preregistration/e0i_threshold.md` **does not exist on the Studio**, though `GATE-1.md` cites it as evidence. ✅ It **does** exist in the MacBook repo. | A release condition with no artefact behind it. |
+| 7 | ~~`preregistration/e0i_threshold.md` does not exist on the Studio~~ — 🔄 **FIXED, re-measured 2026-09-18.** It exists on the Studio at 337 lines and is the **current** version: it reconciles the two derivations (D-G), adds a pooled `≥ 600` floor, and tightens `p̂` to `p_LCB` (one-sided 95% Wilson bound). The MacBook's 191-line copy is the **stale** one. 🔴 It is **UNSIGNED** and says so — *"NOT IN FORCE UNTIL SIGNED"*. | Was a release condition with no artefact. Now an artefact awaiting a signature that only Brendan can give. |
 | 8 | Studio's `Registry.record()` accepts `git_sha` as a caller-typed string and never verifies it. | Provenance can be fabricated. The MacBook version stamps the sha from git inside the measured tree. |
 | 9 | Registry: scope-free reads of MEASURED constants leak across scopes; `record()` accepts DERIVED names that `get()` then ignores; the scope vocabulary has no entry for E4/E7/diagnostics. | Two sources of truth for `gamma_b` — the constant D-1 is *about*. |
 | 10 | **MacBook only:** `measure_pytest_count()` can never return a number. `addopts = "-q"` plus an explicit `-q` makes `-qq`, which suppresses the summary line the parser reads. | **That ratchet is permanently dead**, and CI also fails `ruff format --check` on 6 files. Never noticed because the repo has no remote, so CI has never run once. |
