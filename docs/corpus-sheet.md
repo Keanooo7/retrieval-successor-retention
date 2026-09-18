@@ -113,7 +113,10 @@ All raised by Brendan, all examined, all resolve **in favour of the plan as writ
 ```
 ADR-0002 tolerance committed  (owner)
   -> vendor the pinned TG reference (JAX, read-only; never installed on the Mac)
-    -> extract golden tensors on rented hardware — INCLUDING GRADIENTS
+    -> extract golden tensors ON THIS MACHINE, CPU — INCLUDING GRADIENTS
+       (jaxlib ships macOS arm64 CPU wheels; jax-metal's death kills only the GPU
+        backend. ~8MB from a 2.36M-param model: seconds of CPU work, in a
+        throwaway venv so JAX never becomes a project dependency)
       -> transcribe TG to PyTorch at d=128        <- THE LONG POLE, 3-5 days
         -> fidelity green (forward AND gradients)
           -> E0b, E0c, E0d, E0a
@@ -121,8 +124,12 @@ ADR-0002 tolerance committed  (owner)
               -> E1 / E2 -> the week-4 gate
 ```
 
-⚠️ **E0c must be measured on the rented 48 GB card, not the Studio's 64 GB.** Sizing against 64 and
-running E3 on 48 is how E3 runs out of memory in week 6.
+🔴 **ALL TRAINING IS ON THE MAC STUDIO. There is no rented compute and none is planned.** Outsourcing
+is reconsidered only after the model has demonstrated its effect locally. E0c measures the
+`(S, d, batch)` ceiling **on the Studio**, for the widths actually being trained.
+
+Nothing is lost: §16's approved scope is weeks 1–4, and E1/E2 are synthetic at `M=16, S=48` — which
+fits on this machine several times over. The rental was only ever attached to the unapproved block.
 
 📌 **Gradient fixtures are mandatory.** TG writes sentences to memory *without detaching the gradient
 graph*; JAX and PyTorch diverge exactly there, so a forward-only match with wrong graph retention

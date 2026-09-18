@@ -1,3 +1,17 @@
+# ⛔ OUT OF SCOPE — 2026-09-17
+
+**All training is on the Mac Studio. No compute is rented and none is planned.**
+
+This document is kept as a record of prices and contract shapes surveyed on 2026-09-17, because it
+will be relevant again *after* the model has demonstrated its effect locally. **Until then it is not
+part of any plan.** Do not price providers, draft requests, or raise procurement as a blocker.
+
+The finding worth keeping: the "cancellable hold" both the spec and the delivery plan assume may not
+be a purchasable product — commodity savings plans are prepaid and non-refundable. That matters when
+this becomes live again, and not before.
+
+---
+
 # T8 — GPU procurement
 
 | | |

@@ -186,13 +186,27 @@ an argument.**
 
 # PHASE 2 — Build what is missing, each with its acceptance criterion
 
-**2.1 Vendor the pinned TG reference.** Read-only. **JAX is never installed on the Mac** — no Metal path; `jax-metal`'s last release was 2024-10-08.
-→ **PASS:** the vendored tree's commit **equals the pin**, verified.
+**2.1 Vendor the pinned TG reference.** Read-only. ✅ **DONE** — `f220b1098d24a02c94907043d6205c113b31ebb6`.
 
 **2.2 Commit D-H's tolerances** before generating any fixture. → **PASS:** `git log` shows the ordering.
 
-**2.3 Golden tensors, forward AND gradients.** TG writes gestalts **without detaching the graph**; JAX functional autodiff and PyTorch retained-graph semantics diverge exactly there.
-→ **PASS:** both, plus a **positive control** — a deliberately detached variant must **fail** the gradient check. A forward-only match with wrong graph retention survives to week 7.
+**2.3 Golden tensors, forward AND gradients. 🔴 NOT BLOCKED — corrected 2026-09-17.**
+The earlier text said this needs rented hardware. **That was wrong and it was my error.**
+`jaxlib` ships `macosx_11_0_arm64` **CPU** wheels for py3.12/3.13/3.14 — this machine has 3.12 and
+3.14. `jax-metal` being dead kills only the **Metal GPU backend**; "no GPU path" is not "no path."
+And the job does not want a GPU: at `d = 128` this is **~8 MB of activations from a 2.36M-parameter
+model over 20 steps** — seconds of CPU work. CPU is also the *better* choice, because fixtures must
+be byte-reproducible; your own earlier decision already said CPU is better for E0b determinism.
+
+**Honour "JAX is not a project dependency" like this:** a **throwaway isolated venv** in a temp dir,
+`uv venv` + install jax/jaxlib there, run the extraction, write the `.npz` fixtures into the repo,
+delete the venv. JAX never enters `pyproject.toml`. Record the command that regenerates them.
+
+TG writes gestalts **without detaching the graph**; JAX functional autodiff and PyTorch
+retained-graph semantics diverge exactly there.
+→ **PASS:** forward **and** gradient fixtures, plus a **positive control** — a deliberately detached
+variant must **fail** the gradient check. A forward-only match with wrong graph retention survives
+to week 7.
 
 **2.4 Transcribe TG → PyTorch at `d = 128`.** The long pole, 3–5 days. → **PASS:** `test_fidelity.py` green on forward and gradients within D-H.
 
@@ -203,9 +217,16 @@ an argument.**
 → **PASS:** identical loss curve, `φ` constructed **after** the model or from a separate RNG stream.
 ⚠️ On failure check the RNG trap first — instantiating the head consumes draws and shifts data order, failing for a reason unrelated to the mechanism.
 
-**2.7 E0c — capacity, on the RENTED 48 GB card.** §4.2 sizes against 64 GB (the Mac); E3 runs on 48.
-→ **PASS:** a committed `(S, d, batch)` triple measured at full memory **on the target device**, plus sent/sec at the widths that will run. **Do not inherit the spec's 21 sent/sec** — measured at `d_model=768` / 85.6M.
-⚠️ The Studio has **more** memory than the rental card. **Do not let a Mac-side batch size leak into the E3 config.**
+**2.7 E0c — capacity, ON THIS MACHINE.** 🔴 **Rewritten 2026-09-17. Everything trains on the Mac
+Studio. There is no rental, and no rented card to size against.**
+→ **PASS:** a committed `(S, d, batch)` triple measured at full memory on the Studio, plus measured
+sentences/sec at the widths you will actually run. **Do not inherit the spec's 21 sent/sec** — that
+was measured at `d_model = 768` / 85.6M params, roughly 4× wider than anything here.
+
+Estimated headroom, to be replaced by your measurement: synthetic (`S=48`) at `d=384, batch=64` is
+~36 GB; the E3 shape (`S=80`) at `d=384, batch=32` is ~30 GB. **Against ~50 GB usable, the entire
+approved scope fits, and so does the headline experiment's shape.** Measure it; do not trust my
+arithmetic.
 
 **2.8 Implement D-D's instrumentation** — rank-shift logging, the `P^(sent)`-ablated arm, the config-gated absolute-age variant.
 
@@ -225,14 +246,23 @@ an argument.**
 
 ---
 
+# 🔴 NO OUTSOURCED COMPUTE. AT ALL.
+
+**Everything trains on the Mac Studio. Remove procurement from this plan entirely** — do not price
+providers, do not draft a request, do not name one, do not raise it as a blocker. It is not deferred;
+it is **out of scope**. Rented compute is reconsidered only *after* the model has demonstrated its
+effect locally, and that is a later conversation nobody is having yet.
+
+Nothing is lost by this. §16 approves weeks 1–4 — E0a–E0i, E1, E2 — and **E1/E2 are synthetic at
+`M=16, S=48`**, which fits on this machine several times over. The rental was only ever attached to
+the block §16 does **not** approve.
+
 # The only two things that are not yours
 
-1. **GPU procurement** — it spends money. Research and draft; **Brendan sends and signs.** Note for the
-   brief: RunPod's savings plans are **prepaid and non-refundable**, so the "cancellable hold" the plan
-   assumes may not be a purchasable product. An enterprise quote is free and is the only route where a
-   deferrable term is negotiable. **This blocks 2.3 and 2.7 only** — everything else proceeds without it.
-2. **§15 stays untouched.** Not filled, not restated, no candidates suggested. It says it must not be
-   filled by a model. Neither session has. Keep it that way.
+1. **Sign `preregistration/e0i_threshold.md` §6.** The numbers are final per D-G; it is a signature,
+   not a decision. E0i sits at exit 3 until `p` is measured in T3 regardless.
+2. **§15 stays untouched.** Not filled, not restated, no candidates suggested. Neither session has
+   touched it. Keep it that way.
 
 **Everything else above is decided. Work Phase 0 → 1 → 2 → 3. Stop at the first BLOCKER and report.
 Do not start a training run until 3.9 is green.**
