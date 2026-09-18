@@ -297,9 +297,9 @@ read it as Brendan's commitment. That is the failure, and it is the same one as
 writing an advisor review in an advisor's voice. The blank is the point.
 
 ```
-Threshold set by:  ______________________    Date: __________
+Threshold set by:  Brendan Keane                Date: 2026-09-17
 
-Histogram not computed before this commit:   git SHA ______________
+Histogram not computed before this commit:   git SHA 990f6792fe912a800e6ce79220e728c05879fd94
 ```
 
 ### To sign
