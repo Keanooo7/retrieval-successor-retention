@@ -185,6 +185,23 @@ class TGConfig:
                     f"the fixture sets {key}={d[key]!r}; this transcription "
                     f"implements only {key}={expected!r} (gauntlet 2.4 scope)."
                 )
+        # 🔴 The token ids are REQUIRED, not defaulted. The gestalt is read at the
+        # first [EOS] and memory is written only when a sentence has one, so a
+        # wrong `eos_id` reads position 0, never writes memory, and still produces
+        # a plausible loss. That is what happened on 2026-09-17: the sidecar
+        # omitted them, this method defaulted to GPT-2's 50259 while the fixture
+        # used 510, and every activation matched to 1e-7 while the gestalt was off
+        # by 0.25. Defaulting a field that changes behaviour is the defect; the
+        # fix is to refuse.
+        missing = [k for k in ("pad_id", "bos_id", "eos_id", "eod_id") if k not in d]
+        if missing:
+            raise KeyError(
+                f"the fixture's config omits {missing}. The token ids change what "
+                f"the model does -- the gestalt is read at the first [EOS] and "
+                f"memory is written only when a sentence has one -- so they cannot "
+                f"be defaulted. Regenerate the fixture with a generator that "
+                f"records them."
+            )
         return cls(
             D=d["D"],
             H=d["H"],
@@ -195,4 +212,8 @@ class TGConfig:
             block_config=tuple(d["block_config"]),
             srep_extraction_layer=d["srep_extraction_layer"],
             srep_norm_target=d["srep_norm_target"],
+            pad_id=d["pad_id"],
+            bos_id=d["bos_id"],
+            eos_id=d["eos_id"],
+            eod_id=d["eod_id"],
         )

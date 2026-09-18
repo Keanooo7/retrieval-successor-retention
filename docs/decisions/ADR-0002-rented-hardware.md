@@ -119,6 +119,40 @@ the gradient fixtures exist to catch: the retained-graph divergence, which shows
 as a *structural* difference in which paths carry gradient at all, not as accumulated
 rounding. A wrong graph is off by a large factor or by everything, not by `1e-3`.
 
+### ACHIEVED — 2026-09-17, gauntlet 2.4
+
+The transcription meets them with roughly an order of margin. Reported as the
+**fraction of the allowed tolerance actually used**, where `1.0` is exactly at the
+limit:
+
+| Quantity | Fraction of tolerance used |
+|---|---|
+| Per-layer activations (12 blocks × 20 steps) | **0.115** |
+| Logits | 0.083 |
+| Gestalt vectors | 0.015 |
+| Cross-attention weights | 0.003 |
+| **Gradients** (206 arrays), worst — `srep_head.proj.kernel` | **0.006** |
+| Gradients, median | 0.0001 |
+
+And the total loss is **bit-identical**:
+
+```
+JAX   125.3105468750
+torch 125.3105468750     |delta| = 0.000e+00
+```
+
+**Nothing was relaxed.** The committed numbers stand as committed, and the margin
+means a future regression has room to be visible before it is fatal.
+
+One real transcription bug was found and fixed by this harness rather than by
+inspection: the fixture sidecar did not record the token ids, so
+`TGConfig.from_reference_dict` defaulted `eos_id` to GPT-2's 50259 while the
+extraction used 510. **Every activation matched to 1e-7 and the gestalt was off by
+0.25** — the gestalt is read at the first `[EOS]`, so a wrong id reads position 0,
+and memory is written only when a sentence *has* one, so memory stayed empty for
+all 20 steps. The sidecar now records the ids and `from_reference_dict` **refuses** a
+fixture without them. Defaulting a field that changes behaviour was the defect.
+
 ### If the transcription cannot meet these
 
 🔴 **Record the achieved value here, with the reason. Do not silently relax.** D-H.

@@ -200,49 +200,199 @@ def test_the_positive_control_shows_the_tolerance_can_see_a_severed_graph(meta):
 
 
 # --------------------------------------------------------------------------- #
-# The comparison itself -- needs the PyTorch transcription (gauntlet 2.4).
+# The comparison itself (gauntlet 2.4). PyTorch TG vs the golden tensors, to
+# ADR-0002's committed tolerance.
 # --------------------------------------------------------------------------- #
 
-pytestmark_transcription = pytest.mark.skip(
-    reason=(
-        "Blocked on the PyTorch TG transcription (ADR-0001, gauntlet 2.4). The "
-        "tolerance (ADR-0002) and the extraction (gauntlet 2.3) are both DONE; "
-        "this is the remaining blocker. NOT passing -- unrun. Must not be "
-        "reported as passing in GATE-1."
-    )
+import dataclasses  # noqa: E402
+
+import torch  # noqa: E402
+
+from rsr.model.tg import (  # noqa: E402
+    TGConfig,
+    TGModel,
+    load_reference_params,
+    run_sentence_loop,
 )
+from rsr.model.tg.tolerances import FORWARD, GRADIENT  # noqa: E402
 
 
-@pytestmark_transcription
-def test_forward_matches_jax_reference():
-    raise NotImplementedError("gauntlet 2.4.")
+def _next_token_loss(logits, ids, mask, row_valid):
+    """The same loss the extraction used. Mean over valid positions, per step."""
+    logp = torch.log_softmax(logits[:, :-1].to(torch.float32), dim=-1)
+    tgt = ids[:, 1:]
+    picked = logp.gather(-1, tgt.unsqueeze(-1)).squeeze(-1)
+    valid = (mask[:, 1:] == 1) & row_valid.unsqueeze(-1)
+    return -(picked * valid).sum() / valid.sum().clamp(min=1)
 
 
-@pytestmark_transcription
-def test_gestalt_vectors_match_jax_reference():
-    raise NotImplementedError("gauntlet 2.4.")
+def _build(meta, golden, *, detach=False):
+    cfg = TGConfig.from_reference_dict(meta["config"])
+    if detach:
+        cfg = dataclasses.replace(cfg, detach_sreps_for_memory=True)
+    model = TGModel(cfg)
+    load_reference_params(model, {k: golden[k] for k in golden.files})
+    model.eval()  # ADR-0002: dropout deterministic, srep_dropout disabled
+    return cfg, model
 
 
-@pytestmark_transcription
-def test_cross_attention_weights_match_jax_reference():
-    raise NotImplementedError("gauntlet 2.4.")
+def _run(model, golden, *, capture=True):
+    ids = torch.as_tensor(golden["input_ids"], dtype=torch.long)
+    mask = torch.as_tensor(golden["input_mask"], dtype=torch.long)
+    lengths = torch.as_tensor(golden["input_lengths"], dtype=torch.long)
+    return run_sentence_loop(
+        model,
+        ids,
+        mask,
+        lengths,
+        step_fn=lambda t, out, i, m, rv: _next_token_loss(out.logits, i, m, rv),
+        capture=capture,
+    )
 
 
-@pytestmark_transcription
-def test_gradients_wrt_w_sent_match_jax_reference():
-    """Not optional. See the module docstring."""
-    raise NotImplementedError("gauntlet 2.4.")
+@pytest.fixture(scope="module")
+def transcription(meta, golden):
+    cfg, model = _build(meta, golden)
+    loss, steps = _run(model, golden)
+    return cfg, model, loss, steps
 
 
-@pytestmark_transcription
-def test_gradients_wrt_transformer_params_match_jax_reference():
-    raise NotImplementedError("gauntlet 2.4.")
+def _assert_close(got, want, tol, what):
+    torch.testing.assert_close(
+        got,
+        torch.as_tensor(np.asarray(want), dtype=got.dtype),
+        rtol=tol.rtol,
+        atol=tol.atol,
+        msg=lambda m: (
+            f"{what}: {m}\n\ntolerance is ADR-0002's, committed before "
+            f"these fixtures existed. If it cannot be met, ADR-0002 records the "
+            f"ACHIEVED value and the cause. It does not silently relax."
+        ),
+    )
 
 
-@pytestmark_transcription
-def test_a_detached_pytorch_model_fails_the_gradient_check():
-    """The other half of 2.3's positive control, on the transcription rather than
-    on the tolerance: a PyTorch TG built with `detach_sreps_for_memory=True` must
-    **fail** against these fixtures. If it passed, the gradient check would be
-    measuring nothing about graph retention."""
-    raise NotImplementedError("gauntlet 2.4.")
+def test_the_loss_matches_the_jax_reference(transcription, golden):
+    """The single number that has to agree before anything else is diagnosable."""
+    _, _, loss, _ = transcription
+    _assert_close(loss, golden["loss"], FORWARD, "total loss")
+
+
+def test_forward_matches_jax_reference(transcription, golden):
+    """Per-layer activations, all 12 blocks, all 20 steps."""
+    _, _, _, steps = transcription
+    keys = sorted(
+        (k for k in golden.files if k.startswith("activations/")),
+        key=lambda k: int(k.split("blocks_")[1].split("/")[0]),
+    )
+    assert len(keys) == 12
+    for layer, key in enumerate(keys):
+        want = golden[key]  # [T, B, L, D]
+        got = torch.stack([s.activations[layer] for s in steps])
+        _assert_close(got, want, FORWARD, f"activations, block {layer}")
+
+
+def test_gestalt_vectors_match_jax_reference(transcription, golden):
+    _, _, _, steps = transcription
+    got = torch.stack([s.srep for s in steps])
+    _assert_close(got, golden["gestalts"], FORWARD, "gestalts")
+    assert torch.allclose(got.norm(dim=-1), torch.ones(()), atol=1e-6)
+
+
+def test_cross_attention_weights_match_jax_reference(transcription, golden):
+    """Six layers, not twelve (D-E). Each `[T, B, H, L, M]`."""
+    _, _, _, steps = transcription
+    keys = sorted(
+        (k for k in golden.files if k.startswith("cross_attention/")),
+        key=lambda k: int(k.split("blocks_")[1].split("/")[0]),
+    )
+    assert len(keys) == 6
+    for layer, key in enumerate(keys):
+        got = torch.stack([s.cross_attention[layer] for s in steps])
+        _assert_close(got, golden[key], FORWARD, f"cross-attention, layer {layer}")
+
+
+def test_logits_match_jax_reference(transcription, golden):
+    _, _, _, steps = transcription
+    got = torch.stack([s.logits for s in steps])
+    _assert_close(got, golden["logits"], FORWARD, "logits")
+
+
+# --- gradients -------------------------------------------------------------- #
+
+
+@pytest.fixture(scope="module")
+def gradients(meta, golden):
+    _, model = _build(meta, golden)
+    loss = _run(model, golden, capture=False)
+    loss.backward()
+    return {name: p.grad for name, p in model.named_parameters()}
+
+
+def _reference_grads(golden):
+    from rsr.model.tg.loading import reference_name_to_torch
+
+    return {
+        reference_name_to_torch(k[len("grad/") :]): golden[k]
+        for k in golden.files
+        if k.startswith("grad/")
+    }
+
+
+def test_gradients_wrt_w_sent_match_jax_reference(gradients, golden):
+    """Not optional. See the module docstring: this is where JAX functional
+    autodiff and PyTorch retained-graph semantics diverge."""
+    want = _reference_grads(golden)
+    for name in ("srep_head.proj.kernel", "srep_head.proj.bias"):
+        assert gradients[name] is not None, f"{name} received no gradient"
+        _assert_close(gradients[name], want[name], GRADIENT, name)
+
+
+def test_gradients_wrt_transformer_params_match_jax_reference(gradients, golden):
+    want = _reference_grads(golden)
+    assert len(want) == 206
+    for name, reference in want.items():
+        assert gradients[name] is not None, f"{name} received no gradient"
+        _assert_close(gradients[name], reference, GRADIENT, name)
+
+
+def test_the_memory_gate_receives_gradient(gradients):
+    """D-E's parameter, and the one the positive control hits hardest."""
+    gates = {n: g for n, g in gradients.items() if n.endswith("memory_gate")}
+    assert len(gates) == 6, sorted(gates)  # six cross-attention layers
+    assert all(g is not None and g.abs() > 0 for g in gates.values())
+
+
+def test_a_detached_pytorch_model_fails_the_gradient_check(meta, golden):
+    """🔴 Gauntlet 2.3's positive control, on the transcription.
+
+    A PyTorch TG built with `detach_sreps_for_memory=True` must **fail** against
+    these fixtures. If it passed, the gradient check would be measuring nothing
+    about graph retention -- and a forward-only match with the wrong graph is the
+    failure that survives to week 7 and looks like a finding in E3.
+
+    The forward pass is expected to still match exactly: detaching changes only
+    the backward. That is asserted here too, because it is what makes the control
+    a control rather than a broken model.
+    """
+    _, model = _build(meta, golden, detach=True)
+    loss = _run(model, golden, capture=False)
+    _assert_close(loss, golden["loss"], FORWARD, "detached forward loss")
+
+    loss.backward()
+    want = _reference_grads(golden)
+    mismatched = [
+        name
+        for name, p in model.named_parameters()
+        if p.grad is not None
+        and not torch.allclose(
+            p.grad,
+            torch.as_tensor(np.asarray(want[name]), dtype=p.grad.dtype),
+            rtol=GRADIENT.rtol,
+            atol=GRADIENT.atol,
+        )
+    ]
+    assert len(mismatched) >= len(want) // 4, (
+        f"only {len(mismatched)} of {len(want)} gradients moved when the "
+        f"gestalt->memory graph was severed. The gradient check is not testing "
+        f"graph retention."
+    )

@@ -16,6 +16,10 @@
     "seed": 0,
     "srep_extraction_layer": 6,
     "srep_norm_target": 1.0,
+    "pad_id": 508,
+    "bos_id": 509,
+    "eos_id": 510,
+    "eod_id": 511,
     "block_config": [
       "S",
       "C",

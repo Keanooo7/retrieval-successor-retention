@@ -410,6 +410,16 @@ def main() -> int:
             "seed": SEED,
             "srep_extraction_layer": cfg.srep_extraction_layer,
             "srep_norm_target": cfg.srep_norm_target,
+            # 🔴 The token ids are part of the model's behaviour, not of the data.
+            # The gestalt is read at the first [EOS], and memory is written only
+            # when a sentence HAS one -- so a consumer that defaults `eos_id`
+            # silently reads position 0 and never writes memory. It cost one
+            # debugging cycle on 2026-09-17; the config now carries them and
+            # `TGConfig.from_reference_dict` refuses a fixture without them.
+            "pad_id": cfg.pad_id,
+            "bos_id": cfg.bos_id,
+            "eos_id": cfg.eos_id,
+            "eod_id": cfg.eod_id,
             "block_config": list(cfg.block_config),
             "deterministic": True,
         },

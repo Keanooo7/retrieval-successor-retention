@@ -18,7 +18,7 @@ measures it rather than citing one.
 
 from __future__ import annotations
 
-__all__ = ["segment_sentences", "detect_reintroductions"]
+__all__ = ["detect_reintroductions", "segment_sentences"]
 
 
 def segment_sentences(*args, **kwargs):
