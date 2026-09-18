@@ -201,7 +201,15 @@ def check_claim(runs_dir: Path, ident: str, outcome: str) -> tuple[bool, str]:
 # markdown link target. These are references, not measurements.
 _SKIP_CONTEXT = re.compile(r"(§|\bv|\bADR-|\bE0|\bcycle[- ]|\bp\.)\s*$", re.IGNORECASE)
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
-_NUMBER = re.compile(r"(?<![\w.])(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)(?![\w])")
+# `-` is in the lookbehind so a digit inside an identifier -- `claude-501`,
+# `cycle-04`, `ADR-0006` -- is not read as a measurement. A genuinely negative
+# number still matches, because the match then starts at the sign.
+#
+# ⚠️ Code spans are deliberately NOT masked. Both of the fabrications this exists
+# to catch are written inside backticks in the 2026-09-18 documents
+# (`1.5476 → 1.5336`, `10.817072550456`), so masking them would blind the audit to
+# its own motivating case.
+_NUMBER = re.compile(r"(?<![\w.-])(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)(?![\w])")
 
 
 def _ledger_numbers(runs_dir: Path) -> set[float]:
@@ -237,7 +245,16 @@ def audit_prose(runs_dir: Path, text: str) -> list[str]:
     as backing, because they are `len()` over ledgers rather than typed numbers.
     """
     board = build(runs_dir)
-    numbers = _ledger_numbers(runs_dir) | {float(v) for v in board.tally.values()}
+    # The board's own numbers back the prose too: every one of them is `len()` of
+    # something or a field copied straight off a ledger. Without this the
+    # generated artefact fails its own audit on the per-run row counts, which are
+    # exactly the numbers this script exists to stop anyone typing.
+    derived = {float(v) for v in board.tally.values()}
+    for row in board.rows:
+        for v in row.values():
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                derived.add(float(v))
+    numbers = _ledger_numbers(runs_dir) | derived
     masked = _DATE.sub(" ", text)
 
     unbacked: list[str] = []

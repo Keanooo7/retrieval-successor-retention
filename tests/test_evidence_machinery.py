@@ -232,6 +232,16 @@ def test_every_scoreboard_count_is_a_len_not_a_typed_number():
     )
 
 
+def test_the_rendered_artefact_passes_its_own_audit(tmp_path):
+    """§5.2's claim, made checkable: *a number that is not a ledger key cannot
+    appear in the output*. If the renderer prints something the audit cannot back,
+    one of the two is wrong -- and on the first run it was the audit, which backed
+    ledger *values* but not the `len()`-derived counts the board prints."""
+    board = render_scoreboard.build(_REPO / "runs")
+    text = render_scoreboard.render(board, runs_dir=_REPO / "runs")
+    assert render_scoreboard.audit_prose(_REPO / "runs", text) == []
+
+
 def test_the_audit_flags_a_number_that_is_in_no_ledger():
     """`1.5476` is the fabrication that motivated this script: three documents
     carry it and `grep -rn 1.5476 runs/` returns zero hits."""

@@ -423,6 +423,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "5.2: `1.5476` goes back to passing an audit it should fail",
     ),
     Mutation(
+        "the board's own counts stop backing the prose",
+        "test_the_rendered_artefact_passes_its_own_audit",
+        "scripts/render_scoreboard.py",
+        "    for row in board.rows:\n        for v in row.values():",
+        "    for row in []:\n        for v in row.values():",
+        "5.2: the generated artefact fails its own audit on the per-run row "
+        "counts -- exactly the numbers the script exists to stop anyone typing",
+    ),
+    Mutation(
         "off-gate failures stop counting",
         "test_an_off_gate_failure_makes_a_mutation_unproven",
         "scripts/mutation_battery.py",
