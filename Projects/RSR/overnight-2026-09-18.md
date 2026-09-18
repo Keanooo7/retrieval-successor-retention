@@ -519,3 +519,95 @@ and §3.7's reduction path untouched, and the `−ν·max cos` term is the other
 could interact with `M`. No `S`-control at `M = 8`. CPU only.
 
 ---
+
+## Cycle 7 — is the fix even `M`-shaped?
+
+| | |
+|---|---|
+| **Falsifier** | *"`b`'s realized decision strength is a function of `M` alone — so any `M`-indexed fix is a complete fix."* |
+| **Dispatched** | fresh researcher, retired on hand-back |
+| **Verdict** | **falsified, on three counts, one of which I did not anticipate.** |
+| **Verified by re-execution** | ✅ **Their part-G check, re-run by me**, reproduced **bit-exactly**: `M effect 1.6420 ± 0.0714`, `redundancy effect 2.5928 ± 0.1074`, `redundancy / M = 1.5790`. **And I independently verified their correction of my own brief** by reading the two prior ledgers directly: cycle 5's tight ratio `4.4075 / 3.2479 = 1.357` against cycle 6's same-readout `M` swing of `1.682`. 838 rows, `sd_zero_rows_unclassified = []`, every mean±sd in their writeup machine-checked against the ledger (0 unmatched), and prior-cycle numbers **read at runtime from those ledgers rather than retyped.** |
+| **Ledger** | `runs/cycle-redundancy-vs-M/ledger.json` — 838 rows, 76 s, CPU. |
+
+**The three counts.** (1) At fixed `M = 40`, redundancy moves `b_max/margin` by **2.37102 ± 0.21026**
+(live memory) or **4.03253 ± 0.11747** (static groups), against a whole-`M`-range effect of
+**1.65205 ± 0.17053** — crossing at achieved mean-max-cosine **0.541**, found at the same place by
+two independent constructions. (2) 🔴 **The `M` gap itself moves with redundancy**: the flip-rate gap
+an `M`-keyed `b_max` would be tuned to close is **1.19266 ± 0.05566** at the control and **1.49851 ±
+0.11214** at high redundancy — **one `M`-keyed constant cannot close a gap that is a function of the
+other variable.** (3) 🔴 **The sign flips with `M`**: redundancy *weakens* `b` at `M = 8` (**0.88401 ±
+0.05446**) and *strengthens* it at `M = 40` (**1.10803 ± 0.03838**), straddling 1.0 about 3 sd apart.
+
+**They bounded their own headline honestly.** On the *flip-rate* readout, redundancy (1.108×) stays
+**below** the `M` effect (1.314×) everywhere reachable — 0 of 5 seeds crossed. The margin readout is
+where redundancy wins. The verdict rests on counts 2 and 3, which hold on **either** readout. That
+is the right way to carry a split result.
+
+### 🔴 Two errors in my brief, both real
+
+- **I claimed cycle 5's +36% redundancy swing was "larger than the entire `M = 8 → 40` swing." It
+  is not** — 1.357 vs 1.684, about half. I compared a *ratio* swing against a *flip-rate* swing
+  (1.275), which is the only reading on which my sentence is true. **Verified against the prior
+  ledgers myself.** This is the fifth brief of seven with an error, and it is the first where the
+  error was in the quantitative premise rather than a mechanism claim.
+- **I asked for redundancy to be measured as achieved mean-max-cosine. That is not a sufficient
+  statistic.** Two constructions at the *same* achieved cosine `0.51621 ± 0.00064` differ by
+  **1.48406 ± 0.04645×**. What shrinks the margin is a near-tie between **two** slots — the *upper
+  tail* of the pairwise-cosine distribution, not its mean. **So a cosine-keyed fix would be
+  miscalibrated for the same reason an `M`-keyed one is**, and even a measured corpus mean-max-cosine
+  would not settle the question.
+
+### The mechanism, and it ties back to cycle 5
+
+**Broad correlation is nearly flat, and that is a finding rather than a null.** At `M = 40`, going
+from achieved cosine 0.111 to 0.624 moves the ratio only **1.17951 ± 0.10620** and the flip rate
+**1.0107 ± 0.0383**. Why: a component shared by *every* live slot is a **common additive offset** in
+`ψ̂`, and `_score` subtracts the per-step mean one operation before z-scoring — **the argmin is blind
+to it.** That is the same mechanism cycle 5 used to dismiss the per-step-vs-pooled gap, arriving from
+a different direction. **Anisotropy behaves the same way**: collapsing effective dimension from
+**384.03 ± 0.11** to **4.11 ± 0.04** (achieved participation ratio, finite-`N` bias removed exactly)
+moves the ratio only ~1.43× — at a *higher* achieved cosine (0.771) than the near-duplicate cell
+(0.731) that moved it 2.37×. **Three constructions, same insufficiency conclusion.**
+
+So my brief's premise — *"the margin distribution already moved +36% at fixed `M`"* — does not
+generalize to redundancy as such. It was a property of cycle 5's **near-duplicate** structure
+specifically.
+
+**Another cross-cycle replication:** the `α = 0` live flip rate is `0.59500 ± 0.01289`, identical in
+every digit to cycle 6's `M = 40` row, from a differently written generator.
+
+### The registry question, re-costed — and a fourth option
+
+**(A) per-scope `b_max` keyed on `M`** now costs *more* than cycle 6 thought: it closes the gap at
+one redundancy and opens it at another (1.193 → 1.499), and redundancy's sign differs between `M = 8`
+and `M = 40`. **(B) `M` factor in `γ_b`**: smallest diff, unchanged by this cycle, but `γ_b` has no
+redundancy dependence to exploit — and the flip-rate readout it acts on is a **low-sensitivity
+instrument** (a −17% margin buys +6.6% flips, because `b` is saturated most of the time). **(C)
+`b_max` normalized by a *measured* margin** — `κ ·` trailing median `score_margin`, which the policy
+**already logs** — is the only option that compensates for **both** axes at once, because the margin
+is the variable both act *through*, and it sidesteps the sufficiency problem entirely since no
+geometry statistic has to predict anything. Costs: `b_max` stops being FROZEN and becomes a second
+online feedback path with untested stability, `b` stops being comparable across steps, it needs a
+warm-up interacting with `T_warm`, and §3.5 item 1 gets **replaced rather than amended**. **(D)
+`b_max` should not be frozen at all** — stated plainly because I asked for it: on cycles 5–7 it is a
+FROZEN constant whose only justified reading does no protective work and whose decision-relevant
+value ranges **1.88–12.99×** the margin depending on `M` and geometry, i.e. **a free parameter that
+was never swept.**
+
+🔴 **What all four need and none has: one sentence naming the invariant.** Equal flip rate? Equal
+`b_max`/margin? Equal fraction of decisions `b` could cross? **The missing measurement is the
+invariant, not more numbers** — and this harness supplies all three for any candidate in ~80 s.
+
+**Boundary, and they were scrupulous about the important one.** **Nothing about PG-19** — no PG-19
+gestalts exist in this repo, none were used, `φ` was never trained on text. **Whether a real corpus
+sits above or below the crossing at 0.541 is not measured and not measurable from anything here.**
+Marked as conjecture only: cycle 5's tight arm reached 0.424 and loose 0.183, both *below* 0.541, so
+*if* a real corpus sits there the `M` axis dominates in practice — but §13 forbids reading a
+synthetic number as a corpus number. `ν = 0` throughout, so §3.4's own redundancy term was never
+exercised. Under high redundancy a flip is often between two near-equivalent slots, so **the flip
+rate may over-state harm exactly where redundancy is high** (unquantified). `f = 0.75` is a stress
+test, not a plausible corpus. `φ` untrained and `ū` synthetic; the order-statistic halves involve
+`ū` not at all.
+
+---
