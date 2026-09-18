@@ -900,3 +900,20 @@ positions per sentence. **Only the first is a code defect.** The α token-axis r
 §3.2.1's formula has no token axis and does not say which.
 
 ---
+
+## Cycle 12 — CANARY
+
+| | |
+|---|---|
+| **Falsifier** | *"the environment has not moved since the cycle-4 baseline."* |
+| **Verdict** | **survived.** `beats_outside_tol = []`, max abs diff **1.5894571969710114e-07** — the same floor band as cycle 8's `3.1789143850602386e-07`, i.e. one float step at that magnitude. |
+| **Verified by re-execution** | ✅ **The canary is a re-execution** of the config frozen at cycle 4, now eight cycles and eight commits later (`bc8441a` → `7254080`). |
+| **Ledger** | `runs/canary/cycle-12/ledger.json`. |
+
+**Nothing has moved across the whole night.** Three independent environment checks now agree: a
+retrospective bit-exact reproduction of a **pre-tonight** commit (cycle 4), and two forward canaries at
+cycles 8 and 12, both inside the floor. **Every result in this log rests on an environment verified
+three times, and the two forward readings differ from the baseline only at the MPS nondeterminism floor
+that cycle 1 independently identified.**
+
+---
