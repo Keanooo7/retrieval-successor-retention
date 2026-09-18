@@ -611,3 +611,27 @@ test, not a plausible corpus. `φ` untrained and `ū` synthetic; the order-stati
 `ū` not at all.
 
 ---
+
+## Cycle 8 — CANARY
+
+| | |
+|---|---|
+| **Falsifier** | *"the environment has not moved since the cycle-4 baseline."* |
+| **Dispatched** | nobody — mine to run |
+| **Verdict** | **survived.** All 6 beats within the committed `rel_tol = 1e-4`; `beats_outside_tol = []`. |
+| **Verified by re-execution** | ✅ **The canary is itself a re-execution**, of the config frozen at cycle 4, four cycles and four commits later (`bc8441a` → `1e95487`). |
+| **Ledger** | `runs/canary/cycle-08/ledger.json` against `runs/canary/baseline.json`. |
+
+**And the canary corroborated an earlier measurement in a way I did not plan.** It is not
+bit-identical to the baseline — max abs diff **3.1789143850602386e-07**. That is *digit for digit*
+the value cycle 1 measured as the MPS nondeterminism floor, from a completely separate construction
+(a `fifo`-vs-`fifo` same-seed replicate over 10 beats at `V = 50257`, vs a 6-beat rerun at `V = 160`
+here). **Two unrelated measurements landing on the same floor constant is strong evidence cycle 1
+identified it correctly** — and it means the canary is resolving exactly the floor and nothing else,
+which is the best possible news about the `1e-4` tolerance committed before the first reading.
+
+**Nothing has moved.** Seven cycles of results stand on an environment verified twice: once
+retrospectively against a pre-tonight commit (cycle 4, bit-exact), once forward against the frozen
+baseline (here, at the floor).
+
+---

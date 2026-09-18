@@ -1,0 +1,84 @@
+{
+  "run_id": "canary/cycle-08",
+  "cycle": 8,
+  "question": "has the environment moved since the canary baseline?",
+  "started_utc": "2026-09-18T09:29:10Z",
+  "provenance": {
+    "git_sha": "1e95487ac28c360a2026025bf015f20ec3b71017",
+    "git_dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "commands": [
+    {
+      "argv": ".venv/bin/python scripts/canary.py 8",
+      "exit_code": 0,
+      "note": "frozen config, seed 0; see CONFIG in scripts/canary.py",
+      "at_utc": "2026-09-18T09:29:10Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "losses",
+      "kind": "observation",
+      "value": [
+        4.965003331502278,
+        4.134424209594727,
+        3.1744216283162436,
+        2.775899887084961,
+        2.5399147669474282,
+        2.3805060386657715
+      ],
+      "how": "heartbeat.jsonl beat records, field 'loss'"
+    },
+    {
+      "key": "config",
+      "kind": "observation",
+      "value": {
+        "d": 128,
+        "steps_per_stream": 48,
+        "batch": 8,
+        "iters": 6,
+        "seed": 0,
+        "memory_slots": 16,
+        "lr": 0.001,
+        "device": "mps",
+        "beat_every": 1,
+        "ckpt_every": 0
+      },
+      "how": "frozen literal in scripts/canary.py"
+    },
+    {
+      "key": "rel_tol",
+      "kind": "observation",
+      "value": 0.0001,
+      "how": "committed in scripts/canary.py before the first reading"
+    },
+    {
+      "key": "baseline_losses",
+      "kind": "observation",
+      "value": [
+        4.965003331502278,
+        4.134424209594727,
+        3.174421946207682,
+        2.775899887084961,
+        2.539914925893148,
+        2.3805060386657715
+      ],
+      "how": "runs/canary/baseline.json"
+    },
+    {
+      "key": "beats_outside_tol",
+      "kind": "observation",
+      "value": [],
+      "how": "elementwise |now-base|/|base| vs REL_TOL"
+    }
+  ],
+  "verdict": {
+    "falsifier": "the environment has not moved since the canary baseline",
+    "outcome": "survived",
+    "detail": "all 6 beats within rel_tol=0.0001"
+  },
+  "finished_utc": "2026-09-18T09:29:10Z"
+}
