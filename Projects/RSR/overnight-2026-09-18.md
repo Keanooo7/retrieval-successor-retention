@@ -431,3 +431,91 @@ mid-stream or queries the policy on an underfull memory, the `n_live` curve beco
 `b_max` drops toward 0.56 true SD.** Today it cannot.
 
 ---
+
+## Cycle 6 — can one FROZEN `b_max` serve every `M` the project trains?
+
+| | |
+|---|---|
+| **Falsifier** | *"a single FROZEN `b_max` gives `b` comparable strength at every `M` the project trains."* |
+| **Dispatched** | fresh researcher, retired on hand-back |
+| **Verdict** | **falsified, twice over, on two independent measurements.** |
+| **Verified by re-execution** | ✅ **Their headline claim, re-run by me from the registry's own values.** `b_max = 1.0` FROZEN; `M` by scope = 8 / 16 / 40. Printed `M= 8 → 1.9329 ± 0.0075`, `M=16 → 2.5404 ± 0.0127`, `M=40 → 3.1824 ± 0.0279` — a 1.65× swing **from a single `torch.randn`**, no head, no policy, no gestalt. I separately confirmed their correction-4 arithmetic and the `S`-scope claim (see below). 186 rows audited, `sd_zero_rows_unclassified` is `[]`, `git_dirty: false`. |
+| **Ledger** | `runs/cycle-bmax-scope-dependence/ledger.json` — 186 rows, 7.6 s, CPU. |
+
+**Order statistic:** `b_max / median-top-2-z-margin` = **1.88772 ± 0.05003** at `M = 8`, **2.59245 ±
+0.05256** at 16, **3.17490 ± 0.08201** at 40 — swing **1.68244 ± 0.04855** over a 13-point sweep,
+with exact-iid-normal theory reproducing the whole curve to 2–3% (`|ψ̂ − normal| ≤ 0.0994` at every
+`n`). **Realized victim-flip rate** with `γ_b` from correction 4's own formula at each `M`:
+**0.46713 ± 0.01702 → 0.53359 ± 0.02150 → 0.59500 ± 0.01289**, a **12.8 ± 2.4 pp** spread (≈5 sd).
+
+**The finding I did not anticipate, and it is the good one.** Correction 4's `γ_b = 4/M` is **doing
+real work against this defect even though it was not derived to.** Hold `γ_b` fixed at the `M = 40`
+value of 0.1 and the flip-rate swing nearly **doubles to 1.84636 ± 0.08705** (0.323 → 0.485 →
+0.595). So the formula's `1/M` closes roughly half the gap the order statistic opens — it
+*over*-corrects relative to the ~1/1.68 the order statistic wants, and lands at a residual 1.28×.
+
+### 🔴 Correction 4's formula and its own stated range disagree, at the `M` D-5 funds
+
+Verified by me directly from the registry: `γ_b = b_max/(0.25·E[lifetime])` with `E[lt] = M` gives
+
+| `M` | `γ_b` | correction 4's stated range |
+|---|---|---|
+| 40 | **0.1000** | top of *"order 0.05–0.1"* ✅ |
+| 16 | 0.2500 | 2.5× over |
+| **8** | **0.5000** | **5× over the top of its own range** |
+
+**Both the range and the formula were written for `M = 40`.** At `M = 8` — exactly the E7 small-`M`
+model that D-5 / correction 6 funds and that release condition 4 rests falsifier 4 on — they
+disagree by 5×. This is a defect in an authoritative document, not in code.
+
+**A third `M`-dependence, not in my brief.** `realized / FIFO` lifetime is **0.922 → 0.832 →
+0.656** across `M` = 8/16/40, so the *two parameterizations* of correction 4's formula diverge
+**more** at larger `M`. "Which `E[lifetime]`" is itself scope-dependent, not a global 0.66 factor.
+Realized lifetimes under the learned-head driver: **7.37708 ± 0.07148 / 13.31693 ± 0.32914 /
+26.23583 ± 0.47394** against FIFO's exactly 8/16/40. The `M = 40` figure replicates cycle 2's
+26.49 ± 0.53.
+
+**A direction warning worth keeping.** At `M = 8, γ_b = 0.5`, `b` saturates **more** (64.7% vs
+54.3%) and `mean |b|` is **higher** (0.719 vs 0.641), yet flips **fewer** victims. **Any future
+defence of a frozen `b_max` that argues from `|b|` reaching `b_max` is arguing about the wrong
+quantity.** And `S` is not driving any of it: `M = 16` re-run at its own registry `S = 48` differs
+from `S = 80` by −0.004 / −0.000 / −0.012, all within 1 sd of zero.
+
+**The three registry options, costed, none picked** — correctly left to Brendan. **(A) `b_max`
+per-scope:** mechanically cheapest, but forfeits §4.5's one-line interpretation *"one standard
+deviation because `ψ̂` is z-scored"* — which cycle 5 measured to be **correct** — and moves `b_max`
+out of FROZEN into an experiment-owned constant, creating a second knob A5 must cross with.
+Equalizing the *ratio* puts `b_max ≈ 0.59` at `M = 8`; equalizing the *flip rate* is a different
+number, so **the option needs a stated invariant before it has a value.** **(B) `γ_b`'s formula
+absorbs `M`:** smallest diff and already half-realized by accident, but changes a formula §3.5 item
+4 states and correction 4 pins, and **conflates two jobs in one number** — a *timescale* (reach
+`O(b_max)` in a lifetime, what correction 4 derives) and a *decision authority* (how much of the
+argmin `b` owns, what the order statistic sets). **(C) The spec accepts it:** zero code, but must
+be written into §13 *and* the E7 writeup, because the anti-collapse loop has ~13 pp less authority
+in the model the human-correlation claim rests on. **(C) is free iff `b` is not load-bearing for
+the E7 claim** — which nobody has established.
+
+### Two more corrections to my brief, and one self-correction of theirs
+
+- 🔴 **`M = 16` does have a registry scope** — `get("M","synthetic")` = 16, FROZEN, §5.1. My brief
+  said it might not. All three `M` were registry reads; none invented. What *is* missing is **`S`
+  for the `M = 8` scope**: I confirmed `get("S","e7")` raises `ScopeRequired` and
+  `get("S","corpora")` raises `UnknownScope`, so the small-`M` model's stream length had to be
+  supplied and was, labelled.
+- **Theirs, self-reported:** they mislabelled a row as "FIFO lifetime" when it was the oldest live
+  slot in the *learned* driver's memory (24.3 at `M = 8`, not 8), caught it, re-measured with a
+  real `FIFOPolicy` on its own memory, and **kept the wrong row under its true name** because
+  §12.4 means recording that too. That is the right call.
+- Cosmetic: they numbered their report "Cycle 5" and refer to my cycle 5 as "cycle 4" — they have
+  no visibility of my cycle counter. Their internal cross-references are self-consistent.
+
+**Boundary.** `φ` untrained, `ū` synthetic — parts 1–2 (the order statistic) involve **neither**
+and are unconditional; parts 3–4 (flip rates) are wholly conditional on the synthetic `ū`.
+**Whether the `M`-dependence survives training is not established** — only that it is present,
+~1.68× wide, and a property of `n` under the near-Gaussian law now measured to hold. "Changed the
+victim" is still not "made it worse": no LM, no loss, no `r_i`, no LOO Δloss, so whether the
+`M = 8` model's weaker `b` is a *problem* needs E0e/E3. One gestalt family (iid spherical); `ν = 0`
+and §3.7's reduction path untouched, and the `−ν·max cos` term is the other thing in `_score` that
+could interact with `M`. No `S`-control at `M = 8`. CPU only.
+
+---

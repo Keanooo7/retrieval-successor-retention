@@ -1,0 +1,2701 @@
+{
+  "run_id": "cycle-bmax-scope-dependence",
+  "cycle": 5,
+  "question": "Does a single FROZEN b_max give `b` comparable realized decision strength at every M the project trains (8, 16, 40), when gamma_b is set by correction 4's own formula at each M?",
+  "started_utc": "2026-09-18T08:42:43Z",
+  "provenance": {
+    "git_sha": "ecbc7b61819ea2fd12f95a2cc7aacb74decf61cc",
+    "git_dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "commands": [
+    {
+      "argv": ".venv/bin/python /private/tmp/claude-501/-Users-keanooo7-second-brain/1bdd6660-ee4c-49c5-99a7-28bf139ef2c9/scratchpad/run_bmax_scope.py",
+      "exit_code": null,
+      "note": "single entry point; every row in this ledger is written by this process",
+      "at_utc": "2026-09-18T08:42:43Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "b_max",
+      "kind": "observation",
+      "value": 1.0,
+      "how": "rsr.constants.get('b_max') -- FROZEN, registry read"
+    },
+    {
+      "key": "M_e7",
+      "kind": "observation",
+      "value": 8,
+      "how": "rsr.constants.get('M','e7') -- FROZEN, registry read"
+    },
+    {
+      "key": "M_synthetic",
+      "kind": "observation",
+      "value": 16,
+      "how": "rsr.constants.get('M','synthetic') -- FROZEN, registry read"
+    },
+    {
+      "key": "M_corpora",
+      "kind": "observation",
+      "value": 40,
+      "how": "rsr.constants.get('M','corpora') -- FROZEN, registry read"
+    },
+    {
+      "key": "M_pg19_e3",
+      "kind": "observation",
+      "value": 40,
+      "how": "rsr.constants.get('M','pg19_e3') -- FROZEN, registry read"
+    },
+    {
+      "key": "S_synthetic",
+      "kind": "observation",
+      "value": 48,
+      "how": "rsr.constants.get('S','synthetic') -- FROZEN, registry read"
+    },
+    {
+      "key": "S_pg19_e3",
+      "kind": "observation",
+      "value": 80,
+      "how": "rsr.constants.get('S','pg19_e3') -- FROZEN, registry read"
+    },
+    {
+      "key": "brief_claim_M16_may_have_no_registry_scope__CORRECTED",
+      "kind": "observation",
+      "value": false,
+      "how": "THE BRIEF IS WRONG ON THIS POINT. M = 16 DOES have a registry scope: rsr.constants.get('M','synthetic') returns 16 (FROZEN, spec 5.1 -- '16 synthetic (maximum eviction pressure, exact gap control)'). All three M values in this experiment are registry reads; none is invented. The three scopes are e7=8, synthetic=16, corpora/pg19/pg19_e3/wikitext_e4/a2_ablation=40."
+    },
+    {
+      "key": "S_e7_registry_read",
+      "kind": "observation",
+      "value": "ScopeRequired",
+      "how": "rsr.constants.get('S','e7') RAISES -- section 5.2 sets E7's stream length from the data ('evaluation only, at passage length, uncut'). So S for the M = 8 scope cannot be read and must be supplied; see bypass_S_for_flip_runs."
+    },
+    {
+      "key": "S_corpora_registry_read",
+      "kind": "observation",
+      "value": "UnknownScope",
+      "how": "rsr.constants.get('S','corpora') RAISES: section 5.2 schedules S per experiment, not per corpus."
+    },
+    {
+      "key": "bypass_tau",
+      "kind": "observation",
+      "value": 0.25,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. Section 3.5 item 3's +/-25% band."
+    },
+    {
+      "key": "bypass_rsrconfig_hand_built",
+      "kind": "observation",
+      "value": true,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. RSRConfig built by hand, not RSRConfig.from_registry (which raises UnmeasuredConstant on the empty ledger)."
+    },
+    {
+      "key": "bypass_S_for_flip_runs",
+      "kind": "observation",
+      "value": 80,
+      "how": "DELIBERATE VISIBLE BYPASS, and the experiment's main design choice: S is held FIXED at 80 across all three M so that M is the ONLY thing varying in part 3. 80 is a registry read (S, pg19_e3) but it is NOT the registry's S for the e7 (raises) or synthetic (48) scopes. Part 4 re-runs M = 16 at its own registry S = 48 as the control for this choice. NOT a measurement of S for any scope."
+    },
+    {
+      "key": "bypass_bias_object_has_b_accessor",
+      "kind": "observation",
+      "value": true,
+      "how": "Carried from cycles 2-4: the real ProtectionBias raises NotImplementedError and its DECLARED surface raises AttributeError at rsr.py:377. scratch_bias.CallSiteBias adds b(slots) -- one side changing shape, labelled as such. Without it no b_enabled=True eviction can run at all."
+    },
+    {
+      "key": "bypass_gamma_b_formula",
+      "kind": "observation",
+      "value": "gamma_b = b_max / (0.25 * E_lifetime)",
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. This IS correction 4 / spec 3.5 item 4's own formula, and it is the same expression as src/rsr/constants.py::_derive_gamma_b. It is EVALUATED here with a hand-supplied E_lifetime because the registry refuses E_lifetime until E0e logs it. Neither the resulting gamma_b nor the E_lifetime fed to it is a measurement of that constant."
+    },
+    {
+      "key": "measurements_ledger_exists",
+      "kind": "observation",
+      "value": false,
+      "how": "os.path.exists -- cycle-1 wall 1, re-checked this cycle"
+    },
+    {
+      "key": "phi_is_untrained",
+      "kind": "observation",
+      "value": true,
+      "how": "RSRPolicy.observe() raises NotImplementedError (src/rsr/retention/rsr.py:433) and run_policy_loop never calls it (cycle-2/3 finding), so no trained phi exists anywhere. Every number here is for a randomly initialised BilinearValueHead."
+    },
+    {
+      "key": "u_bar_is_synthetic",
+      "kind": "observation",
+      "value": true,
+      "how": "No real utilisation signal exists. u_bar is a per-slot log-normal salience assigned at write time plus N(0,0.5) noise, softmaxed over live slots, exactly as cycles 2-4. EVERY PART-3/4 FLIP RATE IS CONDITIONAL ON IT. Part 1 does not involve u_bar at all."
+    },
+    {
+      "key": "d_model",
+      "kind": "observation",
+      "value": 384,
+      "how": "chosen in scratch; correction 23's E3 width. Held fixed across M so M is the only variable."
+    },
+    {
+      "key": "gestalt_distribution",
+      "kind": "observation",
+      "value": "iid uniform on the unit sphere in R^384 (torch.randn then L2-normalize)",
+      "how": "matches correction 15: the reference TG L2-normalizes every gestalt to srep_norm_target = 1.0. Same generator as cycles 2-4."
+    },
+    {
+      "key": "section_13_scope_statement",
+      "kind": "observation",
+      "value": "Part 1 is a dimensionless ratio as a function of the integer n -- a pure order-statistic property, no corpus units. Part 3/4 flip rates are all WITHIN ONE synthetic generator evaluated at three capacities. No absolute number from one corpus is compared with one from another.",
+      "how": "stated by the harness, per CLAUDE.md's section 13 rule; the registry attaches M=8/16/40 to e7/synthetic/corpora respectively and this experiment makes no claim about those corpora."
+    },
+    {
+      "key": "part1_design",
+      "kind": "observation",
+      "value": "5 seeds. (a) psi construction: N_CTX=96 contexts x up to 30 DISJOINT slot groups per n, drawn from one randperm of a pool of 8192 unit gestalts whose psi_hat is precomputed at that context. Disjoint, so no within-group duplicate can manufacture a tie. (b) normal yardstick: 40000 exact iid N(0,1) draws per n. Both z-score with std(unbiased=False), i.e. rsr.py:369 verbatim, and take the gap between the two SMALLEST z-scores -- the quantity the argmin turns on, same definition as EvictionRecord.score_margin (rsr.py:406). n sweep = [4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64].",
+      "how": "harness source, this file, part1_psi() / part1_normal()"
+    },
+    {
+      "key": "part1_psi_trials_per_seed_at_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2880.0,
+        2880.0,
+        2880.0,
+        2880.0,
+        2880.0
+      ],
+      "mean": 2880.0,
+      "sd": 0.0,
+      "how": "groups of size n=40 per seed, psi construction",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part1_normal_trials_per_seed_at_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        40000.0,
+        40000.0,
+        40000.0,
+        40000.0,
+        40000.0
+      ],
+      "mean": 40000.0,
+      "sd": 0.0,
+      "how": "exact-normal draws of size n=40 per seed",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n04",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.1351042732132748,
+        1.1831953791365637,
+        1.1843656562703357,
+        1.2008757896552953,
+        1.1930063307988317
+      ],
+      "mean": 1.1793094858148603,
+      "sd": 0.025726809322119404,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=4 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n04",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.1572490848173662,
+        1.1629091412846553,
+        1.165685448188285,
+        1.1630920975716847,
+        1.1623645959798334
+      ],
+      "mean": 1.162260073568365,
+      "sd": 0.0030808958650998825,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=4.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n04",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8809763328343228,
+        0.8451689531865393,
+        0.8443338378698702,
+        0.8327255896190933,
+        0.8382185192013226
+      ],
+      "mean": 0.8482846465422297,
+      "sd": 0.01895701689911724,
+      "how": "median top-2 z-margin at n=4, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n04",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5635416666666667,
+        0.5704861111111111,
+        0.578125,
+        0.5729166666666666,
+        0.5878472222222222
+      ],
+      "mean": 0.5745833333333333,
+      "sd": 0.009082367006023167,
+      "how": "fraction of draws at n=4 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n04",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.02214481160409143,
+        0.020286237851908417,
+        0.01868020808205073,
+        0.03778369208361054,
+        0.030641734818998234
+      ],
+      "mean": 0.02590733688813187,
+      "sd": 0.008084662611462654,
+      "how": "|psi construction - normal yardstick| for the ratio at n=4: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.4817666765977189,
+        1.5004766817444337,
+        1.4129954046287894,
+        1.4635380096482176,
+        1.430741748834853
+      ],
+      "mean": 1.4579037042908025,
+      "sd": 0.03594500123860339,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=5 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.4237089032113401,
+        1.4279996157109278,
+        1.431594029006141,
+        1.438279437652568,
+        1.443909347529815
+      ],
+      "mean": 1.4330982666221583,
+      "sd": 0.008064476437108312,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=5.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6748700829850606,
+        0.6664548754182662,
+        0.7077163851518058,
+        0.6832757286846034,
+        0.6989381562496276
+      ],
+      "mean": 0.6862510456978728,
+      "sd": 0.016970494640434566,
+      "how": "median top-2 z-margin at n=5, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6784722222222223,
+        0.6798611111111111,
+        0.6451388888888889,
+        0.6670138888888889,
+        0.6645833333333333
+      ],
+      "mean": 0.6670138888888889,
+      "sd": 0.013971110790785213,
+      "how": "fraction of draws at n=5 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n05",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.05805777338637874,
+        0.0724770660335059,
+        0.018598624377351713,
+        0.025258571995649515,
+        0.01316759869496198
+      ],
+      "mean": 0.03751192689756957,
+      "sd": 0.026197312824730045,
+      "how": "|psi construction - normal yardstick| for the ratio at n=5: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n06",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.5824116512123252,
+        1.7166026248576316,
+        1.6587960956773282,
+        1.7212672082675164,
+        1.595822587677077
+      ],
+      "mean": 1.6549800335383757,
+      "sd": 0.06513767945469874,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=6 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n06",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.6349712224803388,
+        1.6354220098161387,
+        1.617833974764617,
+        1.6352108616838674,
+        1.6269118358610692
+      ],
+      "mean": 1.6300699809212063,
+      "sd": 0.007726395731743472,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=6.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n06",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6319468131025672,
+        0.582546004252403,
+        0.6028468493541244,
+        0.5809673217480953,
+        0.6266360732840781
+      ],
+      "mean": 0.6049886123482536,
+      "sd": 0.023878009558179966,
+      "how": "median top-2 z-margin at n=6, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n06",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.7107638888888889,
+        0.7319444444444444,
+        0.7069444444444445,
+        0.734375,
+        0.7135416666666666
+      ],
+      "mean": 0.7195138888888889,
+      "sd": 0.012704253291615787,
+      "how": "fraction of draws at n=6 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n06",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.05255957126801358,
+        0.08118061504149288,
+        0.04096212091271112,
+        0.08605634658364902,
+        0.03108924818399217
+      ],
+      "mean": 0.05836958039797176,
+      "sd": 0.024330498868984186,
+      "how": "|psi construction - normal yardstick| for the ratio at n=6: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.8990398575352467,
+        1.9277713665003602,
+        1.8330547756966165,
+        1.9407772687665081,
+        1.8379713497678594
+      ],
+      "mean": 1.8877229236533182,
+      "sd": 0.05002634257930089,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=8 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.928672428251506,
+        1.93663923112405,
+        1.9199267710071932,
+        1.9273911555427532,
+        1.9177479120431808
+      ],
+      "mean": 1.9260754995937366,
+      "sd": 0.007536958778536089,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=8.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5265818913868898,
+        0.5187337136433254,
+        0.5455374347010278,
+        0.5152574775546325,
+        0.5440781218522817
+      ],
+      "mean": 0.5300377278276314,
+      "sd": 0.014102773821533111,
+      "how": "median top-2 z-margin at n=8, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.7836805555555556,
+        0.7777777777777778,
+        0.7600694444444445,
+        0.7989583333333333,
+        0.7763888888888889
+      ],
+      "mean": 0.779375,
+      "sd": 0.014019782512490366,
+      "how": "fraction of draws at n=8 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.029632570716259243,
+        0.008867864623689714,
+        0.08687199531057677,
+        0.013386113223754936,
+        0.07977656227532148
+      ],
+      "mean": 0.04370702122992043,
+      "sd": 0.03706562164331971,
+      "how": "|psi construction - normal yardstick| for the ratio at n=8: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.1759952517262082,
+        2.1969362568841015,
+        2.2403133894202343,
+        2.0669307698242636,
+        2.141739989938902
+      ],
+      "mean": 2.164383131558742,
+      "sd": 0.06513375858989853,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=10 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.120914988502456,
+        2.1577728562690246,
+        2.133278357702895,
+        2.138844935464838,
+        2.1402211988915214
+      ],
+      "mean": 2.138206467366147,
+      "sd": 0.013328464516567065,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=10.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.459559826340018,
+        0.4551793420799075,
+        0.44636612213382687,
+        0.48380914087655813,
+        0.4669100846496905
+      ],
+      "mean": 0.4623649032160002,
+      "sd": 0.01410652104829232,
+      "how": "median top-2 z-margin at n=10, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8225694444444445,
+        0.8197916666666667,
+        0.8284722222222223,
+        0.8114583333333333,
+        0.81875
+      ],
+      "mean": 0.8202083333333334,
+      "sd": 0.00617918992403409,
+      "how": "fraction of draws at n=10 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n10",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.05508026322375237,
+        0.03916340061507695,
+        0.10703503171733919,
+        0.07191416564057418,
+        0.0015187910473803967
+      ],
+      "mean": 0.054942330448824614,
+      "sd": 0.03906648477132606,
+      "how": "|psi construction - normal yardstick| for the ratio at n=10: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n12",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.3232050111371962,
+        2.249666795118322,
+        2.3219932710457605,
+        2.294387273981793,
+        2.3903571611357535
+      ],
+      "mean": 2.315921902483765,
+      "sd": 0.05119568437667876,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=12 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n12",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.311726018144354,
+        2.29566826980672,
+        2.303048875946454,
+        2.3147828885845803,
+        2.2890227922446527
+      ],
+      "mean": 2.3028497689453524,
+      "sd": 0.010770167156602803,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=12.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n12",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.43043984289208526,
+        0.4445102724412149,
+        0.4306644693891073,
+        0.43584621102981913,
+        0.41834752406826947
+      ],
+      "mean": 0.43196166396409924,
+      "sd": 0.009511844443397527,
+      "how": "median top-2 z-margin at n=12, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n12",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8486111111111111,
+        0.8361111111111111,
+        0.8361111111111111,
+        0.8392361111111111,
+        0.8368055555555556
+      ],
+      "mean": 0.8393750000000001,
+      "sd": 0.00532055036371608,
+      "how": "fraction of draws at n=12 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n12",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.011478992992842052,
+        0.046001474688398325,
+        0.018944395099306455,
+        0.02039561460278705,
+        0.10133436889110081
+      ],
+      "mean": 0.03963096925488694,
+      "sd": 0.03687261806710315,
+      "how": "|psi construction - normal yardstick| for the ratio at n=12: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.5326085905590676,
+        2.645416002710408,
+        2.563135770199409,
+        2.5708594353497554,
+        2.650223521696406
+      ],
+      "mean": 2.592448664103009,
+      "sd": 0.05255865313627361,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=16 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.535978908104691,
+        2.520838152463875,
+        2.5291223070277593,
+        2.5419974056937935,
+        2.551726209789013
+      ],
+      "mean": 2.535932596615827,
+      "sd": 0.011836855151392213,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=16.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3948498017924089,
+        0.37801238027419215,
+        0.39014710481848613,
+        0.388974980992671,
+        0.3773266638882975
+      ],
+      "mean": 0.3858621863532111,
+      "sd": 0.0077990680089299776,
+      "how": "median top-2 z-margin at n=16, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8670138888888889,
+        0.8739583333333333,
+        0.8663194444444444,
+        0.8652777777777778,
+        0.8763888888888889
+      ],
+      "mean": 0.8697916666666666,
+      "sd": 0.005025734314628505,
+      "how": "fraction of draws at n=16 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.003370317545623447,
+        0.12457785024653267,
+        0.03401346317164977,
+        0.02886202965596185,
+        0.09849731190739286
+      ],
+      "mean": 0.05786419450543212,
+      "sd": 0.05118917773652573,
+      "how": "|psi construction - normal yardstick| for the ratio at n=16: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.7853843810505805,
+        2.6558293687556405,
+        2.653117506975599,
+        2.6613124384598943,
+        2.683478250316616
+      ],
+      "mean": 2.687824389111666,
+      "sd": 0.05583004001453481,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=20 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.7322401779401684,
+        2.7030641205013164,
+        2.729361831520882,
+        2.715699770726954,
+        2.6825500565996343
+      ],
+      "mean": 2.712583191457791,
+      "sd": 0.020434253396923552,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=20.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3590168763791315,
+        0.37653021378724305,
+        0.3769150809833306,
+        0.37575445315947253,
+        0.37265068195801954
+      ],
+      "mean": 0.3721734612534394,
+      "sd": 0.00754339476778394,
+      "how": "median top-2 z-margin at n=20, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8899305555555556,
+        0.878125,
+        0.8892361111111111,
+        0.88125,
+        0.8857638888888889
+      ],
+      "mean": 0.8848611111111111,
+      "sd": 0.005100740535681617,
+      "how": "fraction of draws at n=20 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n20",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.053144203110412125,
+        0.04723475174567593,
+        0.07624432454528307,
+        0.05438733226705983,
+        0.0009281937169816068
+      ],
+      "mean": 0.046387761077082514,
+      "sd": 0.02769632957660718,
+      "how": "|psi construction - normal yardstick| for the ratio at n=20: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n24",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.72671617058964,
+        2.9390024932309897,
+        2.880076537354087,
+        2.910253669079282,
+        2.888963000345736
+      ],
+      "mean": 2.8690023741199466,
+      "sd": 0.08271655429403513,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=24 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n24",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        2.8642730107322865,
+        2.8680774835410205,
+        2.841978704578629,
+        2.8294526716283643,
+        2.832568956762619
+      ],
+      "mean": 2.8472701654485837,
+      "sd": 0.017913887175467262,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=24.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n24",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.366741507893634,
+        0.3402514976775848,
+        0.34721299487363466,
+        0.3436126584513062,
+        0.3461449661627114
+      ],
+      "mean": 0.3487927250117742,
+      "sd": 0.010385694910759035,
+      "how": "median top-2 z-margin at n=24, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n24",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8854166666666666,
+        0.8913194444444444,
+        0.8927083333333333,
+        0.9,
+        0.8961805555555555
+      ],
+      "mean": 0.8931250000000001,
+      "sd": 0.005464752727849944,
+      "how": "fraction of draws at n=24 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n24",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.13755684014264657,
+        0.07092500968996918,
+        0.038097832775457974,
+        0.08080099745091784,
+        0.056394043583116726
+      ],
+      "mean": 0.07675494472842166,
+      "sd": 0.037603749052258696,
+      "how": "|psi construction - normal yardstick| for the ratio at n=24: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n32",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.126563669900021,
+        3.221603303301521,
+        2.9772581049659284,
+        2.9770259582797376,
+        3.0921405477943376
+      ],
+      "mean": 3.078918316848309,
+      "sd": 0.10430815384283544,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=32 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n32",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.027400185121516,
+        3.062330014299154,
+        3.03804336077746,
+        3.0609585958032457,
+        3.038722313422921
+      ],
+      "mean": 3.0454908938848595,
+      "sd": 0.015422053635774516,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=32.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n32",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.31983996028201056,
+        0.3104044495407592,
+        0.33587951220354273,
+        0.33590570388504304,
+        0.3234005649301137
+      ],
+      "mean": 0.32508603816829384,
+      "sd": 0.010948463885695526,
+      "how": "median top-2 z-margin at n=32, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n32",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9170138888888889,
+        0.9083333333333333,
+        0.9041666666666667,
+        0.9114583333333334,
+        0.9
+      ],
+      "mean": 0.9081944444444444,
+      "sd": 0.006554135615993885,
+      "how": "fraction of draws at n=32 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n32",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.09916348477850523,
+        0.1592732890023667,
+        0.0607852558115316,
+        0.0839326375235081,
+        0.053418234371416684
+      ],
+      "mean": 0.09131458029746567,
+      "sd": 0.04213863179323185,
+      "how": "|psi construction - normal yardstick| for the ratio at n=32: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.1168688561807016,
+        3.2313296481907017,
+        3.2377214578107445,
+        3.2295238708253104,
+        3.05905176293617
+      ],
+      "mean": 3.1748991191887255,
+      "sd": 0.0820107244514826,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=40 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.181776977472653,
+        3.1884496683818724,
+        3.200552027226682,
+        3.161521841132655,
+        3.220176716093365
+      ],
+      "mean": 3.1904954460614454,
+      "sd": 0.021804697308483396,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=40.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.32083480125158803,
+        0.30947012805082386,
+        0.3088591816901296,
+        0.30964316722775864,
+        0.32689868544106293
+      ],
+      "mean": 0.3151411927322726,
+      "sd": 0.008253919289821455,
+      "how": "median top-2 z-margin at n=40, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.915625,
+        0.9277777777777778,
+        0.9208333333333333,
+        0.9173611111111111,
+        0.9173611111111111
+      ],
+      "mean": 0.9197916666666666,
+      "sd": 0.00484869445964201,
+      "how": "fraction of draws at n=40 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.06490812129195156,
+        0.042879979808829294,
+        0.037169430584062635,
+        0.06800202969265534,
+        0.161124953157195
+      ],
+      "mean": 0.07481690290693876,
+      "sd": 0.05007745305348831,
+      "how": "|psi construction - normal yardstick| for the ratio at n=40: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n48",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.2913982661323233,
+        3.3213528500005256,
+        3.3920835776776372,
+        3.2875815233643113,
+        3.3097410318776235
+      ],
+      "mean": 3.320431449810484,
+      "sd": 0.04234148339332564,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=48 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n48",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.3093180395327075,
+        3.305300072593663,
+        3.3137028251295533,
+        3.2994398761387687,
+        3.2696981478574267
+      ],
+      "mean": 3.2994917922504237,
+      "sd": 0.017463595371435978,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=48.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n48",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.30382224183859896,
+        0.301082132842297,
+        0.29480405688725453,
+        0.30417496658049736,
+        0.3021384423640836
+      ],
+      "mean": 0.3012043681025463,
+      "sd": 0.003792398253500804,
+      "how": "median top-2 z-margin at n=48, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n48",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9211805555555556,
+        0.9253472222222222,
+        0.9298611111111111,
+        0.9243055555555556,
+        0.9246527777777778
+      ],
+      "mean": 0.9250694444444445,
+      "sd": 0.0031192075946494106,
+      "how": "fraction of draws at n=48 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n48",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.017919773400384198,
+        0.016052777406862617,
+        0.07838075254808397,
+        0.011858352774457348,
+        0.040042884020196734
+      ],
+      "mean": 0.032850908029996975,
+      "sd": 0.027706021955529705,
+      "how": "|psi construction - normal yardstick| for the ratio at n=48: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_bmax_over_median_top2_z_margin_n64",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.5547176395954345,
+        3.342367350461943,
+        3.568948206831296,
+        3.5498553117252163,
+        3.625896221156842
+      ],
+      "mean": 3.528356945954146,
+      "sd": 0.10829445530369282,
+      "how": "HEADLINE, psi construction: b_max=1.0 in units of the median top-2 z-margin over n=64 z-scored psi_hat draws.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_bmax_over_median_top2_z_margin_n64",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        3.5113110553309816,
+        3.5075164315716747,
+        3.495757502407732,
+        3.4832947725413135,
+        3.4773980685350128
+      ],
+      "mean": 3.495055566077343,
+      "sd": 0.014748816040698148,
+      "how": "NORMAL-THEORY YARDSTICK (exact iid N(0,1), no head, no gestalt): b_max=1.0 over the median top-2 z-margin at n=64.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_median_top2_z_margin_n64",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.28131629608528086,
+        0.2991891360660257,
+        0.28019459573156813,
+        0.28170162223147166,
+        0.27579388349977374
+      ],
+      "mean": 0.283639106722824,
+      "sd": 0.00900506650967829,
+      "how": "median top-2 z-margin at n=64, psi construction",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_bmax_n64",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9270833333333334,
+        0.9361111111111111,
+        0.9388888888888889,
+        0.9291666666666667,
+        0.9357638888888888
+      ],
+      "mean": 0.9334027777777777,
+      "sd": 0.005022134647712349,
+      "how": "fraction of draws at n=64 whose top-2 z-margin is below b_max=1.0, i.e. inside b_max's unilateral reach",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_psi_minus_normal_ratio_abs_dev_n64",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.043406584264452874,
+        0.1651490811097318,
+        0.07319070442356379,
+        0.06656053918390281,
+        0.14849815262182942
+      ],
+      "mean": 0.09936101232069613,
+      "sd": 0.05393093412989816,
+      "how": "|psi construction - normal yardstick| for the ratio at n=64: how good a yardstick normal theory is here",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_2bmax_n08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9885416666666667,
+        0.9850694444444444,
+        0.9833333333333333,
+        0.9871527777777778,
+        0.9888888888888889
+      ],
+      "mean": 0.9865972222222222,
+      "sd": 0.0023626424772505796,
+      "how": "fraction below 2*b_max at n=8; 2*b_max is the maximum attainable spread of b, so this is the CEILING on what b can ever flip",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_2bmax_n16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9940972222222222,
+        0.9934027777777777,
+        0.9930555555555556,
+        0.9934027777777777,
+        0.9965277777777778
+      ],
+      "mean": 0.9940972222222222,
+      "sd": 0.0014104233341381961,
+      "how": "fraction below 2*b_max at n=16; 2*b_max is the maximum attainable spread of b, so this is the CEILING on what b can ever flip",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_frac_top2_z_margin_below_2bmax_n40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9982638888888888,
+        0.9993055555555556,
+        0.9979166666666667,
+        0.9975694444444444,
+        0.9989583333333333
+      ],
+      "mean": 0.9984027777777778,
+      "sd": 0.000720015324768329,
+      "how": "fraction below 2*b_max at n=40; 2*b_max is the maximum attainable spread of b, so this is the CEILING on what b can ever flip",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_ratio_swing_M40_over_M8",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.6412866974925258,
+        1.6761996284117429,
+        1.7662982583705455,
+        1.6640363233839222,
+        1.6643631378272226
+      ],
+      "mean": 1.6824368090971915,
+      "sd": 0.048554639968456784,
+      "how": "HEADLINE SWING: ratio at n=40 divided by ratio at n=8, per seed. The brief predicted ~1.67 from cycle 4's 3.248 / 1.945.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_ratio_swing_M40_over_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.2306950500758824,
+        1.221482611763135,
+        1.2631876529735502,
+        1.2562039862696524,
+        1.1542617963703201
+      ],
+      "mean": 1.225166219490508,
+      "sd": 0.04324507637373163,
+      "how": "ratio at n=40 over ratio at n=16, per seed",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_ratio_swing_M16_over_M8",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.3336258217592791,
+        1.3722664672174514,
+        1.3982865128650286,
+        1.3246545478058418,
+        1.4419286361733203
+      ],
+      "mean": 1.3741523971641842,
+      "sd": 0.04814579745886418,
+      "how": "ratio at n=16 over ratio at n=8, per seed",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_normal_ratio_swing_M40_over_M8",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.6497238882380796,
+        1.646382876655481,
+        1.6670177610720396,
+        1.6403114811650004,
+        1.6791449469824051
+      ],
+      "mean": 1.656516190822601,
+      "sd": 0.01607603518082235,
+      "how": "same swing on the exact-normal yardstick",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part1_cycle4_replication_targets",
+      "kind": "observation",
+      "value": {
+        "n8_ratio_cycle4": 1.945,
+        "n40_ratio_cycle4": 3.24786,
+        "n40_ratio_cycle4_sd": 0.04523,
+        "n40_frac_below_bmax_cycle4": 0.92278
+      },
+      "how": "runs/cycle-zscore-denominator/ledger.json rows part2_bmax_over_median_top2_z_margin_at_n{08,40} and part2_frac_top2_z_margin_below_bmax_n40 -- a different harness with a different n sweep and therefore different randperm consumption, so agreement is a replication, not a bit-for-bit reproduction."
+    },
+    {
+      "key": "part2_design",
+      "kind": "observation",
+      "value": "For each M in [8, 16, 40]: 12 streams x S=80 steps, b-free learned-head driver. `lifetime` = age at eviction = t - written_at[victim], over EVICTED slots only (slots alive at stream end are censored and excluded -- stated, not hidden). The FIFO column is a REAL `FIFOPolicy` driving its OWN memory over the same context stream -- not a statistic read out of the learned driver's memory, which would be a different policy's contents. The oldest-live-slot column IS read out of the learned driver's memory and is labelled as such.",
+      "how": "harness source, this file, part2_lifetime()"
+    },
+    {
+      "key": "part2_realized_mean_slot_lifetime_M08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        7.372685185185185,
+        7.273148148148148,
+        7.431712962962963,
+        7.454861111111111,
+        7.3530092592592595
+      ],
+      "mean": 7.377083333333333,
+      "sd": 0.07147588162914754,
+      "how": "MEASURED IN THIS HARNESS, NOT the registry's E_lifetime (MEASURED, owned by E0e, defined there as the FIFO value). Mean age at eviction under the b-free learned-head driver at M=8, S=80.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_fifo_mean_slot_lifetime_M08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        8.0,
+        8.0,
+        8.0,
+        8.0,
+        8.0
+      ],
+      "mean": 8.0,
+      "sd": 0.0,
+      "how": "mean age at eviction under a REAL FIFOPolicy driving its OWN memory over the same context stream, M=8. With one write per step and a full memory this is exactly M by construction, and the row measuring exactly M is the check on that -- which is why 'E[lifetime] = M' IS the FIFO parameterization of correction 4.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_oldest_live_slot_age_at_decision_M08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        23.60185185185185,
+        24.34259259259259,
+        22.875,
+        22.930555555555557,
+        27.65625
+      ],
+      "mean": 24.28125,
+      "sd": 1.978502230357992,
+      "how": "mean age of the OLDEST live slot in the LEARNED driver's memory at a decision, M=8. NOT a FIFO quantity -- an earlier version of this harness mislabelled it as one. It is far above M because the learned head spares old slots, and it is the ceiling of the lifetime distribution whose mean is the row above the previous one.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_max_age_learned_M08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        62.0,
+        59.0,
+        54.0,
+        61.0,
+        62.0
+      ],
+      "mean": 59.6,
+      "sd": 3.361547262794322,
+      "how": "single longest realized slot lifetime observed at M=8",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_realized_over_fifo_lifetime_M08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9215856481481481,
+        0.9091435185185185,
+        0.9289641203703703,
+        0.9318576388888888,
+        0.9191261574074074
+      ],
+      "mean": 0.9221354166666667,
+      "sd": 0.008934485203643443,
+      "how": "realized / FIFO lifetime at M=8 -- the factor by which correction 4's gamma_b moves between the two parameterizations",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_n_evictions_per_seed_M08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        864.0,
+        864.0,
+        864.0,
+        864.0,
+        864.0
+      ],
+      "mean": 864.0,
+      "sd": 0.0,
+      "how": "12 x (S - M) = 864 at M=8",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_realized_mean_slot_lifetime_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        13.111979166666666,
+        13.515625,
+        13.447916666666666,
+        13.658854166666666,
+        12.850260416666666
+      ],
+      "mean": 13.316927083333331,
+      "sd": 0.32914080940766793,
+      "how": "MEASURED IN THIS HARNESS, NOT the registry's E_lifetime (MEASURED, owned by E0e, defined there as the FIFO value). Mean age at eviction under the b-free learned-head driver at M=16, S=80.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_fifo_mean_slot_lifetime_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        16.0,
+        16.0,
+        16.0,
+        16.0,
+        16.0
+      ],
+      "mean": 16.0,
+      "sd": 0.0,
+      "how": "mean age at eviction under a REAL FIFOPolicy driving its OWN memory over the same context stream, M=16. With one write per step and a full memory this is exactly M by construction, and the row measuring exactly M is the check on that -- which is why 'E[lifetime] = M' IS the FIFO parameterization of correction 4.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_oldest_live_slot_age_at_decision_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        41.639322916666664,
+        40.6171875,
+        42.842447916666664,
+        40.075520833333336,
+        44.020833333333336
+      ],
+      "mean": 41.8390625,
+      "sd": 1.6132157241367306,
+      "how": "mean age of the OLDEST live slot in the LEARNED driver's memory at a decision, M=16. NOT a FIFO quantity -- an earlier version of this harness mislabelled it as one. It is far above M because the learned head spares old slots, and it is the ceiling of the lifetime distribution whose mean is the row above the previous one.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_max_age_learned_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        72.0,
+        74.0,
+        79.0,
+        62.0,
+        70.0
+      ],
+      "mean": 71.4,
+      "sd": 6.228964600958975,
+      "how": "single longest realized slot lifetime observed at M=16",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_realized_over_fifo_lifetime_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8194986979166666,
+        0.8447265625,
+        0.8404947916666666,
+        0.8536783854166666,
+        0.8031412760416666
+      ],
+      "mean": 0.8323079427083332,
+      "sd": 0.020571300587979246,
+      "how": "realized / FIFO lifetime at M=16 -- the factor by which correction 4's gamma_b moves between the two parameterizations",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_n_evictions_per_seed_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        768.0,
+        768.0,
+        768.0,
+        768.0,
+        768.0
+      ],
+      "mean": 768.0,
+      "sd": 0.0,
+      "how": "12 x (S - M) = 768 at M=16",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_realized_mean_slot_lifetime_M40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        26.38125,
+        26.983333333333334,
+        26.102083333333333,
+        25.777083333333334,
+        25.935416666666665
+      ],
+      "mean": 26.235833333333336,
+      "sd": 0.47394436792612016,
+      "how": "MEASURED IN THIS HARNESS, NOT the registry's E_lifetime (MEASURED, owned by E0e, defined there as the FIFO value). Mean age at eviction under the b-free learned-head driver at M=40, S=80.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_fifo_mean_slot_lifetime_M40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        40.0,
+        40.0,
+        40.0,
+        40.0,
+        40.0
+      ],
+      "mean": 40.0,
+      "sd": 0.0,
+      "how": "mean age at eviction under a REAL FIFOPolicy driving its OWN memory over the same context stream, M=40. With one write per step and a full memory this is exactly M by construction, and the row measuring exactly M is the check on that -- which is why 'E[lifetime] = M' IS the FIFO parameterization of correction 4.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_oldest_live_slot_age_at_decision_M40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        59.00416666666667,
+        58.489583333333336,
+        58.94375,
+        58.69166666666667,
+        58.65208333333333
+      ],
+      "mean": 58.75625,
+      "sd": 0.21374736028259642,
+      "how": "mean age of the OLDEST live slot in the LEARNED driver's memory at a decision, M=40. NOT a FIFO quantity -- an earlier version of this harness mislabelled it as one. It is far above M because the learned head spares old slots, and it is the ceiling of the lifetime distribution whose mean is the row above the previous one.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_max_age_learned_M40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        79.0,
+        75.0,
+        74.0,
+        77.0,
+        75.0
+      ],
+      "mean": 76.0,
+      "sd": 2.0,
+      "how": "single longest realized slot lifetime observed at M=40",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_realized_over_fifo_lifetime_M40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.65953125,
+        0.6745833333333333,
+        0.6525520833333334,
+        0.6444270833333333,
+        0.6483854166666666
+      ],
+      "mean": 0.6558958333333333,
+      "sd": 0.01184860919815299,
+      "how": "realized / FIFO lifetime at M=40 -- the factor by which correction 4's gamma_b moves between the two parameterizations",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part2_n_evictions_per_seed_M40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        480.0,
+        480.0,
+        480.0,
+        480.0,
+        480.0
+      ],
+      "mean": 480.0,
+      "sd": 0.0,
+      "how": "12 x (S - M) = 480 at M=40",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part2_cycle4_replication_target",
+      "kind": "observation",
+      "value": {
+        "realized_mean_slot_lifetime_M40": 26.49,
+        "sd": 0.53
+      },
+      "how": "the brief's own figure from an earlier cycle, at M=40 under a learned-head driver. Compare part2_realized_mean_slot_lifetime_M40."
+    },
+    {
+      "key": "part3_gamma_b_formula_M",
+      "kind": "observation",
+      "value": {
+        "8": 0.5,
+        "16": 0.25,
+        "40": 0.1
+      },
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. gamma_b = b_max/(0.25*M), i.e. correction 4's formula fed the FIFO lifetime E[lifetime] = M. NOTE: at M = 8 this is 0.5, which is 5x the TOP of correction 4's own stated order '0.05-0.1'. The formula and the stated range disagree away from M = 40."
+    },
+    {
+      "key": "part3_gamma_b_formula_realized",
+      "kind": "observation",
+      "value": {
+        "8": 0.54222,
+        "16": 0.30037,
+        "40": 0.152463
+      },
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. gamma_b = b_max/(0.25*L) with L = part 2's MEASURED realized mean slot lifetime at that M under the learned-head driver."
+    },
+    {
+      "key": "part3_gamma_b_fixed",
+      "kind": "observation",
+      "value": 0.1,
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. gamma_b held at the M = 40 formula value (0.1) for every M. This arm is the DECOMPOSITION: with gamma_b constant, any remaining M-dependence in the flip rate is pure order statistics, not the formula's M-dependence."
+    },
+    {
+      "key": "part3_design",
+      "kind": "observation",
+      "value": "For each M in [8, 16, 40], at S=80: a driver arm (b_enabled=False, nu=0) owns the memory so the MemoryState sequence is IDENTICAL across arms; every arm shares ONE BilinearValueHead so psi_hat is bit-identical; 12 streams/seed, 5 seeds. A 'flip' is an eviction where the b-enabled arm's victim differs from the b-free driver's on the same state. Arms: ['formula_M', 'formula_realized', 'fixed_0.1']. EMA half-life is E[lifetime]/4 with the SAME E[lifetime] that set that arm's gamma_b (correction 4's own pairing).",
+      "how": "harness source, this file, flip_run() / arms_for_clean()"
+    },
+    {
+      "key": "part3_half_lives",
+      "kind": "observation",
+      "value": {
+        "8": {
+          "formula_M": 2.0,
+          "formula_realized": 1.8443,
+          "fixed_0.1": 2.0
+        },
+        "16": {
+          "formula_M": 4.0,
+          "formula_realized": 3.3292,
+          "fixed_0.1": 4.0
+        },
+        "40": {
+          "formula_M": 10.0,
+          "formula_realized": 6.559,
+          "fixed_0.1": 10.0
+        }
+      },
+      "how": "DELIBERATE VISIBLE BYPASS in scratch, NOT a measurement of this constant: gamma_b is DERIVED and tau / E_lifetime are MEASURED (E0e); measurements/ledger.json does not exist so the registry refuses the read (cycle-1 wall 1). Supplied by hand to make the experiment runnable. EMA half-life per arm = E[lifetime]/4, per correction 4's note that the same E[lifetime] sets both."
+    },
+    {
+      "key": "part3_n_evictions_per_seed_per_arm_M08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        864.0,
+        864.0,
+        864.0,
+        864.0,
+        864.0
+      ],
+      "mean": 864.0,
+      "sd": 0.0,
+      "how": "12 x (S - M) = 864 at M=8",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_driver_top2_score_margin_median_M08",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5045721530914307,
+        0.5384448766708374,
+        0.515317440032959,
+        0.5261096954345703,
+        0.5690590143203735
+      ],
+      "mean": 0.5307006359100341,
+      "sd": 0.024858376472910743,
+      "how": "median EvictionRecord.score_margin of the b-free driver at M=8, IN A LIVE MEMORY (duplicates accumulate over a stream), in z-scored psi_hat units. Compare part1_median_top2_z_margin_n08, which is the iid-draw version of the same quantity.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M08_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M08_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.4849537037037037,
+        0.47685185185185186,
+        0.45601851851851855,
+        0.47453703703703703,
+        0.44328703703703703
+      ],
+      "mean": 0.4671296296296297,
+      "sd": 0.017022154077080503,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=8 under the 'formula_M' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M08_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6608796296296297,
+        0.6449652777777778,
+        0.6247106481481481,
+        0.6357060185185185,
+        0.6668113425925926
+      ],
+      "mean": 0.6466145833333333,
+      "sd": 0.017413356957687302,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=8, arm 'formula_M'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M08_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.7310474537037037,
+        0.7178819444444444,
+        0.6964699074074074,
+        0.7132523148148148,
+        0.7355324074074074
+      ],
+      "mean": 0.7188368055555555,
+      "sd": 0.015493704195075479,
+      "how": "mean |b| over (decision, slot) pairs, M=8, arm 'formula_M'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M08_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M08_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.48842592592592593,
+        0.48842592592592593,
+        0.4583333333333333,
+        0.48148148148148145,
+        0.44675925925925924
+      ],
+      "mean": 0.4726851851851852,
+      "sd": 0.01904629854696687,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=8 under the 'formula_realized' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M08_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6721643518518519,
+        0.6553819444444444,
+        0.6341145833333334,
+        0.6443865740740741,
+        0.6825810185185185
+      ],
+      "mean": 0.6577256944444445,
+      "sd": 0.01979376054956895,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=8, arm 'formula_realized'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M08_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.7496710479328478,
+        0.7377066633284644,
+        0.7200844736286888,
+        0.729178463867693,
+        0.7605358791985998
+      ],
+      "mean": 0.7394353055912587,
+      "sd": 0.016067438592545114,
+      "how": "mean |b| over (decision, slot) pairs, M=8, arm 'formula_realized'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M08_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M08_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3425925925925926,
+        0.3275462962962963,
+        0.3113425925925926,
+        0.3194444444444444,
+        0.3125
+      ],
+      "mean": 0.3226851851851852,
+      "sd": 0.012872743253147486,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=8 under the 'fixed_0.1' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M08_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.22569444444444445,
+        0.20109953703703703,
+        0.1831597222222222,
+        0.171875,
+        0.21412037037037038
+      ],
+      "mean": 0.19918981481481482,
+      "sd": 0.021977982714879343,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=8, arm 'fixed_0.1'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M08_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.44704861911358657,
+        0.4232638978778764,
+        0.4031684117529679,
+        0.40611980146624976,
+        0.4447048714781111
+      ],
+      "mean": 0.42486112033775836,
+      "sd": 0.020678620116089626,
+      "how": "mean |b| over (decision, slot) pairs, M=8, arm 'fixed_0.1'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_n_evictions_per_seed_per_arm_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        768.0,
+        768.0,
+        768.0,
+        768.0,
+        768.0
+      ],
+      "mean": 768.0,
+      "sd": 0.0,
+      "how": "12 x (S - M) = 768 at M=16",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_driver_top2_score_margin_median_M16",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3961784839630127,
+        0.3900012969970703,
+        0.37889087200164795,
+        0.4110128879547119,
+        0.38657474517822266
+      ],
+      "mean": 0.3925316572189331,
+      "sd": 0.012070768203263632,
+      "how": "median EvictionRecord.score_margin of the b-free driver at M=16, IN A LIVE MEMORY (duplicates accumulate over a stream), in z-scored psi_hat units. Compare part1_median_top2_z_margin_n16, which is the iid-draw version of the same quantity.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M16_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M16_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5638020833333334,
+        0.5130208333333334,
+        0.5234375,
+        0.51953125,
+        0.5481770833333334
+      ],
+      "mean": 0.53359375,
+      "sd": 0.021502123350817016,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=16 under the 'formula_M' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M16_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5965983072916666,
+        0.5983072916666666,
+        0.5692545572916666,
+        0.5895182291666666,
+        0.6019694010416666
+      ],
+      "mean": 0.5911295572916666,
+      "sd": 0.013038800876340073,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=16, arm 'formula_M'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M16_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6761067708333334,
+        0.68194580078125,
+        0.6556599934895834,
+        0.6807861328125,
+        0.6816609700520834
+      ],
+      "mean": 0.67523193359375,
+      "sd": 0.011192450926767334,
+      "how": "mean |b| over (decision, slot) pairs, M=16, arm 'formula_M'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M16_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M16_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5703125,
+        0.5338541666666666,
+        0.53515625,
+        0.5364583333333334,
+        0.5625
+      ],
+      "mean": 0.54765625,
+      "sd": 0.017362196146649255,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=16 under the 'formula_realized' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M16_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6162923177083334,
+        0.621826171875,
+        0.589599609375,
+        0.61181640625,
+        0.6244303385416666
+      ],
+      "mean": 0.61279296875,
+      "sd": 0.01385783326238269,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=16, arm 'formula_realized'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M16_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.718850381555967,
+        0.7269314682732025,
+        0.699224062768432,
+        0.726518395395639,
+        0.7288715057075024
+      ],
+      "mean": 0.7200791627401486,
+      "sd": 0.012269557868912033,
+      "how": "mean |b| over (decision, slot) pairs, M=16, arm 'formula_realized'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M16_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M16_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.4986979166666667,
+        0.48828125,
+        0.4791666666666667,
+        0.4713541666666667,
+        0.4895833333333333
+      ],
+      "mean": 0.4854166666666667,
+      "sd": 0.010473477891765727,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=16 under the 'fixed_0.1' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M16_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3981119791666667,
+        0.3720703125,
+        0.3731282552083333,
+        0.35986328125,
+        0.387939453125
+      ],
+      "mean": 0.37822265625,
+      "sd": 0.014923741266649393,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=16, arm 'fixed_0.1'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M16_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5584554095403291,
+        0.5485351636307314,
+        0.5338378969657546,
+        0.5431884837453254,
+        0.5554850326928621
+      ],
+      "mean": 0.5479003973150005,
+      "sd": 0.009865266731418921,
+      "how": "mean |b| over (decision, slot) pairs, M=16, arm 'fixed_0.1'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_n_evictions_per_seed_per_arm_M40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        480.0,
+        480.0,
+        480.0,
+        480.0,
+        480.0
+      ],
+      "mean": 480.0,
+      "sd": 0.0,
+      "how": "12 x (S - M) = 480 at M=40",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_driver_top2_score_margin_median_M40",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3147139549255371,
+        0.35666894912719727,
+        0.3127264976501465,
+        0.32967448234558105,
+        0.35559308528900146
+      ],
+      "mean": 0.33387539386749265,
+      "sd": 0.021349991178044925,
+      "how": "median EvictionRecord.score_margin of the b-free driver at M=40, IN A LIVE MEMORY (duplicates accumulate over a stream), in z-scored psi_hat units. Compare part1_median_top2_z_margin_n40, which is the iid-draw version of the same quantity.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M40_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M40_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6,
+        0.575,
+        0.5895833333333333,
+        0.6041666666666666,
+        0.60625
+      ],
+      "mean": 0.595,
+      "sd": 0.012893123705638165,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=40 under the 'formula_M' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M40_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.53703125,
+        0.5518229166666667,
+        0.535625,
+        0.55671875,
+        0.5357291666666667
+      ],
+      "mean": 0.5433854166666666,
+      "sd": 0.01010181727411379,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=40, arm 'formula_M'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M40_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6308489611744881,
+        0.6553281285365422,
+        0.6371927125255267,
+        0.6489739605784416,
+        0.6328125058611234
+      ],
+      "mean": 0.6410312537352244,
+      "sd": 0.010647165328279395,
+      "how": "mean |b| over (decision, slot) pairs, M=40, arm 'formula_M'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M40_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M40_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6229166666666667,
+        0.6020833333333333,
+        0.6,
+        0.6125,
+        0.6125
+      ],
+      "mean": 0.61,
+      "sd": 0.009246808758821749,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=40 under the 'formula_realized' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M40_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6403125,
+        0.6635416666666667,
+        0.6471875,
+        0.6565625,
+        0.64828125
+      ],
+      "mean": 0.6511770833333334,
+      "sd": 0.00900315820359108,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=40, arm 'formula_realized'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M40_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.7298438620567321,
+        0.7506675511598587,
+        0.7381324196855227,
+        0.7342995614806811,
+        0.7337923462192217
+      ],
+      "mean": 0.7373471481204033,
+      "sd": 0.008004272159307456,
+      "how": "mean |b| over (decision, slot) pairs, M=40, arm 'formula_realized'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_selftest_hand_score_matches_policy_victim_M40_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of evictions where the hand-recomputed argmin[(psi-mean)/std(unbiased=False) + b] equals RSRPolicy's own victim. 1.0 proves the hand replication IS rsr.py's _score, which is what licenses the flip counts.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part3_frac_victims_flipped_by_b_M40_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6,
+        0.575,
+        0.5895833333333333,
+        0.6041666666666666,
+        0.60625
+      ],
+      "mean": 0.595,
+      "sd": 0.012893123705638165,
+      "how": "HEADLINE: fraction of victims `b` CHANGED at M=40 under the 'fixed_0.1' gamma_b parameterization -- same state, same phi, same stream, b on vs b off.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_frac_b_entries_saturated_M40_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.53703125,
+        0.5518229166666667,
+        0.535625,
+        0.55671875,
+        0.5357291666666667
+      ],
+      "mean": 0.5433854166666666,
+      "sd": 0.01010181727411379,
+      "how": "fraction of (decision, slot) pairs with |b| at +/-b_max, M=40, arm 'fixed_0.1'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_mean_abs_b_M40_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6308489611744881,
+        0.6553281285365422,
+        0.6371927125255267,
+        0.6489739605784416,
+        0.6328125058611234
+      ],
+      "mean": 0.6410312537352244,
+      "sd": 0.010647165328279395,
+      "how": "mean |b| over (decision, slot) pairs, M=40, arm 'fixed_0.1'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_swing_M40_over_M8_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.2372315035799522,
+        1.2058252427184464,
+        1.2928934010152284,
+        1.273170731707317,
+        1.3676240208877284
+      ],
+      "mean": 1.2753489799817346,
+      "sd": 0.06146894886738243,
+      "how": "HEADLINE SWING in realized flip rate, M=40 over M=8, arm 'formula_M'. 1.0 would mean b has comparable realized strength at both.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_abs_diff_M40_minus_M8_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.11504629629629626,
+        0.0981481481481481,
+        0.1335648148148148,
+        0.1296296296296296,
+        0.16296296296296292
+      ],
+      "mean": 0.12787037037037036,
+      "sd": 0.02405659532865332,
+      "how": "absolute difference in flip rate, M=40 minus M=8, arm 'formula_M' (percentage points / 100)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_max_minus_min_across_M_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.11504629629629626,
+        0.0981481481481481,
+        0.1335648148148148,
+        0.1296296296296296,
+        0.16296296296296292
+      ],
+      "mean": 0.12787037037037036,
+      "sd": 0.02405659532865332,
+      "how": "spread of the flip rate across M in [8, 16, 40], arm 'formula_M', per seed",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_swing_M40_over_M8_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.2753554502369668,
+        1.2327014218009478,
+        1.309090909090909,
+        1.2721153846153848,
+        1.3709844559585493
+      ],
+      "mean": 1.2920495243405514,
+      "sd": 0.051767247211816955,
+      "how": "HEADLINE SWING in realized flip rate, M=40 over M=8, arm 'formula_realized'. 1.0 would mean b has comparable realized strength at both.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_abs_diff_M40_minus_M8_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.13449074074074074,
+        0.11365740740740737,
+        0.14166666666666666,
+        0.1310185185185186,
+        0.1657407407407408
+      ],
+      "mean": 0.13731481481481483,
+      "sd": 0.018935836038800644,
+      "how": "absolute difference in flip rate, M=40 minus M=8, arm 'formula_realized' (percentage points / 100)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_max_minus_min_across_M_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.13449074074074074,
+        0.11365740740740737,
+        0.14166666666666666,
+        0.1310185185185186,
+        0.1657407407407408
+      ],
+      "mean": 0.13731481481481483,
+      "sd": 0.018935836038800644,
+      "how": "spread of the flip rate across M in [8, 16, 40], arm 'formula_realized', per seed",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_swing_M40_over_M8_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.7513513513513512,
+        1.75547703180212,
+        1.8936802973977693,
+        1.891304347826087,
+        1.94
+      ],
+      "mean": 1.8463626056754656,
+      "sd": 0.08705459743729384,
+      "how": "HEADLINE SWING in realized flip rate, M=40 over M=8, arm 'fixed_0.1'. 1.0 would mean b has comparable realized strength at both.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_abs_diff_M40_minus_M8_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.25740740740740736,
+        0.24745370370370368,
+        0.27824074074074073,
+        0.2847222222222222,
+        0.29374999999999996
+      ],
+      "mean": 0.2723148148148148,
+      "sd": 0.01929270044515263,
+      "how": "absolute difference in flip rate, M=40 minus M=8, arm 'fixed_0.1' (percentage points / 100)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_flip_max_minus_min_across_M_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.25740740740740736,
+        0.24745370370370368,
+        0.27824074074074073,
+        0.2847222222222222,
+        0.29374999999999996
+      ],
+      "mean": 0.2723148148148148,
+      "sd": 0.01929270044515263,
+      "how": "spread of the flip rate across M in [8, 16, 40], arm 'fixed_0.1', per seed",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part3_cycle2_3_replication_target",
+      "kind": "observation",
+      "value": {
+        "frac_victims_changed_by_b_at_M40_gamma_b_0.05_to_0.1": "0.56-0.60"
+      },
+      "how": "the brief's own replicated figure from cycles 2 and 3 at M = 40. Compare part3_frac_victims_flipped_by_b_M40_formula_M (gamma_b = 0.1) and _fixed_0.1 (the same arm by construction at M = 40)."
+    },
+    {
+      "key": "part4_design",
+      "kind": "observation",
+      "value": "M = 16 re-run at its OWN registry stream length S = 48 (scope 'synthetic'), everything else identical to part 3. Controls the part-3 choice to hold S = 80 across all M.",
+      "how": "harness source, this file; S read from rsr.constants.get('S','synthetic')"
+    },
+    {
+      "key": "part4_n_evictions_per_seed_per_arm_M16_S48",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        384.0,
+        384.0,
+        384.0,
+        384.0,
+        384.0
+      ],
+      "mean": 384.0,
+      "sd": 0.0,
+      "how": "12 x (48 - 16) = 384",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "part4_frac_victims_flipped_by_b_M16_S48_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5390625,
+        0.5833333333333334,
+        0.5338541666666666,
+        0.4817708333333333,
+        0.5078125
+      ],
+      "mean": 0.5291666666666667,
+      "sd": 0.03793512028047948,
+      "how": "flip rate at M=16 with S=48 (registry), arm 'formula_M'. Compare part3_frac_victims_flipped_by_b_M16_formula_M at S=80.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_flip_S48_minus_S80_M16_formula_M",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.02473958333333337,
+        0.0703125,
+        0.01041666666666663,
+        -0.037760416666666685,
+        -0.04036458333333337
+      ],
+      "mean": -0.004427083333333359,
+      "sd": 0.04642616424095871,
+      "how": "S = 48 minus S = 80 at M = 16, arm 'formula_M'. Near zero means the part-3 fixed-S choice is not driving the result.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_frac_victims_flipped_by_b_M16_S48_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5807291666666666,
+        0.5859375,
+        0.546875,
+        0.5,
+        0.5234375
+      ],
+      "mean": 0.5473958333333333,
+      "sd": 0.03680084646237396,
+      "how": "flip rate at M=16 with S=48 (registry), arm 'formula_realized'. Compare part3_frac_victims_flipped_by_b_M16_formula_realized at S=80.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_flip_S48_minus_S80_M16_formula_realized",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.01041666666666663,
+        0.05208333333333337,
+        0.01171875,
+        -0.03645833333333337,
+        -0.0390625
+      ],
+      "mean": -0.0002604166666666741,
+      "sd": 0.0381223672815944,
+      "how": "S = 48 minus S = 80 at M = 16, arm 'formula_realized'. Near zero means the part-3 fixed-S choice is not driving the result.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_frac_victims_flipped_by_b_M16_S48_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.4739583333333333,
+        0.5286458333333334,
+        0.4895833333333333,
+        0.4166666666666667,
+        0.4583333333333333
+      ],
+      "mean": 0.4734375,
+      "sd": 0.04110955679306483,
+      "how": "flip rate at M=16 with S=48 (registry), arm 'fixed_0.1'. Compare part3_frac_victims_flipped_by_b_M16_fixed_0.1 at S=80.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "part4_flip_S48_minus_S80_M16_fixed_0.1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.02473958333333337,
+        0.04036458333333337,
+        0.01041666666666663,
+        -0.0546875,
+        -0.03125
+      ],
+      "mean": -0.011979166666666674,
+      "sd": 0.0374153594855646,
+      "how": "S = 48 minus S = 80 at M = 16, arm 'fixed_0.1'. Near zero means the part-3 fixed-S choice is not driving the result.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "sd_zero_rows_count",
+      "kind": "observation",
+      "value": 21,
+      "how": "count of rows with sd == 0.0"
+    },
+    {
+      "key": "sd_zero_rows_reasons",
+      "kind": "observation",
+      "value": {
+        "part1_psi_trials_per_seed_at_n40": "STRUCTURAL: min(N_TRIALS_PER_CTX, N_POOL//n) * N_CTX, no RNG in the count.",
+        "part1_normal_trials_per_seed_at_n40": "STRUCTURAL: N_NORMAL_DRAWS, no RNG in the count (sd_pop > 0 for every draw at n >= 4 in float64).",
+        "part2_fifo_mean_slot_lifetime_M08": "STRUCTURAL/ALGEBRAIC AND IT IS THE POINT: a real FIFOPolicy on its own memory with one write per step evicts a slot of age exactly M at every decision, so the FIFO lifetime is identically M and no seed can move it. This is the check that 'E[lifetime] = M' IS the FIFO parameterization of correction 4's formula.",
+        "part2_n_evictions_per_seed_M08": "STRUCTURAL: N_STREAMS * (S - M), no RNG in the count.",
+        "part2_fifo_mean_slot_lifetime_M16": "STRUCTURAL/ALGEBRAIC AND IT IS THE POINT: a real FIFOPolicy on its own memory with one write per step evicts a slot of age exactly M at every decision, so the FIFO lifetime is identically M and no seed can move it. This is the check that 'E[lifetime] = M' IS the FIFO parameterization of correction 4's formula.",
+        "part2_n_evictions_per_seed_M16": "STRUCTURAL: N_STREAMS * (S - M), no RNG in the count.",
+        "part2_fifo_mean_slot_lifetime_M40": "STRUCTURAL/ALGEBRAIC AND IT IS THE POINT: a real FIFOPolicy on its own memory with one write per step evicts a slot of age exactly M at every decision, so the FIFO lifetime is identically M and no seed can move it. This is the check that 'E[lifetime] = M' IS the FIFO parameterization of correction 4's formula.",
+        "part2_n_evictions_per_seed_M40": "STRUCTURAL: N_STREAMS * (S - M), no RNG in the count.",
+        "part3_n_evictions_per_seed_per_arm_M08": "STRUCTURAL: N_STREAMS * (S - M), no RNG in the count.",
+        "part3_selftest_hand_score_matches_policy_victim_M08_formula_M": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part3_selftest_hand_score_matches_policy_victim_M08_formula_realized": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part3_selftest_hand_score_matches_policy_victim_M08_fixed_0.1": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part3_n_evictions_per_seed_per_arm_M16": "STRUCTURAL: N_STREAMS * (S - M), no RNG in the count.",
+        "part3_selftest_hand_score_matches_policy_victim_M16_formula_M": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part3_selftest_hand_score_matches_policy_victim_M16_formula_realized": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part3_selftest_hand_score_matches_policy_victim_M16_fixed_0.1": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part3_n_evictions_per_seed_per_arm_M40": "STRUCTURAL: N_STREAMS * (S - M), no RNG in the count.",
+        "part3_selftest_hand_score_matches_policy_victim_M40_formula_M": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part3_selftest_hand_score_matches_policy_victim_M40_formula_realized": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part3_selftest_hand_score_matches_policy_victim_M40_fixed_0.1": "SELF-TEST at its required value 1.0: the hand-recomputed score reproduces rsr.py::_score exactly on every eviction, which is what licenses the flip counts. A value below 1.0 would invalidate the experiment.",
+        "part4_n_evictions_per_seed_per_arm_M16_S48": "STRUCTURAL: N_STREAMS * (48 - 16), no RNG in the count."
+      },
+      "how": "reason per key, produced by a classifier in this same process"
+    },
+    {
+      "key": "sd_zero_rows_unclassified",
+      "kind": "observation",
+      "value": [],
+      "how": "MUST be [] -- any key here is an unexplained zero sd"
+    },
+    {
+      "key": "wall_clock_seconds",
+      "kind": "observation",
+      "value": 7.64,
+      "how": "time.time() delta"
+    }
+  ],
+  "verdict": {
+    "falsifier": "a single FROZEN b_max gives `b` comparable strength at every M the project trains (M = 8 for the D-5 / correction 6 E7 model, M = 16 for synthetic, M = 40 for corpora / PG-19).",
+    "outcome": "falsified",
+    "detail": "ORDER STATISTIC. b_max / median-top-2-z-margin is 1.8877 +/- 0.0500 at M = 8, 2.5924 +/- 0.0526 at M = 16 and 3.1749 +/- 0.0820 at M = 40 -- a swing of 1.6824 +/- 0.0486 across exactly the two M the project trains. Exact-normal yardstick: 1.9261 / 2.5359 / 3.1905. The brief's predicted ~1.67 swing is confirmed. b is MECHANICALLY STRONGER per unit of b at larger M, because the gap between the two smallest of n z-scores shrinks with n while b_max does not move. REALIZED FLIPS. Under correction 4's own formula fed the FIFO lifetime E[lifetime] = M -- gamma_b = 4/M, i.e. 0.5 / 0.25 / 0.1 -- b changes 0.4671 +/- 0.0170 of victims at M = 8, 0.5336 +/- 0.0215 at M = 16 and 0.5950 +/- 0.0129 at M = 40. The formula's 1/M scaling OVER-CORRECTS relative to the order statistic: the arm with gamma_b HELD at the M = 40 value (0.1) gives 0.3227 / 0.4854 / 0.5950, so with gamma_b fixed b is weakest at small M and the formula's M-dependence is what pulls the small-M rate up. Either way the three rates are NOT comparable, and the two parameterizations of E[lifetime] are themselves far apart: realized mean slot lifetime under the learned-head driver is 7.377 / 13.317 / 26.236 against the FIFO 8 / 16 / 40. `phi` is UNTRAINED and `u_bar` is SYNTHETIC; part 1 depends on neither beyond the head's linear-functional form, part 3 depends on both."
+  },
+  "finished_utc": "2026-09-18T08:42:51Z"
+}
