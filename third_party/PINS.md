@@ -93,6 +93,65 @@ Because `.git` is gone, the sha cannot be re-derived from the tree. It is record
 above and in the vendoring commit message; re-verify by re-cloning if it ever
 matters.
 
+### Golden-tensor extraction — DONE, 2026-09-17 (gauntlet 2.3)
+
+**JAX runs here, on CPU.** `jaxlib` ships `macosx_11_0_arm64` CPU wheels; only
+`jax-metal`, the Metal *GPU* backend, is dead. CPU is the right target anyway —
+fixtures must be byte-reproducible, which is ADR-0001 D3's own argument for running
+E0b on CPU.
+
+**JAX is still not a project dependency and never enters `pyproject.toml`.** The
+extraction runs in a throwaway venv that is created, used, and deleted:
+
+```bash
+uv venv --python 3.12 /tmp/rsr-jaxenv
+uv pip install --python /tmp/rsr-jaxenv/bin/python \
+    "jax==0.7.2" "jaxlib==0.7.2" "flax>=0.8.2" "numpy>=1.26"
+PYTHONPATH=third_party/ThoughtGestaltCode \
+    /tmp/rsr-jaxenv/bin/python scripts/extract_golden_tensors.py \
+    --out tests/fixtures/tg_d128_seed0.npz
+rm -rf /tmp/rsr-jaxenv
+```
+
+Produced, on `Darwin arm64`, `TFRT_CPU_0`, jax 0.7.2 / python 3.12.13:
+
+```
+parameters: 2,478,278  (D=128 H=2 N=12 V=512 M=8)
+loss (explicit loop)     = 125.3105468750
+loss (run_sentence_loop) = 125.3105468750      |gap| = 0.000e+00
+wrote tests/fixtures/tg_d128_seed0.npz (23.48 MB, 438 arrays)
+sha256 79edafe967efff900ab3fe2d10a15cd7757398289a89f672588aad5efd2cd4e8
+steps at full memory (i.e. evicting): 12 of 20
+gestalt L2 norms: min=1.000000 max=1.000000
+```
+
+**Byte-reproducible**, verified by re-running under a different `PYTHONHASHSEED` in
+a fresh process: identical sha256.
+
+Three choices in the extraction that are not the reference's defaults, each for a
+stated reason:
+
+- **`M = 8`, not 40.** 🔴 The most important one. At `M = 40` a 20-step extraction
+  never fills memory, so `push_memory` never takes its roll-and-evict branch and the
+  gradient path *through eviction* — the path where JAX functional autodiff and
+  PyTorch retained-graph semantics actually diverge — would be missing from the
+  fixtures while the fixtures looked complete. At `M = 8`, 12 of 20 steps evict.
+- **`V = 512`, `L = 16`.** Keeps the fixture to 23 MB. Shapes are parametric; the
+  mechanism is not.
+- **`H = 2`.** Preserves the reference's head dimension of 64 at `D = 128` (the
+  reference is `D = 768 / H = 12`). Head *count* is the width axis under μP; head
+  *dim* is not.
+
+The generator runs the sentence loop twice — once explicitly to capture per-step
+intermediates, once through the reference's own `run_sentence_loop` for the loss and
+gradients — and **aborts if the two losses disagree.** A hand-written loop inside the
+thing that validates transcriptions is itself a transcription, and an unchecked one
+there is the worst place to put it. Measured gap: exactly zero.
+
+Cross-attention probabilities are read through `capture_intermediates`, via the
+`nn.Dropout` submodule that the softmax is piped through (the identity at
+`deterministic=True`). **Nothing in the vendored tree was instrumented or modified.**
+
 ### What the vendored source settled
 
 Six claims that were previously **relayed** from a session that had the tree are now

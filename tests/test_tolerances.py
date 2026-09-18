@@ -56,17 +56,50 @@ def test_the_reasons_are_recorded_beside_the_numbers():
     assert "float32" in FORWARD.why
 
 
-def test_no_fixture_exists_yet():
-    """Gauntlet 2.2's ordering, asserted rather than asserted-about.
+def test_the_tolerance_commit_precedes_the_fixture_commit():
+    """Gauntlet 2.2's ordering, now asserted against git rather than against the
+    absence of the fixtures.
 
-    If this ever fails, the fixtures were generated in the same commit as (or
-    before) the tolerance, and `git log` no longer proves what ADR-0002 claims.
-    Delete this test in the commit that adds the fixtures, and say so there.
+    `test_no_fixture_exists_yet` lived here and was deleted in the commit that
+    added them, exactly as its docstring said it would be. The ordering claim it
+    stood for is now checked directly: the commit that introduced
+    `src/rsr/model/tg/tolerances.py` must be an ancestor of the one that
+    introduced `tests/fixtures/`.
     """
+    import shutil
+    import subprocess
     from pathlib import Path
 
-    fixtures = Path(__file__).parent / "fixtures"
-    assert not fixtures.exists() or not list(fixtures.glob("*.npz")), (
-        "golden tensors exist; this test has served its purpose and its removal "
-        "belongs in the same commit that adds them"
+    root = Path(__file__).resolve().parents[1]
+    git = next(
+        (g for g in ("/opt/homebrew/bin/git", "/usr/local/bin/git") if Path(g).exists()),
+        shutil.which("git"),
+    )
+    if git is None:
+        pytest.skip("git not available; the ordering claim lives in ADR-0002")
+
+    def first_commit(path: str) -> str | None:
+        out = subprocess.run(
+            [git, "-C", str(root), "log", "--reverse", "--format=%H", "--", path],
+            capture_output=True,
+            text=True,
+        )
+        lines = [ln for ln in out.stdout.splitlines() if ln]
+        return lines[0] if lines else None
+
+    tol = first_commit("src/rsr/model/tg/tolerances.py")
+    fix = first_commit("tests/fixtures")
+    if tol is None or fix is None:
+        pytest.skip("shallow clone or unborn history; ordering lives in ADR-0002")
+    if tol == fix:
+        pytest.fail(
+            "tolerance and fixtures landed in one commit; the order is unprovable"
+        )
+    merge_base = subprocess.run(
+        [git, "-C", str(root), "merge-base", "--is-ancestor", tol, fix]
+    )
+    assert merge_base.returncode == 0, (
+        f"the tolerance commit {tol[:8]} is not an ancestor of the fixture commit "
+        f"{fix[:8]}; ADR-0002's claim that the tolerance was committed first no "
+        f"longer holds"
     )
