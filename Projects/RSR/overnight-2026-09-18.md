@@ -734,3 +734,96 @@ depends on a `max_cos` dispersion that nothing here measures on real text. One d
 break the exact-equality identity. `φ` untrained, `ū` synthetic, `d = 384` only, CPU.
 
 ---
+
+## Cycle 10 — is a tie that `ν` creates cheap? The assumption eight cycles rest on
+
+| | |
+|---|---|
+| **Falsifier** | *"a tie that `ν` creates is cheap — when the two lowest-scoring slots are near-copies at cosine ≥ 0.9, which one is evicted does not change what the model can later retrieve."* |
+| **Dispatched** | fresh researcher, retired on hand-back |
+| **Verdict** | **falsified on the cost limb. The tie is expensive, nothing in the eviction rule resolves it, and `ν` multiplies how often it is faced by 24.8×.** |
+| **Verified by re-execution** | ✅ **Their snippet, re-run by me**, reproduced exactly — including the regime split that carries the cycle: at `wq = 0.9` the real `r_i` discriminates the pair at **1.0000 ± 0.0000**, but at `wq = 1.00` it falls to **0.5050 ± 0.0200** while LOO stays at **1.0000 ± 0.0000**. I also confirmed both of their brief-error claims directly: `loo_delta_loss` **raises `NotImplementedError`** at `src/rsr/metrics/loo.py:22`, and the spec contains **no near-duplicate cosine threshold** — the `0.9` was mine. 159 rows, all 41 zero-sd rows classified, `sd_zero_rows_unclassified = []`. |
+| **Ledger** | `runs/cycle-dup-victim-cost/ledger.json` — 159 rows, 42.3 s. |
+
+**The cost.** Which member of a `cos = 0.90` pair dies moves the 2AFC retrieval hit rate from
+**1.00000 ± 0.00000** (kept the needed member) to **0.00000 ± 0.00000** (evicted it) — paired Δ
+**1.00000 ± 0.00000** against a null of 0, holding at every pair cosine tested (0.90 / 0.95 / 0.99 /
+0.999) and at `M = 16` as well as `M = 40`. Continuous readout: 0.31410 vs 0.00032, a factor of
+**980**. The wrong choice lands *below* the 0.5 chance floor, because the surviving near-copy answers
+confidently with the **other** detail — **D-3's submodularity point, measured.**
+
+**And the rule cannot resolve it.** `P(argmin evicts the needed member)` = **0.49860 ± 0.01613**
+against chance 0.5 — **bit-identical at `ν` = 0, 1 and 4**, by `torch.equal` on the per-trial
+indicator, every trial of every seed — while `P(victim ∈ pair)` rises **0.0349 → 0.8535**. Expected
+hit-loss per eviction goes **0.01743 ± 0.00266 → 0.42552 ± 0.01290**. That is cycle 9's ν-invariance
+result in its strongest possible form.
+
+**The negative control is what makes this a *detail* effect rather than a "one fewer slot" effect**,
+and it is also the honest bracket on the whole finding: if the later query needs the **shared topic**
+— §3.4's own defence — the two victims differ by **0.00001**. So §3.4 is right *in the regime where
+the answer lives in the shared content* and wrong where it lives in the residual. **The load-bearing
+unmeasured quantity is the fraction of real near-duplicate pairs whose residual carries a
+future-needed distinction**, and nothing here measures it on text.
+
+### 🔴 The finding that indicts the spec rather than my brief: §3.2.1's target is blind inside the pair
+
+Using the **real** path — `rsr.retention.reward.retrieval_demand(trace, …, gated=True)` on a real
+`AttentionTrace` built to corrections 17 (memory gate), 18 (six cross-attention layers), and 20 (eval
+mode), with `gated=False` reported alongside:
+
+| at `wq = 1.0` (topic-level query) | value |
+|---|---|
+| **LOO** discriminates the pair (chance 0.5) | **1.00000 ± 0.00000** |
+| **`r_i`** discriminates (chance 0.5) | **0.50300 ± 0.03493** |
+| `r_i` ungated | 0.49800 ± 0.04791 |
+| `r_i(needed)/r_i(other)` | **1.00635 ± 0.00680** |
+| P(needed is global LOO argmax; chance 1/40) | **1.00000 ± 0.00000** |
+| P(needed is global `r_i` argmax; chance 1/40) | 0.50300 ± 0.03493 |
+
+**§3.2.1's rule is that when the proxy and LOO disagree, LOO is truth. They disagree, so `r_i` is the
+confound.** The mechanism is not subtle: the two near-copies receive **α = 0.49754 vs 0.49739**. *A
+retention target built from attention cannot see a distinction the attention does not make* — and
+`ψ̂` is regressed onto `r_i`, so **training does not fix it**. §3.4's specified response is `ν`, and
+`ν` is ν-invariant inside the pair, so **the specified response does not reach this failure at all.**
+
+The disagreement is **regime-dependent and they reported both**: at `wq = 0.9`, where the query
+carries the detail, `r_i` discriminates perfectly and the two agree. The all-slots Spearman
+(−0.59951 ± 0.00513) is flagged rather than headlined, because it is dominated by 38 distractors
+where softmax renormalisation makes `r_i` and LOO run opposite **by construction**.
+
+**The anti-leak work is why this counts.** The pair is a uniform random orthonormal 2-frame whose law
+is **exchangeable in the two members**, so any function of pre-query state picks each with probability
+exactly 0.5 — a proof, not a hope. Leak control at n = 80,000: geometry rule 0.49641 ± 0.00758
+(z = −2.03), untrained `ψ̂` 0.49862 ± 0.00645 (z = −0.78). **Positive control proving the measurement
+has power:** inject the target detail into `c_t` and the geometry rule goes to **0.00000 ± 0.00000** —
+it never evicts the needed member — while the untrained `ψ̂` stays at chance, **locating the blockage
+in the untrained head rather than in the geometry.** They also flagged one of their own rows as a
+degenerate artifact (a strict `>` on a bit-exact tie) rather than letting it read as a protective rule.
+
+### 🔴 Four errors in my brief, and one is structural
+
+1. **Category error.** I wrote *"changes retrievability at a rate above chance"* and separately ruled
+   that *"a rate that beats zero is not a finding when chance is 0.5."* Those belong to the
+   **argmin** question (chance 0.5). The **cost** question is a **paired difference whose null is 0**.
+   I fused two questions with different nulls into one sentence.
+2. 🔴 **Items 1 and 2 of my brief are in tension, and satisfying one makes the other a theorem.**
+   Once the anti-leak requirement holds, exchangeability **forces** exactly 0.5 for any pre-query
+   rule — so "does the argmin pick correctly" stops being a measurement. The only way it could be
+   non-trivial is a **trained** `ψ̂`, which cannot exist because `observe()` raises. **Blocked from
+   both sides.** They resolved it by demoting item 2 to a verification of the leak control and adding
+   the positive control so that "0.5" carries information instead of being a tautology. That is a
+   better experiment than the one I asked for.
+3. **`loo.py` is a stub.** I said the file "exists" and implied it was drivable; `loo_delta_loss`
+   raises. Confirmed by me. Their LOO is a genuine leave-one-out **in this task's unit**, labelled as
+   a substitute everywhere — **not** Δ next-sentence loss.
+4. **The `cos ≥ 0.9` threshold is mine, not the spec's.** Confirmed: no near-duplicate cosine
+   threshold appears in `rsr_model_spec_v0.5.md`.
+
+**Boundary.** Constructed task, not a corpus: it shows the **mechanism** of harm exists and that
+nothing in §3.4 resolves it; it says **nothing about the rate on real text**. No trained model
+anywhere — `W_K` tied to `W_Q` (labelled) so the head retrieves by content at all, `ψ̂` freshly
+initialised. **A trained `ψ̂` might read the need out of `c_t` where discourse makes it predictable —
+the positive control shows that signal is exploitable in principle, so this is explicitly not ruled
+out.** The 2AFC saturates by design and cannot express graded harm; the continuous rows carry that.
+
+---

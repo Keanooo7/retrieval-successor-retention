@@ -1,0 +1,2316 @@
+{
+  "run_id": "cycle-dup-victim-cost",
+  "cycle": 10,
+  "question": "When the two lowest-scoring slots are near-copies at cos>=0.9, does WHICH one is evicted change what a later query can retrieve, and can the argmin pick the right one above chance (0.5)?",
+  "started_utc": "2026-09-18T10:19:55Z",
+  "provenance": {
+    "git_sha": "03f71c6fc58cdf04c1080762e0aa515bd3db7352",
+    "git_dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.venv/bin/python /private/tmp/claude-501/-Users-keanooo7-second-brain/1bdd6660-ee4c-49c5-99a7-28bf139ef2c9/scratchpad/run_dup_victim_cost.py",
+      "exit_code": 0,
+      "note": "the harness that wrote this ledger; scratch, not committed",
+      "at_utc": "2026-09-18T10:20:37Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "section_13_scope_statement",
+      "kind": "observation",
+      "value": "Every number in this run comes from ONE synthetic generator built in this harness. There are no PG-19 gestalts, no corpus text and no trained TG in this repo. No absolute number from one corpus is set against one from another (CLAUDE.md / spec section 13). The construction can show that the MECHANISM of harm exists or does not; it cannot give the RATE on real text.",
+      "how": "written before any number was computed"
+    },
+    {
+      "key": "registry_M_pg19_e3",
+      "kind": "observation",
+      "value": 40,
+      "how": "rsr.constants.get(\"M\",\"pg19_e3\") FROZEN"
+    },
+    {
+      "key": "registry_M_synthetic",
+      "kind": "observation",
+      "value": 16,
+      "how": "rsr.constants.get(\"M\",\"synthetic\") FROZEN"
+    },
+    {
+      "key": "registry_S_synthetic",
+      "kind": "observation",
+      "value": 48,
+      "how": "rsr.constants.get(\"S\",\"synthetic\") FROZEN"
+    },
+    {
+      "key": "registry_b_max",
+      "kind": "observation",
+      "value": 1.0,
+      "how": "rsr.constants.get(\"b_max\") FROZEN"
+    },
+    {
+      "key": "nu_registry_read_raises",
+      "kind": "observation",
+      "value": "'nu' is MEASURED and has no logged value in scope 'synthetic'. It is produced by **E1** (spec section 3.4, 4.5).\n\n  Redundancy penalty in the eviction rule (defect D-3). Set value under leave-one-out ",
+      "how": "rsr.constants.get(\"nu\",\"synthetic\") -- every nu below is a LABELLED BYPASS and no nu value is reported as a measurement of E1"
+    },
+    {
+      "key": "S_e7_registry_read_raises",
+      "kind": "observation",
+      "value": "'S' in scope 'e7' is set by the data, not by the registry (spec section 5.2). Stream length. Gaps longer than S do not exist in training data, so S silently caps the headline experiment -- this was th",
+      "how": "rsr.constants.get(\"S\",\"e7\")"
+    },
+    {
+      "key": "repo_loo_harness_status",
+      "kind": "observation",
+      "value": "STUB -- raises NotImplementedError('E0d / kickoff T6. Spec section 3.2.1.')",
+      "how": "called rsr.metrics.loo.loo_delta_loss() in this process. The BRIEF says 'src/rsr/metrics/loo.py exists'. The FILE exists; the FUNCTION is a stub, so the repo's LOO path cannot be driven. The LOO in this run is a leave-one-out computed in THIS task's ground-truth unit by this harness -- a LABELLED SUBSTITUTE, not rsr.metrics.loo."
+    },
+    {
+      "key": "phi_is_untrained_observe_raises",
+      "kind": "observation",
+      "value": "Sprint 2: the MC return and the shadow buffer (sections 3.3-3.4). r_i itself is implemented in rsr.retention.reward.",
+      "how": "RSRPolicy.observe() raises, so no psi_hat in this repo has ever been trained on a realized r_i. Every psi_hat here is a freshly initialised BilinearValueHead."
+    },
+    {
+      "key": "bypass_d_model",
+      "kind": "observation",
+      "value": 384,
+      "how": "LABELLED BYPASS: not a registry constant; carried from cycles 2-9"
+    },
+    {
+      "key": "bypass_L_xattn",
+      "kind": "observation",
+      "value": 6,
+      "how": "LABELLED BYPASS: correction 18: six cross-attention layers"
+    },
+    {
+      "key": "bypass_H_heads",
+      "kind": "observation",
+      "value": 8,
+      "how": "LABELLED BYPASS: supplied; TG head count is not in the registry"
+    },
+    {
+      "key": "bypass_softmax_sharpness",
+      "kind": "observation",
+      "value": 12.0,
+      "how": "LABELLED BYPASS: supplied; achieved alpha mass is reported"
+    },
+    {
+      "key": "bypass_g_mem",
+      "kind": "observation",
+      "value": "linspace(0.3,1.2,6)",
+      "how": "LABELLED BYPASS: g_mem is TG-LEARNED ([P2] App. C: grows with depth). No trained TG exists here, so it is supplied."
+    },
+    {
+      "key": "bypass_W_K_tied_to_W_Q",
+      "kind": "observation",
+      "value": true,
+      "how": "LABELLED BYPASS: with independent random W_Q/W_K the logits are content-blind in expectation (E[(W_Q q).(W_K s)] = 0) and every retrieval number would be noise. Tying makes the head retrieval-competent, which is what a TRAINED head does. Labelled, not hidden."
+    },
+    {
+      "key": "bypass_cos_threshold_0.9",
+      "kind": "observation",
+      "value": 0.9,
+      "how": "LABELLED BYPASS: the >=0.9 near-copy threshold is the BRIEF's, not the spec's: grep of docs/spec/rsr_model_spec_v0.5.md finds no near-duplicate cosine threshold anywhere."
+    },
+    {
+      "key": "orthogonal_residual_norm_at_cos_0.9",
+      "kind": "observation",
+      "value": 0.4358898943540673,
+      "how": "||s_A - proj_{s_B} s_A|| = sqrt(1-c^2) for unit gestalts. At the brief's cos=0.9 threshold this is 0.4359 -- 44% of a unit vector's length is NOT shared. That is where a discriminating detail lives."
+    },
+    {
+      "key": "orthogonal_residual_norm_at_cos_0.95",
+      "kind": "observation",
+      "value": 0.31224989991991997,
+      "how": "||s_A - proj_{s_B} s_A|| = sqrt(1-c^2) for unit gestalts. At the brief's cos=0.9 threshold this is 0.4359 -- 44% of a unit vector's length is NOT shared. That is where a discriminating detail lives."
+    },
+    {
+      "key": "orthogonal_residual_norm_at_cos_0.99",
+      "kind": "observation",
+      "value": 0.14106735979665894,
+      "how": "||s_A - proj_{s_B} s_A|| = sqrt(1-c^2) for unit gestalts. At the brief's cos=0.9 threshold this is 0.4359 -- 44% of a unit vector's length is NOT shared. That is where a discriminating detail lives."
+    },
+    {
+      "key": "orthogonal_residual_norm_at_cos_0.999",
+      "kind": "observation",
+      "value": 0.04471017781221601,
+      "how": "||s_A - proj_{s_B} s_A|| = sqrt(1-c^2) for unit gestalts. At the brief's cos=0.9 threshold this is 0.4359 -- 44% of a unit vector's length is NOT shared. That is where a discriminating detail lives."
+    },
+    {
+      "key": "partA_selftest_vec_score_matches_RSRPolicy_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of 50 memories where the vectorised argmin[(psi-mean)/std(unbiased=False) - nu*max_cos] picks the SAME victim as rsr.retention.rsr.RSRPolicy.select_eviction with b_enabled=False. 1.0 is what licenses every argmin number below.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partA_selftest_vec_score_matches_RSRPolicy_nu1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of 50 memories where the vectorised argmin[(psi-mean)/std(unbiased=False) - nu*max_cos] picks the SAME victim as rsr.retention.rsr.RSRPolicy.select_eviction with b_enabled=False. 1.0 is what licenses every argmin number below.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partA_selftest_vec_score_matches_RSRPolicy_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "fraction of 50 memories where the vectorised argmin[(psi-mean)/std(unbiased=False) - nu*max_cos] picks the SAME victim as rsr.retention.rsr.RSRPolicy.select_eviction with b_enabled=False. 1.0 is what licenses every argmin number below.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ground_truth_unit",
+      "kind": "observation",
+      "value": "2AFC RETRIEVAL HIT: after eviction, the reader gets back the attention-weighted memory mixture m = sum_i alpha_i s_i (averaged over the 6 x 8 cross-attention heads). A HIT is <m, d_target> > <m, d_other>, i.e. the needed detail is more present in what came back than the near-copy's detail. CHANCE IS 0.5 and it is a genuine 2AFC, not a rate against zero.",
+      "how": "definition, written before the numbers"
+    },
+    {
+      "key": "partB_hit_KEEPneeded_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "M=40, cos=0.90, query topic-weight 0.7. Evicted the NOT-needed member. 2AFC retrieval hit rate, chance 0.5. n=2000 trials/seed.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_hit_EVICTneeded_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "same memories, same query; evicted the NEEDED member instead. chance 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_hit_DELTA_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "PAIRED difference keep-needed minus evict-needed on the SAME trials. The null for a DIFFERENCE is 0, not 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_recovery_KEEPneeded_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.31060418486595154,
+        0.3105199337005615,
+        0.3105614483356476,
+        0.31048643589019775,
+        0.3105628192424774
+      ],
+      "mean": 0.31054696440696716,
+      "sd": 4.5082428274638714e-05,
+      "how": "continuous unit: <m, d_target>, the coefficient of the needed detail in what the memory returned.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_recovery_EVICTneeded_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0026519231032580137,
+        0.0026898118667304516,
+        0.0027389489114284515,
+        0.002713889582082629,
+        0.0026102790143340826
+      ],
+      "mean": 0.0026809704955667256,
+      "sd": 5.090277331770067e-05,
+      "how": "same, having evicted the needed member.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_NEGCONTROL_shared_topic_recovery_KEEP_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9310707449913025,
+        0.9307996034622192,
+        0.9309121370315552,
+        0.9306812882423401,
+        0.9309805631637573
+      ],
+      "mean": 0.9308888673782348,
+      "sd": 0.00015255015924661657,
+      "how": "NEGATIVE CONTROL: <m, u>, recovery of the SHARED topic direction. If the answer had been the shared content the victim choice should not matter.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_NEGCONTROL_shared_topic_recovery_EVICT_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8223132491111755,
+        0.8212131857872009,
+        0.8216080069541931,
+        0.8206325769424438,
+        0.8218446969985962
+      ],
+      "mean": 0.821522343158722,
+      "sd": 0.0006371900637875538,
+      "how": "same, evicting the needed member. Compare to the KEEP row: a small difference here is what makes the large difference above a DETAIL effect and not a generic 'one fewer slot' effect.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_needed_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.903948962688446,
+        0.9038557410240173,
+        0.903864324092865,
+        0.9034880995750427,
+        0.9035719633102417
+      ],
+      "mean": 0.9037458181381226,
+      "sd": 0.00020250849945891168,
+      "how": "achieved mean attention mass on the needed member (full memory), averaged over 6 layers x 8 heads. Reported so the head's retrieval competence is a measurement, not a claim.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_other_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0790974423289299,
+        0.07892275601625443,
+        0.07901883870363235,
+        0.07918524742126465,
+        0.07937794178724289
+      ],
+      "mean": 0.07912044525146485,
+      "sd": 0.00017352078108552428,
+      "how": "same, on the not-needed near-copy.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_best_distractor_wq0.7",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.001916070468723774,
+        0.001956345746293664,
+        0.0019760048016905785,
+        0.001933941850438714,
+        0.0019533601589500904
+      ],
+      "mean": 0.0019471446052193643,
+      "sd": 2.28917001244466e-05,
+      "how": "largest attention mass on any NON-pair slot. Small = the pair really is where the query looks.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_hit_KEEPneeded_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "M=40, cos=0.90, query topic-weight 0.9. Evicted the NOT-needed member. 2AFC retrieval hit rate, chance 0.5. n=2000 trials/seed.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_hit_EVICTneeded_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "same memories, same query; evicted the NEEDED member instead. chance 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_hit_DELTA_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "PAIRED difference keep-needed minus evict-needed on the SAME trials. The null for a DIFFERENCE is 0, not 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_recovery_KEEPneeded_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3141365945339203,
+        0.3140827715396881,
+        0.31409716606140137,
+        0.31407058238983154,
+        0.31409889459609985
+      ],
+      "mean": 0.3140972018241882,
+      "sd": 2.4856989620528534e-05,
+      "how": "continuous unit: <m, d_target>, the coefficient of the needed detail in what the memory returned.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_recovery_EVICTneeded_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.00031848825165070593,
+        0.00032300734892487526,
+        0.00033115947735495865,
+        0.0003304978599771857,
+        0.0003127033996861428
+      ],
+      "mean": 0.00032317126751877365,
+      "sd": 7.890250587370638e-06,
+      "how": "same, having evicted the needed member.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_NEGCONTROL_shared_topic_recovery_KEEP_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9423365592956543,
+        0.9421740770339966,
+        0.9422138929367065,
+        0.9421287178993225,
+        0.942237913608551
+      ],
+      "mean": 0.9422182321548462,
+      "sd": 7.805443184890716e-05,
+      "how": "NEGATIVE CONTROL: <m, u>, recovery of the SHARED topic direction. If the answer had been the shared content the victim choice should not matter.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_NEGCONTROL_shared_topic_recovery_EVICT_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9240246415138245,
+        0.9235500693321228,
+        0.9237411022186279,
+        0.9234138131141663,
+        0.9237334132194519
+      ],
+      "mean": 0.9236926078796387,
+      "sd": 0.00023038384800407182,
+      "how": "same, evicting the needed member. Compare to the KEEP row: a small difference here is what makes the large difference above a DETAIL effect and not a generic 'one fewer slot' effect.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_needed_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8089148998260498,
+        0.8091098070144653,
+        0.808706521987915,
+        0.8087780475616455,
+        0.8080354928970337
+      ],
+      "mean": 0.8087089538574219,
+      "sd": 0.00040664066281712974,
+      "how": "achieved mean attention mass on the needed member (full memory), averaged over 6 layers x 8 heads. Reported so the head's retrieval competence is a measurement, not a claim.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_other_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.1858273446559906,
+        0.18549352884292603,
+        0.1859368532896042,
+        0.18579453229904175,
+        0.1866166591644287
+      ],
+      "mean": 0.18593378365039825,
+      "sd": 0.0004155938173970921,
+      "how": "same, on the not-needed near-copy.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_best_distractor_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0006105370121076703,
+        0.0006218870403245091,
+        0.0006233109743334353,
+        0.0006177328759804368,
+        0.0006351101910695434
+      ],
+      "mean": 0.000621715618763119,
+      "sd": 8.983493179851143e-06,
+      "how": "largest attention mass on any NON-pair slot. Small = the pair really is where the query looks.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_hit_KEEPneeded_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "M=40, cos=0.90, query topic-weight 0.98. Evicted the NOT-needed member. 2AFC retrieval hit rate, chance 0.5. n=2000 trials/seed.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_hit_EVICTneeded_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "same memories, same query; evicted the NEEDED member instead. chance 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_hit_DELTA_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "PAIRED difference keep-needed minus evict-needed on the SAME trials. The null for a DIFFERENCE is 0, not 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_recovery_KEEPneeded_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3141200542449951,
+        0.3140580654144287,
+        0.3140732944011688,
+        0.3140427768230438,
+        0.314069539308548
+      ],
+      "mean": 0.3140727460384369,
+      "sd": 2.899277849123677e-05,
+      "how": "continuous unit: <m, d_target>, the coefficient of the needed detail in what the memory returned.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_recovery_EVICTneeded_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        7.004335202509537e-05,
+        6.801532435929403e-05,
+        7.142326649045572e-05,
+        7.242269202833995e-05,
+        6.508990190923214e-05
+      ],
+      "mean": 6.939890736248344e-05,
+      "sd": 2.921405587662673e-06,
+      "how": "same, having evicted the needed member.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_NEGCONTROL_shared_topic_recovery_KEEP_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9424299001693726,
+        0.9422512650489807,
+        0.9422940611839294,
+        0.9421966671943665,
+        0.9422963857650757
+      ],
+      "mean": 0.9422936558723449,
+      "sd": 8.627559131333614e-05,
+      "how": "NEGATIVE CONTROL: <m, u>, recovery of the SHARED topic direction. If the answer had been the shared content the victim choice should not matter.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_NEGCONTROL_shared_topic_recovery_EVICT_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9369186758995056,
+        0.9366277456283569,
+        0.9367506504058838,
+        0.9365489482879639,
+        0.9367116689682007
+      ],
+      "mean": 0.9367115378379822,
+      "sd": 0.00013954612397314847,
+      "how": "same, evicting the needed member. Compare to the KEEP row: a small difference here is what makes the large difference above a DETAIL effect and not a generic 'one fewer slot' effect.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_needed_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.6582947969436646,
+        0.6584683656692505,
+        0.6576047539710999,
+        0.6583475470542908,
+        0.6569010019302368
+      ],
+      "mean": 0.6579232931137085,
+      "sd": 0.0006636371451618837,
+      "how": "achieved mean attention mass on the needed member (full memory), averaged over 6 layers x 8 heads. Reported so the head's retrieval competence is a measurement, not a claim.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_other_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.33754175901412964,
+        0.3372391164302826,
+        0.3381490409374237,
+        0.33733588457107544,
+        0.3388325572013855
+      ],
+      "mean": 0.33781967163085935,
+      "sd": 0.0006675984949345304,
+      "how": "same, on the not-needed near-copy.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_best_distractor_wq0.98",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.00048733060248196125,
+        0.0004930413560941815,
+        0.000489501457195729,
+        0.0004983264952898026,
+        0.0005103328148834407
+      ],
+      "mean": 0.000495706545189023,
+      "sd": 9.172713200740844e-06,
+      "how": "largest attention mass on any NON-pair slot. Small = the pair really is where the query looks.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_hit_KEEPneeded_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "M=40, cos=0.90, query topic-weight 1.0. Evicted the NOT-needed member. 2AFC retrieval hit rate, chance 0.5. n=2000 trials/seed.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_hit_EVICTneeded_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "same memories, same query; evicted the NEEDED member instead. chance 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_hit_DELTA_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "PAIRED difference keep-needed minus evict-needed on the SAME trials. The null for a DIFFERENCE is 0, not 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_recovery_KEEPneeded_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.31289806962013245,
+        0.3128036558628082,
+        0.312826544046402,
+        0.3127795457839966,
+        0.3128177225589752
+      ],
+      "mean": 0.3128251075744629,
+      "sd": 4.448627512245172e-05,
+      "how": "continuous unit: <m, d_target>, the coefficient of the needed detail in what the memory returned.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_recovery_EVICTneeded_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        7.292608756870322e-07,
+        -2.788116262308904e-06,
+        3.943750641610677e-07,
+        8.122593158077507e-07,
+        -4.350040853751125e-06
+      ],
+      "mean": -1.0404523720808356e-06,
+      "sd": 2.3785951915347184e-06,
+      "how": "same, having evicted the needed member.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_NEGCONTROL_shared_topic_recovery_KEEP_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9389774203300476,
+        0.9387140870094299,
+        0.9387761950492859,
+        0.9386281371116638,
+        0.9387680888175964
+      ],
+      "mean": 0.9387727856636048,
+      "sd": 0.0001287223432080377,
+      "how": "NEGATIVE CONTROL: <m, u>, recovery of the SHARED topic direction. If the answer had been the shared content the victim choice should not matter.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_NEGCONTROL_shared_topic_recovery_EVICT_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9389324188232422,
+        0.9386890530586243,
+        0.9387830495834351,
+        0.9386153221130371,
+        0.9387586712837219
+      ],
+      "mean": 0.9387557029724121,
+      "sd": 0.00011846321858266932,
+      "how": "same, evicting the needed member. Compare to the KEEP row: a small difference here is what makes the large difference above a DETAIL effect and not a generic 'one fewer slot' effect.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_needed_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.49808844923973083,
+        0.49807968735694885,
+        0.49690964818000793,
+        0.4982295334339142,
+        0.4963831305503845
+      ],
+      "mean": 0.49753808975219727,
+      "sd": 0.0008371361095253337,
+      "how": "achieved mean attention mass on the needed member (full memory), averaged over 6 layers x 8 heads. Reported so the head's retrieval competence is a measurement, not a claim.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_other_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.4969536066055298,
+        0.49681273102760315,
+        0.4980393350124359,
+        0.4966351389884949,
+        0.49853381514549255
+      ],
+      "mean": 0.49739492535591123,
+      "sd": 0.0008401371253698607,
+      "how": "same, on the not-needed near-copy.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_alpha_mass_best_distractor_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0005805168184451759,
+        0.0005923815770074725,
+        0.000582963228225708,
+        0.0005963306175544858,
+        0.0006059923325665295
+      ],
+      "mean": 0.0005916369147598744,
+      "sd": 1.0338674580572723e-05,
+      "how": "largest attention mass on any NON-pair slot. Small = the pair really is where the query looks.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_cos_sweep_achieved_cos_0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8999998569488525,
+        0.8999998569488525,
+        0.8999999165534973,
+        0.8999998569488525,
+        0.8999999761581421
+      ],
+      "mean": 0.8999998927116394,
+      "sd": 5.331201499700045e-08,
+      "how": "achieved cos(s_A,s_B), measured not nominal. Construction gives 1/(1+eps^2) exactly.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_cos_sweep_hit_DELTA_0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "paired keep-minus-evict 2AFC hit delta at pair cosine 0.9, wq=0.9, M=40. Null 0.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_cos_sweep_achieved_cos_0.95",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9499998688697815,
+        0.9499998688697815,
+        0.9499998688697815,
+        0.9499998688697815,
+        0.9499998688697815
+      ],
+      "mean": 0.9499998688697815,
+      "sd": 0.0,
+      "how": "achieved cos(s_A,s_B), measured not nominal. Construction gives 1/(1+eps^2) exactly.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_cos_sweep_hit_DELTA_0.95",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "paired keep-minus-evict 2AFC hit delta at pair cosine 0.95, wq=0.9, M=40. Null 0.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_cos_sweep_achieved_cos_0.99",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9899998903274536,
+        0.9899999499320984,
+        0.9899998903274536,
+        0.9899998903274536,
+        0.9899998903274536
+      ],
+      "mean": 0.9899999022483825,
+      "sd": 2.6656007498500224e-08,
+      "how": "achieved cos(s_A,s_B), measured not nominal. Construction gives 1/(1+eps^2) exactly.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_cos_sweep_hit_DELTA_0.99",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "paired keep-minus-evict 2AFC hit delta at pair cosine 0.99, wq=0.9, M=40. Null 0.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_cos_sweep_achieved_cos_0.999",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.999000072479248,
+        0.999000072479248,
+        0.999000072479248,
+        0.9990000128746033,
+        0.9990000128746033
+      ],
+      "mean": 0.9990000486373901,
+      "sd": 3.264680847556389e-08,
+      "how": "achieved cos(s_A,s_B), measured not nominal. Construction gives 1/(1+eps^2) exactly.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partB_cos_sweep_hit_DELTA_0.999",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "paired keep-minus-evict 2AFC hit delta at pair cosine 0.999, wq=0.9, M=40. Null 0.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partB_M16_hit_DELTA",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "same paired delta at M=16 (registry, scope 'synthetic'), cos=0.90, wq=0.9.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.7_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.7_nu1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.7_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_global_victim_IN_PAIR_wq0.7_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.039500001817941666,
+        0.030500000342726707,
+        0.03400000184774399,
+        0.030500000342726707,
+        0.03999999910593033
+      ],
+      "mean": 0.03490000069141388,
+      "sd": 0.004655641691744244,
+      "how": "P(the unrestricted argmin over all M=40 slots lands on a pair member) at nu=0 -- how often the coin is flipped at all.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_global_victim_IN_PAIR_wq0.7_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8619999885559082,
+        0.8634999990463257,
+        0.843999981880188,
+        0.8460000157356262,
+        0.8519999980926514
+      ],
+      "mean": 0.8534999966621399,
+      "sd": 0.008958235042988235,
+      "how": "same at nu=4 (LABELLED BYPASS: nu is MEASURED by E1 and unmeasured). The rise is the exposure the nu term buys.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.9_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.9_nu1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.9_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_global_victim_IN_PAIR_wq0.9_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.039500001817941666,
+        0.030500000342726707,
+        0.03400000184774399,
+        0.030500000342726707,
+        0.03999999910593033
+      ],
+      "mean": 0.03490000069141388,
+      "sd": 0.004655641691744244,
+      "how": "P(the unrestricted argmin over all M=40 slots lands on a pair member) at nu=0 -- how often the coin is flipped at all.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_global_victim_IN_PAIR_wq0.9_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8619999885559082,
+        0.8634999990463257,
+        0.843999981880188,
+        0.8460000157356262,
+        0.8519999980926514
+      ],
+      "mean": 0.8534999966621399,
+      "sd": 0.008958235042988235,
+      "how": "same at nu=4 (LABELLED BYPASS: nu is MEASURED by E1 and unmeasured). The rise is the exposure the nu term buys.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.98_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.98_nu1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq0.98_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_global_victim_IN_PAIR_wq0.98_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.039500001817941666,
+        0.030500000342726707,
+        0.03400000184774399,
+        0.030500000342726707,
+        0.03999999910593033
+      ],
+      "mean": 0.03490000069141388,
+      "sd": 0.004655641691744244,
+      "how": "P(the unrestricted argmin over all M=40 slots lands on a pair member) at nu=0 -- how often the coin is flipped at all.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_global_victim_IN_PAIR_wq0.98_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8619999885559082,
+        0.8634999990463257,
+        0.843999981880188,
+        0.8460000157356262,
+        0.8519999980926514
+      ],
+      "mean": 0.8534999966621399,
+      "sd": 0.008958235042988235,
+      "how": "same at nu=4 (LABELLED BYPASS: nu is MEASURED by E1 and unmeasured). The rise is the exposure the nu term buys.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq1_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq1_nu1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_argmin_EVICTS_needed_wq1_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "P(score(needed) < score(not-needed)) within the pair, i.e. the argmin restricted to the two near-copies evicts the member the later query needs. CHANCE IS 0.5. 1-this is 'keeps the needed member'.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_global_victim_IN_PAIR_wq1_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.039500001817941666,
+        0.030500000342726707,
+        0.03400000184774399,
+        0.030500000342726707,
+        0.03999999910593033
+      ],
+      "mean": 0.03490000069141388,
+      "sd": 0.004655641691744244,
+      "how": "P(the unrestricted argmin over all M=40 slots lands on a pair member) at nu=0 -- how often the coin is flipped at all.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_p_global_victim_IN_PAIR_wq1_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.8619999885559082,
+        0.8634999990463257,
+        0.843999981880188,
+        0.8460000157356262,
+        0.8519999980926514
+      ],
+      "mean": 0.8534999966621399,
+      "sd": 0.008958235042988235,
+      "how": "same at nu=4 (LABELLED BYPASS: nu is MEASURED by E1 and unmeasured). The rise is the exposure the nu term buys.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_within_pair_maxcos_penalty_abs_diff",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "mean |max_cos_needed - max_cos_other| inside the pair, float32. Near zero reproduces cycle 9: the nu penalty is EQUAL within a pair, so nu cannot break the tie it creates.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partC_LEAK_blind_rule_maxcos_evicts_needed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "LEAK CONTROL (blind c_t). Rule: evict the member with the HIGHER max-cosine. Rate at which it evicts the NEEDED member. CHANCE IS 0.5. 'blind' must be 0.5 or the generator leaks the answer into the geometry; 'leaky' is the POSITIVE CONTROL where c_t deliberately carries the target detail, and shows the measurement can see an above-chance rate when one exists.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partC_LEAK_leaky_rule_maxcos_evicts_needed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "LEAK CONTROL (leaky c_t). Rule: evict the member with the HIGHER max-cosine. Rate at which it evicts the NEEDED member. CHANCE IS 0.5. 'blind' must be 0.5 or the generator leaks the answer into the geometry; 'leaky' is the POSITIVE CONTROL where c_t deliberately carries the target detail, and shows the measurement can see an above-chance rate when one exists.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partC_LEAK_blind_rule_cosctx_evicts_needed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5145000219345093,
+        0.5214999914169312,
+        0.5205000042915344,
+        0.49399998784065247,
+        0.5095000267028809
+      ],
+      "mean": 0.5120000064373016,
+      "sd": 0.011169157575368623,
+      "how": "LEAK CONTROL (blind c_t). Rule: evict the member LESS similar to c_t (the obvious heuristic). Rate at which it evicts the NEEDED member. CHANCE IS 0.5. 'blind' must be 0.5 or the generator leaks the answer into the geometry; 'leaky' is the POSITIVE CONTROL where c_t deliberately carries the target detail, and shows the measurement can see an above-chance rate when one exists.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_LEAK_leaky_rule_cosctx_evicts_needed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "LEAK CONTROL (leaky c_t). Rule: evict the member LESS similar to c_t (the obvious heuristic). Rate at which it evicts the NEEDED member. CHANCE IS 0.5. 'blind' must be 0.5 or the generator leaks the answer into the geometry; 'leaky' is the POSITIVE CONTROL where c_t deliberately carries the target detail, and shows the measurement can see an above-chance rate when one exists.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partC_LEAK_blind_rule_psi_evicts_needed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.492000013589859,
+        0.48350000381469727,
+        0.4884999990463257,
+        0.5055000185966492,
+        0.5235000252723694
+      ],
+      "mean": 0.4986000120639801,
+      "sd": 0.01613382502595429,
+      "how": "LEAK CONTROL (blind c_t). Rule: evict the member with the lower z(psi_hat) -- the untrained head. Rate at which it evicts the NEEDED member. CHANCE IS 0.5. 'blind' must be 0.5 or the generator leaks the answer into the geometry; 'leaky' is the POSITIVE CONTROL where c_t deliberately carries the target detail, and shows the measurement can see an above-chance rate when one exists.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partC_LEAK_leaky_rule_psi_evicts_needed",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.5059999823570251,
+        0.4860000014305115,
+        0.44999998807907104,
+        0.4984999895095825,
+        0.4925000071525574
+      ],
+      "mean": 0.4865999937057495,
+      "sd": 0.021752586174272594,
+      "how": "LEAK CONTROL (leaky c_t). Rule: evict the member with the lower z(psi_hat) -- the untrained head. Rate at which it evicts the NEEDED member. CHANCE IS 0.5. 'blind' must be 0.5 or the generator leaks the answer into the geometry; 'leaky' is the POSITIVE CONTROL where c_t deliberately carries the target detail, and shows the measurement can see an above-chance rate when one exists.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_spearman_ri_vs_LOO_allslots_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.6015684803001876,
+        -0.6035984990619138,
+        -0.5987992495309569,
+        -0.5909146341463415,
+        -0.6026754221388367
+      ],
+      "mean": -0.5995112570356473,
+      "sd": 0.005132215299686837,
+      "how": "Spearman rho(r_i, LOO delta-loss) across all M=40 slots, per trial, averaged over 200 trials/seed. r_i is rsr.retention.reward.retrieval_demand(gated=True) on a real eval-mode AttentionTrace; LOO is leave-one-out in THIS task's unit (the repo's loo_delta_loss is a stub).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_spearman_ri_vs_LOO_DISTRACTORS_ONLY_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.7059284385600173,
+        -0.7083378925484186,
+        -0.7027333406280774,
+        -0.6935233614180981,
+        -0.7072808841229892
+      ],
+      "mean": -0.7035607834555201,
+      "sd": 0.005993751199070163,
+      "how": "same Spearman restricted to the M-2 = 38 NON-pair slots. This is the diagnostic for the all-slots row: a distractor's r_i is its (tiny) attention mass, and removing a distractor renormalises that mass onto the pair, which HELPS -- so among distractors r_i and LOO delta-loss run opposite by construction of softmax attention, and they dominate a 40-slot rank correlation.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_LOO_discriminates_pair_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "P(LOO delta-loss of the NEEDED member > that of the not-needed near-copy). CHANCE IS 0.5. This is truth under spec section 3.2.1.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partD_ri_discriminates_pair_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "P(r_i of the NEEDED member > that of the not-needed near-copy), same trials, the REAL retrieval_demand. CHANCE IS 0.5.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partD_ri_RAW_ungated_discriminates_pair_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "same with gated=False (correction 17 asks for both). ",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partD_ri_needed_over_other_ratio_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        4.338594070941483,
+        4.424153213967605,
+        4.407246006410162,
+        4.394856515311142,
+        4.409544391562394
+      ],
+      "mean": 4.394878839638557,
+      "sd": 0.03313981708309263,
+      "how": "mean r_i(needed)/r_i(not-needed). 1.0 = the section 3.2.1 target is BLIND to which near-copy the future query will need.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_LOO_needed_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.502861944437027,
+        0.5051424345374107,
+        0.5048163123428822,
+        0.503484273403883,
+        0.5050737103819847
+      ],
+      "mean": 0.5042757350206375,
+      "sd": 0.0010374695026985736,
+      "how": "mean LOO delta-loss of the needed member (positive = ablating it hurts).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_LOO_other_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.11847892329096794,
+        -0.11630999319255352,
+        -0.11639001578092575,
+        -0.11773454196751118,
+        -0.11619536601006984
+      ],
+      "mean": -0.11702176804840565,
+      "sd": 0.0010271346993625922,
+      "how": "mean LOO delta-loss of the not-needed near-copy.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_p_needed_is_argmax_LOO_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "P(the needed member has the LARGEST LOO delta-loss of all M=40 slots). Chance for an argmax over 40 slots is 1/40 = 0.025.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partD_p_needed_is_argmax_ri_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "P(the needed member has the largest r_i of all M=40 slots), same trials, the REAL retrieval_demand. Chance 1/40 = 0.025.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partD_ri_LOO_sign_agreement_within_pair_wq0.9",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "P(sign(r_needed - r_other) == sign(LOO_needed - LOO_other)). CHANCE 0.5. Section 3.2.1: where they disagree, LOO is truth and r_i is a confound.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partD_spearman_ri_vs_LOO_allslots_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.010482176360225139,
+        -0.008183864915572228,
+        0.007870544090056285,
+        0.0006585365853658553,
+        -0.0037973733583489683
+      ],
+      "mean": -0.002786866791744839,
+      "sd": 0.007328330518594083,
+      "how": "Spearman rho(r_i, LOO delta-loss) across all M=40 slots, per trial, averaged over 200 trials/seed. r_i is rsr.retention.reward.retrieval_demand(gated=True) on a real eval-mode AttentionTrace; LOO is leave-one-out in THIS task's unit (the repo's loo_delta_loss is a stub).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_spearman_ri_vs_LOO_DISTRACTORS_ONLY_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.011771528613633876,
+        -0.009390524127366233,
+        0.009098369624685411,
+        0.00048582995951416963,
+        -0.004851734325418539
+      ],
+      "mean": -0.0032859174964438133,
+      "sd": 0.008356438339126226,
+      "how": "same Spearman restricted to the M-2 = 38 NON-pair slots. This is the diagnostic for the all-slots row: a distractor's r_i is its (tiny) attention mass, and removing a distractor renormalises that mass onto the pair, which HELPS -- so among distractors r_i and LOO delta-loss run opposite by construction of softmax attention, and they dominate a 40-slot rank correlation.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_LOO_discriminates_pair_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "P(LOO delta-loss of the NEEDED member > that of the not-needed near-copy). CHANCE IS 0.5. This is truth under spec section 3.2.1.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partD_ri_discriminates_pair_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.45,
+        0.49,
+        0.51,
+        0.525,
+        0.54
+      ],
+      "mean": 0.503,
+      "sd": 0.03492849839314597,
+      "how": "P(r_i of the NEEDED member > that of the not-needed near-copy), same trials, the REAL retrieval_demand. CHANCE IS 0.5.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_ri_RAW_ungated_discriminates_pair_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.43,
+        0.495,
+        0.495,
+        0.505,
+        0.565
+      ],
+      "mean": 0.49799999999999994,
+      "sd": 0.04790615826801392,
+      "how": "same with gated=False (correction 17 asks for both). ",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_ri_needed_over_other_ratio_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.9958798897926282,
+        1.0105877472978042,
+        1.0055241725110744,
+        1.0059191234411677,
+        1.0138623983601587
+      ],
+      "mean": 1.0063546662805667,
+      "sd": 0.006798628093516688,
+      "how": "mean r_i(needed)/r_i(not-needed). 1.0 = the section 3.2.1 target is BLIND to which near-copy the future query will need.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_LOO_needed_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.3108614718914032,
+        0.3139894138276577,
+        0.31353290677070617,
+        0.3121398973464966,
+        0.3140015083551407
+      ],
+      "mean": 0.31290503963828087,
+      "sd": 0.001372401182997751,
+      "how": "mean LOO delta-loss of the needed member (positive = ablating it hurts).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_LOO_other_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        -0.3146284291148186,
+        -0.31174577757716176,
+        -0.31201109036803243,
+        -0.3134319739043713,
+        -0.3114465101063251
+      ],
+      "mean": -0.3126527562141418,
+      "sd": 0.0013416257486590177,
+      "how": "mean LOO delta-loss of the not-needed near-copy.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_p_needed_is_argmax_LOO_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "P(the needed member has the LARGEST LOO delta-loss of all M=40 slots). Chance for an argmax over 40 slots is 1/40 = 0.025.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partD_p_needed_is_argmax_ri_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.45,
+        0.49,
+        0.51,
+        0.525,
+        0.54
+      ],
+      "mean": 0.503,
+      "sd": 0.03492849839314597,
+      "how": "P(the needed member has the largest r_i of all M=40 slots), same trials, the REAL retrieval_demand. Chance 1/40 = 0.025.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partD_ri_LOO_sign_agreement_within_pair_wq1",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.45,
+        0.49,
+        0.51,
+        0.525,
+        0.54
+      ],
+      "mean": 0.503,
+      "sd": 0.03492849839314597,
+      "how": "P(sign(r_needed - r_other) == sign(LOO_needed - LOO_other)). CHANCE 0.5. Section 3.2.1: where they disagree, LOO is truth and r_i is a confound.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_reexec_snippet",
+      "kind": "observation",
+      "value": "\nimport sys, math, torch; sys.path.insert(0,'src'); torch.set_num_threads(1)\nfrom rsr import constants as C\nfrom rsr.retention.value_head import BilinearValueHead\nfrom rsr.retention.policy import MemoryState, AttentionTrace\nfrom rsr.retention.rsr import RSRConfig, RSRPolicy\nfrom rsr.retention.reward import retrieval_demand\nM = C.get('M','pg19_e3')                       # FROZEN registry read -> 40\nd, L, H, dh, T = 384, 6, 8, 48, 400            # LABELLED BYPASS (no trained TG here)\nNUS = [0.0, 1.0, 4.0]                          # LABELLED BYPASS: nu is MEASURED (E1)\nCOS, SHARP = 0.90, 12.0                        # cos threshold is the brief's, not the spec's\nu_ = lambda x: x/x.norm(dim=-1,keepdim=True)\ndef cell(seed, wq):\n    g = torch.Generator().manual_seed(9000+seed)\n    WQ = torch.randn(L,H,dh,d,generator=g)/math.sqrt(d)\n    WV = torch.randn(L,H,dh,d,generator=g)/math.sqrt(d)\n    WO = torch.randn(L,H,d,dh,generator=g)/math.sqrt(dh)\n    gate = torch.linspace(0.3,1.2,L); A = torch.einsum('lhed,lhef->lhdf',WQ,WQ)\n    head = BilinearValueHead(d, generator=g)\n    x = torch.randn(T,3,d,generator=g); uu = u_(x[:,0])\n    a = u_(x[:,1]-(x[:,1]*uu).sum(-1,True)*uu)\n    b = x[:,2]-(x[:,2]*uu).sum(-1,True)*uu; b = u_(b-(b*a).sum(-1,True)*a)\n    eps = math.sqrt(1/COS-1); nrm = math.sqrt(1+eps*eps)\n    tgt = torch.randint(0,2,(T,),generator=g)          # the coin: a,b exchangeable\n    dt = torch.where(tgt.unsqueeze(-1)==0,a,b); do = torch.where(tgt.unsqueeze(-1)==0,b,a)\n    G = u_(torch.randn(T,M,d,generator=g)); ar = torch.arange(T)\n    perm = torch.stack([torch.randperm(M,generator=g) for _ in range(T)])\n    iA,iB = perm[:,0],perm[:,1]\n    G[ar,iA] = (uu+eps*a)/nrm; G[ar,iB] = (uu+eps*b)/nrm\n    inn = torch.where(tgt==0,iA,iB); iot = torch.where(tgt==0,iB,iA)\n    n = u_(torch.randn(T,d,generator=g)); ctx = u_(0.5*uu+math.sqrt(0.75)*n)  # BLIND\n    q = uu.clone() if wq>=1.0 else u_(wq*uu+math.sqrt(1-wq*wq)*dt)\n    def al_(live):\n        h = torch.einsum('td,lhdf->tlhf',q,A)\n        lg = torch.einsum('tlhf,tmf->tlhm',h,G)*(SHARP*d/dh)\n        return torch.softmax(torch.where(live[:,None,None,:],lg,torch.full_like(lg,-1e30)),-1)\n    mix = lambda al: torch.einsum('tlhm,tmd->td',al,G)/(L*H)\n    live = torch.ones(T,M,dtype=torch.bool)\n    hits = {}\n    for tag,idx in (('keep',iot),('evict',inn)):\n        lv = live.clone(); lv[ar,idx]=False; m2 = mix(al_(lv))\n        hits[tag] = ((m2*dt).sum(-1) > (m2*do).sum(-1)).double().mean().item()\n    with torch.no_grad():\n        psi = head(G,ctx).double(); z = (psi-psi.mean(1,True))/psi.std(1,unbiased=False)[:,None]\n        gn = torch.nn.functional.normalize(G,dim=-1); gram = gn@gn.transpose(1,2)\n        mc = gram.clone(); mc.diagonal(dim1=1,dim2=2).fill_(-1.); mc = mc.max(2).values.double()\n    ev = {nu: ((z-nu*mc)[ar,inn] < (z-nu*mc)[ar,iot]).double().mean().item() for nu in NUS}\n    inpair = {nu: (((z-nu*mc).argmin(1)==inn)|((z-nu*mc).argmin(1)==iot)).double().mean().item()\n              for nu in NUS}\n    al = al_(live); m = mix(al)\n    lf = -((m*dt).sum(-1)-(m*do).sum(-1)); LOO = torch.zeros(T,M,dtype=torch.float64)\n    for i in range(M):\n        lv = live.clone(); lv[:,i]=False; m2 = mix(al_(lv))\n        LOO[:,i] = (-((m2*dt).sum(-1)-(m2*do).sum(-1)) - lf).double()\n    R = torch.zeros(T,M,dtype=torch.float64)\n    for t in range(0,T,50):                              # REAL rsr.retention.reward\n        v = torch.einsum('lhed,tmd->tlhme',WV,G[t:t+50])\n        wv = torch.einsum('lhde,tlhme->tlhmd',WO,v)\n        for j in range(wv.shape[0]):\n            tr = AttentionTrace(alpha=al[t+j],wo_v=wv[j],live=live[t+j],step=M,\n                                eval_mode=True,gate=gate)\n            R[t+j] = retrieval_demand(tr,n_live=M,capacity=M,gated=True).double()\n    return dict(hits=hits, ev=ev, inpair=inpair,\n                loo_disc=(LOO[ar,inn]>LOO[ar,iot]).double().mean().item(),\n                ri_disc=(R[ar,inn]>R[ar,iot]).double().mean().item(),\n                r_ratio=(R[ar,inn]/(R[ar,iot]+1e-30)).mean().item())\ndef ms(xs):\n    m = sum(xs)/len(xs); return m, math.sqrt(sum((x-m)**2 for x in xs)/(len(xs)-1))\nS = [0,1,2]\nprint('CHANCE FOR EVERY RATE BELOW IS 0.500.  M=%d (registry), pair cos=%.2f, %d trials x %d seeds'%(M,COS,T,len(S)))\nfor wq in (0.9, 1.0):\n    A_ = [cell(s,wq) for s in S]\n    print('--- query topic-weight wq=%.2f %s'%(wq,'(pure topic-level query)' if wq>=1 else ''))\n    print('  2AFC hit, evicted NOT-needed (kept needed) : %.4f +/- %.4f'%ms([x['hits']['keep'] for x in A_]))\n    print('  2AFC hit, evicted NEEDED                   : %.4f +/- %.4f'%ms([x['hits']['evict'] for x in A_]))\n    for nu in NUS:\n        print('  nu=%-4g argmin EVICTS needed member      : %.4f +/- %.4f   | P(victim in pair) %.4f +/- %.4f'\n              %(nu,*ms([x['ev'][nu] for x in A_]),*ms([x['inpair'][nu] for x in A_])))\n    print('  LOO delta-loss discriminates the pair      : %.4f +/- %.4f'%ms([x['loo_disc'] for x in A_]))\n    print('  r_i (real retrieval_demand) discriminates  : %.4f +/- %.4f'%ms([x['ri_disc'] for x in A_]))\n    print('  r_i(needed)/r_i(not-needed)                : %.4f +/- %.4f'%ms([x['r_ratio'] for x in A_]))\n",
+      "how": "embedded verbatim; the rows below are written by RUNNING this exact text in this process, so what it prints IS these rows"
+    },
+    {
+      "key": "partE_snippet_hit_KEEPneeded_wq0.9",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "printed by the embedded snippet, line '2AFC hit, evicted NOT-needed'",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partE_snippet_hit_EVICTneeded_wq0.9",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "printed by the embedded snippet, line '2AFC hit, evicted NEEDED'",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partE_snippet_argmin_evicts_needed_wq0.9_nu0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.535,
+        0.4675,
+        0.5525
+      ],
+      "mean": 0.5183333333333334,
+      "sd": 0.044884110031650756,
+      "how": "printed by the embedded snippet, line 'argmin EVICTS needed member'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_victim_in_pair_wq0.9_nu0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.04,
+        0.0325,
+        0.03
+      ],
+      "mean": 0.03416666666666667,
+      "sd": 0.0052041649986653326,
+      "how": "printed by the embedded snippet, 'P(victim in pair)'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_argmin_evicts_needed_wq0.9_nu1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.535,
+        0.4675,
+        0.5525
+      ],
+      "mean": 0.5183333333333334,
+      "sd": 0.044884110031650756,
+      "how": "printed by the embedded snippet, line 'argmin EVICTS needed member'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_victim_in_pair_wq0.9_nu1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1425,
+        0.1375,
+        0.1475
+      ],
+      "mean": 0.1425,
+      "sd": 0.0049999999999999906,
+      "how": "printed by the embedded snippet, 'P(victim in pair)'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_argmin_evicts_needed_wq0.9_nu4",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.535,
+        0.4675,
+        0.5525
+      ],
+      "mean": 0.5183333333333334,
+      "sd": 0.044884110031650756,
+      "how": "printed by the embedded snippet, line 'argmin EVICTS needed member'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_victim_in_pair_wq0.9_nu4",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.855,
+        0.8425,
+        0.855
+      ],
+      "mean": 0.8508333333333334,
+      "sd": 0.007216878364870297,
+      "how": "printed by the embedded snippet, 'P(victim in pair)'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_LOO_disc_wq0.9",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "printed by the embedded snippet, line 'LOO delta-loss discriminates'",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partE_snippet_ri_disc_wq0.9",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "printed by the embedded snippet, line 'r_i ... discriminates'",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partE_snippet_ri_ratio_wq0.9",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        4.385272934902851,
+        4.366748644996149,
+        4.393722397650021
+      ],
+      "mean": 4.381914659183007,
+      "sd": 0.013796896205883789,
+      "how": "printed by the embedded snippet, line 'r_i(needed)/r_i(not-needed)'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_hit_KEEPneeded_wq1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "printed by the embedded snippet, line '2AFC hit, evicted NOT-needed'",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partE_snippet_hit_EVICTneeded_wq1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "printed by the embedded snippet, line '2AFC hit, evicted NEEDED'",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partE_snippet_argmin_evicts_needed_wq1_nu0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.535,
+        0.4675,
+        0.5525
+      ],
+      "mean": 0.5183333333333334,
+      "sd": 0.044884110031650756,
+      "how": "printed by the embedded snippet, line 'argmin EVICTS needed member'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_victim_in_pair_wq1_nu0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.04,
+        0.0325,
+        0.03
+      ],
+      "mean": 0.03416666666666667,
+      "sd": 0.0052041649986653326,
+      "how": "printed by the embedded snippet, 'P(victim in pair)'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_argmin_evicts_needed_wq1_nu1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.535,
+        0.4675,
+        0.5525
+      ],
+      "mean": 0.5183333333333334,
+      "sd": 0.044884110031650756,
+      "how": "printed by the embedded snippet, line 'argmin EVICTS needed member'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_victim_in_pair_wq1_nu1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1425,
+        0.1375,
+        0.1475
+      ],
+      "mean": 0.1425,
+      "sd": 0.0049999999999999906,
+      "how": "printed by the embedded snippet, 'P(victim in pair)'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_argmin_evicts_needed_wq1_nu4",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.535,
+        0.4675,
+        0.5525
+      ],
+      "mean": 0.5183333333333334,
+      "sd": 0.044884110031650756,
+      "how": "printed by the embedded snippet, line 'argmin EVICTS needed member'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_victim_in_pair_wq1_nu4",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.855,
+        0.8425,
+        0.855
+      ],
+      "mean": 0.8508333333333334,
+      "sd": 0.007216878364870297,
+      "how": "printed by the embedded snippet, 'P(victim in pair)'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_LOO_disc_wq1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "printed by the embedded snippet, line 'LOO delta-loss discriminates'",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partE_snippet_ri_disc_wq1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.505,
+        0.485,
+        0.525
+      ],
+      "mean": 0.505,
+      "sd": 0.020000000000000018,
+      "how": "printed by the embedded snippet, line 'r_i ... discriminates'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partE_snippet_ri_ratio_wq1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0050368205664417,
+        1.0070286504035482,
+        1.0055149113785722
+      ],
+      "mean": 1.0058601274495207,
+      "sd": 0.0010398207185509,
+      "how": "printed by the embedded snippet, line 'r_i(needed)/r_i(not-needed)'",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partF_LEAK_highn_cosctx",
+      "kind": "statistic",
+      "n": 20,
+      "samples": [
+        0.4925,
+        0.49875,
+        0.4955,
+        0.503,
+        0.49825,
+        0.4915,
+        0.47925,
+        0.508,
+        0.49725,
+        0.486,
+        0.504,
+        0.5035,
+        0.49275,
+        0.494,
+        0.5115,
+        0.48825,
+        0.4915,
+        0.50025,
+        0.49675,
+        0.49575
+      ],
+      "mean": 0.49641250000000003,
+      "sd": 0.007578221479309876,
+      "how": "LEAK CONTROL at n=80000 pairs (20 seeds x 4000 blind trials). Rule: evict the pair member LESS similar to c_t. Rate of evicting the NEEDED member; CHANCE IS 0.5. Pooled rate 0.49641, z vs 0.5 = -2.03.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partF_LEAK_highn_cosctx_pooled_z_vs_chance",
+      "kind": "observation",
+      "value": -2.029,
+      "how": "(p - 0.5)/sqrt(0.25/n) with n=80000, pooled over the 20 seeds above"
+    },
+    {
+      "key": "partF_LEAK_highn_psi",
+      "kind": "statistic",
+      "n": 20,
+      "samples": [
+        0.498,
+        0.49225,
+        0.498,
+        0.50675,
+        0.4895,
+        0.497,
+        0.50525,
+        0.493,
+        0.5005,
+        0.5005,
+        0.51275,
+        0.49975,
+        0.503,
+        0.48925,
+        0.50525,
+        0.495,
+        0.496,
+        0.50575,
+        0.4955,
+        0.4895
+      ],
+      "mean": 0.498625,
+      "sd": 0.006454037903759006,
+      "how": "LEAK CONTROL at n=80000 pairs (20 seeds x 4000 blind trials). Rule: evict the pair member with the lower psi_hat (untrained head). Rate of evicting the NEEDED member; CHANCE IS 0.5. Pooled rate 0.49862, z vs 0.5 = -0.78.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partF_LEAK_highn_psi_pooled_z_vs_chance",
+      "kind": "observation",
+      "value": -0.778,
+      "how": "(p - 0.5)/sqrt(0.25/n) with n=80000, pooled over the 20 seeds above"
+    },
+    {
+      "key": "partF_LEAK_highn_maxcos_tie",
+      "kind": "statistic",
+      "n": 20,
+      "samples": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "LEAK CONTROL at n=80000 pairs (20 seeds x 4000 blind trials). Rule: the two members' max-cosine penalties are EXACTLY equal in float32. Rate of evicting the NEEDED member; CHANCE IS 0.5. Pooled rate 1.00000, z vs 0.5 = +282.84.",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "partF_LEAK_highn_maxcos_tie_pooled_z_vs_chance",
+      "kind": "observation",
+      "value": 282.843,
+      "how": "(p - 0.5)/sqrt(0.25/n) with n=80000, pooled over the 20 seeds above"
+    },
+    {
+      "key": "partF_within_pair_victim_is_nu_INVARIANT_exact",
+      "kind": "observation",
+      "value": true,
+      "how": "torch.equal on the per-trial indicator 'argmin evicts the needed member' between nu=0 and nu in {1,4}, every trial of every seed. True reproduces cycle 9 in its strongest form: the max-cosine penalty is bit-identical within a near-duplicate pair, so nu cannot change WHICH member dies."
+    },
+    {
+      "key": "partF_expected_hitloss_inflation_nu4_over_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        21.822783516034452,
+        28.311475060433676,
+        24.823527529784243,
+        27.737705122267997,
+        21.300000428408392
+      ],
+      "mean": 24.799098331385753,
+      "sd": 3.2432596626931995,
+      "how": "paired per seed: expected hit-loss per eviction at nu=4 divided by nu=0. The other two factors (P(evicts needed | in pair) and the paired hit delta) are bit-identical across nu, so this ratio IS the exposure ratio. nu is a LABELLED BYPASS of an unmeasured MEASURED constant (E1).",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partF_expected_cost_definition",
+      "kind": "observation",
+      "value": "expected 2AFC-hit loss per near-duplicate eviction = P(argmin evicts the needed member) x (hit|keep - hit|evict). With the argmin at chance this is 0.5 x 1.0 = 0.5 hits lost per pair decision. Per EVICTION it is that times P(victim in pair).",
+      "how": "definition; both factors are measured rows above"
+    },
+    {
+      "key": "partF_expected_hitloss_per_eviction_nu0",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.019434001431226755,
+        0.014746750282056631,
+        0.01660900087019801,
+        0.015417750740446157,
+        0.02094000054284928
+      ],
+      "mean": 0.017429500773355366,
+      "sd": 0.0026579663280212325,
+      "how": "P(victim in pair) x P(evicts needed | in pair) x paired hit delta, per seed, at M=40, cos=0.90, wq=0.9. nu is a LABELLED BYPASS.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "partF_expected_hitloss_per_eviction_nu4",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.42410400608396515,
+        0.41750225283288955,
+        0.4122939903435707,
+        0.42765302368712454,
+        0.44602202053356166
+      ],
+      "mean": 0.4255150586962223,
+      "sd": 0.012904448397393038,
+      "how": "P(victim in pair) x P(evicts needed | in pair) x paired hit delta, per seed, at M=40, cos=0.90, wq=0.9. nu is a LABELLED BYPASS.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "sd_zero_rows_classified",
+      "kind": "observation",
+      "value": {
+        "partA_selftest_vec_score_matches_RSRPolicy_nu0": "exact agreement on every trial in every seed -- an identity, not a statistic that failed to vary",
+        "partA_selftest_vec_score_matches_RSRPolicy_nu1": "exact agreement on every trial in every seed -- an identity, not a statistic that failed to vary",
+        "partA_selftest_vec_score_matches_RSRPolicy_nu4": "exact agreement on every trial in every seed -- an identity, not a statistic that failed to vary",
+        "partB_hit_KEEPneeded_wq0.7": "CEILING by construction: keeping the needed member always leaves its detail in memory, so the 2AFC resolves correctly on every trial. Not a dead seed.",
+        "partB_hit_EVICTneeded_wq0.7": "FLOOR by construction: with the needed member gone the surviving near-copy carries the OTHER detail, so the 2AFC resolves the wrong way on every trial. Below chance, not merely at it. Not a dead seed.",
+        "partB_hit_DELTA_wq0.7": "difference of the ceiling row and the floor row above; both are saturated",
+        "partB_hit_KEEPneeded_wq0.9": "CEILING by construction: keeping the needed member always leaves its detail in memory, so the 2AFC resolves correctly on every trial. Not a dead seed.",
+        "partB_hit_EVICTneeded_wq0.9": "FLOOR by construction: with the needed member gone the surviving near-copy carries the OTHER detail, so the 2AFC resolves the wrong way on every trial. Below chance, not merely at it. Not a dead seed.",
+        "partB_hit_DELTA_wq0.9": "difference of the ceiling row and the floor row above; both are saturated",
+        "partB_hit_KEEPneeded_wq0.98": "CEILING by construction: keeping the needed member always leaves its detail in memory, so the 2AFC resolves correctly on every trial. Not a dead seed.",
+        "partB_hit_EVICTneeded_wq0.98": "FLOOR by construction: with the needed member gone the surviving near-copy carries the OTHER detail, so the 2AFC resolves the wrong way on every trial. Below chance, not merely at it. Not a dead seed.",
+        "partB_hit_DELTA_wq0.98": "difference of the ceiling row and the floor row above; both are saturated",
+        "partB_hit_KEEPneeded_wq1": "CEILING by construction: keeping the needed member always leaves its detail in memory, so the 2AFC resolves correctly on every trial. Not a dead seed.",
+        "partB_hit_EVICTneeded_wq1": "FLOOR by construction: with the needed member gone the surviving near-copy carries the OTHER detail, so the 2AFC resolves the wrong way on every trial. Below chance, not merely at it. Not a dead seed.",
+        "partB_hit_DELTA_wq1": "difference of the ceiling row and the floor row above; both are saturated",
+        "partB_cos_sweep_hit_DELTA_0.9": "difference of the ceiling row and the floor row above; both are saturated",
+        "partB_cos_sweep_achieved_cos_0.95": "exact-by-construction pair cosine; identical in every seed by design",
+        "partB_cos_sweep_hit_DELTA_0.95": "difference of the ceiling row and the floor row above; both are saturated",
+        "partB_cos_sweep_hit_DELTA_0.99": "difference of the ceiling row and the floor row above; both are saturated",
+        "partB_cos_sweep_hit_DELTA_0.999": "difference of the ceiling row and the floor row above; both are saturated",
+        "partB_M16_hit_DELTA": "difference of the ceiling row and the floor row above; both are saturated",
+        "partC_within_pair_maxcos_penalty_abs_diff": "BIT-EXACT equality: max_j!=i cos(s_i,s_j) is the same float32 for both members of the pair on every trial (partF tie rate 1.000 at n=80000). This is the measurement, not a failure to vary.",
+        "partC_LEAK_blind_rule_maxcos_evicts_needed": "DEGENERATE RULE, not an above-chance one: the strict `>` is evaluated on a bit-exact tie, so it is always False. Reported as 0.0 and must NOT be read as 'the max-cosine rule protects the needed member'.",
+        "partC_LEAK_leaky_rule_maxcos_evicts_needed": "DEGENERATE RULE, not an above-chance one: the strict `>` is evaluated on a bit-exact tie, so it is always False. Reported as 0.0 and must NOT be read as 'the max-cosine rule protects the needed member'.",
+        "partC_LEAK_leaky_rule_cosctx_evicts_needed": "POSITIVE CONTROL saturates: when c_t is built to carry the target detail the needed member is more similar to c_t on every trial, so the rule never evicts it. This is the row that shows the harness CAN see an above-chance rate.",
+        "partD_LOO_discriminates_pair_wq0.9": "CEILING: leave-one-out identifies the needed member without error in this construction -- ablating it always costs more than ablating the near-copy",
+        "partD_ri_discriminates_pair_wq0.9": "CEILING at wq<1: the query carries the detail, so attention mass -- and therefore r_i -- lands on the needed member on every trial. Contrast the wq=1.0 row, which is at chance.",
+        "partD_ri_RAW_ungated_discriminates_pair_wq0.9": "CEILING at wq<1: the query carries the detail, so attention mass -- and therefore r_i -- lands on the needed member on every trial. Contrast the wq=1.0 row, which is at chance.",
+        "partD_p_needed_is_argmax_LOO_wq0.9": "CEILING: the needed member is the global LOO argmax on every trial",
+        "partD_p_needed_is_argmax_ri_wq0.9": "CEILING at wq<1: the query carries the detail, so attention mass -- and therefore r_i -- lands on the needed member on every trial. Contrast the wq=1.0 row, which is at chance.",
+        "partD_ri_LOO_sign_agreement_within_pair_wq0.9": "CEILING at wq<1: the query carries the detail, so attention mass -- and therefore r_i -- lands on the needed member on every trial. Contrast the wq=1.0 row, which is at chance.",
+        "partD_LOO_discriminates_pair_wq1": "CEILING: leave-one-out identifies the needed member without error in this construction -- ablating it always costs more than ablating the near-copy",
+        "partD_p_needed_is_argmax_LOO_wq1": "CEILING: the needed member is the global LOO argmax on every trial",
+        "partE_snippet_hit_KEEPneeded_wq0.9": "CEILING by construction: keeping the needed member always leaves its detail in memory, so the 2AFC resolves correctly on every trial. Not a dead seed.",
+        "partE_snippet_hit_EVICTneeded_wq0.9": "the metric is 0.0 on every trial of every seed: with the needed member gone the surviving near-copy carries the OTHER detail, so the 2AFC never resolves the right way. A floor, not a dead seed.",
+        "partE_snippet_LOO_disc_wq0.9": "1.0 on every trial of every seed -- LOO identifies the needed member without error in this construction. A ceiling, not a dead seed.",
+        "partE_snippet_ri_disc_wq0.9": "CEILING at wq<1: the query carries the detail, so attention mass -- and therefore r_i -- lands on the needed member on every trial. Contrast the wq=1.0 row, which is at chance.",
+        "partE_snippet_hit_KEEPneeded_wq1": "CEILING by construction: keeping the needed member always leaves its detail in memory, so the 2AFC resolves correctly on every trial. Not a dead seed.",
+        "partE_snippet_hit_EVICTneeded_wq1": "the metric is 0.0 on every trial of every seed: with the needed member gone the surviving near-copy carries the OTHER detail, so the 2AFC never resolves the right way. A floor, not a dead seed.",
+        "partE_snippet_LOO_disc_wq1": "1.0 on every trial of every seed -- LOO identifies the needed member without error in this construction. A ceiling, not a dead seed.",
+        "partF_LEAK_highn_maxcos_tie": "a saturated indicator -- see the pooled rate in `how`"
+      },
+      "how": "every statistic row with sd == 0.0, classified in the same process that wrote it"
+    },
+    {
+      "key": "sd_zero_rows_unclassified",
+      "kind": "observation",
+      "value": [],
+      "how": "must be []"
+    },
+    {
+      "key": "wall_seconds",
+      "kind": "observation",
+      "value": 42.3,
+      "how": "time.time() around the run"
+    }
+  ],
+  "verdict": {
+    "falsifier": "A tie that nu creates is cheap -- when the two lowest-scoring slots are near-copies at cosine >= 0.9, which one is evicted does not change what the model can later retrieve.",
+    "outcome": "falsified",
+    "detail": "FALSIFIED on the cost limb, in a synthetic task with ground truth. Which member of a cos=0.90 pair is evicted moves the 2AFC retrieval hit rate from 1.0000 (kept the needed member) to 0.0000 (evicted it) -- a paired delta of 1.0000 +/- 0.0000 against a null of 0, and the evicted-needed arm is BELOW the 0.5 chance floor because the surviving near-copy answers with the wrong detail. The delta is 1.0000 at every pair cosine up to 0.999 and at M=16 as well as M=40. The argmin meanwhile chooses the victim at exactly chance: 0.49860 +/- 0.01613 against 0.5, identical to the last bit at nu = 0, 1 and 4, while P(the victim is a pair member) rises 0.0349 -> 0.8535 as nu goes 0 -> 4. So the tie is not cheap, nothing in the eviction rule resolves it, and nu multiplies how often it is faced. SCOPE: synthetic construction, no corpus, no trained TG, no trained phi -- this establishes that the MECHANISM of harm exists, not its rate on real text."
+  },
+  "finished_utc": "2026-09-18T10:20:37Z"
+}
