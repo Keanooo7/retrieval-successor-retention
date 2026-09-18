@@ -201,6 +201,16 @@ def check_claim(runs_dir: Path, ident: str, outcome: str) -> tuple[bool, str]:
 # markdown link target. These are references, not measurements.
 _SKIP_CONTEXT = re.compile(r"(§|\bv|\bADR-|\bE0|\bcycle[- ]|\bp\.)\s*$", re.IGNORECASE)
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# §9 requires every wall-clock time to be read from `date` and written down. A
+# timestamp is a fact about when, not a measurement, and flagging its digits would
+# make the audit unusable on exactly the documents that obey that rule.
+_CLOCK = re.compile(
+    r"\b\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp][Mm])?(?:\s+[A-Z]{2,5})?(?:\s+\d{4})?"
+)
+_MONTHDAY = re.compile(
+    r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*\s+"
+    r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}\b"
+)
 # `-` is in the lookbehind so a digit inside an identifier -- `claude-501`,
 # `cycle-04`, `ADR-0006` -- is not read as a measurement. A genuinely negative
 # number still matches, because the match then starts at the sign.
@@ -255,7 +265,7 @@ def audit_prose(runs_dir: Path, text: str) -> list[str]:
             if isinstance(v, (int, float)) and not isinstance(v, bool):
                 derived.add(float(v))
     numbers = _ledger_numbers(runs_dir) | derived
-    masked = _DATE.sub(" ", text)
+    masked = _MONTHDAY.sub(" ", _CLOCK.sub(" ", _DATE.sub(" ", text)))
 
     unbacked: list[str] = []
     for m in _NUMBER.finditer(masked):

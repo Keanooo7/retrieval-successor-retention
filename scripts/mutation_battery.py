@@ -416,12 +416,28 @@ MUTATIONS: tuple[Mutation, ...] = (
         "of something",
     ),
     Mutation(
+        "the prose audit reads timestamps as measurements",
+        "test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement",
+        "scripts/render_scoreboard.py",
+        "    masked = _MONTHDAY.sub(\" \", _CLOCK.sub(\" \", _DATE.sub(\" \", text)))",
+        "    masked = _DATE.sub(\" \", text)",
+        "5.2: an audit that flags the wall clock is an audit nobody runs on a "
+        "document that obeys §9",
+    ),
+    Mutation(
         "the prose audit backs every number",
         "test_the_audit_flags_a_number_that_is_in_no_ledger",
         "scripts/render_scoreboard.py",
         "        if not backed and lit not in unbacked:",
         "        if False:",
         "5.2: `1.5476` goes back to passing an audit it should fail",
+        off_gate_allowed=(
+            ("tests/test_evidence_machinery.py::"
+             "test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement",
+             "the timestamp test asserts both halves of the same behaviour -- a "
+             "clock is skipped AND a real number beside it is still flagged -- so "
+             "an audit that flags nothing necessarily reddens it too"),
+        ),
     ),
     Mutation(
         "a mutated run writes the real census file",

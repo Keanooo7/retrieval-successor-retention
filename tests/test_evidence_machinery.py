@@ -242,6 +242,16 @@ def test_the_rendered_artefact_passes_its_own_audit(tmp_path):
     assert render_scoreboard.audit_prose(_REPO / "runs", text) == []
 
 
+def test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement():
+    """§9 requires every time to be read from `date` and written down, so an audit
+    that flags `11:44:45 PDT 2026` is unusable on the documents that comply."""
+    stamped = "Launched Fri Sep 18 11:44:45 PDT 2026, written 2026-09-18 12:35:18 PDT."
+    assert render_scoreboard.audit_prose(_REPO / "runs", stamped) == []
+    assert render_scoreboard.audit_prose(
+        _REPO / "runs", stamped + " The NLL was 1.5476."
+    ) == ["1.5476"]
+
+
 def test_the_audit_flags_a_number_that_is_in_no_ledger():
     """`1.5476` is the fabrication that motivated this script: three documents
     carry it and `grep -rn 1.5476 runs/` returns zero hits."""

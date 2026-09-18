@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**35/35 gates proven.**
+**36/36 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -39,7 +39,8 @@
 | exit_code gets a default | `test_exit_code_is_required` | **PROVEN** | 0 | 0 |
 | the scoreboard resolves a cycle number | `test_the_scoreboard_refuses_the_prose_verdict_for_cycle_4` | **PROVEN** | 0 | 0 |
 | a scoreboard count is typed rather than counted | `test_every_scoreboard_count_is_a_len_not_a_typed_number` | **PROVEN** | 0 | 0 |
-| the prose audit backs every number | `test_the_audit_flags_a_number_that_is_in_no_ledger` | **PROVEN** | 0 | 0 |
+| the prose audit reads timestamps as measurements | `test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement` | **PROVEN** | 0 | 0 |
+| the prose audit backs every number | `test_the_audit_flags_a_number_that_is_in_no_ledger` | **PROVEN** | 1 | 1 |
 | a mutated run writes the real census file | `test_a_mutated_suite_run_does_not_clobber_the_census` | **PROVEN** | 0 | 0 |
 | the board's own counts stop backing the prose | `test_the_rendered_artefact_passes_its_own_audit` | **PROVEN** | 0 | 0 |
 | off-gate failures stop counting | `test_an_off_gate_failure_makes_a_mutation_unproven` | **PROVEN** | 0 | 0 |
@@ -309,13 +310,23 @@ Reddened nothing else.
 
 Reddened nothing else.
 
+### the prose audit reads timestamps as measurements
+
+**Gate:** `test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement` — **PROVEN**
+
+5.2: an audit that flags the wall clock is an audit nobody runs on a document that obeys §9
+
+Reddened nothing else.
+
 ### the prose audit backs every number
 
 **Gate:** `test_the_audit_flags_a_number_that_is_in_no_ledger` — **PROVEN**
 
 5.2: `1.5476` goes back to passing an audit it should fail
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_evidence_machinery.py::test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement` — ✔ declared
 
 ### a mutated run writes the real census file
 
@@ -386,6 +397,7 @@ A coupling worth knowing about is one somebody wrote down. These are the reasons
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006).
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006). Added 2026-09-18: the on-the-real-model variant post-dates docs/mutation-battery.md's table.
 - SOURCE_ROOTS is one enumeration: what gates and what does not are the same list, so widening it necessarily moves both assertions
+- the timestamp test asserts both halves of the same behaviour -- a clock is skipped AND a real number beside it is still flagged -- so an audit that flags nothing necessarily reddens it too
 
 ## Not covered here
 
