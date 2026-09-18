@@ -173,6 +173,26 @@ def test_the_absolute_age_index_exists_and_is_off_by_default(measured):
     assert cfg.sent_pos_index is SentPosIndex.RANK
 
 
+def test_the_absolute_age_index_refuses_to_be_a_decorative_switch(measured):
+    """🔴 A switch that is set and does nothing is worse than no switch.
+
+    `sent_pos_index` changes how TG indexes `P^(sent)` on the memory **keys**. The
+    policy never sees the positional encoding, so it cannot honour the setting; the
+    model that would is the PyTorch TG, which does not exist yet (gauntlet 2.4).
+    Accepting the value would let someone run an "absolute-age" arm that was
+    rank-indexed throughout, and report the comparison.
+    """
+    cfg = RSRConfig.from_registry(
+        "synthetic",
+        steps_per_epoch=1200,
+        registry=measured,
+        b_enabled=False,
+        sent_pos_index=SentPosIndex.ABSOLUTE_AGE,
+    )
+    with pytest.raises(NotImplementedError, match="MODEL-side"):
+        RSRPolicy(cfg, d_model=4)
+
+
 def test_b_enabled_without_a_bias_is_refused(measured):
     """A silently absent `b` is defect D-1's shape: the control loop reported as
     unnecessary rather than as absent."""

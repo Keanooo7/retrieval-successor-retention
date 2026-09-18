@@ -279,6 +279,23 @@ class RSRPolicy:
                 f"single-valued, and it keeps psi_hat positionally blind "
                 f"(ADR-0006). Implement the ablation deliberately, in its own arm."
             )
+        if config.sent_pos_index is not SentPosIndex.RANK:
+            # 🔴 A switch that is set and does nothing is worse than no switch.
+            # `sent_pos_index` selects how TG indexes `P^(sent)` on the memory
+            # KEYS -- it is consumed by the model, not by the policy, and the
+            # PyTorch TG that would consume it does not exist yet (gauntlet 2.4).
+            # Until it does, accepting the value here would let someone run an
+            # "absolute-age" arm that was rank-indexed throughout.
+            raise NotImplementedError(
+                f"sent_pos_index={config.sent_pos_index.value!r} is a MODEL-side "
+                f"switch (ADR-0006 item 3): it changes how TG indexes P^(sent) on "
+                f"the memory keys, and the policy never sees the positional "
+                f"encoding at all. It lands with the PyTorch TG transcription "
+                f"(gauntlet 2.4) and must stay 'rank' until then -- an arm that "
+                f"reported absolute-age indexing while running rank-indexed would "
+                f"be worse than no arm. In the reference the ablated variant is "
+                f"stm_cross_pos_mode='none' / stm_positional_weight=0.0."
+            )
         if config.b_enabled and bias is None:
             raise ValueError(
                 "b_enabled=True needs the anti-collapse bias (section 3.5), whose "
