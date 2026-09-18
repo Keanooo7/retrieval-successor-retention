@@ -293,3 +293,50 @@ sentence uses); a weaker "reinforced" notion would score higher and was not meas
   artifact and the prose disagree and the artifact wins.
 
 ---
+
+## Cycle 4 — CANARY
+
+| | |
+|---|---|
+| **Falsifier** | *"the environment has not moved."* |
+| **Dispatched** | nobody — the canary is mine to run, not a researcher's |
+| **Verdict** | **survived, and with a real comparison rather than a bare first reading.** |
+| **Verified by re-execution** | ✅ **This cycle *is* a re-execution.** `runs/smoke2/heartbeat.jsonl` is a seed-0 run at `d=128, S=48, batch=8` from commit `d03b737`, made **before tonight started**. Re-running that exact config at `HEAD = 9362c68` — six commits later — reproduces it **bit-identically**: step 0 `10.817072550456` vs `10.817072550456` (rel diff `0.000e+00`), step 4 `8.130104700724` vs `8.130104700724`, and `grad_norm[0] = 507.4735412597656` in both. The environment has not moved, and tonight's six commits did not perturb the training path. |
+| **Ledger** | `runs/canary/cycle-04/ledger.json`; baseline frozen at `runs/canary/baseline.json`. |
+
+**A nuance, not a contradiction.** Cycle 1 measured `3.18e-07` run-to-run variation on MPS over 10
+beats. These first two beats are bit-identical, so that variation accumulates later in a run
+rather than being present from step 0. **MPS is not thereby deterministic** — the canary's
+committed tolerance stays at `1e-4` relative, and the retrospective check happened to land inside
+the exactly-equal regime.
+
+### 🔴 And the canary caught something I was told as a premise
+
+The canary's own first loss is **4.965**, not smoke2's **10.817**. That is **not drift** — it is a
+different `V`, and chasing it down invalidates the framing of the run I was handed as "proven to
+learn".
+
+| quantity | value |
+|---|---|
+| distinct words in the synthetic corpus | **156** |
+| `V` when `train()` derives it from the corpus | **160** → `ln V` = **5.0752** |
+| `V` the CLI default supplies | **50257** → `ln V` = **10.8249** |
+| smoke2's `V`, and its loss[0] | 50257, and **10.8171** |
+| fraction of that vocab that can **never** occur | **99.682%** |
+
+So the "loss 10.82 → 1.11 **from chance**" run started at chance **for a 50,257-token vocabulary
+of which 50,097 tokens can never appear.** Chance for the *actual* corpus is `ln(160) = 5.075`.
+The first ~5.75 nats of that 9.71-nat drop is the model learning that most of its output layer is
+dead — which is real optimization but is **not** learning the language.
+
+**The claim "the training loop learns" survives**, and it is worth being precise about why: final
+loss **1.107** is well below `ln(160) = 5.075`, and final perplexity **3.024** against a
+true-chance perplexity of **160**. That is genuine learning with a factor of ~53 in perplexity
+behind it. But the honest baseline is **5.075, not 10.825**, and the interval that represents
+learning the corpus is **5.075 → 1.107**, not 10.82 → 1.11.
+
+**The canary's own baseline is internally valid**: its 4.965 at step 0 sits just below
+`ln(160) = 5.075`, exactly where derived-vocab chance should be. Frozen as the reference for
+cycles 8, 12, 16.
+
+---
