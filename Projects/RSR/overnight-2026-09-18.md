@@ -635,3 +635,102 @@ retrospectively against a pre-tonight commit (cycle 4, bit-exact), once forward 
 baseline (here, at the floor).
 
 ---
+
+## Cycle 9 — does `ν > 0` remove the redundancy sensitivity §3.4 exists to remove?
+
+| | |
+|---|---|
+| **Falsifier** | *"a `ν > 0` redundancy term removes the redundancy sensitivity §3.4 exists to remove — so once `ν` is on, `b`'s decision strength really is a function of `M` alone."* |
+| **Dispatched** | fresh researcher, retired on hand-back |
+| **Verdict** | **falsified. `ν` does not flatten the redundancy axis — in a live memory it nearly doubles it.** |
+| **Verified by re-execution** | ✅ **Their headline, re-run by me**, reproduced exactly: within-pair penalty difference `4.102e-08 ± 4.342e-10`, and the within-pair score gap **constant at `0.11729 ± 0.00180` across every `ν` from 0 to 4** while `frac bottom-2 is a near-dup pair` climbs `0.2513 → 0.8408`. **I separately verified both sign traps and the scale mismatch by reading and running `_score` myself** (below). 2091 rows, `sd_zero_rows_unclassified = []` with all 237 zero-sd rows classified in 8 stated categories, and all 326 five-decimal numbers in their writeup machine-checked to trace to a ledger row. |
+| **Ledger** | `runs/cycle-nu-redundancy-term/ledger.json` — 2091 rows, 64.8 s. |
+
+**Live memory: `ν` makes it worse.** At `M = 40`, the redundancy swing on `b_max`/margin is **2.37102 ±
+0.21026** at `ν = 0` and **4.16593 ± 0.48548** at `ν = 4` — paired inflation **1.76779 ± 0.25171** —
+while the `M` swing is **untouched** (paired **0.99849 ± 0.03338**). The flip-rate redundancy swing
+also rises, `1.10803 ± 0.03838 → 1.20914 ± 0.03203`. Redundancy's lead over `M` as the variable
+setting `b`'s decision strength goes from **1.41550 ± 0.16527** to **2.50528 ± 0.46000**. **Turning on
+§3.4's redundancy term nearly doubles the problem §3.4 exists to solve.**
+
+### 🔴 The cause of death is an identity, not a measurement
+
+**The max-cosine penalty is equal within a near-duplicate pair to float32 precision** — mean
+`|Δpenalty| = 4.102e-08 ± 4.342e-10` — so the within-pair *score* gap is invariant in `ν` to **nine
+significant figures** (seed 0: `0.1169522568` at `ν=0`, `0.1169522510` at `ν=4`). **The term is
+rank-preserving inside exactly the pair that sets the margin.** It cannot break that tie at any `ν`;
+it can only push both members to the bottom together.
+
+So it creates ties rather than breaking them, and the cost is severe: at `M = 40, ρ=0.99, f=0.25`,
+`ν` 0→4 moves the median bottom-2 cosine `0.01679 ± 0.00402 → 0.99000 ± 0.00000`, the fraction of
+decisions whose two lowest slots are a near-duplicate pair `0.11917 ± 0.01191 → 0.87000 ± 0.00815`
+(inflation **7.36156 ± 0.77031**), and the median margin `0.26520 ± 0.02208 → 0.08767 ± 0.00508`.
+**By `ν = 2` the median eviction decision is a coin-flip between two slots at cosine 0.99.** And
+`ν` creates no ties where none were planted — the iid and broad-correlation columns are **identically
+zero at every `ν`**, which rules out a statistic artifact.
+
+**`ν`'s entire effect is a function of the *dispersion* of `max_cos`, not its level.** Per-cell
+inflation at `ν=4`: iid **1.00646 ± 0.03008**, broad-flat control **1.01050 ± 0.04313**, `f=0.25`
+**3.03887 ± 0.36234**. Where nearly every slot is paired (`f=0.75`, achieved cosine 0.980) the
+penalty is a near-common offset and the argmin is blind to it again — the same
+common-additive-offset mechanism as cycles 5 and 7, now explaining why two readouts disagree.
+
+### 🔴 The finding upstream of everything: `b` and `ν` are not commensurable by construction
+
+I verified this by reading `_score` (`rsr.py:362–382`) myself. It z-scores `ψ̂`, adds `b` **on the z
+scale**, then subtracts `ν · max_cos` **raw**:
+
+```
+sd = finite.std(unbiased=False); psi = (psi - finite.mean()) / sd
+score = psi + self.bias.b(slots)            # z units
+score = score - self.config.nu * self._max_cosine(slots)   # cosine units
+```
+
+`b_max` is in units of SD(`ψ̂`) — §3.5 item 1's entire point — while `ν` is in units of cosine.
+**The conversion factor between them is the very gestalt geometry `ν` is supposed to neutralize.**
+
+### Two sign traps in `_max_cosine`, both confirmed by me directly
+
+`_max_cosine` is otherwise **correct**: audited against an independently written brute-force
+reference over 200 partly-dead memories to `7.45e-08`; a duplicate planted in a *dead* slot does not
+leak (`dead_column_leaked = False`); NaN/1e9 garbage in dead rows leaves live rows **bit-identical**.
+But it uses `-1.0` as the "absent" fill in a quantity whose range includes negatives. My own runs:
+
+- `n_live == 1` → `[-1.0, 0, 0, 0]`, so `−ν·(−1) = +ν` — **a bonus, not a zero penalty.** Unreachable
+  in eviction (the memory is full when a victim is chosen) but wrong for any future caller.
+- An **antipodal live pair** → `[-1.0, -1.0, …]`, so each member gets a **bonus of `+ν`**. §3.4 calls
+  this a *penalty*; as implemented **it rewards anti-correlation exactly as hard as it punishes
+  duplication.** Never bites at `d = 384` with iid gestalts (`max_cos = 0.10937 ± 0.00025`) but
+  becomes reachable once gestalts are trained and anisotropic. **Spec question, not a code bug** —
+  reported, not fixed.
+
+### 🔴 My brief contained a logical contradiction, and I propagated it
+
+I offered as the interesting outcome that `ν` might *"flatten the margin while inflating the flip
+rate."* **Those are contradictory.** Tie creation *shrinks* the margin — that is what a tie is — so it
+raises `b_max`/margin and the flip rate **together**. Measured: `ν` 0→4 moves the median margin
+`0.26520 → 0.08767` **and** the flip rate `0.58917 → 0.61542`, same direction. **The wording is
+inherited verbatim from cycle 7's own §10 and I carried it forward without checking its logic** —
+which is the first time this night's error has propagated *between* cycles rather than originating in
+one brief. The verdict does not rest on it.
+
+Two framing points they recorded rather than treated as errors: after the `ν` term the quantity is
+**not on a z scale**, so they report the top-2 **score** margin (which is what `EvictionRecord.score_margin`
+actually holds); and my `1.888 → 2.592 → 3.175` triple is cycle 6's **order-statistic** readout, which
+they located by reading cycle 6's ledger — the live-memory column differs by up to 7% at `M = 16`.
+**Recorded so a later cycle does not mix readouts.**
+
+Cross-cycle: their `ν = 0` column reproduces cycle 6 **in every digit** (3.15777 ± 0.19603; 2.37102 ±
+0.21026; 1.19266 ± 0.05566) from an independently written driver. All 77 self-tests — hand
+`argmin[z(ψ̂) + b − ν·max_cos]` against `RSRPolicy`'s victim — are `1.00000 ± 0.00000`.
+
+**Boundary, including the one they named as the cycle's largest gap.** ⚠️ **"Created a tie" is not
+"made it worse."** No LM ran, no loss, no `r_i`, no LOO Δloss. A tie between two slots at cosine 0.99
+may be **cheap** — §3.4's own defence — or not, which is what D-3's submodularity argument denies.
+**Neither direction was quantified, and every "changed the victim" number in cycles 2–7 has quietly
+leaned on this assumption.** Also: nothing about PG-19 or any real corpus, and `ν`'s whole effect
+depends on a `max_cos` dispersion that nothing here measures on real text. One duplicate topology
+(pairs only) — triples and chains would give a source a different `max_cos` from each copy and could
+break the exact-equality identity. `φ` untrained, `ū` synthetic, `d = 384` only, CPU.
+
+---
