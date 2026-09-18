@@ -30,10 +30,15 @@ def _cmd_floor(args: argparse.Namespace) -> int:
     result = check_floor("pytest_count", measured, direction=Direction.MAY_RISE,
                          store="test-floor.json")
     print(result)
-    if result.code is Exit.UNBANKED_RISE and args.bank:
+    # --bank is a DELIBERATE act and the number is MEASURED, never typed -- which is the
+    # distinction that matters. It banks an improvement (4) and seeds a first floor (2);
+    # it does not bank a DROP (1) or a non-measurement (3), and a bare --check never banks.
+    if args.bank and result.code in (Exit.UNBANKED_RISE, Exit.UNKNOWN):
         record_floor("pytest_count", float(measured), direction=Direction.MAY_RISE,
-                     evidence="uv run pytest -q", store="test-floor.json")
-        print(f"banked pytest_count = {measured}")
+                     evidence="uv run rsr floor --check --bank (JUnit XML)",
+                     store="test-floor.json")
+        verb = "seeded" if result.code is Exit.UNKNOWN else "banked"
+        print(f"{verb} pytest_count = {measured}")
         return Exit.OK
     # An unbanked rise is not a CI failure: it is a rise. Report it and pass.
     # UNKNOWN (2) is NOT a pass: it means nothing was compared. Only 0 and 4 map to success.

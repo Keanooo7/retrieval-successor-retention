@@ -1,0 +1,8 @@
+{
+  "pytest_count": {
+    "commit": "3fbf614",
+    "direction": "may-rise-never-fall",
+    "evidence": "uv run rsr floor --check --bank (JUnit XML)",
+    "value": 43.0
+  }
+}
