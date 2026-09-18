@@ -917,3 +917,68 @@ three times, and the two forward readings differ from the baseline only at the M
 that cycle 1 independently identified.**
 
 ---
+
+## Cycle 13 — is the collapse caused by the missing `srep_norm` hinge? (time-boxed, handed back 06:28)
+
+| | |
+|---|---|
+| **Falsifier** | *"the gestalt collapse is caused by the missing `srep_norm_penalty`; restore the hinge and the gestalt space stays non-degenerate."* |
+| **Dispatched** | fresh researcher, time-boxed to 06:45, **handed back 06:28 inside budget** |
+| **Verdict** | **falsified. The hinge binds decisively and the collapse survives it.** |
+| **Verified by re-execution** | ✅ **Both arms re-measured by me** from their saved checkpoints, no retraining: `srep_raw_norm` **20.471 → 0.780** (the reference band is `[0.9, 1.1]`, so the hinge genuinely binds), effective dimension **2.708 → 1.314** (*worse*), masked NLL **1.5605 → 1.5574** (unchanged), cross-attn KL **0.0099 → 0.0136** against `ln 16 = 2.7726`. Every headline number reproduced. |
+| **Ledger** | `runs/cycle-srep-hinge/ledger.json` — 79 rows. |
+
+**The hinge is not inert and not free-riding**: training penalty falls 5798×, and the pre-normalization
+norm goes from **15–20× outside** the reference band to just below it. **And it costs nothing** — final
+CE `0.1059 ± 0.0055 → 0.1008 ± 0.0006`, masked NLL `1.5476 ± 0.0171 → 1.5336 ± 0.0337`. There is **no
+"prevents collapse but wrecks the loss" tradeoff to price.**
+
+**But the collapse survives.** At 100 iterations the arms are indistinguishable — **100% of all 73,536
+pairs at cos ≥ 0.9 in both**. At 300 iterations cosine *does* separate (`0.999965 → 0.872725`, frac ≥ 0.9
+`1.000 → 0.530 ± 0.010`) — **but effective dimension gets worse** (`1.93 ± 1.10 → 1.285 ± 0.042`) while
+per-dimension sd rises 48×. Their reading, which I find convincing: those move together **only if
+hinge-on gestalts spread along one antipodal axis**, and cosine improves because antipodal pairs have
+low cosine. **1.285 of 128 dimensions is not a non-degenerate space.**
+
+🔴 **The decisive limb: the memory is inert in both arms.** Deleting all 16 slots changes masked NLL by
+**+0.033% ± 0.003%** (off) and **−0.044% ± 0.060%** (on) — both indistinguishable from zero.
+
+**Control anchored bit-exactly.** The hinge-off seed-0 CE trajectory matches cycle 11's published
+every-25-iteration trajectory **digit for digit** (`4.96007, 0.51682, …, 0.10207`). The comparison has a
+solid anchor, and that is the fifth unprompted cross-cycle replication tonight.
+
+**A nuance they flagged against their own metric:** untrained cross-attention KL is already 0.00265 nats
+at cosine 0.487, so **near-uniform cross-attention is not produced by gestalt collapse alone** at this
+scale — the KL row must not be read as a standalone collapse metric. They also reported
+`sd_zero_rows_unclassified` as **not** `[]` and itemized the three rows (all genuinely 1.0 at every seed
+because every pair really is above threshold), rather than forcing it empty.
+
+### 🔴 My brief's framing error, and it is the one most likely to have cost a decision
+
+My disjunction — *"hinge prevents collapse → a code defect invalidates every TG; hinge does not → the
+cause is scale or the pad-dominated loss"* — **is not exhaustive, and its second branch is misleading:**
+
+1. **"Falsified" does not mean `loop.py` is fine.** The defect is confirmed independently of this result
+   and this cycle does not clear it: the shipped loop optimizes CE only and lets the `srep` norm run to
+   20× the reference band. **What was shown is that the defect is not the *cause of the collapse* — not
+   that it is harmless.** I would have mis-escalated this without their note.
+2. **My branch 2 omitted the candidate their own ablation points at:** *nothing in the objective rewards
+   two sentences having different gestalts*, and deleting the memory costs ≈0% in **both** arms. **There
+   is no gradient pressure toward gestalt diversity anywhere.** That is a mechanism, not a scale effect,
+   and it is cheaper to test than scale.
+
+**Boundary and what was cut for time:** 300 iterations is **2 seeds**, 100 is 3 — the interesting
+cosine separation rests on two samples (which agree tightly, 0.87659 / 0.86886). `srep_norm_reg_weight`
+was only ever `TGConfig`'s 0.01, no sweep; hinge-on eval-mode norm lands at **0.818, just below** the
+band, and a stronger weight might land inside it — untested. **No scale arm and no non-pad-weighted loss
+arm**, so both of my branch-2 suspects remain untested. No `r_i`/LOO/planted-pair discrimination in
+either arm, so whether the antipodal structure buys any *discrimination* is unknown.
+
+---
+
+## Cycle tally
+
+**13 cycles: 11 dispatched, 3 canaries** (cycles 4, 8, 12 — one overlaps the count since cycle 4 both
+established the baseline and produced a finding). **9 falsified, 1 survived, 3 canary/infrastructure.**
+**Every cycle has a non-empty "verified by re-execution" field.** No cycle was a failed cycle, and no
+researcher was given a second brief.
