@@ -827,3 +827,76 @@ the positive control shows that signal is exploitable in principle, so this is e
 out.** The 2AFC saturates by design and cannot express graded harm; the continuous rows carry that.
 
 ---
+
+## Cycle 11 — does training fix `r_i`'s blindness? (ran ~2 h; the night's longest)
+
+| | |
+|---|---|
+| **Falsifier** | *"`r_i`'s within-pair blindness is an artifact of an untrained attention head; a trained TG separates the pair."* |
+| **Dispatched** | fresh researcher, retired on hand-back |
+| **Verdict** | **falsified — but for a reason neither I nor cycle 10 anticipated: training collapses the gestalt space, so there is nothing left to separate.** |
+| **Verified by re-execution** | ✅ **The collapse, re-derived by me from their saved checkpoint.** Trained all-pairs gestalt cosine **0.999974**, min 0.999932, **100%** of pairs at cos ≥ 0.9; the same model untrained gives **0.5536** and **2.4%**. I also confirmed the repo defect directly: `SrepHead` returns `srep_norm_penalty` (`model.py:442, 543`) and `rsr/train/loop.py`'s `step_fn` is `cross_entropy` alone — **zero** occurrences of `srep_norm` in the file. ⚠️ I could *not* verify their `srep_raw_norm = 21.32` with my probe, because `o.srep` is the **post**-normalization vector; theirs is the pre-normalization norm inside `SrepHead`. Not a disagreement — a different tensor, and I am recording that my check did not reach it. |
+| **Ledger** | `runs/cycle-trained-alpha-pair/ledger.json` — 493 rows, 19 zero-sd rows all classified, `sd_zero_rows_unclassified = []`. |
+
+**The model did train**, and they read the unit honestly: loss `4.977 ± 0.018 → 0.104 ± 0.005` over 300
+iterations at `V = 160` (true chance `ln 160 = 5.075`). But `step_fn` is cross-entropy over **all 63
+next-token positions including PAD**, and a ~5-token sentence sits in a 64-length window, so ~58 of 63
+positions are trivial. The **masked real-token NLL** is **1.955 ± 0.007** trained vs **5.092 ± 0.045**
+untrained — a real 3.14-nat gain. **It learned the corpus. It did not learn to use the memory.**
+
+🔴 **The memory is inert.** Cross-attention KL from uniform is **0.001301 ± 0.000381 nats** against a
+maximum of `ln 16 = 2.7726`. α(needed) 0.062479, α(other) 0.062469, **α(distractor) 0.062504** — all at
+`1/M = 0.0625`, and the distractor gets *more* than the needed slot. **Deleting the entire memory costs
+0.005581 ± 0.000501 nats out of 1.955 — 0.29%.** Effective dimension of the gestalt space falls from
+10.55 to **2.62 out of d = 128**. Collapse happens within ~10 iterations and is **not** a learning-rate
+artifact (`lr = 3e-4` gives cosine 0.999973, KL 0.000221).
+
+### 🔴 Repo defect: the training loop drops the reference's `srep_norm` hinge
+
+`SrepHead` computes `srep_norm_penalty` — the reference's squared hinge around `srep_norm_target = 1.0`,
+margin 0.1 — and the reference adds it to the loss with `srep_norm_reg_weight`. **`rsr.train.loop`'s
+`step_fn` drops it.** They measured the pre-normalization norm rising `2.99 → 21.32`, **19× outside the
+reference's [0.9, 1.1] band**. 🔴 **`test_fidelity.py` structurally cannot catch this**: it loads
+reference weights and compares forward and gradients, and never exercises the training objective. So the
+repo's one fidelity guarantee has a blind spot exactly the shape of this defect.
+
+### 🔴 A correction to what I escalated at 03:27 — cycle 10's headline was overstated
+
+Cycle 10's `LOO = 1.000` vs `r_i = 0.503` is, on this cycle's reading, an **information asymmetry, not an
+architecture defect.** Cycle 10's LOO was evaluated on a readout that *contained* the needed detail,
+while `α` is a function of the **pre-query state**, in which the need was an independent coin. **A
+counterfactual on the downstream outcome can see what a function of the present input provably cannot.**
+No training closes that gap, and it is not evidence that §3.2.1's target is architecturally broken.
+**I escalated it to Brendan as "the night's most serious finding" and that was too strong** — corrected
+in `for-brendan`.
+
+**And §3.2.1's rule does not fire here.** In the trained model, proxy and LOO **agree — and both are
+uninformative** (`disc_LOO` tie-split `0.510 ± 0.028`; LOO Δ magnitudes ~`1e-7` nats; sign agreement
+`0.510 ± 0.016`). The rule says *"if they disagree, LOO is truth"*; it is **silent on the case that
+actually obtains**, which is a gap in the rule. 🔴 **Constraint on E0d:** it validates `r_i` by
+correlating it against LOO Δloss, and on this corpus at this budget **both sides are ≈ 0**, so E0d would
+report a null that is a property of the model's degeneracy rather than of the target's fidelity.
+
+### 🔴 My brief's central premise was again a theorem, not a question
+
+They caught that the condition I cited — cycle 10's topic-level query at `wq = 1.0` — makes `0.5` a
+**theorem** by cycle 10's own leak proof: the needed member is drawn from a coin independent of (memory,
+query), so `P(α_needed > α_other) = 0.5` exactly for *any* function of the input, trained or not.
+**Training cannot move it, so the falsifier was not decidable in the condition I named.** Worse, cycle 10
+had already reported **untrained** `r_i` discriminating at **1.00000** when the query carried the detail
+(`wq = 0.9`) — so "the untrained head" was never the binding constraint, and I had built the brief on a
+misreading of cycle 10's own result. They repaired it by adding a **`specific`** condition where the pair
+differs in one token and the query names the needed entity, which is the only condition where training
+*could* matter, and rested the verdict there. `topic` was retained as a control and came out at chance
+exactly as the theorem requires. **This is the second consecutive cycle where the researcher had to
+replace my question with a decidable one.**
+
+**Boundary, and they were careful with the important one.** ⚠️ **This does not establish that a
+well-trained TG is blind.** *This* TG, trained by *this* entry point on *this* corpus at *this* budget,
+is degenerate; "no trained TG can separate a near-duplicate pair" is **not** claimed. The cause is
+**unseparated** among three candidates: the missing `srep_norm_penalty`, a ~15k-token corpus that is
+memorisable without memory (the reference trains on 12M tokens), and a loss dominated by ~58 pad
+positions per sentence. **Only the first is a code defect.** The α token-axis reduction is their choice —
+§3.2.1's formula has no token axis and does not say which.
+
+---
