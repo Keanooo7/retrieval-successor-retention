@@ -238,18 +238,151 @@ def test_the_learned_head_does_shift_ranks():
 
 
 # --------------------------------------------------------------------------- #
-# The gate itself -- still blocked on the transcription.
+# The gate itself (gauntlet 2.6): bit-exact against the PyTorch TG.
 # --------------------------------------------------------------------------- #
 
+import json  # noqa: E402
+from pathlib import Path  # noqa: E402
 
-@pytest.mark.skip(
-    reason=(
-        "Blocked on the PyTorch TG transcription (ADR-0001, gauntlet 2.4). The "
-        "loss-curve comparison is the only part of E0b that needs TG; the off-"
-        "switch contract and the eviction-rule reduction above run today. NOT "
-        "passing -- unrun. Must not be reported as passing in GATE-1."
-    )
+import numpy as np  # noqa: E402
+
+from rsr.model.tg import (  # noqa: E402
+    TGConfig,
+    TGModel,
+    load_reference_params,
+    run_sentence_loop,
 )
-def test_loss_curve_is_bit_exact_against_stock_tg():
-    """The gate itself. Identical loss curve, not 'close'."""
-    raise NotImplementedError("Needs the PyTorch TG. ADR-0001.")
+from rsr.model.tg.policy_loop import run_policy_loop  # noqa: E402
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _loss(t, out, ids, mask, row_valid):
+    logp = torch.log_softmax(out.logits[:, :-1].to(torch.float32), dim=-1)
+    picked = logp.gather(-1, ids[:, 1:].unsqueeze(-1)).squeeze(-1)
+    valid = (mask[:, 1:] == 1) & row_valid.unsqueeze(-1)
+    return -(picked * valid).sum() / valid.sum().clamp(min=1)
+
+
+@pytest.fixture(scope="module")
+def tg():
+    """The PyTorch TG at the fixture's configuration, with reference weights.
+
+    Real weights rather than a fresh init: a reduction that holds only at
+    initialisation would be a statement about small numbers, not about the
+    eviction rule.
+    """
+    npz, sidecar = FIXTURES / "tg_d128_seed0.npz", FIXTURES / "tg_d128_seed0.json"
+    if not npz.exists():
+        pytest.skip("golden fixtures absent; run scripts/extract_golden_tensors.py")
+    golden = np.load(npz)
+    cfg = TGConfig.from_reference_dict(json.loads(sidecar.read_text())["config"])
+    model = TGModel(cfg)
+    load_reference_params(model, {k: golden[k] for k in golden.files})
+    model.eval()
+    ids = torch.as_tensor(golden["input_ids"], dtype=torch.long)
+    mask = torch.as_tensor(golden["input_mask"], dtype=torch.long)
+    lengths = torch.as_tensor(golden["input_lengths"], dtype=torch.long)
+    return cfg, model, ids, mask, lengths
+
+
+def _stock(tg):
+    """Stock TG: the transcription's own loop, whose `push_memory` evicts the
+    oldest slot. This is the arm E3 calls FIFO."""
+    _, model, ids, mask, lengths = tg
+    return run_sentence_loop(model, ids, mask, lengths, step_fn=_loss)
+
+
+def _under_policy(tg, policy):
+    _, model, ids, mask, lengths = tg
+    return run_policy_loop(model, ids, mask, lengths, policy, step_fn=_loss)
+
+
+def test_the_fixture_configuration_actually_fills_memory(tg):
+    """A reduction test on a memory that never fills tests nothing: no eviction
+    ever happens, so the eviction rule is never consulted. `M = 8` over 20 steps
+    gives 12 evictions."""
+    cfg, _, _, _, lengths = tg
+    assert int(lengths.max()) > cfg.M
+
+
+def test_loss_curve_is_bit_exact_against_stock_tg(tg):
+    """🔴 **The gate.** Identical loss, not 'close'.
+
+    Under §3.7's switches `psi_hat == -a_i`, so the argmin selects the oldest slot
+    and `write_at` reduces to `push_memory`'s roll. The two loops then differ in
+    no operation at all, and the losses must agree to the last bit -- not to a
+    tolerance, which is what `test_fidelity.py` is for.
+    """
+    cfg, _, _, _, _ = tg
+    policy = RSRPolicy(RSRConfig.reduction_to_tg(capacity=cfg.M), d_model=cfg.D)
+    stock, reduced = _stock(tg), _under_policy(tg, policy)
+    assert reduced.item() == stock.item(), (
+        f"stock {stock.item()!r} vs reduction {reduced.item()!r}; "
+        f"delta {abs(reduced.item() - stock.item()):.3e}"
+    )
+
+
+def test_the_reduction_ran_through_the_score_path(tg):
+    """Gauntlet 0.1 again, now on the real model: every eviction attributed to the
+    score, none to FIFO warmup. `T_warm = inf` used to make this all warmup."""
+    cfg, _, _, _, _ = tg
+    policy = RSRPolicy(RSRConfig.reduction_to_tg(capacity=cfg.M), d_model=cfg.D)
+    _under_policy(tg, policy)
+    counts = policy.attribution_counts()
+    assert counts.get("fifo_warmup", 0) == 0, counts
+    assert counts["neg_age"] == 24, counts  # 12 evicting steps x 2 rows
+
+
+def test_the_reduction_displaces_no_ranks_on_the_real_model(tg):
+    """ADR-0006. Under the reduction the policy *is* FIFO, so displacement is
+    identically 0 -- which is exactly why E0b cannot see the P^(sent) confound and
+    why the instrumentation exists separately."""
+    cfg, _, _, _, _ = tg
+    policy = RSRPolicy(RSRConfig.reduction_to_tg(capacity=cfg.M), d_model=cfg.D)
+    _under_policy(tg, policy)
+    assert policy.rank_shifts.distribution() == {0: 24}
+
+
+def test_fifo_policy_also_reproduces_stock_tg(tg):
+    """The other direction: the explicit FIFO baseline must agree too.
+
+    If it did not, the divergence would be in `write_at` rather than in the score,
+    and the gate above would be passing for the wrong reason.
+    """
+    assert _under_policy(tg, FIFOPolicy()).item() == _stock(tg).item()
+
+
+def test_a_learned_head_changes_the_loss(tg):
+    """**The mutation.** If the learned head also matched stock TG bit for bit, the
+    gate would be measuring the harness, not the eviction rule."""
+    cfg, _, _, _, _ = tg
+    mutated = replace(RSRConfig.reduction_to_tg(capacity=cfg.M), psi_override=None)
+    policy = RSRPolicy(mutated, d_model=cfg.D, generator=torch.Generator().manual_seed(1))
+    assert _under_policy(tg, policy).item() != _stock(tg).item()
+
+
+def test_the_learned_head_does_evict_middle_slots(tg):
+    """And the mutation is the interesting kind: it displaces ranks, which is the
+    confound ADR-0006 instruments and E0b structurally cannot see."""
+    cfg, _, _, _, _ = tg
+    mutated = replace(RSRConfig.reduction_to_tg(capacity=cfg.M), psi_override=None)
+    policy = RSRPolicy(mutated, d_model=cfg.D, generator=torch.Generator().manual_seed(1))
+    _under_policy(tg, policy)
+    assert policy.rank_shifts.fraction_shifting > 0.0
+
+
+def test_phi_construction_does_not_perturb_the_global_rng(tg):
+    """The RNG trap, on the real model. Constructing `phi` from the global
+    generator consumes draws, shifts data order and dropout masks, and fails this
+    file for a reason unrelated to the mechanism (§3.7)."""
+    cfg, _, _, _, _ = tg
+    torch.manual_seed(0)
+    baseline = torch.randn(4)
+    torch.manual_seed(0)
+    RSRPolicy(
+        replace(RSRConfig.reduction_to_tg(capacity=cfg.M), psi_override=None),
+        d_model=cfg.D,
+        generator=torch.Generator().manual_seed(7),
+    )
+    assert torch.equal(baseline, torch.randn(4))
