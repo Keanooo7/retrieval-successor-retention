@@ -19,10 +19,28 @@ __pycache__/
 #
 # `tests/test_repo_integrity.py` now checks the class, not the two instances.
 /data/
-/runs/
 /outputs/
 *.ckpt
 *.pt
+
+# ...but the measurement ledgers are evidence, not output.
+#
+# `/runs/` correctly ignores checkpoints (binary, large, regenerable) and
+# heartbeats (per-step, chatty). It also ignored `runs/<id>/ledger.json`, which is
+# the artefact the overnight protocol requires **every reported number to trace
+# to** -- so a cycle's evidence could not be committed and a claim had nothing
+# durable behind it. Un-ignore the ledgers and the writeups only; the directory
+# itself must stay ignored or `git add -A` sweeps in the .pt files.
+# Note the form: `/runs/**` ignores the CONTENTS, and `!/runs/**/` re-includes the
+# directories. Ignoring `/runs/` itself would make the negations below dead letters
+# -- git does not descend into an excluded directory, so a re-include under one can
+# never match. That is exactly the trap this rule was in.
+/runs/**
+!/runs/**/
+!/runs/**/ledger.json
+!/runs/**/RESULTS.md
+!/runs/**/walls.json
+!/runs/**/baseline.json
 
 # Belt and braces: the source packages are never ignorable, whatever pattern
 # comes back. Scoped to sources so `__pycache__/` above still applies.

@@ -1,0 +1,626 @@
+{
+  "run_id": "cycle-arm-identity",
+  "cycle": null,
+  "question": "Are train()'s policy_name='fifo' and policy_name='rsr' arms different arms? Falsifier: two runs, same seed, same config, differing policy_name, whose measured trajectories differ.",
+  "started_utc": "2026-09-18T07:36:33Z",
+  "provenance": {
+    "git_sha": "4245b7daa744a3872e23694ed0ad5801f8f06655",
+    "git_dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "commands": [
+    {
+      "argv": ".venv/bin/python -c from rsr.train.loop import train; import json; print(json.dumps(train(d=128, steps_per_stream=48, batch=8, iters=10, seed=0, device='mps', out_dir='/Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-mps-a', ckpt_every=0, policy_name='fifo')))",
+      "exit_code": 0,
+      "note": "fifo_mps_a: policy_name='fifo' device=mps",
+      "at_utc": "2026-09-18T07:36:43Z"
+    },
+    {
+      "argv": ".venv/bin/python -c from rsr.train.loop import train; import json; print(json.dumps(train(d=128, steps_per_stream=48, batch=8, iters=10, seed=0, device='mps', out_dir='/Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/rsr-mps', ckpt_every=0, policy_name='rsr')))",
+      "exit_code": 0,
+      "note": "rsr_mps: policy_name='rsr' device=mps",
+      "at_utc": "2026-09-18T07:36:54Z"
+    },
+    {
+      "argv": ".venv/bin/python -c from rsr.train.loop import train; import json; print(json.dumps(train(d=128, steps_per_stream=48, batch=8, iters=10, seed=0, device='mps', out_dir='/Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-mps-b', ckpt_every=0, policy_name='fifo')))",
+      "exit_code": 0,
+      "note": "fifo_mps_b: policy_name='fifo' device=mps",
+      "at_utc": "2026-09-18T07:37:04Z"
+    },
+    {
+      "argv": ".venv/bin/python -c from rsr.train.loop import train; import json; print(json.dumps(train(d=128, steps_per_stream=48, batch=8, iters=10, seed=0, device='cpu', out_dir='/Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-cpu', ckpt_every=0, policy_name='fifo')))",
+      "exit_code": 0,
+      "note": "fifo_cpu: policy_name='fifo' device=cpu",
+      "at_utc": "2026-09-18T07:37:28Z"
+    },
+    {
+      "argv": ".venv/bin/python -c from rsr.train.loop import train; import json; print(json.dumps(train(d=128, steps_per_stream=48, batch=8, iters=10, seed=0, device='cpu', out_dir='/Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/rsr-cpu', ckpt_every=0, policy_name='rsr')))",
+      "exit_code": 0,
+      "note": "rsr_cpu: policy_name='rsr' device=cpu",
+      "at_utc": "2026-09-18T07:37:52Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "heartbeat_policy_field.fifo_mps_a",
+      "kind": "observation",
+      "value": "fifo",
+      "how": "header.config.policy in /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-mps-a/heartbeat.jsonl"
+    },
+    {
+      "key": "run_id.fifo_mps_a",
+      "kind": "observation",
+      "value": "fifo-d128-s48-b8-1abb8237ff86e191",
+      "how": "train() return value / heartbeat header"
+    },
+    {
+      "key": "loss_sequence.fifo_mps_a",
+      "kind": "observation",
+      "value": [
+        4.965003331502278,
+        4.134423891703288,
+        3.174421946207682,
+        2.775899887084961,
+        2.539914925893148,
+        2.3805060386657715,
+        2.2317760785420737,
+        2.078620751698812,
+        1.917667547861735,
+        1.7557916641235352
+      ],
+      "how": "every beat's `loss` field, /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-mps-a/heartbeat.jsonl"
+    },
+    {
+      "key": "attribution.fifo_mps_a",
+      "kind": "observation",
+      "value": null,
+      "how": "heartbeat beat 0 `attribution` field (policy.attribution() or None)"
+    },
+    {
+      "key": "heartbeat_policy_field.rsr_mps",
+      "kind": "observation",
+      "value": "rsr",
+      "how": "header.config.policy in /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/rsr-mps/heartbeat.jsonl"
+    },
+    {
+      "key": "run_id.rsr_mps",
+      "kind": "observation",
+      "value": "rsr-d128-s48-b8-fa466171a1c031f3",
+      "how": "train() return value / heartbeat header"
+    },
+    {
+      "key": "loss_sequence.rsr_mps",
+      "kind": "observation",
+      "value": [
+        4.965003331502278,
+        4.134424209594727,
+        3.1744216283162436,
+        2.775899887084961,
+        2.539914925893148,
+        2.3805060386657715,
+        2.231776237487793,
+        2.078620751698812,
+        1.917667547861735,
+        1.7557916641235352
+      ],
+      "how": "every beat's `loss` field, /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/rsr-mps/heartbeat.jsonl"
+    },
+    {
+      "key": "attribution.rsr_mps",
+      "kind": "observation",
+      "value": null,
+      "how": "heartbeat beat 0 `attribution` field (policy.attribution() or None)"
+    },
+    {
+      "key": "heartbeat_policy_field.fifo_mps_b",
+      "kind": "observation",
+      "value": "fifo",
+      "how": "header.config.policy in /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-mps-b/heartbeat.jsonl"
+    },
+    {
+      "key": "run_id.fifo_mps_b",
+      "kind": "observation",
+      "value": "fifo-d128-s48-b8-1abb8237ff86e191",
+      "how": "train() return value / heartbeat header"
+    },
+    {
+      "key": "loss_sequence.fifo_mps_b",
+      "kind": "observation",
+      "value": [
+        4.965003331502278,
+        4.134423891703288,
+        3.1744216283162436,
+        2.775899887084961,
+        2.539914925893148,
+        2.3805060386657715,
+        2.231776237487793,
+        2.078620751698812,
+        1.917667547861735,
+        1.7557916641235352
+      ],
+      "how": "every beat's `loss` field, /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-mps-b/heartbeat.jsonl"
+    },
+    {
+      "key": "attribution.fifo_mps_b",
+      "kind": "observation",
+      "value": null,
+      "how": "heartbeat beat 0 `attribution` field (policy.attribution() or None)"
+    },
+    {
+      "key": "heartbeat_policy_field.fifo_cpu",
+      "kind": "observation",
+      "value": "fifo",
+      "how": "header.config.policy in /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-cpu/heartbeat.jsonl"
+    },
+    {
+      "key": "run_id.fifo_cpu",
+      "kind": "observation",
+      "value": "fifo-d128-s48-b8-66d33d0e33a687e3",
+      "how": "train() return value / heartbeat header"
+    },
+    {
+      "key": "loss_sequence.fifo_cpu",
+      "kind": "observation",
+      "value": [
+        4.967211405436198,
+        4.244429270426433,
+        3.1902389526367188,
+        2.7873481114705405,
+        2.556297461191813,
+        2.394665082295736,
+        2.2474188804626465,
+        2.0902415911356607,
+        1.929010550181071,
+        1.7659316062927246
+      ],
+      "how": "every beat's `loss` field, /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/fifo-cpu/heartbeat.jsonl"
+    },
+    {
+      "key": "attribution.fifo_cpu",
+      "kind": "observation",
+      "value": null,
+      "how": "heartbeat beat 0 `attribution` field (policy.attribution() or None)"
+    },
+    {
+      "key": "heartbeat_policy_field.rsr_cpu",
+      "kind": "observation",
+      "value": "rsr",
+      "how": "header.config.policy in /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/rsr-cpu/heartbeat.jsonl"
+    },
+    {
+      "key": "run_id.rsr_cpu",
+      "kind": "observation",
+      "value": "rsr-d128-s48-b8-2e38179862bad068",
+      "how": "train() return value / heartbeat header"
+    },
+    {
+      "key": "loss_sequence.rsr_cpu",
+      "kind": "observation",
+      "value": [
+        4.967211405436198,
+        4.244429270426433,
+        3.1902389526367188,
+        2.7873481114705405,
+        2.556297461191813,
+        2.394665082295736,
+        2.2474188804626465,
+        2.0902415911356607,
+        1.929010550181071,
+        1.7659316062927246
+      ],
+      "how": "every beat's `loss` field, /Users/keanooo7/retrieval-successor-retention/runs/cycle-arm-identity/rsr-cpu/heartbeat.jsonl"
+    },
+    {
+      "key": "attribution.rsr_cpu",
+      "kind": "observation",
+      "value": null,
+      "how": "heartbeat beat 0 `attribution` field (policy.attribution() or None)"
+    },
+    {
+      "key": "loss_bit_identical.fifo_mps_a__vs__rsr_mps",
+      "kind": "observation",
+      "value": false,
+      "how": "elementwise Python float equality over all 10 beats' `loss`"
+    },
+    {
+      "key": "loss_max_abs_diff.fifo_mps_a__vs__rsr_mps",
+      "kind": "observation",
+      "value": 3.1789143850602386e-07,
+      "how": "max_t |loss_x[t] - loss_y[t]| over the 10 beats"
+    },
+    {
+      "key": "grad_norm_bit_identical.fifo_mps_a__vs__rsr_mps",
+      "kind": "observation",
+      "value": false,
+      "how": "elementwise equality over all 10 beats' `grad_norm`"
+    },
+    {
+      "key": "config_hash_differs.fifo_mps_a__vs__rsr_mps",
+      "kind": "observation",
+      "value": true,
+      "how": "header.provenance.config_hash of the two heartbeats"
+    },
+    {
+      "key": "loss_bit_identical.fifo_mps_a__vs__fifo_mps_b",
+      "kind": "observation",
+      "value": false,
+      "how": "elementwise Python float equality over all 10 beats' `loss`"
+    },
+    {
+      "key": "loss_max_abs_diff.fifo_mps_a__vs__fifo_mps_b",
+      "kind": "observation",
+      "value": 3.1789143850602386e-07,
+      "how": "max_t |loss_x[t] - loss_y[t]| over the 10 beats"
+    },
+    {
+      "key": "grad_norm_bit_identical.fifo_mps_a__vs__fifo_mps_b",
+      "kind": "observation",
+      "value": true,
+      "how": "elementwise equality over all 10 beats' `grad_norm`"
+    },
+    {
+      "key": "config_hash_differs.fifo_mps_a__vs__fifo_mps_b",
+      "kind": "observation",
+      "value": false,
+      "how": "header.provenance.config_hash of the two heartbeats"
+    },
+    {
+      "key": "loss_bit_identical.fifo_cpu__vs__rsr_cpu",
+      "kind": "observation",
+      "value": true,
+      "how": "elementwise Python float equality over all 10 beats' `loss`"
+    },
+    {
+      "key": "loss_max_abs_diff.fifo_cpu__vs__rsr_cpu",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "max_t |loss_x[t] - loss_y[t]| over the 10 beats"
+    },
+    {
+      "key": "grad_norm_bit_identical.fifo_cpu__vs__rsr_cpu",
+      "kind": "observation",
+      "value": true,
+      "how": "elementwise equality over all 10 beats' `grad_norm`"
+    },
+    {
+      "key": "config_hash_differs.fifo_cpu__vs__rsr_cpu",
+      "kind": "observation",
+      "value": true,
+      "how": "header.provenance.config_hash of the two heartbeats"
+    },
+    {
+      "key": "loss_bit_identical.rsr_mps__vs__fifo_mps_b",
+      "kind": "observation",
+      "value": false,
+      "how": "elementwise Python float equality over all 10 beats' `loss`"
+    },
+    {
+      "key": "loss_max_abs_diff.rsr_mps__vs__fifo_mps_b",
+      "kind": "observation",
+      "value": 3.1789143850602386e-07,
+      "how": "max_t |loss_x[t] - loss_y[t]| over the 10 beats"
+    },
+    {
+      "key": "grad_norm_bit_identical.rsr_mps__vs__fifo_mps_b",
+      "kind": "observation",
+      "value": false,
+      "how": "elementwise equality over all 10 beats' `grad_norm`"
+    },
+    {
+      "key": "config_hash_differs.rsr_mps__vs__fifo_mps_b",
+      "kind": "observation",
+      "value": true,
+      "how": "header.provenance.config_hash of the two heartbeats"
+    },
+    {
+      "key": "final_loss_mps_three_runs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.7557916641235352,
+        1.7557916641235352,
+        1.7557916641235352
+      ],
+      "mean": 1.7557916641235352,
+      "sd": 0.0,
+      "how": "last beat `loss` of the three MPS runs (fifo, rsr, fifo-replicate), SAME seed=0 -- this sd is run-to-run MPS nondeterminism, not seed variation",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "final_loss_cpu_two_runs",
+      "kind": "statistic",
+      "n": 2,
+      "samples": [
+        1.7659316062927246,
+        1.7659316062927246
+      ],
+      "mean": 1.7659316062927246,
+      "sd": 0.0,
+      "how": "last beat `loss` of the fifo and rsr CPU runs, same seed=0; CPU is deterministic so sd=0 here means the two arms executed the same code",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "measurements_ledger_exists",
+      "kind": "observation",
+      "value": false,
+      "how": "Path.exists() on rsr.constants._DEFAULT_LEDGER"
+    },
+    {
+      "key": "wall_1",
+      "kind": "observation",
+      "value": {
+        "n": 1,
+        "attempt": "RSRConfig.from_registry('synthetic', steps_per_epoch=100.0)",
+        "exc_type": "UnmeasuredConstant",
+        "at": "src/rsr/constants.py:829",
+        "source_line": "raise UnmeasuredConstant(",
+        "message": "'nu' is MEASURED and has no logged value in scope 'synthetic'. It is produced by **E1** (spec section 3.4, 4.5).\n\n  Redundancy penalty in the eviction rule (defect D-3). Set value under leave-one-out is submodular, so greedy argmin over independent scores is not an approximation to marginal value -- under redundancy it is anti-correlated with it. Swept once on synthetic. `nu = 0` is also part of the section 3.7 reduction condition.\n\nRun E1, then log the result with rsr.constants.record(). Do not hardcode a value here -- section 4.5: never freeze an unmeasured constant."
+      },
+      "how": "throwaway script: constructed the object the way a training run would, caught the exception, read file:line off the deepest src/rsr traceback frame"
+    },
+    {
+      "key": "wall_2",
+      "kind": "observation",
+      "value": {
+        "n": 2,
+        "attempt": "RSRPolicy(RSRConfig(..., b_enabled default True), d) with bias=None",
+        "exc_type": "ValueError",
+        "at": "src/rsr/retention/rsr.py:300",
+        "source_line": "raise ValueError(",
+        "message": "b_enabled=True needs the anti-collapse bias (section 3.5), whose gamma_b and tau are measured by E0e. Pass one, or set b_enabled=False and say so -- b == 0 is also the section 3.7 reduction condition, so a silently absent b is defect D-1's shape."
+      },
+      "how": "throwaway script: constructed the object the way a training run would, caught the exception, read file:line off the deepest src/rsr traceback frame"
+    },
+    {
+      "key": "wall_3",
+      "kind": "observation",
+      "value": {
+        "n": 3,
+        "attempt": "ProtectionBias(capacity=M, b_max=1.0, gamma_b=0.07, tau=0.25)",
+        "exc_type": "NotImplementedError",
+        "at": "src/rsr/retention/bias.py:60",
+        "source_line": "raise NotImplementedError(",
+        "message": "Sprint 2. Spec section 3.5; gamma_b and tau from rsr.constants (E0e)."
+      },
+      "how": "throwaway script: constructed the object the way a training run would, caught the exception, read file:line off the deepest src/rsr traceback frame"
+    },
+    {
+      "key": "wall_4",
+      "kind": "observation",
+      "value": {
+        "n": 4,
+        "attempt": "select_eviction with b_enabled=True and a bias exposing ProtectionBias's declared surface (update/values/reset)",
+        "exc_type": "AttributeError",
+        "at": "src/rsr/retention/rsr.py:377",
+        "source_line": "score = score + self.bias.b(slots)  # type: ignore[attr-defined]",
+        "message": "'BiasShim' object has no attribute 'b'"
+      },
+      "how": "throwaway script: constructed the object the way a training run would, caught the exception, read file:line off the deepest src/rsr traceback frame"
+    },
+    {
+      "key": "wall_5",
+      "kind": "observation",
+      "value": {
+        "n": 5,
+        "attempt": "policy.observe(slots, eval-mode trace, step) -- the only path by which phi receives gradient (MC return, \u00a73.3-3.4)",
+        "exc_type": "NotImplementedError",
+        "at": "src/rsr/retention/rsr.py:433",
+        "source_line": "raise NotImplementedError(",
+        "message": "Sprint 2: the MC return and the shadow buffer (sections 3.3-3.4). r_i itself is implemented in rsr.retention.reward."
+      },
+      "how": "throwaway script: constructed the object the way a training run would, caught the exception, read file:line off the deepest src/rsr traceback frame"
+    },
+    {
+      "key": "loop_py_constructs_FIFOPolicy_unconditionally",
+      "kind": "observation",
+      "value": true,
+      "how": "substring test on src/rsr/train/loop.py: 'policy = FIFOPolicy()' present AND 'RSRPolicy(' absent"
+    },
+    {
+      "key": "loop_py_policy_assignment_line",
+      "kind": "observation",
+      "value": [
+        138
+      ],
+      "how": "line numbers of the `policy = ` assignment in src/rsr/train/loop.py"
+    },
+    {
+      "key": "cli_has_policy_flag",
+      "kind": "observation",
+      "value": false,
+      "how": "substring '--policy' in src/rsr/train/loop.py (argparse in main())"
+    },
+    {
+      "key": "policy_loop_calls_observe",
+      "kind": "observation",
+      "value": false,
+      "how": "substring '.observe(' in src/rsr/model/tg/policy_loop.py"
+    },
+    {
+      "key": "loop_py_value_head_in_param_groups",
+      "kind": "observation",
+      "value": true,
+      "how": "substring test: the value-head argument to build_param_groups is literal None"
+    },
+    {
+      "key": "partC_n_evictions",
+      "kind": "observation",
+      "value": 256,
+      "how": "len(Twin.pairs): one entry per select_eviction call, forward-only run_policy_loop over 8 rows x 48 steps, M=16, CPU"
+    },
+    {
+      "key": "partC_attribution_counts",
+      "kind": "observation",
+      "value": {
+        "psi": 256
+      },
+      "how": "RSRPolicy.attribution_counts() after the forward-only run"
+    },
+    {
+      "key": "partC_victim_disagreements_same_state",
+      "kind": "observation",
+      "value": 239,
+      "how": "count of select_eviction calls where RSRPolicy and FIFOPolicy, handed the IDENTICAL MemoryState, returned different slots"
+    },
+    {
+      "key": "partC_victim_disagreement_fraction",
+      "kind": "observation",
+      "value": 0.93359375,
+      "how": "partC_victim_disagreements_same_state / partC_n_evictions"
+    },
+    {
+      "key": "partC_victims_rsr_first50",
+      "kind": "observation",
+      "value": [
+        2,
+        0,
+        5,
+        0,
+        11,
+        0,
+        0,
+        0,
+        0,
+        1,
+        12,
+        1,
+        0,
+        0,
+        1,
+        10,
+        0,
+        7,
+        0,
+        10,
+        8,
+        13,
+        13,
+        1,
+        3,
+        14,
+        11,
+        14,
+        0,
+        14,
+        12,
+        6,
+        1,
+        15,
+        13,
+        14,
+        15,
+        0,
+        13,
+        15,
+        15,
+        14,
+        6,
+        11,
+        8,
+        9,
+        5,
+        2,
+        11,
+        7
+      ],
+      "how": "first 50 RSRPolicy victim indices, Twin.pairs"
+    },
+    {
+      "key": "partC_victims_fifo_same_state_first50",
+      "kind": "observation",
+      "value": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "how": "first 50 FIFOPolicy victim indices on the same states, Twin.pairs"
+    },
+    {
+      "key": "partC_loss_rsr_forward_only",
+      "kind": "observation",
+      "value": 237.985595703125,
+      "how": "run_policy_loop summed CE, RSRPolicy(psi_override=None), eval mode, no optimizer, identical initial weights"
+    },
+    {
+      "key": "partC_loss_fifo_forward_only",
+      "kind": "observation",
+      "value": 237.9049530029297,
+      "how": "same, FIFOPolicy, same initial weights (state_dict cloned)"
+    },
+    {
+      "key": "partC_loss_abs_diff",
+      "kind": "observation",
+      "value": 0.0806427001953125,
+      "how": "|partC_loss_rsr_forward_only - partC_loss_fifo_forward_only|"
+    },
+    {
+      "key": "mps_nondeterminism_floor_equals_cross_arm_diff",
+      "kind": "observation",
+      "value": true,
+      "how": "the fifo-vs-fifo replicate max|dloss| and the fifo-vs-rsr max|dloss| are the same number, so the cross-arm difference is entirely the MPS run-to-run floor and carries no policy signal"
+    },
+    {
+      "key": "untracked_files_at_measurement_time",
+      "kind": "observation",
+      "value": [
+        "scripts/canary.py"
+      ],
+      "how": "/opt/homebrew/bin/git status --porcelain in the repo; git_dirty=true in provenance is due to this one untracked file from a prior cycle, which no code path in this experiment imports"
+    }
+  ],
+  "verdict": {
+    "falsifier": "Brendan's reading: src/rsr/train/loop.py's policy_name='rsr' and policy_name='fifo' runs are the SAME arm -- train() stamps policy_name into run_id and the frozen config but constructs FIFOPolicy() unconditionally (loop.py:138), so a heartbeat reading \"policy\": \"rsr\" is a FIFO run. The reading dies if two runs at identical seed and config, differing only in policy_name, have trajectories that differ by more than the run-to-run floor.",
+    "outcome": "survived",
+    "detail": "Could not be falsified. On CPU (deterministic) the fifo and rsr loss sequences are BIT-IDENTICAL over all 10 beats (max|dloss| = 0.0) while config_hash and run_id differ. On MPS they differ by 3.1789143850602386e-07, but the fifo-vs-fifo REPLICATE at the same seed differs by exactly the same 3.1789143850602386e-07, so that is the nondeterminism floor, not policy signal. The heartbeat header of the rsr runs reads \"policy\": \"rsr\" and their beats carry attribution=null, because FIFOPolicy has no attribution() method. This is corpus-sheet defect 2's shape relocated from RSRConfig into the training loop. Separately measured: bypassing five walls, the RSR eviction path DOES run -- 256 evictions, attribution {'psi': 256} with zero fifo_warmup, disagreeing with FIFO on 239/256 identical memory states and moving a forward-only loss by 0.0806427001953125 -- so a real RSR arm would produce a visibly different trajectory, and the loop is not producing one."
+  },
+  "finished_utc": "2026-09-18T07:38:32Z"
+}

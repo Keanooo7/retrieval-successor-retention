@@ -1,0 +1,42 @@
+[
+  {
+    "n": 1,
+    "attempt": "RSRConfig.from_registry('synthetic', steps_per_epoch=100.0)",
+    "exc_type": "UnmeasuredConstant",
+    "at": "src/rsr/constants.py:829",
+    "source_line": "raise UnmeasuredConstant(",
+    "message": "'nu' is MEASURED and has no logged value in scope 'synthetic'. It is produced by **E1** (spec section 3.4, 4.5).\n\n  Redundancy penalty in the eviction rule (defect D-3). Set value under leave-one-out is submodular, so greedy argmin over independent scores is not an approximation to marginal value -- under redundancy it is anti-correlated with it. Swept once on synthetic. `nu = 0` is also part of the section 3.7 reduction condition.\n\nRun E1, then log the result with rsr.constants.record(). Do not hardcode a value here -- section 4.5: never freeze an unmeasured constant."
+  },
+  {
+    "n": 2,
+    "attempt": "RSRPolicy(RSRConfig(..., b_enabled default True), d) with bias=None",
+    "exc_type": "ValueError",
+    "at": "src/rsr/retention/rsr.py:300",
+    "source_line": "raise ValueError(",
+    "message": "b_enabled=True needs the anti-collapse bias (section 3.5), whose gamma_b and tau are measured by E0e. Pass one, or set b_enabled=False and say so -- b == 0 is also the section 3.7 reduction condition, so a silently absent b is defect D-1's shape."
+  },
+  {
+    "n": 3,
+    "attempt": "ProtectionBias(capacity=M, b_max=1.0, gamma_b=0.07, tau=0.25)",
+    "exc_type": "NotImplementedError",
+    "at": "src/rsr/retention/bias.py:60",
+    "source_line": "raise NotImplementedError(",
+    "message": "Sprint 2. Spec section 3.5; gamma_b and tau from rsr.constants (E0e)."
+  },
+  {
+    "n": 4,
+    "attempt": "select_eviction with b_enabled=True and a bias exposing ProtectionBias's declared surface (update/values/reset)",
+    "exc_type": "AttributeError",
+    "at": "src/rsr/retention/rsr.py:377",
+    "source_line": "score = score + self.bias.b(slots)  # type: ignore[attr-defined]",
+    "message": "'BiasShim' object has no attribute 'b'"
+  },
+  {
+    "n": 5,
+    "attempt": "policy.observe(slots, eval-mode trace, step) -- the only path by which phi receives gradient (MC return, \u00a73.3-3.4)",
+    "exc_type": "NotImplementedError",
+    "at": "src/rsr/retention/rsr.py:433",
+    "source_line": "raise NotImplementedError(",
+    "message": "Sprint 2: the MC return and the shadow buffer (sections 3.3-3.4). r_i itself is implemented in rsr.retention.reward."
+  }
+]

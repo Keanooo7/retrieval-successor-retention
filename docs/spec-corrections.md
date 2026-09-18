@@ -498,3 +498,93 @@ GPUs, and no four-figure spend to stage.
 So this is a measurement of the model's throughput, not of a training loop's. The
 cut order in §4.1 stays on the page as a contingency; it is simply not binding at
 these numbers.
+
+## 24 — S-7: sentence length is an uncontrolled confound in E7
+
+> **Numbering note.** Brendan supplied this as "correction 16" and as **S-7** in his
+> own scheme. **16 is already taken** — it is the `T_warm = ∞` / E0b-vacuity entry
+> that gauntlet 0.1 rests on — and corrections 16–23 are all cited by number
+> elsewhere. Filed as **24** to avoid both overwriting a live correction and a
+> renumber that would break existing citations. Cite it as **correction 24 (S-7)**.
+
+**Adds to:** §10.1's E7 correlation protocol. **Supersedes** nothing; it is an
+analysis requirement and a §13 limitation, not a change to any prescription.
+
+🔴 **Do not change the μP multiplier, `srep_norm_target`, or any frozen constant on
+the strength of this.** It is a regressor in one analysis.
+
+### The confound
+
+TG normalizes every gestalt to `srep_norm_target = 1.0` (correction 15), so **every
+sentence enters memory at identical strength regardless of how much was compressed
+into it.** A 4-word sentence and a 43-word sentence produce equally loud entries.
+
+Humans do not work that way: encoding quality falls with sentence length. So the two
+systems being correlated in E7 forget for different reasons:
+
+| | how it encodes | why it "forgets" |
+|---|---|---|
+| human | long sentences **poorly** | partly **encoding** |
+| TG / RSR | all lengths **equally** | **retention** only |
+
+§10.1's correlation therefore assumes both systems encoded comparably, and they do
+not. **A correlation between what RSR drops and what people fail to recall can be
+produced by sentence length alone, with no retention policy involved.** That is a
+confound in the **primary claim**, not in a secondary measure.
+
+The source for the human side is American Press Institute readability research
+across 410 newspapers — reported shape: near-complete comprehension around 8 words
+per sentence, falling below ~10% by ~43 words. ⚠️ **Correlational, not a controlled
+experiment. Use the shape; do not cite the percentages as a constant** and do not
+put either number in `constants.py`.
+
+### The regime is not hypothetical
+
+[P2]'s own corpus averages **~25 words/sentence** — the paper states this directly,
+deriving ~25 × 30 ≈ 750 tokens per stream. That sits in the 50–60% comprehension
+band, i.e. squarely inside the range where the human curve is steep.
+
+### Fix
+
+**Partial sentence length out of the E7 correlation, exactly as §10.1 already
+partials out serial position.** One extra regressor.
+
+- If the correlation **survives**, it is *stronger* than it would otherwise have
+  been — the confound was carrying none of it.
+- If it **does not**, RSR is tracking **sentence length rather than structural
+  importance**. That is a vacuity failure **no falsifier currently names**, and the
+  age-based §7.1 gate ("RSR must beat LRU") **structurally cannot see it**: length
+  and age are independent, so a length-tracking policy beats LRU comfortably while
+  having rediscovered nothing.
+
+### Invisible in current work — do not go looking for it tonight
+
+Both measured, not assumed:
+
+- The synthetic corpus is **mean 4.14 words/sentence, max 6, min 2, zero sentences
+  over 8** — re-measured 2026-09-18 at `SyntheticConfig(sentences_per_document=48,
+  seed=0)`, **n = 3072** (64 documents), full distribution
+  `{2: 91, 3: 244, 4: 1914, 5: 784, 6: 39}`. The entire corpus sits at the flat top
+  of the human curve, so the confound has **no variance to act through**.
+
+  *(The brief reported n = 1536 for the same shape; that is a different
+  `sentences_per_document`, and the mean/max/ceiling claims reproduce either way.
+  §12.4: the config is part of the measurement, so the config is recorded with it.)*
+- `max_sentence_tokens = 64` **truncates rather than degrades** — a cliff, where the
+  human curve is a gradient. Truncation is not a model of poor encoding.
+
+So this cannot be studied on the synthetic corpus and does not bite until E7 has
+real stimuli (ADR-0005).
+
+### For the authors, not for the code
+
+Normalizing magnitude away is a **departure from the Sentence Gestalt lineage**
+(St. John & McClelland 1990) that TG names as its own ancestor, where magnitude
+carried strength. Recorded as a question for the authors. **Not a code change.**
+
+### Where this lands
+
+- **§13 (limitations):** state that every E7 correlation is conditional on sentence
+  length having been partialled out, and that TG's unit-norm gestalts make the two
+  systems' forgetting mechanisms non-comparable without it.
+- **`docs/release-conditions.md`:** condition 4's E7 line.
