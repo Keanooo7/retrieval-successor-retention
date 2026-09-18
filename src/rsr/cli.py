@@ -16,9 +16,12 @@ from rsr.gates.floors import Direction, Exit, check_floor, measure_pytest_count,
 def _cmd_floor(args: argparse.Namespace) -> int:
     if args.record:
         key, _, raw = args.record.partition("=")
+        # store= is explicit: the check reads test-floor.json, so a record that defaulted
+        # to gate-floors.json banked the number into a file the checker never opens.
         record_floor(
             key, float(raw), direction=Direction.MAY_RISE,
             evidence=args.evidence or "rsr floor --record",
+            store="test-floor.json",
         )
         print(f"banked {key} = {raw}")
         return Exit.OK
@@ -33,7 +36,8 @@ def _cmd_floor(args: argparse.Namespace) -> int:
         print(f"banked pytest_count = {measured}")
         return Exit.OK
     # An unbanked rise is not a CI failure: it is a rise. Report it and pass.
-    return Exit.OK if result.code in (Exit.OK, Exit.UNBANKED_RISE, Exit.UNKNOWN) else result.code
+    # UNKNOWN (2) is NOT a pass: it means nothing was compared. Only 0 and 4 map to success.
+    return Exit.OK if result.code in (Exit.OK, Exit.UNBANKED_RISE) else result.code
 
 
 def _cmd_constants(args: argparse.Namespace) -> int:
@@ -42,11 +46,9 @@ def _cmd_constants(args: argparse.Namespace) -> int:
         result = check_floor("unmeasured_constants", float(len(unset)),
                              direction=Direction.MAY_FALL)
         print(result)
-        if result.code is Exit.UNKNOWN:
-            record_floor("unmeasured_constants", float(len(unset)),
-                         direction=Direction.MAY_FALL, evidence="rsr constants --check")
-            print(f"seeded floor at {len(unset)}")
-            return Exit.OK
+        # A check must NEVER seed its own floor. Banking whatever the current environment
+        # happens to show, as the standard, is a gate that passes on first sight of anything.
+        # Seeding is a deliberate act: rsr floor --record, with evidence.
         return Exit.OK if result.code in (Exit.OK, Exit.UNBANKED_RISE) else result.code
 
     width = max(len(r["name"]) for r in REGISTRY.table())

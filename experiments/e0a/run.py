@@ -1,23 +1,29 @@
-"""E0a -- muP coordinate check.
+"""E0a -- muP coordinate check (value-head half).
 
-The spec requires this run **twice**: bare TG, then TG with the value head attached, and it requires
-checking ``psi-hat``'s **scalar output** coordinate scale specifically, not only transformer
-activations. §4.3: "this is the failure that surfaces in week 9 with no error message."
+§4.3 requires checking **`psi-hat`'s scalar output** coordinate scale specifically, not only
+transformer activations: "this is the failure that surfaces in week 9 with no error message."
 
-**This file runs half of E0a.** The bare-TG half is blocked on ADR-0001 (no TG implementation is
-available and one is being built from the paper). The value-head half is independent of TG and runs
-now, because it is where the novel muP prescription lives -- the transformer's parameterization is
-[P4]-standard, the bilinear head's is not.
+🔴 **Read the verdict at `t >= 1`, never at step 0.** With the `1/d` multiplier the bilinear output
+is `Theta(1/sqrt(d))` at init by construction (uncorrelated `s`, `Wc`) and `Theta(1)` once
+correlated. A check read at init shows a *correct* parameterization shrinking with width.
 
-Probe: fit ``psi-hat`` to a Theta(1) per-slot regression target under MSE. That is the shape of
-``L_MC`` (§3.3), so the coordinate scales measured here are the ones training will actually produce.
+⚠️ **This measures the Theta(1)-coordinate regime. TG's real gestalts are L2-normalised to unit
+norm** (`srep_norm_target = 1.0`), so their coordinates are `O(1/sqrt(d))`. See
+docs/spec-corrections.md D-15. This file confirms §4.3's *reasoning*; it does not confirm its
+*prescription* for TG's actual inputs.
 
-Usage:  uv run python experiments/e0a/run.py
+📌 Two defects this file has already carried, both of which produced confident wrong numbers:
+  1. `SEEDS` was declared and then `SEED = SEEDS[0]` was used, with no loop -- so RESULTS.md
+     reported a five-seed aggregate no committed code path could produce.
+  2. `build()` called `torch.manual_seed(SEED)` on the module constant, clobbering the per-seed
+     seeding, so five seeds gave five byte-identical results. **The reported `sd` of 0.0000 is
+     what exposed it** -- which is the argument for always reporting spread, not just a mean.
 """
 
 from __future__ import annotations
 
 import json
+import statistics
 from pathlib import Path
 
 import torch
@@ -26,88 +32,87 @@ from rsr.mup.coord_check import coord_check, width_invariance
 from rsr.retention.value_head import BilinearValueHead
 
 WIDTHS = (128, 192, 256, 384)
-N_LIVE = 40  # M on the corpora
+N_LIVE = 40          # M on the corpora
 STEPS = 8
 SEEDS = (0, 1, 2, 3, 4)
-SEED = SEEDS[0]
 
 
-def build(d: int):
-    torch.manual_seed(SEED)
-    head = BilinearValueHead(d, base_d=WIDTHS[0])
+def make_build(seed: int):
+    """Factory closing over `seed`, so each seed genuinely differs."""
 
-    # Fixed inputs and targets per width, drawn from the same seed so widths are comparable.
-    # Coordinates are Theta(1), matching what a muP-parameterized transformer emits.
-    g = torch.randn(N_LIVE, d)
-    c = torch.randn(d)
-    target = torch.randn(N_LIVE)
+    def build(d: int):
+        torch.manual_seed(seed)
+        head = BilinearValueHead(d, base_d=WIDTHS[0])
+        g = torch.randn(N_LIVE, d)
+        c = torch.randn(d)
+        target = torch.randn(N_LIVE)
 
-    state = {"prev": None}
+        def forward(m: torch.nn.Module) -> dict[str, torch.Tensor]:
+            out = m(g, c)
+            return {"output": out - target, "psi": out, "hidden_Wc": m.W @ c}
 
-    def forward(m: torch.nn.Module) -> dict[str, torch.Tensor]:
-        out = m(g, c)
-        h = m.W @ c
-        delta = out - state["prev"] if state["prev"] is not None else torch.zeros_like(out)
-        state["prev"] = out.detach().clone()
-        return {
-            "output": out - target,  # the residual is what the loss sees
-            "psi": out,  # the scalar the spec names
-            "hidden_Wc": h,  # the Theta(1) intermediate
-            "delta_psi": delta,  # per-step change -- the muP quantity
-        }
+        return head, forward
 
-    return head, forward
+    return build
+
+
+def _agg(rows: list[dict], key: str) -> dict:
+    v = [r[key] for r in rows]
+    return {
+        "mean": statistics.mean(v),
+        "sd": statistics.stdev(v) if len(v) > 1 else 0.0,
+        "min": min(v), "max": max(v), "n": len(v),
+    }
 
 
 def main() -> None:
-    records = coord_check(build, WIDTHS, steps=STEPS, lr=1e-2, seed=SEED, base_d=WIDTHS[0])
     here = Path(__file__).parent
+    per_seed: list[dict] = []
 
-    rows = [vars(r) for r in records]
-    (here / "coord_records.json").write_text(json.dumps(rows, indent=2) + "\n")
+    for sd in SEEDS:
+        recs = coord_check(make_build(sd), WIDTHS, steps=STEPS, lr=1e-2,
+                           seed=sd, base_d=WIDTHS[0])
+        base = next(r.rms for r in recs
+                    if r.name == "psi" and r.step == 0 and r.width == WIDTHS[0])
+        wide = next(r.rms for r in recs
+                    if r.name == "psi" and r.step == 0 and r.width == WIDTHS[-1])
+        per_seed.append({
+            "seed": sd,
+            "drift_at_init": width_invariance(recs, "psi", 0),
+            "drift_at_verdict": width_invariance(recs, "psi", STEPS),
+            "init_rms_ratio_wide_over_base": wide / base,
+        })
 
-    print(f"E0a (value-head half) -- widths {WIDTHS}, n_live={N_LIVE}, {STEPS} AdamW steps\n")
-    for name in ("psi", "hidden_Wc", "delta_psi"):
-        print(f"  {name}")
-        header = "    step  " + "".join(f"d={d:<10}" for d in WIDTHS) + "  drift"
-        print(header)
-        for step in range(STEPS + 1):
-            cells = []
-            for d in WIDTHS:
-                r = next(
-                    (x for x in records if x.name == name and x.step == step and x.width == d),
-                    None,
-                )
-                cells.append(f"{r.rms:<12.5f}" if r else f"{'-':<12}")
-            try:
-                drift = width_invariance(records, name, step)
-                dcell = f"{drift:6.3f}"
-            except ValueError:
-                dcell = "     -"
-            flag = ""
-            if name == "psi" and step == 0:
-                flag = "   <- init regime: Theta(1/sqrt(d)) BY CONSTRUCTION, not a violation"
-            print(f"    {step:<4}  " + "".join(cells) + dcell + flag)
-        print()
-
-    verdict_step = STEPS
-    drift = width_invariance(records, "psi", verdict_step)
-    init_drift = width_invariance(records, "psi", 0)
     summary = {
+        "seeds_actually_run": list(SEEDS),
+        "n_seeds": len(SEEDS),
         "widths": list(WIDTHS),
         "steps": STEPS,
-        "psi_drift_at_init": init_drift,
-        "psi_drift_at_verdict_step": drift,
-        "verdict_step": verdict_step,
+        "verdict_step": STEPS,
+        "per_seed": per_seed,
+        "drift_at_init": _agg(per_seed, "drift_at_init"),
+        "drift_at_verdict": _agg(per_seed, "drift_at_verdict"),
+        "init_rms_ratio_wide_over_base": _agg(per_seed, "init_rms_ratio_wide_over_base"),
+        "predicted_init_ratio": (WIDTHS[0] / WIDTHS[-1]) ** 0.5,
         "note": (
-            "Verdict is read at t>=1. Step 0 is recorded, never gated on: with the 1/d multiplier "
-            "the bilinear output is Theta(1/sqrt(d)) at init by construction (uncorrelated s, Wc) "
-            "and Theta(1) once correlated. See src/rsr/mup/coord_check.py."
+            "Verdict read at t>=1. Step 0 is recorded, never gated on: with the 1/d multiplier the "
+            "bilinear output is Theta(1/sqrt(d)) at init by construction. Inputs here are "
+            "Theta(1)-coordinate; TG's real gestalts are unit-norm (spec-corrections D-15)."
         ),
     }
     (here / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-    print(f"  psi drift at init  : {init_drift:.3f}   (recorded, NOT gated)")
-    print(f"  psi drift at step {verdict_step}: {drift:.3f}   <- the E0a number")
+
+    print(f"E0a value-head half -- widths {WIDTHS}, n_live={N_LIVE}, {STEPS} steps, "
+          f"{len(SEEDS)} seeds\n")
+    print("  seed   drift@init   drift@t=8   init ratio d384/d128")
+    for r in per_seed:
+        print(f"  {r['seed']:>4}   {r['drift_at_init']:>10.4f}  {r['drift_at_verdict']:>10.4f}"
+              f"   {r['init_rms_ratio_wide_over_base']:>10.4f}")
+    a = summary["init_rms_ratio_wide_over_base"]
+    v = summary["drift_at_verdict"]
+    print(f"\n  init ratio : mean {a['mean']:.4f}  sd {a['sd']:.4f}  n={a['n']}"
+          f"   vs {summary['predicted_init_ratio']:.4f} predicted by Theta(1/sqrt(d))")
+    print(f"  drift @t=8 : mean {v['mean']:.4f}  sd {v['sd']:.4f}")
 
 
 if __name__ == "__main__":
