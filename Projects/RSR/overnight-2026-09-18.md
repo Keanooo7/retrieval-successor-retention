@@ -300,7 +300,7 @@ sentence uses); a weaker "reinforced" notion would score higher and was not meas
 |---|---|
 | **Falsifier** | *"the environment has not moved."* |
 | **Dispatched** | nobody — the canary is mine to run, not a researcher's |
-| **Verdict** | **survived, and with a real comparison rather than a bare first reading.** |
+| **Verdict** | **survived, and with a real comparison rather than a bare first reading.** 🔴 **[CORRECTED 2026-09-18 — THIS CYCLE IS `inconclusive`, NOT `survived`.** Its own ledger, `runs/canary/cycle-04/ledger.json`, reads `"outcome": "inconclusive"`, detail *"first reading: this IS the baseline, nothing to compare against yet"* — the opposite of "a real comparison rather than a bare first reading". **Two canaries held, not three.** The four numbers in the cell below (`10.817072550456`, `8.130104700724`, `507.4735412597656`, rel diff `0.000e+00`) appear in **no ledger** — the ledger's own `losses` row starts at 4.965. The environmental CONCLUSION still holds: the 2026-09-18 audit re-executed `smoke2` at HEAD, ten commits downstream, and got bit-identical loss, grad_norm, loss_sum and ppl.]** |
 | **Verified by re-execution** | ✅ **This cycle *is* a re-execution.** `runs/smoke2/heartbeat.jsonl` is a seed-0 run at `d=128, S=48, batch=8` from commit `d03b737`, made **before tonight started**. Re-running that exact config at `HEAD = 9362c68` — six commits later — reproduces it **bit-identically**: step 0 `10.817072550456` vs `10.817072550456` (rel diff `0.000e+00`), step 4 `8.130104700724` vs `8.130104700724`, and `grad_norm[0] = 507.4735412597656` in both. The environment has not moved, and tonight's six commits did not perturb the training path. |
 | **Ledger** | `runs/canary/cycle-04/ledger.json`; baseline frozen at `runs/canary/baseline.json`. |
 
@@ -844,7 +844,7 @@ next-token positions including PAD**, and a ~5-token sentence sits in a 64-lengt
 positions are trivial. The **masked real-token NLL** is **1.955 ± 0.007** trained vs **5.092 ± 0.045**
 untrained — a real 3.14-nat gain. **It learned the corpus. It did not learn to use the memory.**
 
-🔴 **The memory is inert.** Cross-attention KL from uniform is **0.001301 ± 0.000381 nats** against a
+🔴 **The memory is inert.** Cross-attention KL from uniform is **0.001301 ± 0.000381 nats** against a 🔴 **[CORRECTED 2026-09-18 — DO NOT CITE THIS NUMBER.** The cross-attention KL from uniform is **non-diagnostic and directionally backwards**: the *untrained* model measures 0.0016–0.0034 and the *trained* model 0.0099–0.0139, so training moved it **4.4× FARTHER from uniform**, monotone across every seed. Near-uniform cross-attention is this architecture's default at this scale. Cycle 13's own ledger carries a row named `KL_IS_A_WEAK_DISCRIMINATOR` saying so. **Quote the shuffle control instead** — another document's entire 16-slot memory moves the loss by exactly 0.0, max per-token delta 1.2e-4 nats across 384 sentences.]**
 maximum of `ln 16 = 2.7726`. α(needed) 0.062479, α(other) 0.062469, **α(distractor) 0.062504** — all at
 `1/M = 0.0625`, and the distractor gets *more* than the needed slot. **Deleting the entire memory costs
 0.005581 ± 0.000501 nats out of 1.955 — 0.29%.** Effective dimension of the gestalt space falls from
@@ -910,7 +910,7 @@ positions per sentence. **Only the first is a code defect.** The α token-axis r
 | **Verified by re-execution** | ✅ **The canary is a re-execution** of the config frozen at cycle 4, now eight cycles and eight commits later (`bc8441a` → `7254080`). |
 | **Ledger** | `runs/canary/cycle-12/ledger.json`. |
 
-**Nothing has moved across the whole night.** Three independent environment checks now agree: a
+**Nothing has moved across the whole night.** 🔴 **[CORRECTED 2026-09-18 — it was TWO forward canaries plus one INCONCLUSIVE first reading, not three checks.** Cycle 4 wrote the baseline; it compared against nothing. The conclusion survives on the two forward readings plus the audit's own re-execution.]** Three independent environment checks now agree: a
 retrospective bit-exact reproduction of a **pre-tonight** commit (cycle 4), and two forward canaries at
 cycles 8 and 12, both inside the floor. **Every result in this log rests on an environment verified
 three times, and the two forward readings differ from the baseline only at the MPS nondeterminism floor
@@ -930,7 +930,7 @@ that cycle 1 independently identified.**
 
 **The hinge is not inert and not free-riding**: training penalty falls 5798×, and the pre-normalization
 norm goes from **15–20× outside** the reference band to just below it. **And it costs nothing** — final
-CE `0.1059 ± 0.0055 → 0.1008 ± 0.0006`, masked NLL `1.5476 ± 0.0171 → 1.5336 ± 0.0337`. There is **no
+CE `0.1059 ± 0.0055 → 0.1008 ± 0.0006`, masked NLL `1.5476 ± 0.0171 → 1.5336 ± 0.0337` 🔴 **[CORRECTED 2026-09-18 — `1.5476` IS A FABRICATED FIGURE.** It exists in no ledger and no metrics file on either machine; `grep -rn "1.5476" runs/` returns 0 hits. The real hinge-OFF arm is **`1.5945 ± 0.0482` (n=2)**, ledger key `I300_HINGEOFF_eval_masked_real_token_nll` in `runs/cycle-srep-hinge/ledger.json`. The error runs AGAINST the claimant's interest — the hinge helps ~4× more than reported — so it is transcription, not motivation. **The honest support for "costs nothing" is the paired statistic: 5 of 5 seeds move the same direction, sign-test p = 0.031.** Also: 0.780 does not LAND in the `[0.9, 1.1]` band — 0 of 384 sentences reach the lower edge. The hinge BINDS; it does not land.]**. There is **no
 "prevents collapse but wrecks the loss" tradeoff to price.**
 
 **But the collapse survives.** At 100 iterations the arms are indistinguishable — **100% of all 73,536
