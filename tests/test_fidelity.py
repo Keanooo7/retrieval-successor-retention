@@ -171,6 +171,34 @@ def test_the_fixture_carries_the_reference_parameters(golden):
     assert total == 2_478_278
 
 
+def test_the_positive_control_shows_the_tolerance_can_see_a_severed_graph(meta):
+    """Gauntlet 2.3: "a deliberately detached variant must **fail** the gradient
+    check."
+
+    This half is a control on the **tolerance**. The extraction reruns everything
+    with `detach_sreps_for_memory=True` -- the reference's own ablation, whose
+    comment reads *"MUST stay False for the recurrence to train"* -- and records
+    what that does.
+
+    🔴 **The forward loss is bit-identical.** `125.3105468750` either way. Only the
+    backward pass changes. That is the failure mode ADR-0002 is built around, made
+    numerical: a transcription with the wrong graph retention matches every forward
+    quantity, passes a forward-only check, and surfaces in week 7 as a
+    gradient-flow difference in E3 that looks like a finding.
+
+    Without this, "the gradients match" would be compatible with "the gradients
+    are insensitive to the thing being checked."
+    """
+    control = meta["detach_positive_control"]
+    assert control["forward_identical"] is True
+    assert control["loss_retained"] == control["loss_detached"]
+    assert control["tolerance"] == {"rtol": 1e-3, "atol": 1e-4}
+    # 113 of 206 on the recorded run. The floor is a quarter, so the assertion is
+    # about the tolerance being able to see it, not about the exact number.
+    assert control["arrays_outside_gradient_tolerance"] >= control["gradient_arrays"] // 4
+    assert control["worst_relative_delta"] > 1.0, control["worst_relative_delta"]
+
+
 # --------------------------------------------------------------------------- #
 # The comparison itself -- needs the PyTorch transcription (gauntlet 2.4).
 # --------------------------------------------------------------------------- #
@@ -208,4 +236,13 @@ def test_gradients_wrt_w_sent_match_jax_reference():
 
 @pytestmark_transcription
 def test_gradients_wrt_transformer_params_match_jax_reference():
+    raise NotImplementedError("gauntlet 2.4.")
+
+
+@pytestmark_transcription
+def test_a_detached_pytorch_model_fails_the_gradient_check():
+    """The other half of 2.3's positive control, on the transcription rather than
+    on the tolerance: a PyTorch TG built with `detach_sreps_for_memory=True` must
+    **fail** against these fixtures. If it passed, the gradient check would be
+    measuring nothing about graph retention."""
     raise NotImplementedError("gauntlet 2.4.")

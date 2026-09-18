@@ -34,6 +34,24 @@ Gradients (tolerance `rtol=1e-3, atol=1e-4`):
 * **`W_sent`** -- `srep_head/proj` kernel and bias
 * **transformer parameters** -- embeddings, every block, the output LayerNorm
 
+## The positive control (gauntlet 2.3)
+
+> *"a deliberately detached variant must **fail** the gradient check."*
+
+The generator also runs the whole thing with `detach_sreps_for_memory=True` -- the
+reference's own ablation switch, whose comment reads *"MUST stay False for the
+recurrence to train: gradients have to flow from later sentences back through
+memory"* -- and records, in the sidecar, how far that moves the gradients.
+
+It is a control on the **tolerance**, not on the transcription: it establishes that
+D-H's `rtol=1e-3, atol=1e-4` can actually separate a retained graph from a severed
+one. Without it, "the gradients match" is compatible with "the gradients are
+insensitive to the thing we are checking."
+
+The control on the transcription is the other half, and it lives in
+`tests/test_fidelity.py`: a PyTorch model built with detach ON must **fail** against
+these fixtures.
+
 ## The two configuration choices that are not the reference's, and why
 
 1. **`M = 8`, not 40.** With 20 sentence steps and `M = 40` the memory never fills,
@@ -67,6 +85,7 @@ place to put one.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import json
 import platform
@@ -233,7 +252,9 @@ def main() -> int:
     )
     params = variables["params"]
     n_params = sum(int(np.prod(p.shape)) for p in jax.tree_util.tree_leaves(params))
-    print(f"parameters: {n_params:,}  (D={cfg.D} H={cfg.H} N={cfg.N} V={cfg.V} M={cfg.M})")
+    print(
+        f"parameters: {n_params:,}  (D={cfg.D} H={cfg.H} N={cfg.N} V={cfg.V} M={cfg.M})"
+    )
 
     # --- forward, with intermediates --------------------------------------- #
     loss_explicit, captured = explicit_loop(params, model, cfg, ids, mask, lengths)
@@ -258,6 +279,57 @@ def main() -> int:
         "/".join(str(k.key) for k in path): np.asarray(v)
         for path, v in jax.tree_util.tree_flatten_with_path(grads)[0]
     }
+
+    # --- the positive control: sever the S_REP -> STM graph ------------------ #
+    cfg_det = dataclasses.replace(cfg, detach_sreps_for_memory=True)
+    model_det = tg_model.ThoughtGestaltDo(cfg_det)
+    loss_det = loss_through_reference_loop(params, model_det, cfg_det, ids, mask, lengths)
+    grads_det = jax.grad(loss_through_reference_loop)(
+        params, model_det, cfg_det, ids, mask, lengths
+    )
+    flat_det = {
+        "/".join(str(k.key) for k in path): np.asarray(v)
+        for path, v in jax.tree_util.tree_flatten_with_path(grads_det)[0]
+    }
+    g_rtol, g_atol = 1e-3, 1e-4  # ADR-0002's gradient tolerance
+    outside, worst_key, worst_rel = 0, None, 0.0
+    for key, g in flat_grads.items():
+        if np.allclose(g, flat_det[key], rtol=g_rtol, atol=g_atol):
+            continue
+        outside += 1
+        denom = float(np.abs(flat_det[key]).max()) or 1.0
+        rel = float(np.abs(g - flat_det[key]).max()) / denom
+        if rel > worst_rel:
+            worst_key, worst_rel = key, rel
+    control = {
+        "description": (
+            "detach_sreps_for_memory=True severs the S_REP -> STM graph. The "
+            "forward pass is unchanged; only the backward pass is. If the loss "
+            "below is identical and the gradient count is large, D-H's gradient "
+            "tolerance can separate a retained graph from a severed one."
+        ),
+        "loss_retained": float(loss_reference),
+        "loss_detached": float(loss_det),
+        "forward_identical": float(loss_reference) == float(loss_det),
+        "gradient_arrays": len(flat_grads),
+        "arrays_outside_gradient_tolerance": outside,
+        "tolerance": {"rtol": g_rtol, "atol": g_atol},
+        "worst_array": worst_key,
+        "worst_relative_delta": worst_rel,
+    }
+    print(
+        f"positive control: forward loss identical="
+        f"{control['forward_identical']}, {outside}/{len(flat_grads)} gradient "
+        f"arrays outside D-H, worst {worst_key} at {worst_rel:.3f}"
+    )
+    if not control["forward_identical"] or outside < len(flat_grads) // 4:
+        print(
+            "ABORT: the positive control is not a control. Either detaching moved "
+            "the forward pass (so the comparison is not isolating the graph), or "
+            "it barely moved the gradients (so the tolerance cannot detect it).",
+            file=sys.stderr,
+        )
+        return 1
 
     payload: dict[str, np.ndarray] = {}
 
@@ -327,8 +399,15 @@ def main() -> int:
         "device": str(jax.devices()[0]),
         "tg_pin": "f220b1098d24a02c94907043d6205c113b31ebb6",
         "config": {
-            "D": cfg.D, "H": cfg.H, "N": cfg.N, "V": cfg.V, "M": cfg.M,
-            "L": cfg.L, "steps": N_STEPS, "batch": BATCH, "seed": SEED,
+            "D": cfg.D,
+            "H": cfg.H,
+            "N": cfg.N,
+            "V": cfg.V,
+            "M": cfg.M,
+            "L": cfg.L,
+            "steps": N_STEPS,
+            "batch": BATCH,
+            "seed": SEED,
             "srep_extraction_layer": cfg.srep_extraction_layer,
             "srep_norm_target": cfg.srep_norm_target,
             "block_config": list(cfg.block_config),
@@ -340,13 +419,17 @@ def main() -> int:
         "bytes": args.out.stat().st_size,
         "sha256": digest,
         "steps_with_full_memory": n_evictions,
+        "detach_positive_control": control,
         "activation_keys": block_keys,
         "cross_attention_keys": xattn_keys,
         "grad_keys": sorted(flat_grads),
     }
     args.out.with_suffix(".json").write_text(json.dumps(meta, indent=2) + "\n")
 
-    print(f"wrote {args.out} ({args.out.stat().st_size / 1e6:.2f} MB, {len(payload)} arrays)")
+    print(
+        f"wrote {args.out} ({args.out.stat().st_size / 1e6:.2f} MB, "
+        f"{len(payload)} arrays)"
+    )
     print(f"sha256 {digest}")
     print(f"steps at full memory (i.e. evicting): {n_evictions} of {N_STEPS}")
     norms = np.linalg.norm(payload["gestalts"], axis=-1)

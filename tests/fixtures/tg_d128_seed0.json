@@ -38,6 +38,20 @@
   "bytes": 23481749,
   "sha256": "79edafe967efff900ab3fe2d10a15cd7757398289a89f672588aad5efd2cd4e8",
   "steps_with_full_memory": 12,
+  "detach_positive_control": {
+    "description": "detach_sreps_for_memory=True severs the S_REP -> STM graph. The forward pass is unchanged; only the backward pass is. If the loss below is identical and the gradient count is large, D-H's gradient tolerance can separate a retained graph from a severed one.",
+    "loss_retained": 125.310546875,
+    "loss_detached": 125.310546875,
+    "forward_identical": true,
+    "gradient_arrays": 206,
+    "arrays_outside_gradient_tolerance": 113,
+    "tolerance": {
+      "rtol": 0.001,
+      "atol": 0.0001
+    },
+    "worst_array": "blocks_1/memory_gate",
+    "worst_relative_delta": 2.7234232097279922
+  },
   "activation_keys": [
     "blocks_0/__call__",
     "blocks_1/__call__",
