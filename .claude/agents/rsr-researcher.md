@@ -26,9 +26,13 @@ You run **one experiment**, in detail, and report it. You do not decide what run
 does, and that separation is the whole safety argument.
 
 ```bash
-export ORCH_PROJECT=rsr
 cd ~/retrieval-successor-retention
 ```
+
+⚠️ **Nothing on the Mac Studio reads `ORCH_PROJECT`** — there is no orchestrator there, no
+`~/.claude/helpers`, and no `.orchestrator/` in this repo. `grep -rn ORCH_PROJECT` returns prose
+only, in four markdown files, with not one consumer. The line that used to open this block was
+inert; the cycle protocol is the whole mechanism.
 
 🔴 **`/opt/homebrew/bin/git`, never bare `git`.** Apple's refuses to run until a licence prompt is
 accepted and it fails in a way that looks like an **empty answer rather than an error**. That has
