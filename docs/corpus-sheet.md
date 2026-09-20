@@ -21,9 +21,9 @@ explicitly secondary**, and the spec says so.
 
 | | |
 |---|---|
-| **Mac Studio** — M4 Max, 64 GB, 16 cores, 736 GB free | `keanooo7@100.81.77.20`. The training machine. Repo at `~/retrieval-successor-retention`, pushed to `github.com/Keanooo7/retrieval-successor-retention` (private). |
+| **Mac Studio** — M4 Max, 64 GB, 16 cores, 736 GB free | `<studio>`. The training machine. Repo at `~/retrieval-successor-retention`, pushed to `github.com/Keanooo7/retrieval-successor-retention`. |
 | **MacBook Pro** — 16 GB | This machine. Advisory only. **No memory or throughput number measured here transfers.** Second repo at `~/Documents/GitHub/retrieval-successor-retention` — ✅ **given a remote 2026-09-18**; its 13 commits are pushed to branch `macbook-local-2026-09-18`. It has an **unrelated history** to `main` and is not mergeable by fast-forward. |
-| Link | Tailscale + SSH key installed. `ssh keanooo7@100.81.77.20` works. Thunderbolt cable is plugged in but **unconfigured** (no address), so traffic relays the long way — ~218 ms between two machines on one desk. |
+| Link | Tailscale + SSH key installed. `ssh <studio>` works (`<studio>` is a private tailnet address; substitute your own). Thunderbolt cable is plugged in but **unconfigured** (no address), so traffic relays the long way — ~218 ms between two machines on one desk. |
 
 🔴 **Use `/opt/homebrew/bin/git` on the Studio, never bare `git`.** Apple's git refuses to run until
 an Xcode licence prompt is accepted, and it fails in a way that looks like an **empty answer rather
@@ -57,7 +57,7 @@ MacBook's 13 commits are preserved as their own branch; trunk is the Studio's `m
 🔴 **The Studio can now train. The line "nothing in either repository can train anything
 today" was true on 2026-09-17 and is false now** — `src/rsr/train/loop.py` exists and runs.
 What it trains is a separate question, and a bad one: see the five confirmed defects in
-`Projects/RSR/HANDOFF-2026-09-18.md` §5.
+`docs/lab-notes/HANDOFF-2026-09-18.md` §5.
 
 ### What is real vs stub, on the Studio — re-measured 2026-09-18
 
@@ -177,8 +177,8 @@ The single most useful question: **"show me the command you ran and what it prin
 Quick independent checks:
 
 ```bash
-ssh keanooo7@100.81.77.20 'cd ~/retrieval-successor-retention && /opt/homebrew/bin/git log --oneline | head'
-ssh keanooo7@100.81.77.20 'cd ~/retrieval-successor-retention && .venv/bin/pytest -q -rs --tb=no | tail -5'
+ssh <studio> 'cd ~/retrieval-successor-retention && /opt/homebrew/bin/git log --oneline | head'
+ssh <studio> 'cd ~/retrieval-successor-retention && .venv/bin/pytest -q -rs --tb=no | tail -5'
 ```
 
 ---

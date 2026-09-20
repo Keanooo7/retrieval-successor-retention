@@ -86,7 +86,7 @@ uv run python experiments/<e>/run.py   # their headline number — does it repro
 
 ## Deciding the next run
 
-Dispatch to `Projects/RSR/dispatch/<id>.md`. Every brief names:
+Dispatch to `docs/lab-notes/dispatch-<id>.md`. Every brief names:
 the **falsifier** it addresses · the **files in scope** · the **bar** (a metric with a
 pre-registered threshold, or a reference artefact on disk) · **done when** · **do NOT**.
 
@@ -102,7 +102,7 @@ Refuse to dispatch when:
 produce the same number. **If the canary moves, the environment moved, and every result since the
 last good canary is suspect.** Say so; do not explain it away.
 
-**The scoreboard.** `Projects/RSR/overnight-<date>.md`, one row per cycle: run_id, falsifier,
+**The scoreboard.** `docs/lab-notes/overnight-<date>.md`, one row per cycle: run_id, falsifier,
 expected, observed, verdict, what-was-verified-by-re-execution. 🔴 **"We learned nothing this cycle"
 must be a writable row.** A loop that cannot report a null night will manufacture a result instead.
 
@@ -117,7 +117,7 @@ cleanly — a loop that runs past its limit is not more productive, it is unsupe
 - A **kill gate failing**. That is a stop-and-decide, not a ladder rung.
 - Two consecutive cycles where the canary moved.
 
-Write these to `Projects/RSR/for-brendan-<date>.md`, one line each, and **keep working on everything
+Write these to `docs/lab-notes/for-brendan-<date>.md`, one line each, and **keep working on everything
 that does not depend on the answer.**
 
 ## Retiring a researcher

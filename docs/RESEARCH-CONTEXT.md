@@ -25,7 +25,7 @@ Read §1–§3 always. Then jump:
 | quote a number | §9, §11 — and resolve it to a ledger key or a command |
 | run an experiment | §6, §10, §14 |
 | change a constant, threshold, bucket edge or arm | §12, §13 — almost certainly **stop** |
-| write a brief | §14, `Projects/RSR/dispatch/overnight-2026-09-19.md` §6 |
+| write a brief | §14, `docs/lab-notes/overnight-2026-09-19.md` §6 |
 | reason about hardware or cost | §5 |
 
 🔴 **Three things are never yours.** Spec §15 (§13.1), the E0i signature (§13.2), and the six owner
@@ -956,7 +956,7 @@ while its prose is not.** An audit re-derived the load-bearing claims. These fai
 | **"50 escalations"** | it was **54** | — |
 | **"every number traces to a ledger row"** | **false**, and it fails first at the canary headline itself — cycle 4's four advertising numbers appear in no ledger | — |
 
-🔴 **If you are about to repeat a number from `Projects/RSR/overnight-2026-09-18.md` or
+🔴 **If you are about to repeat a number from `docs/lab-notes/overnight-2026-09-18.md` or
 `morning-2026-09-18.md`, resolve it to a ledger key first. If it has no key it is a claim, not a
 measurement, and it does not go in any output.** Join on `run_id`, **not on `cycle`** — the
 experiment ledgers' `cycle` field runs one behind the scoreboard's numbering, two runs collide on
@@ -1036,7 +1036,7 @@ must be rederivable from the primary sources **without reference to the review t
 
 🔴 **Do not sign `preregistration/e0i_threshold.md`.** It says **"AWAITING SIGNATURE — NOT IN FORCE
 UNTIL SIGNED"** and *"it must be signed by a person, and that person is not a model."*
-⚠️ **`Projects/RSR/HANDOFF-2026-09-18.md`'s document table calls it "signed." The handoff is wrong
+⚠️ **`docs/lab-notes/HANDOFF-2026-09-18.md`'s document table calls it "signed." The handoff is wrong
 and the file is right.**
 
 *A name written there by an agent would make the document look committed-to while binding nobody,
@@ -1125,9 +1125,9 @@ for them.** Make correcting the brief a requirement, not a courtesy.
 
 | | |
 |---|---|
-| **Mac Studio** — M4 Max, 64 GB | `keanooo7@100.81.77.20` (Tailscale). **The training machine. All training happens here.** Repo at `~/retrieval-successor-retention` |
+| **Mac Studio** — M4 Max, 64 GB | `<studio>` (Tailscale). **The training machine. All training happens here.** Repo at `~/retrieval-successor-retention` |
 | **MacBook Pro** — 16 GB | Advisory. 🔴 **No memory or throughput number measured here transfers.** |
-| Remote | `github.com/Keanooo7/retrieval-successor-retention` (private) |
+| Remote | `github.com/Keanooo7/retrieval-successor-retention` |
 
 🔴 **Two histories, no common ancestor.** The Studio's is trunk (`origin/main`); the MacBook's 13
 commits were scaffolded independently and are preserved as `origin/macbook-local-2026-09-18`.
@@ -1167,9 +1167,9 @@ it stops at a password screen and is unreachable until someone types it in physi
 | Sprint 1 report | `experiments/GATE-1.md` |
 | Per-experiment results | `experiments/e0*/RESULTS.md` |
 | The pinned TG reference and its known defects | `third_party/PINS.md` |
-| 🔴 **Where the project stands, with the audit's corrections** | `Projects/RSR/HANDOFF-2026-09-18.md` |
-| The overnight record | `Projects/RSR/overnight-2026-09-18.md`, `morning-2026-09-18.md`, `for-brendan-2026-09-18.md` (⚠️ §11) |
-| The next run's contract | `Projects/RSR/dispatch/overnight-2026-09-19.md` |
+| 🔴 **Where the project stands, with the audit's corrections** | `docs/lab-notes/HANDOFF-2026-09-18.md` |
+| The overnight record | `docs/lab-notes/overnight-2026-09-18.md`, `morning-2026-09-18.md`, `for-brendan-2026-09-18.md` (⚠️ §11) |
+| The next run's contract | `docs/lab-notes/overnight-2026-09-19.md` |
 | Two sessions compared, and who was right | `docs/decision-review.md` |
 | The path to a first training run | `docs/gauntlet-to-first-training.md` |
 | A plain-language account of the project | `docs/RSR-end-of-day-2026-09-17.md` |

@@ -51,8 +51,9 @@ def _git(*args: str) -> str:
     already produced one false "everything is clean" report on this machine."""
     for exe in ("/opt/homebrew/bin/git", "git"):
         try:
-            r = subprocess.run([exe, *args], cwd=_REPO, capture_output=True,
-                               text=True, timeout=15)
+            r = subprocess.run(
+                [exe, *args], cwd=_REPO, capture_output=True, text=True, timeout=15
+            )
         except (OSError, subprocess.SubprocessError):
             continue
         if r.returncode == 0:
@@ -92,27 +93,32 @@ class Ledger:
 
     # -- what was run -------------------------------------------------------- #
 
-    def command(self, argv: list[str] | str, *, exit_code: int | None = None,
-                note: str = "") -> None:
+    def command(
+        self, argv: list[str] | str, *, exit_code: int | None = None, note: str = ""
+    ) -> None:
         """The literal command line. A ledger without one cannot be re-executed,
         and re-execution is how the manager verifies a claim."""
-        self.doc["commands"].append({
-            "argv": argv if isinstance(argv, str) else " ".join(argv),
-            "exit_code": exit_code,
-            "note": note,
-            "at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        })
+        self.doc["commands"].append(
+            {
+                "argv": argv if isinstance(argv, str) else " ".join(argv),
+                "exit_code": exit_code,
+                "note": note,
+                "at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
+        )
 
     # -- numbers ------------------------------------------------------------- #
 
     def note(self, key: str, value: Any, *, how: str) -> None:
         """One observed value. `how` says which artefact it was read out of, so a
         reader can go and look at that artefact instead of trusting the row."""
-        self.doc["rows"].append({"key": key, "kind": "observation",
-                                 "value": value, "how": how})
+        self.doc["rows"].append(
+            {"key": key, "kind": "observation", "value": value, "how": how}
+        )
 
-    def stat(self, key: str, samples: list[float], *, how: str,
-             allow_single: bool = False) -> dict[str, Any]:
+    def stat(
+        self, key: str, samples: list[float], *, how: str, allow_single: bool = False
+    ) -> dict[str, Any]:
         """Mean and sample sd over `samples`, with the samples kept.
 
         Refuses one sample unless asked explicitly, and never reports `sd = 0.0`
@@ -131,8 +137,13 @@ class Ledger:
         else:
             sd = math.sqrt(sum((x - mean) ** 2 for x in xs) / (len(xs) - 1))
         row = {
-            "key": key, "kind": "statistic", "n": len(xs),
-            "samples": xs, "mean": mean, "sd": sd, "how": how,
+            "key": key,
+            "kind": "statistic",
+            "n": len(xs),
+            "samples": xs,
+            "mean": mean,
+            "sd": sd,
+            "how": how,
             "sd_exactly_zero": sd is not None and sd == 0.0,
         }
         self.doc["rows"].append(row)
@@ -148,10 +159,14 @@ class Ledger:
         `inconclusive`, and saying so is the honest row.
         """
         if outcome not in {"survived", "falsified", "inconclusive"}:
-            raise ValueError(f"outcome={outcome!r} is not one of "
-                             f"survived / falsified / inconclusive")
-        self.doc["verdict"] = {"falsifier": falsifier, "outcome": outcome,
-                               "detail": detail}
+            raise ValueError(
+                f"outcome={outcome!r} is not one of survived / falsified / inconclusive"
+            )
+        self.doc["verdict"] = {
+            "falsifier": falsifier,
+            "outcome": outcome,
+            "detail": detail,
+        }
 
     def write(self) -> Path:
         self.doc["finished_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

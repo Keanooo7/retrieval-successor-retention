@@ -1,5 +1,14 @@
 # Gates and ratchets
 
+> WARNING: **THIS IS A SPECIFICATION OF INTENT, NOT A DESCRIPTION OF THIS TREE.**
+> The ratchet machinery below arrived by a port from the app pipeline and is **not
+> implemented here**: there is no `src/rsr/gates/`, no `.rsr/` directory, and
+> `REGISTRY.unset()` -- which the last ratchet row names -- does not exist.
+> **Do not report a ratchet as checked because this file lists it.** The mutation
+> evidence and the exit-code taxonomy below are real and are used; the floor table
+> is a plan. Checked 2026-09-20 at `b572ad6`.
+
+
 Two rules govern everything here, both borrowed from the app pipeline this project's orchestration
 is ported from:
 
