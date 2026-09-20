@@ -425,8 +425,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "exit_code gets a default",
         "test_exit_code_is_required",
         "scripts/ledger.py",
-        "    def command(self, argv: list[str] | str, *, exit_code: int | None,",
-        "    def command(self, argv: list[str] | str, *, exit_code: int | None = None,",
+        # 📌 Re-anchored 2026-09-20 (cycle 1). The old one-line form of this
+        # signature was reflowed by the Studio/trunk merge (4ece429), and because
+        # `apply()` raises on a stale anchor the battery **aborted at this entry**
+        # -- so every mutation after it, including the 13 that follow, had not
+        # been running since that merge. The brief's revalidation checked that
+        # `off_gate_allowed` existed and declared bar item 2 "executable as
+        # written"; it did not run the battery.
+        '        *,\n        exit_code: int | None,\n        note: str = "",',
+        '        *,\n        exit_code: int | None = None,\n        note: str = "",',
         "5.1: seven of 13 ledgers carried `exit_code: null` by omission",
     ),
     Mutation(

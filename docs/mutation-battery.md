@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**36/36 gates proven.**
+**37/37 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -48,6 +48,7 @@
 | the mutation table is field-shifted again | `test_the_mutation_table_is_well_formed_without_a_runtime_repair` | **PROVEN** | 0 | 0 |
 | a first canary reading exits 0 again | `test_a_first_canary_reading_exits_3_not_0` | **PROVEN** | 0 | 0 |
 | a truncated canary run is compared over the overlap | `test_a_length_mismatch_is_a_move` | **PROVEN** | 0 | 0 |
+| the training loss scores padding again | `test_lm_loss` | **PROVEN** | 0 | 0 |
 
 ## What each mutation breaks, and what else went red
 
@@ -381,6 +382,14 @@ Reddened nothing else.
 **Gate:** `test_a_length_mismatch_is_a_move` — **PROVEN**
 
 5.4: a run that produced 2 of 6 beats reports "held"
+
+Reddened nothing else.
+
+### the training loss scores padding again
+
+**Gate:** `test_lm_loss` — **PROVEN**
+
+cycle 1 defect 1: the objective goes back to averaging over every target, 93.4% of which are PAD on the committed synthetic corpus -- so the number minimised, reported and exponentiated into a perplexity is mostly the model's skill at predicting zeros
 
 Reddened nothing else.
 

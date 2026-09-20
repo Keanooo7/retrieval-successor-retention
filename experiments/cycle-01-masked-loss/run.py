@@ -399,10 +399,7 @@ def write_ledger(out: dict, led) -> Path:
             stats[f"{arm}.{key}"] = led.stat(
                 f"{arm}.{key}_final",
                 samples,
-                how=(
-                    f"heartbeat final beat, field {key}, seeds {SEEDS}, "
-                    f"replicate a"
-                ),
+                how=(f"heartbeat final beat, field {key}, seeds {SEEDS}, replicate a"),
             )
         led.stat(
             f"{arm}.loss_first_beat",
