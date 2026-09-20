@@ -10,9 +10,14 @@ It was run early because the spec's GPU budget, its baseline definitions and two
 all descend from claims about [P2], [P5] and [P6]. Building on an unchecked number is how a week-2
 task becomes a week-9 rewrite.
 
-**Scope of this pass:** [P2], [P5], [P6], [P7]. The primary sources were fetched and read.
-[P1], [P3], [P4], [P8]–[P14] are **not yet checked** and are listed at the bottom as outstanding.
-This audit does not discharge §1's note until they are.
+**Scope of pass 1 (2026-09-17):** [P2], [P5], [P6], [P7].
+
+**Scope of pass 2 (2026-09-20):** [P1], [P3], [P4], [P8], [P10], [P11], [P12], [P13], [P14].
+Primary sources fetched and read. **[P9] (DNC) remains unchecked** and is the only one left.
+
+CRITICAL: **[P11] did not survive.** Three of the spec's statements about Kintsch & van Dijk are
+wrong, one of them load-bearing for E7's design. Corrections 25-27. The rest of pass 2 produced
+one cross-reference error, two omitted boundary conditions, and one missing prior work.
 
 ---
 
@@ -193,15 +198,177 @@ runs in the direction that protects the project, which is the wrong direction fo
 
 ---
 
-## Outstanding — not yet checked
+## [P11] Kintsch & van Dijk 1978; Thorndyke 1977 — **the spec is wrong in three places**
 
-[P1] Cho & McClelland · [P3] Dayan 1993 · [P4] Tensor Programs V · [P8] Compressive Transformer ·
-[P9] DNC · [P10] Scissorhands · [P11] Kintsch & van Dijk 1978 / Thorndyke 1977 ·
-[P12] Dunsmoor et al. 2015 / Braun et al. 2018 · [P13] Frey & Morris 1997 · [P14] StreamingLLM.
+Source read in full: *Toward a model of text comprehension and production*, **Psychological Review
+85(5), 363–394**, doi:10.1037/0033-295X.85.5.363 — scan with a text layer at
+`https://www.cl.cam.ac.uk/teaching/1516/R216/Towards.pdf`.
 
-**[P11] is the highest-value remaining check** — it is now §2's framing, the named ancestor, and an
-*implemented baseline*, so the implementation depends on reading it. **[P4] is second** — §4.3 is the
-one passage the spec claims as the author's own (§15.3), and §15.1 requires deriving it from [P4]
-directly.
+### The leading-edge strategy, verbatim (p. 379)
 
-⚠️ **§1's verification note stays in the spec until this list is empty.** It is not discharged.
+> *"The 'leading-edge strategy,' originally proposed by Kintsch and Vipond (1978), does exactly
+> that. It consists of the following scheme. Start with the top proposition in Figure 1 and pick
+> up all propositions along the graph's lower edge, as long as each is more recent than the
+> previous one (i.e., the index numbers increase); next, go to the highest level possible and pick
+> propositions in order of their recency (i.e., highest numbers first); stop whenever s
+> propositions have been selected."*
+
+### Corrections — the spec states these wrongly
+
+| # | Spec says | [P11] says | Where |
+|---|---|---|---|
+| **25** | §10.1: the levels effect holds *"largely independently of recency"* | The strategy *"emphasizes recency and frequency"*. Footnote 6: a **levels-plus-primacy** strategy fits **23% worse** than leading-edge on the same data. **Recency is one of the two selection criteria, not a confound** | spec line 641 |
+| **26** | §5.4 and §11: keep those *"highest in the macrostructure"* | The strategy runs on the **microstructure coherence graph** (argument overlap), cycle by cycle. KvD explicitly disclaim the other reading: *"Note that the procedure is strictly formal: There is no claim that topmost propositions are always most important or relevant in a more intuitive sense. That will be taken care of with the macro-operations described below."* | spec lines 517, 686 |
+| **27** | "Kintsch & van Dijk's leading-edge strategy" | *"originally proposed by **Kintsch and Vipond (1978)**"*. KvD implement it; they do not propose it | throughout |
+
+Minor, same source: the reinstatement trigger is *"if there exists some argument overlap between
+the input set and the contents of the short-term memory buffer"* — a cycle-level coherence failure,
+not "a needed proposition has been dropped" (spec line 686).
+
+### KEY: Three things the spec is leaving on the table
+
+1. **A published human-fit buffer capacity.** *"The statistics reported above were calculated for
+   an arbitrarily chosen value of s = 4. For s = 10, the minimum chi-square increases drastically,
+   and the model no longer can fit the data. On the other hand, for s = 1, 2, or 3, the minimum
+   chi-squares are only slightly larger."* **`s ≈ 1–4` is a fitted human capacity**, and it
+   justifies E7 at `M = 8` far better than §10.1's current argument from eviction pressure.
+2. **The model's own recall predictor is survival time.** *"if a proposition is selected k − 1
+   times for inclusion in the short-term memory buffer, it has k chances of being stored in
+   long-term memory, and hence, its reproduction probability will be 1 − (1 − p)^k."* E7's
+   dependent measure is already the right one; the spec should say so, with the formula.
+3. **A published baseline ranking to compare against.** Footnote 6: recency-only **+43%** minimum
+   chi-square, levels-plus-primacy **+23%**, random rejected at **χ²(34) = 113.77**. So
+   *leading-edge > levels+primacy > recency-only > random*, on human data, in 1978. A
+   pure-structural policy is **worse** than the recency+structure hybrid — which is directly
+   relevant to what RSR should be expected to rediscover.
+
+### Thorndyke is a different hierarchy, and [P11] bundles them
+
+**Thorndyke (1977)**, *Cognitive Psychology* 9(1), 77–110, doi:10.1016/0010-0285(77)90005-6 —
+verified via ERIC EJ154360; full text not read. Thorndyke's hierarchy is a **story grammar**
+(setting / theme / plot / resolution). KvD's is an **argument-overlap coherence graph over
+propositions**. Different objects, different rankings. E0g's stimulus selection has to pick one and
+say which, and report the correlation between them. ⚠️ Currently [P11] cites both as one claim.
+
+### WARNING: TG does not cite Kintsch & van Dijk
+
+Checked against arXiv:2512.25026v2. TG's discourse-memory citations are the **situation-model**
+tradition — Radvansky & Zacks 2011 [18], Jarvella 1971 [19], Zwaan 2016 [20] — plus the Sentence
+Gestalt model, St. John & McClelland 1990 [21]. **The spec may not say "TG builds on Kintsch."**
+Adding the citation TG's own framing implies is a contribution; describing it as inherited is not.
+
+---
+
+## [P3] Dayan 1993 — clean
+
+*Improving generalization for temporal difference learning: the successor representation*, **Neural
+Computation 5(4), 613–624**, doi:10.1162/neco.1993.5.4.613. Generalization between states should
+follow the similarity of their **successors**; the SR is learnable by TD. No correction.
+
+NOTE: For any claim about SR *in general* rather than Dayan's specific result, cite **Carvalho,
+Tomov, de Cothi, Barry & Gershman (2024), "Predictive Representations: Building Blocks of
+Intelligence," Neural Computation 36(11), 2225–** — the current review of record.
+
+---
+
+## [P12] Dunsmoor et al. 2015; Braun et al. 2018 — accurate, but the spec omits the boundary conditions
+
+**Dunsmoor, Murty, Davachi & Phelps (2015)**, *Nature* 520(7547), 345–348, doi:10.1038/nature14106.
+The spec's §10.2 gloss is faithful. The abstract's next sentence is not in the spec:
+
+> *"Retroactive enhancements as a result of emotional learning were observed **following a period
+> of consolidation**, but were **not observed in an immediate memory test** or for items strongly
+> encoded before fear conditioning."*
+
+CRITICAL: **This cuts against §10.2's mapping.** RSR recomputes `ψ̂(s_i, c_t)` at **every step** —
+the immediate condition, which is precisely where the human effect is **absent**. Either state the
+disanalogy in §13 or argue explicitly that the transferable claim is computational (retention value
+is revisable by later context) and the consolidation timescale is not part of it. A reviewer who
+knows this paper will raise it.
+
+**Braun, Wimmer & Shohamy (2018)**, *Nature Communications* 9:4886, doi:10.1038/s41467-018-07280-0.
+Same structure, same delay dependence — and the prioritization is **graded by distance from
+reward**, which is an SR-discount-shaped result the spec does not currently use.
+
+---
+
+## [P13] Frey & Morris 1997 — faithful
+
+*Synaptic tagging and long-term potentiation*, **Nature 385(6616), 533–536**, doi:10.1038/385533a0.
+The spec's gloss is accurate. Two details to add where §10.2 makes the mapping: **the tag decays in
+under three hours**, and capture is a **competition for a limited diffusible protein pool**
+triggered by a strong event at *another* input. The analogy is about **revisability**, not about
+value recomputation, and should be labelled as one.
+
+---
+
+## [P8] Compressive Transformer · [P10] Scissorhands · [P14] StreamingLLM — titles and claims confirmed
+
+| Ref | Source | Note |
+|---|---|---|
+| [P8] | Rae, Potapenko, Jayakumar & Lillicrap, *Compressive Transformers for Long-Range Sequence Modelling*, arXiv:1911.05507 (2019-11-13), **ICLR 2020** | Introduced PG-19; "compress rather than evict" confirmed. The spec's "(2020)" is the ICLR year; cite consistently |
+| [P10] | Liu, Desai, Liao et al., *Scissorhands: Exploiting the Persistence of Importance Hypothesis for LLM KV Cache Compression at Test Time*, arXiv:2305.17118, **NeurIPS 2023** | Hypothesis name and test-time framing confirmed from the title. ⚠️ **The magnitude was not read, and §14 Q4 makes it the pivot** — if past attention predicts future attention nearly perfectly, RSR's delta over H2O is small by construction. Read the numbers before E1 |
+| [P14] | Xiao, Tian, Chen, Han & Lewis, *Efficient Streaming Language Models with Attention Sinks*, arXiv:2309.17453, **ICLR 2024** | Attention-sink claim confirmed; body not read |
+
+---
+
+## [P4] Tensor Programs V — the citation is right, a **cross-reference** to it is wrong
+
+**Yang, Hu et al. (2022)**, arXiv:2203.03466. μP / zero-shot hyperparameter transfer across width.
+Correct where §4.3 uses it.
+
+CRITICAL: **§15.1 cites [P4] for something [P4] does not contain.** It asks whether the author can
+derive, *"from [P4] and from what `detach` does to the gradient,"* why the CLS mapping is inverted.
+μP is about HP transfer across width; it says nothing about gradient flow through a detached memory
+write. **That argument comes from [P2] Appendix A.** Recorded as **correction 28** rather than
+edited in place: §15 states it must not be filled by a reviewer, an advisor, or a model, and a
+citation swap inside it is still an edit to it. NOTE: **For the author, not for an agent.**
+
+---
+
+## [P1] Cho & McClelland 2026 — exists, now at v3
+
+*Capturing rapid learning in an extended successor representation theory of the cognitive map*,
+**bioRxiv, v3 posted 2026-02-25**. Extends the SR by weighting with **perceived salience** signals
+and relies on **behavioural timescale synaptic plasticity** for one-shot place-field formation.
+
+✅ §10.2's framing contrast is **correct**: [P1] weights at **encoding**; RSR weights **after**
+encoding. ⚠️ **Figures 3f–g were not read**, and spec line 300 cites them for the
+over-representation / router-collapse claim. Open the PDF before week 4. NOTE: it is on its **third
+revision**, so §1's "may change materially" caveat has already come true twice.
+
+---
+
+## Prior work the spec does not cite, and should
+
+**Immertreu, Schilling, Kinfe & Krauss (2026)**, *Word Class Representations Spontaneously Emerge
+from Successor Representations Trained on Natural Language*, **arXiv:2605.24585** (2026-05-23).
+Trains a network on WikiText-103 to predict future word distributions across multiple temporal
+horizons instead of the next token; noun/verb/adjective structure becomes *"separable and
+recoverable through unsupervised clustering"*, with shorter horizons yielding more syntactic and
+longer horizons more semantic structure. **This is the closest published work to RSR's
+"SR over discourse" premise and it is not in the spec.** It belongs in §11.
+
+🔴 **Name collision — keep it out of §11.** "Successor **heads**" (Gould, Ong, Ogden & Conmy, ICLR
+2024) are attention heads that increment ordinal tokens. The paper does not mention successor
+representations or Dayan. Unrelated to [P3].
+
+📌 **A novelty claim that currently holds.** No paper applying a successor representation
+specifically to transformer KV-cache or working-memory eviction was found across roughly six query
+formulations. State it as "to our knowledge" and re-check before submission.
+
+---
+
+## Outstanding — one left
+
+**[P9] DNC** — Graves, Wayne, Reynolds et al. (2016), *Hybrid computing using a neural network with
+dynamic external memory*, Nature 538, 471–476, doi:10.1038/nature20101. **Not fetched.** The spec
+calls it the closest ancestor (*"usage-based allocation with least-used writes"*), so the free-list
+/ usage-vector / least-used wording needs confirming against the paper. One fetch closes it.
+
+Also unverified and worth an hour: **Kintsch & Vipond (1978)**, seen only as an in-text citation in
+[P11]; **Thorndyke 1977** beyond its abstract; **[P1] Figs. 3f–g**; and the bodies of [P10] and
+[P14].
+
+⚠️ **§1's verification note stays in the spec until [P9] is read.** Thirteen of fourteen are now
+checked; it is not yet discharged.

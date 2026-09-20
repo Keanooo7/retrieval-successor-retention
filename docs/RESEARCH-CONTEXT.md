@@ -85,22 +85,33 @@ report R².
 `[P1]`–`[P14]` are the spec's own numbering. **Ten of fourteen were unchecked at drafting** — §1 of
 the spec says so and calls the check (E0f) *"the cheapest risk retirement in the project."*
 
+> 📌 **E0f pass 2 ran 2026-09-20. Thirteen of fourteen are now checked; [P9] (DNC) is the only one
+> left.** The pass was not clean. **[P11] — Kintsch & van Dijk, which is §2's entire framing — is
+> wrong in the spec in three places**, one of them load-bearing for E7's design: the levels effect
+> is *not* "largely independent of recency" (the strategy emphasizes recency, and a
+> levels-plus-primacy variant fits 23% worse than leading-edge on the same data); the strategy runs
+> on the **microstructure** coherence graph, not the macrostructure; and it is **Kintsch & Vipond
+> (1978)**, whom KvD credit. Also: §15.1 cites [P4] for an argument that is in [P2]; §10.2 omits
+> that its own biological evidence is **delay-dependent and absent in immediate test**, which is
+> the condition RSR operates in; and §11 is missing arXiv:2605.24585, the nearest prior work.
+> **Corrections 25–30. Detail in `docs/citation-audit.md`.**
+
 | Ref | Source | Status | Checked against primary source? |
 |---|---|---|---|
-| **[P1]** | Cho & McClelland (2026), extended successor-representation theory of the cognitive map | Preprint, not peer reviewed | ❌ outstanding |
+| **[P1]** | Cho & McClelland (2026), extended successor-representation theory of the cognitive map | Preprint, not peer reviewed | ◐ v3 read; **Figs. 3f–g not read** |
 | **[P2]** | **Borazjanizadeh & McClelland (2026), *Modeling Language as a Sequence of Thoughts*, arXiv:2512.25026v2** | Under review — **the base model** | ✅ **read in full** |
-| **[P3]** | Dayan (1993), successor representation | Published | ❌ outstanding |
-| **[P4]** | Yang & Hu et al., **Tensor Programs V (μP)** | Published | ❌ outstanding — **and §15.1 requires deriving §4.3 from it directly** |
+| **[P3]** | Dayan (1993), successor representation | Published | ✅ read 2026-09-20 |
+| **[P4]** | Yang & Hu et al., **Tensor Programs V (μP)** | Published | ✅ read 2026-09-20. ⚠️ **§15.1 cites it for an argument that is in [P2] App. A** — μP says nothing about gradient flow through a detached write (correction 28) |
 | **[P5]** | Kobayashi et al. (2020), *Attention is Not Only a Weight* | Published | ✅ checked |
 | **[P6]** | Zhang et al. (2023), **H2O: Heavy-Hitter Oracle** | Published — the bar | ✅ checked |
 | **[P7]** | Sukhbaatar et al. (2021), **Expire-Span** | Published — falsifier 6 | ✅ checked |
-| **[P8]** | Rae et al., **Compressive Transformer** (introduced PG-19) | Published | ❌ outstanding. ⚠️ **misdated** — it is arXiv:1911.05507, posted **2019-11-13** (ICLR 2020), not "2020" (correction 12) |
-| **[P9]** | Graves et al. (2016), DNC | Published | ❌ outstanding |
-| **[P10]** | Liu et al. (2023), Scissorhands | Published | ❌ outstanding |
-| **[P11]** | **Kintsch & van Dijk (1978); Thorndyke (1977)** — levels effect | Published — **the cognitive claim** | ❌ outstanding — **highest-value remaining check.** It is §2's framing, the named ancestor, *and* an implemented baseline, so the implementation depends on reading it |
-| **[P12]** | Dunsmoor et al. (2015, *Nature*); Braun, Wimmer & Shohamy (2018) | Published | ❌ outstanding |
-| **[P13]** | Frey & Morris (1997), synaptic tagging and capture | Published | ❌ outstanding |
-| **[P14]** | Xiao et al. (2023), StreamingLLM — attention sinks | Published | ❌ outstanding |
+| **[P8]** | Rae et al., **Compressive Transformer** (introduced PG-19) | Published | ✅ read 2026-09-20. ⚠️ **misdated** — arXiv:1911.05507, posted **2019-11-13** (ICLR 2020), not "2020" (correction 12) |
+| **[P9]** | Graves et al. (2016), DNC | Published | ❌ **the one outstanding** |
+| **[P10]** | Liu et al. (2023), Scissorhands | Published | ◐ title/claim; **body not read** |
+| **[P11]** | **Kintsch & van Dijk (1978); Thorndyke (1977)** — levels effect | Published — **the cognitive claim** | 🔴 **READ 2026-09-20 — AND THE SPEC IS WRONG IN THREE PLACES.** Corrections 25–27: the levels effect is not "largely independent of recency"; the strategy runs on the microstructure coherence graph, not the macrostructure; and it is Kintsch & Vipond (1978). Thorndyke is a **story grammar**, a different hierarchy, and [P11] bundles the two. **TG does not cite KvD at all** |
+| **[P12]** | Dunsmoor et al. (2015, *Nature*); Braun, Wimmer & Shohamy (2018) | Published | 🔴 **read — corr. 29** |
+| **[P13]** | Frey & Morris (1997), synaptic tagging and capture | Published | ✅ read 2026-09-20 |
+| **[P14]** | Xiao et al. (2023), StreamingLLM — attention sinks | Published | ◐ title/claim; body not read |
 
 ⚠️ **§1's verification note stays in the spec until that list is empty.** It is not discharged, and
 the spec says it *"cannot still be here at week 12."*
@@ -491,7 +502,7 @@ measured on a single M4 Max**, and the paper must not imply anything about other
 | **E0c** | Memory/throughput ceiling on the Studio | Resizes everything | ✅ **RUN** |
 | **E0d** | `r_i` vs leave-one-out Δloss | **Yes** | ☐ not run. ⚠️ `metrics/loo.py` is a stub that raises — §3.2.1's truth rule has **no implemented arbiter** |
 | **E0e** | `ū` distribution on a FIFO run → `τ`, `E[lifetime]` → `γ_b` | No | ☐ not run. ⚠️ **E0e MEASURES; it does not freeze `γ_b`** — the scope question is §12.2 |
-| **E0f** | Verify [P5]–[P14] against primary sources | No | ◐ **partial** — [P2],[P5],[P6],[P7] done; ten outstanding (§2) |
+| **E0f** | Verify [P5]–[P14] against primary sources | No | ◐ **pass 2 run 2026-09-20 — 13 of 14 done, [P9] outstanding.** Not clean: corrections 25–30, including three on [P11], the cognitive claim (§2) |
 | **E0g** | Name and obtain the E7 stimulus set | **Yes, for E7** | ✅ **PASS** |
 | **E0h** | Regress `ψ̂(γ=0)` on current cross-attention logits | **Yes** | ☐ not run |
 | **E0i** | Coref histogram over the PG-19 subset, CPU | **Yes — kill gate** | 🔴 **exit 3 — DID NOT RUN.** Pre-registration is **final and UNSIGNED** |

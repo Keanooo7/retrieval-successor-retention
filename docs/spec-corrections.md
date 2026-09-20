@@ -588,3 +588,156 @@ carried strength. Recorded as a question for the authors. **Not a code change.**
   length having been partialled out, and that TG's unit-norm gestalts make the two
   systems' forgetting mechanisms non-comparable without it.
 - **`docs/release-conditions.md`:** condition 4's E7 line.
+
+---
+
+## 25 — §10.1's "largely independently of recency" is false, and E7's design depends on it
+
+**Source:** Kintsch & van Dijk 1978, p. 379 and footnote 6, read in full 2026-09-20 (E0f pass 2).
+
+Spec line 641 says the levels effect holds *"largely independently of recency."* The leading-edge
+strategy **"emphasizes recency and frequency"** — recency is one of its two selection criteria.
+Footnote 6 reports the comparison on the immediate-summary data: against leading-edge, a
+**recency-only** strategy raises the minimum chi-square by **43%**, and a **levels-plus-primacy**
+strategy by **23%** (both highly significant); random is rejected at **χ²(34) = 113.77**.
+
+### Why this is not cosmetic
+
+§10.1 requires E7 to report a partial correlation **controlling for serial position**, on the
+grounds that *"the levels effect is not recency, and neither should the result be."* But the theory
+being tested **predicts a recency component**. A partial correlation that zeroes recency out is
+testing a strawman of the leading-edge strategy, and RSR could reproduce 1978 exactly and still
+score near zero on it.
+
+### Fix — E7 reports three numbers, not two
+
+1. Raw rank correlation between survival time and normed human recall.
+2. Partial, controlling serial position — **kept**, because it separates RSR from FIFO, whose
+   survival time is the deterministic `min(M, S−i)`.
+3. 🔑 **New and primary: the agreement between RSR's survival ordering and the leading-edge
+   strategy's own ordering** on the same passages. That is the actual comparator, and it is the one
+   the claim in §2 is about.
+
+Reading (3) as the headline also makes the published ranking usable as a yardstick: leading-edge >
+levels+primacy > recency-only > random. RSR's position in that ordering is the result.
+
+---
+
+## 26 — the leading-edge strategy runs on the MICROstructure, not the macrostructure
+
+**Source:** same, p. 379.
+
+Spec lines 517 and 686 say the rule keeps propositions *"highest in the macrostructure."* It does
+not. It walks the **microstructure coherence graph**, built from argument overlap, cycle by cycle.
+KvD disclaim the other reading in the same paragraph:
+
+> *"Note that the procedure is strictly formal: There is no claim that topmost propositions are
+> always most important or relevant in a more intuitive sense. That will be taken care of with the
+> macro-operations described below."*
+
+The macro-operators — deletion, generalization, construction, under schema control — are a
+**separate mechanism** applied later.
+
+🔴 **This is an implementation bug waiting to happen.** §11 makes the leading-edge strategy an
+*implemented baseline* and calls it "an afternoon." A baseline that builds a macrostructure is not
+the leading-edge strategy and will not reproduce the 1978 fit. `src/rsr/baselines/leading_edge.py`
+is still a stub; the brief that implements it must specify the coherence graph.
+
+**Two more parameters the implementation needs, both published:** the buffer is `s`, and KvD report
+that `s = 4` fits, `s = 1–3` fit nearly as well, and **`s = 10` fails outright** — *"the minimum
+chi-square increases drastically, and the model no longer can fit the data."* Recall probability is
+**`1 − (1 − p)^k`** for `k` cycles survived, so **survival time is the model's own recall
+predictor** and E7's dependent measure is already the right one.
+
+📌 The fitted human range `s ≈ 1–4` is a better argument for evaluating E7 at `M = 8` than §10.1's
+current one from eviction pressure. Use it in §5.1; it also shrinks precondition 1's problem.
+
+Also minor, same source: the reinstatement search triggers on **absent argument overlap between the
+input set and the buffer** — a cycle-level coherence failure — not on "a needed proposition has been
+dropped" (spec line 686).
+
+---
+
+## 27 — attribution: the leading-edge strategy is Kintsch & Vipond (1978)
+
+KvD 1978, p. 379: *"originally proposed by **Kintsch and Vipond (1978)**."* The spec calls it
+"Kintsch & van Dijk's leading-edge strategy" throughout. KvD 1978 **implements and validates** it;
+it does not propose it. Cite both. ⚠️ Kintsch & Vipond has been seen only as an in-text citation and
+is itself unverified.
+
+**Related, and the reason this matters more than a footnote:** [P11] bundles Kintsch & van Dijk with
+**Thorndyke (1977)**, and they are different hierarchies — an argument-overlap coherence graph over
+propositions versus a **story grammar** (setting / theme / plot / resolution). They produce different
+rankings. E0g's stimulus selection must pick one, say which, and report the correlation between them.
+
+🔴 **And TG does not cite Kintsch & van Dijk at all.** Checked against arXiv:2512.25026v2: TG's
+discourse-memory citations are the situation-model tradition (Radvansky & Zacks, Jarvella, Zwaan)
+plus the Sentence Gestalt model. **The spec may not describe the KvD connection as inherited from
+TG.** Making it is a contribution; inheriting it is a false claim.
+
+---
+
+## 28 — §15.1 cites [P4] for an argument that is in [P2]
+
+**For the author. Not a code change, and deliberately not edited in place.**
+
+§15.1 asks whether the author can derive, *"from **[P4]** and from what `detach` does to the
+gradient,"* why the CLS mapping in §3.6 is inverted. [P4] is Tensor Programs V — μP, zero-shot
+hyperparameter transfer across width. It says nothing about gradient flow through a detached memory
+write. That argument is in **[P2] Appendix A**.
+
+Recorded here rather than fixed in the spec because §15 states it *"must not be filled by a
+reviewer, an advisor, or a model,"* and swapping a citation inside it is still editing it. The
+author should make the change.
+
+---
+
+## 29 — §10.2 omits the boundary conditions on its own biological evidence
+
+**Source:** Dunsmoor, Murty, Davachi & Phelps (2015), *Nature* 520:345–348, abstract read
+2026-09-20; Braun, Wimmer & Shohamy (2018), *Nat Commun* 9:4886.
+
+§10.2 cites [P12] as a *"biological existence proof"* for retroactive prioritization. The gloss is
+accurate; the abstract's next clause is not in the spec:
+
+> *"Retroactive enhancements as a result of emotional learning were observed **following a period of
+> consolidation**, but were **not observed in an immediate memory test** or for items strongly
+> encoded before fear conditioning."*
+
+🔴 RSR recomputes `ψ̂(s_i, c_t)` at **every step** — the immediate condition, which is exactly where
+the human effect is **absent**. Braun et al. has the same delay dependence (24 hours).
+
+**Fix — §13, not §10.2.** The claim survives in its computational form: retention value is
+*revisable by later context*, and no accumulated-past-attention method has that property. The
+**timescale does not transfer**, and §13 must say so rather than leaving a reviewer to find it.
+Braun additionally reports prioritization **graded by distance from reward**, which is an
+SR-discount-shaped result §10.2 could use and currently does not.
+
+Same section, [P13]: the synaptic tag **decays in under three hours** and capture is a competition
+for a **limited diffusible protein pool** triggered at another input. "The gestalt is the tag,
+re-scoring is the capture" is an analogy about revisability. Label it as one.
+
+---
+
+## 30 — §11 is missing the nearest prior work
+
+**Immertreu, Schilling, Kinfe & Krauss (2026)**, *Word Class Representations Spontaneously Emerge
+from Successor Representations Trained on Natural Language*, arXiv:2605.24585. A network trained on
+WikiText-103 to predict future word distributions across multiple horizons — rather than the next
+token — develops word-class structure *"separable and recoverable through unsupervised clustering,"*
+with shorter horizons more syntactic and longer horizons more semantic.
+
+**This is the closest published work to RSR's premise that a successor representation is the right
+object over discourse**, and §11 does not have it. Add it.
+
+Two notes attached to the same search:
+
+- 🔴 **"Successor heads"** (Gould, Ong, Ogden & Conmy, ICLR 2024) are attention heads that
+  increment ordinal tokens. The paper does not mention successor representations or Dayan. **Do not
+  let the name collision into §11.**
+- 📌 **No paper applying an SR specifically to transformer KV-cache or working-memory eviction was
+  found**, across roughly six query formulations. That is a real novelty claim — state it as "to our
+  knowledge" and re-check before submission.
+
+For general SR claims, cite **Carvalho, Tomov, de Cothi, Barry & Gershman (2024), Neural Computation
+36(11)** alongside Dayan; it is the current review of record.
