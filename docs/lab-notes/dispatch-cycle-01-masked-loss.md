@@ -286,3 +286,57 @@ is the finding and we will both show our paths.
 
 *This correction is itself a `BRIEF ERRORS` entry — mine, against my own revalidation block, found
 by re-executing rather than re-reading. Record it as one.*
+
+---
+
+## 🔴 SECOND CORRECTION — the floor is a different statistic than the one you need, and the device is unpinned
+
+This one is load-bearing. I traced `3.1789143850602386e-07` to its ledger rather than accepting it.
+
+**It is ledger-backed** — `runs/cycle-arm-identity/ledger.json`, key
+`loss_max_abs_diff.fifo_mps_a__vs__fifo_mps_b`, the same-arm replicate, which is the right
+provenance for a floor. So far so good. But its `how` field says what it actually is:
+
+> `"max_t |loss_x[t] - loss_y[t]| over the 10 beats"`
+
+**That is a sup-norm over a whole 10-beat trajectory. Your falsifier is about the *final* training
+loss.** Those are different statistics, and the trajectory max is ≥ the final-beat difference by
+construction. It was also measured at a beat count this brief does not use.
+
+🔴 **Do not compare your final-loss delta against that number.** Measure *your* floor, as *your*
+statistic, at *your* config: two runs identical in everything, and the spread of the quantity you
+are actually going to claim moved. Report both if you like — but the bar is the one you measured.
+If you report a sup-norm floor and a final-loss delta and compare them, the comparison is
+meaningless in a way that will look rigorous.
+
+### And the device decides whether the discriminator exists at all
+
+From the same experiment's `RESULTS.md`:
+
+| pair | `loss` bit-identical | max\|Δloss\| |
+|---|---|---|
+| `fifo_cpu` vs `rsr_cpu` | **True** | **0.0** |
+| `fifo_mps_a` vs `fifo_mps_b` *(replicate — the floor)* | False | `3.1789143850602386e-07` |
+
+**On CPU the run-to-run floor is exactly `0.0`.** The brief does not pin a device, and this
+decides the cycle:
+
+- **On CPU**, the floor is `0.0` and the falsifier's second half becomes *"masking moves the loss
+  by more than zero"* — satisfied by any nonzero delta, including one float ulp. 🔴 **The
+  discriminator is vacuous, and a vacuous discriminator that returns `survived` is the exact
+  failure this cycle exists to prevent.**
+- **On MPS**, the floor is real and non-zero, and the comparison has content.
+
+**Pin the device explicitly in your manifest and say which you used.** If you run on CPU and get a
+floor of `0.0`, that is **not** a clean floor — it is the same shape as the `sd = 0.0000` this
+brief already rejects, and you must say so rather than reporting a comfortable pass. Report the
+floor with its statistic and its device, or it is not a floor.
+
+**Do not let this choose your answer for you.** If you run on CPU because determinism is right for
+this measurement, that is defensible — but then say plainly that the second half of the falsifier
+could not be tested on that device, and the cycle is `inconclusive` on it. `inconclusive` is a
+writable verdict. A vacuous `survived` is not.
+
+*BRIEF ERRORS entry against the brief and against the dispatch that commissioned it: both told you
+to reproduce `3.1789143850602386e-07` without stating that it is a trajectory sup-norm at 10 beats
+on MPS, and neither pinned a device. Found by opening the ledger instead of quoting the prose.*
