@@ -48,9 +48,19 @@ sys.path.insert(0, str(_REPO / "src"))
 from ledger import Ledger  # noqa: E402
 
 # -- the frozen canary config. Do not tune these. ----------------------------- #
-CONFIG = dict(d=128, steps_per_stream=48, batch=8, iters=6, seed=0,
-              memory_slots=16, lr=1e-3, device="mps", beat_every=1, ckpt_every=0)
-REL_TOL = 1e-4          # committed before the first reading
+CONFIG = dict(
+    d=128,
+    steps_per_stream=48,
+    batch=8,
+    iters=6,
+    seed=0,
+    memory_slots=16,
+    lr=1e-3,
+    device="mps",
+    beat_every=1,
+    ckpt_every=0,
+)
+REL_TOL = 1e-4  # committed before the first reading
 BASELINE = _REPO / "runs" / "canary" / "baseline.json"
 
 
@@ -83,14 +93,22 @@ def compare(baseline: list[float], losses: list[float]) -> tuple[str, list[dict]
     """
     n = min(len(baseline), len(losses))
     if len(baseline) != len(losses):
-        return "MOVED", [], (
-            f"beat-count length mismatch: baseline has {len(baseline)}, this run "
-            f"produced {len(losses)}. A short run is a moved environment, not a "
-            f"held one -- the overlap is not compared."
+        return (
+            "MOVED",
+            [],
+            (
+                f"beat-count length mismatch: baseline has {len(baseline)}, this run "
+                f"produced {len(losses)}. A short run is a moved environment, not a "
+                f"held one -- the overlap is not compared."
+            ),
         )
     moved = [
-        {"beat": i, "baseline": baseline[i], "now": losses[i],
-         "rel": abs(losses[i] - baseline[i]) / max(abs(baseline[i]), 1e-12)}
+        {
+            "beat": i,
+            "baseline": baseline[i],
+            "now": losses[i],
+            "rel": abs(losses[i] - baseline[i]) / max(abs(baseline[i]), 1e-12),
+        }
         for i in range(n)
         if abs(losses[i] - baseline[i]) / max(abs(baseline[i]), 1e-12) > REL_TOL
     ]
@@ -116,38 +134,57 @@ def run(cycle: int) -> dict:
     losses = _losses(out_dir / "heartbeat.jsonl")
 
     run_id = f"canary/cycle-{cycle:02d}"
-    led = Ledger(run_id, cycle=cycle,
-                 question="has the environment moved since the canary baseline?")
+    led = Ledger(
+        run_id,
+        cycle=cycle,
+        question="has the environment moved since the canary baseline?",
+    )
     led.manifest(CONFIG)
-    led.run_meta(device=CONFIG["device"], seeds_actually_run=[CONFIG["seed"]],
-                 steps_requested=CONFIG["iters"], steps_done=len(losses))
-    led.command(f".venv/bin/python scripts/canary.py {cycle}", exit_code=0,
-                note="frozen config, seed 0; see CONFIG in scripts/canary.py")
+    led.run_meta(
+        device=CONFIG["device"],
+        seeds_actually_run=[CONFIG["seed"]],
+        steps_requested=CONFIG["iters"],
+        steps_done=len(losses),
+    )
+    led.command(
+        f".venv/bin/python scripts/canary.py {cycle}",
+        exit_code=0,
+        note="frozen config, seed 0; see CONFIG in scripts/canary.py",
+    )
     led.note("losses", losses, how="heartbeat.jsonl beat records, field 'loss'")
     led.note("config", CONFIG, how="frozen literal in scripts/canary.py")
-    led.note("rel_tol", REL_TOL,
-             how="committed in scripts/canary.py before the first reading")
+    led.note(
+        "rel_tol", REL_TOL, how="committed in scripts/canary.py before the first reading"
+    )
 
     if not BASELINE.exists():
         BASELINE.parent.mkdir(parents=True, exist_ok=True)
         BASELINE.write_text(
-            json.dumps({"cycle": cycle, "losses": losses}, indent=2) + "\n")
-        led.note("role", "baseline",
-                 how="baseline.json did not exist; this reading defines it")
-        led.verdict(falsifier="the environment has not moved",
-                    outcome="inconclusive",
-                    detail="first reading: this IS the baseline, nothing to compare "
-                           "against yet. Exits 3 (did not run), never 0.")
+            json.dumps({"cycle": cycle, "losses": losses}, indent=2) + "\n"
+        )
+        led.note(
+            "role", "baseline", how="baseline.json did not exist; this reading defines it"
+        )
+        led.verdict(
+            falsifier="the environment has not moved",
+            outcome="inconclusive",
+            detail="first reading: this IS the baseline, nothing to compare "
+            "against yet. Exits 3 (did not run), never 0.",
+        )
         led.status("partial")
         verdict, moved, detail = "baseline", [], "first reading"
     else:
         base = json.loads(BASELINE.read_text())["losses"]
         verdict, moved, detail = compare(base, losses)
         led.note("baseline_losses", base, how="runs/canary/baseline.json")
-        led.note("beats_outside_tol", moved,
-                 how="elementwise |now-base|/|base| vs REL_TOL")
-        led.note("beat_counts", {"baseline": len(base), "now": len(losses)},
-                 how="len of the two beat sequences")
+        led.note(
+            "beats_outside_tol", moved, how="elementwise |now-base|/|base| vs REL_TOL"
+        )
+        led.note(
+            "beat_counts",
+            {"baseline": len(base), "now": len(losses)},
+            how="len of the two beat sequences",
+        )
         led.verdict(
             falsifier="the environment has not moved since the canary baseline",
             outcome="falsified" if verdict == "MOVED" else "survived",
@@ -156,9 +193,14 @@ def run(cycle: int) -> dict:
         led.status("ok")
 
     path = led.write()
-    return {"verdict": verdict, "moved": moved, "losses": losses,
-            "detail": detail, "ledger": str(path),
-            "exit_code": exit_code_for(verdict)}
+    return {
+        "verdict": verdict,
+        "moved": moved,
+        "losses": losses,
+        "detail": detail,
+        "ledger": str(path),
+        "exit_code": exit_code_for(verdict),
+    }
 
 
 if __name__ == "__main__":

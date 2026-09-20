@@ -20,9 +20,9 @@ collides with `canary/cycle-04` on `4`, and `cycle-arm-identity` has
 
     S=scripts/render_scoreboard.py
     uv run python $S --over runs/
-    uv run python $S --over runs/ --artefact Projects/RSR/overnight-2026-09-19.md
+    uv run python $S --over runs/ --artefact docs/lab-notes/scoreboard-2026-09-19.md
     uv run python $S --over runs/ --claim canary/cycle-04:survived
-    uv run python $S --over runs/ --audit Projects/RSR/overnight-2026-09-18.md
+    uv run python $S --over runs/ --audit docs/lab-notes/overnight-2026-09-18.md
 
 Exit codes follow the run protocol: `0` pass · `1` real failure · `2` nothing to
 compare · `3` did not run. 🔴 `3` must never collapse to `0`.
@@ -96,11 +96,13 @@ def build(runs_dir: Path) -> Board:
         # The directory is the fact; `run_id` inside the file is a claim about it.
         run_id = _rel_run_id(p, runs_dir)
         if doc.get("run_id") not in (None, run_id):
-            board.unreadable.append({
-                "path": str(p),
-                "error": f"run_id {doc['run_id']!r} disagrees with its directory "
-                         f"{run_id!r}; joining on the directory",
-            })
+            board.unreadable.append(
+                {
+                    "path": str(p),
+                    "error": f"run_id {doc['run_id']!r} disagrees with its directory "
+                    f"{run_id!r}; joining on the directory",
+                }
+            )
         if run_id in seen:
             board.unreadable.append({"path": str(p), "error": "duplicate run_id"})
             continue
@@ -113,34 +115,40 @@ def build(runs_dir: Path) -> Board:
         if isinstance(cycle, int):
             by_cycle.setdefault(cycle, []).append(run_id)
 
-        board.rows.append({
-            "run_id": run_id,
-            "cycle": cycle,
-            "question": doc.get("question"),
-            "falsifier": verdict.get("falsifier"),
-            "outcome": verdict.get("outcome"),
-            "detail": verdict.get("detail"),
-            "capped_from": verdict.get("capped_from"),
-            "status": doc.get("status"),
-            "device": doc.get("device"),
-            "seeds_actually_run": doc.get("seeds_actually_run"),
-            "steps_requested": doc.get("steps_requested"),
-            "steps_done": doc.get("steps_done"),
-            "config_hash": doc.get("config_hash"),
-            "git_sha": prov.get("git_sha"),
-            "git_dirty": prov.get("dirty", prov.get("git_dirty")),
-            "provenance_error": prov.get("provenance_error"),
-            "n_commands": len(cmds),
-            "n_rows": len(doc.get("rows", [])),
-            "first_unreproducible": next(
-                (c.get("argv") for c in cmds
-                 if not _reproducible(c, prov.get("git_sha"))), None
-            ),
-            "n_null_exit": len([c for c in cmds if c.get("exit_code") is None]),
-            "n_unreproducible": len(
-                [c for c in cmds if not _reproducible(c, prov.get("git_sha"))]
-            ),
-        })
+        board.rows.append(
+            {
+                "run_id": run_id,
+                "cycle": cycle,
+                "question": doc.get("question"),
+                "falsifier": verdict.get("falsifier"),
+                "outcome": verdict.get("outcome"),
+                "detail": verdict.get("detail"),
+                "capped_from": verdict.get("capped_from"),
+                "status": doc.get("status"),
+                "device": doc.get("device"),
+                "seeds_actually_run": doc.get("seeds_actually_run"),
+                "steps_requested": doc.get("steps_requested"),
+                "steps_done": doc.get("steps_done"),
+                "config_hash": doc.get("config_hash"),
+                "git_sha": prov.get("git_sha"),
+                "git_dirty": prov.get("dirty", prov.get("git_dirty")),
+                "provenance_error": prov.get("provenance_error"),
+                "n_commands": len(cmds),
+                "n_rows": len(doc.get("rows", [])),
+                "first_unreproducible": next(
+                    (
+                        c.get("argv")
+                        for c in cmds
+                        if not _reproducible(c, prov.get("git_sha"))
+                    ),
+                    None,
+                ),
+                "n_null_exit": len([c for c in cmds if c.get("exit_code") is None]),
+                "n_unreproducible": len(
+                    [c for c in cmds if not _reproducible(c, prov.get("git_sha"))]
+                ),
+            }
+        )
 
     board.cycle_collisions = {c: sorted(v) for c, v in by_cycle.items() if len(v) > 1}
     board.tally = {
@@ -149,9 +157,7 @@ def build(runs_dir: Path) -> Board:
         "no_verdict": len([r for r in board.rows if r["outcome"] is None]),
         "unreadable": len(board.unreadable),
         "with_null_exit_code": len([r for r in board.rows if r["n_null_exit"]]),
-        "not_re_executable": len(
-            [r for r in board.rows if r["n_unreproducible"]]
-        ),
+        "not_re_executable": len([r for r in board.rows if r["n_unreproducible"]]),
     }
     return board
 
@@ -270,11 +276,11 @@ def audit_prose(runs_dir: Path, text: str) -> list[str]:
     unbacked: list[str] = []
     for m in _NUMBER.finditer(masked):
         lit = m.group(1)
-        if _SKIP_CONTEXT.search(masked[max(0, m.start() - 12):m.start()]):
+        if _SKIP_CONTEXT.search(masked[max(0, m.start() - 12) : m.start()]):
             continue
         try:
             val = float(lit)
-        except ValueError:                       # pragma: no cover - regex-guarded
+        except ValueError:  # pragma: no cover - regex-guarded
             continue
         dec = len(lit.split(".")[1]) if "." in lit and "e" not in lit.lower() else None
         if dec is None:
@@ -378,30 +384,47 @@ def render(board: Board, *, runs_dir: Path) -> str:
             f"{len(bad)} of {t['total']} ledgers record at least one command that "
             "cannot be resolved to an entry point committed at its own sha.",
             "",
-            *[f"- `{r['run_id']}` — {r['n_unreproducible']}"
-              f" of {r['n_commands']} commands — "
-              f"`{_cell(r['first_unreproducible'])[:90]}`"
-              for r in sorted(bad, key=lambda r: r["run_id"])],
+            *[
+                f"- `{r['run_id']}` — {r['n_unreproducible']}"
+                f" of {r['n_commands']} commands — "
+                f"`{_cell(r['first_unreproducible'])[:90]}`"
+                for r in sorted(bad, key=lambda r: r["run_id"])
+            ],
             "",
         ]
 
     if board.unreadable:
-        out += ["### Unreadable", "",
-                *[f"- `{u['path']}` — {u['error']}" for u in board.unreadable], ""]
+        out += [
+            "### Unreadable",
+            "",
+            *[f"- `{u['path']}` — {u['error']}" for u in board.unreadable],
+            "",
+        ]
     return "\n".join(out)
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--over", type=Path, default=_REPO / "runs",
-                    help="the runs/ directory to read")
-    ap.add_argument("--artefact", type=Path, default=None,
-                    help="write the rendered markdown here")
+    ap.add_argument(
+        "--over", type=Path, default=_REPO / "runs", help="the runs/ directory to read"
+    )
+    ap.add_argument(
+        "--artefact", type=Path, default=None, help="write the rendered markdown here"
+    )
     ap.add_argument("--json", type=Path, default=None)
-    ap.add_argument("--claim", default=None, metavar="RUN_ID:OUTCOME",
-                    help="check one prose claim against its ledger")
-    ap.add_argument("--audit", type=Path, default=None, metavar="FILE",
-                    help="list numbers in FILE that no ledger backs")
+    ap.add_argument(
+        "--claim",
+        default=None,
+        metavar="RUN_ID:OUTCOME",
+        help="check one prose claim against its ledger",
+    )
+    ap.add_argument(
+        "--audit",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help="list numbers in FILE that no ledger backs",
+    )
     args = ap.parse_args(argv)
 
     if not args.over.exists():
@@ -440,10 +463,20 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(text)
     if args.json:
-        args.json.write_text(json.dumps(
-            {"rows": board.rows, "tally": board.tally,
-             "cycle_collisions": {str(k): v for k, v in board.cycle_collisions.items()},
-             "unreadable": board.unreadable}, indent=2) + "\n")
+        args.json.write_text(
+            json.dumps(
+                {
+                    "rows": board.rows,
+                    "tally": board.tally,
+                    "cycle_collisions": {
+                        str(k): v for k, v in board.cycle_collisions.items()
+                    },
+                    "unreadable": board.unreadable,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
     return 2 if not board.rows else 0
 
 

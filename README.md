@@ -22,11 +22,15 @@ everything downstream is a projection, not a permission.
 
 | Document | Role |
 |---|---|
-| [`docs/spec-corrections.md`](docs/spec-corrections.md) | **Read before the spec.** 14 corrections that win over the spec body |
+| [`docs/RESEARCH-CONTEXT.md`](docs/RESEARCH-CONTEXT.md) | **Start here.** The single orientation document — claim, sources, decisions, measured numbers, what is broken, what no agent may touch |
+| [`docs/spec-corrections.md`](docs/spec-corrections.md) | **Read before the spec.** 30 corrections that win over the spec body |
 | [`docs/spec/rsr_model_spec_v0.5.md`](docs/spec/rsr_model_spec_v0.5.md) | The model specification, verbatim |
 | [`CLAUDE.md`](CLAUDE.md) | Standing rules for every agent session |
 | [`docs/decisions/`](docs/decisions/) | ADRs for anything expensive to reverse |
 | [`docs/release-conditions.md`](docs/release-conditions.md) | §16's eight conditions, each linking its evidence |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | **What happens next and in what order.** Supersedes §8's week numbering. Names the blocker that gates four experiments at once |
+| [`docs/cognitive-grounding.md`](docs/cognitive-grounding.md) | What the cognitive literature licenses, and what it does not. Read before writing anything that cites McClelland or Kintsch |
+| [`docs/citation-audit.md`](docs/citation-audit.md) | E0f. 13 of 14 primary sources checked; **[P11], the cognitive claim, did not survive** |
 
 The spec is on its fifth revision and carries three changelogs. Several passages
 were superseded by a correction and never rewritten. `docs/spec-corrections.md` is
@@ -65,16 +69,24 @@ machine's CPU, in a throwaway venv; the exact command is in
 ```
 src/rsr/
   model/        tg base, memory, gestalt write
-  retention/    policy, value_head, reward, shadow, bias
-  baselines/    fifo, lru, h2o, expire_span, leading_edge, random, oracle
-  data/         synthetic generator, pg19, coref
-  metrics/      reintroduction, loo, vacuity, gini
-  mup/          param groups, coordinate check
+  retention/    policy, value_head, reward           [shadow, bias = STUBS, raise]
+  baselines/    fifo, lru, random                     [h2o, expire_span,
+                                                       leading_edge, oracle = STUBS]
+  data/         synthetic generator                   [pg19, coref = STUBS]
+  metrics/      -- ALL FOUR ARE STUBS: reintroduction, loo, vacuity, gini
+  mup/          param groups                          [coord_check = STUB]
   constants.py  the registry that refuses unmeasured reads
 configs/        base + model/ + data/ + experiment/
 experiments/    e0a … e0i, each with run.py + RESULTS.md
 preregistration/  committed BEFORE the experiment they govern
 ```
+
+**A stub raises `NotImplementedError`.** They are marked above rather than omitted
+because the layout is also the work plan. Four of the eight baselines, both
+anti-collapse mechanisms, and every metric -- including leave-one-out, which
+§3.2.1 makes the arbiter of truth -- are not implemented. See
+`docs/RESEARCH-CONTEXT.md` §10 for the full register, and read it before reading
+any result in `runs/`.
 
 ## Licence
 

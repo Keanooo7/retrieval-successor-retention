@@ -93,9 +93,9 @@ SOURCE_ROOTS = ("src/", "scripts/", "experiments/")
 #: recorded here rather than argued in prose so it can be reversed in one line.
 TOOL_ENTRY_POINTS = {
     "pytest": "the code it runs is tests/ and src/, both committed; the runner "
-              "itself is pinned in pyproject.toml",
+    "itself is pinned in pyproject.toml",
     "ruff": "reads pyproject.toml's [tool.ruff] and the committed tree; the "
-            "invocation carries no code of its own",
+    "invocation carries no code of its own",
 }
 
 #: `status` vocabulary. "unknown" is deliberately absent -- it is the silent-fail
@@ -141,7 +141,9 @@ def _run_git(*args: str) -> subprocess.CompletedProcess[str] | None:
     try:
         return subprocess.run(
             [exe, "-C", str(_REPO), *args],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -158,9 +160,11 @@ def git_provenance() -> dict[str, Any]:
     sha = _run_git("rev-parse", "HEAD")
     status = _run_git("status", "--porcelain")
     if sha is None or status is None or sha.returncode != 0 or status.returncode != 0:
-        err = (sha.stderr.strip() if sha else "") or (
-            status.stderr.strip() if status else ""
-        ) or "git invocation failed"
+        err = (
+            (sha.stderr.strip() if sha else "")
+            or (status.stderr.strip() if status else "")
+            or "git invocation failed"
+        )
         return {"git_sha": None, "dirty": None, "provenance_error": err}
     return {"git_sha": sha.stdout.strip(), "dirty": bool(status.stdout.strip())}
 
@@ -186,7 +190,7 @@ def _dirty_source_paths() -> list[str]:
         if not line.strip():
             continue
         path = line[3:].strip()
-        if " -> " in path:                     # a rename records both sides
+        if " -> " in path:  # a rename records both sides
             path = path.split(" -> ")[-1]
         path = path.strip('"')
         if path.startswith(SOURCE_ROOTS):
@@ -220,7 +224,7 @@ def entry_point(argv: list[str] | str) -> str | None:
     """
     try:
         toks = shlex.split(argv) if isinstance(argv, str) else [str(t) for t in argv]
-    except ValueError:                          # unbalanced quotes
+    except ValueError:  # unbalanced quotes
         return None
     if not toks:
         return None
@@ -231,12 +235,12 @@ def entry_point(argv: list[str] | str) -> str | None:
 
     i = 0
     while i < len(toks) and "=" in toks[i] and not toks[i].startswith("-"):
-        i += 1                                   # leading VAR=value assignments
+        i += 1  # leading VAR=value assignments
     if i >= len(toks):
         return None
 
     prog = toks[i]
-    if posixpath.basename(prog) == "uv":         # `uv run python foo.py`
+    if posixpath.basename(prog) == "uv":  # `uv run python foo.py`
         i += 1
         while i < len(toks) and (toks[i] == "run" or toks[i].startswith("-")):
             i += 1
@@ -249,7 +253,7 @@ def entry_point(argv: list[str] | str) -> str | None:
         while i < len(toks):
             t = toks[i]
             if t in ("-c", "-"):
-                return None                      # inline code names no file
+                return None  # inline code names no file
             if t == "-m":
                 if i + 1 >= len(toks):
                     return None
@@ -267,18 +271,18 @@ def _module_to_path(module: str) -> str | None:
     for cand in (f"src/{rel}.py", f"{rel}.py", f"src/{rel}/__main__.py"):
         if (_REPO / cand).exists():
             return cand
-    return f"src/{rel}.py"                       # let the sha check refuse it
+    return f"src/{rel}.py"  # let the sha check refuse it
 
 
 def _repo_relative(tok: str) -> str | None:
-    if "<" in tok or ">" in tok:                 # `<scratch>/train_arm.py`
+    if "<" in tok or ">" in tok:  # `<scratch>/train_arm.py`
         return None
     p = Path(tok)
     if p.is_absolute():
         try:
             return p.relative_to(_REPO).as_posix()
         except ValueError:
-            return None                          # outside the tree entirely
+            return None  # outside the tree entirely
     if tok.startswith(".."):
         return None
     return posixpath.normpath(tok)
@@ -300,8 +304,14 @@ class Ledger:
     >>> p = led.write()
     """
 
-    def __init__(self, run_id: str, *, question: str, cycle: int | None = None,
-                 runs_root: Path | None = None) -> None:
+    def __init__(
+        self,
+        run_id: str,
+        *,
+        question: str,
+        cycle: int | None = None,
+        runs_root: Path | None = None,
+    ) -> None:
         self.run_id = run_id
         self.runs_root = Path(runs_root) if runs_root is not None else _REPO / "runs"
         self.path = self.runs_root / run_id / "ledger.json"
@@ -338,8 +348,14 @@ class Ledger:
 
     # -- what was run -------------------------------------------------------- #
 
-    def command(self, argv: list[str] | str, *, exit_code: int | None,
-                note: str = "", allow_unreproducible: bool = False) -> None:
+    def command(
+        self,
+        argv: list[str] | str,
+        *,
+        exit_code: int | None,
+        note: str = "",
+        allow_unreproducible: bool = False,
+    ) -> None:
         """The literal command line, and whether it can be run again.
 
         `exit_code` is keyword-*required* (it may still be `None` for a process
@@ -353,9 +369,11 @@ class Ledger:
         elif ep is None:
             why = "names no file in this repository"
         elif sha is None:
-            why = (f"the sha is unknown ("
-                   f"{self.doc['provenance'].get('provenance_error')}), so "
-                   f"{ep!r} cannot be resolved")
+            why = (
+                f"the sha is unknown ("
+                f"{self.doc['provenance'].get('provenance_error')}), so "
+                f"{ep!r} cannot be resolved"
+            )
         elif not _exists_at_sha(ep, sha):
             why = f"{ep!r} does not exist at {sha[:7]}"
         else:
@@ -368,26 +386,36 @@ class Ledger:
                 f"Commit the entry point, or pass allow_unreproducible=True and "
                 f"accept that this run's verdict is capped at `inconclusive`."
             )
-        self.doc["commands"].append({
-            "argv": argv if isinstance(argv, str) else " ".join(argv),
-            "entry_point": ep,
-            "reproducible": not why,
-            "unreproducible_because": why or None,
-            "exit_code": exit_code,
-            "note": note,
-            "at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        })
+        self.doc["commands"].append(
+            {
+                "argv": argv if isinstance(argv, str) else " ".join(argv),
+                "entry_point": ep,
+                "reproducible": not why,
+                "unreproducible_because": why or None,
+                "exit_code": exit_code,
+                "note": note,
+                "at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
+        )
 
     # -- what the run actually did ------------------------------------------- #
 
-    def run_meta(self, *, device: str | None = None,
-                 seeds_actually_run: list[int] | None = None,
-                 steps_requested: int | None = None,
-                 steps_done: int | None = None) -> None:
+    def run_meta(
+        self,
+        *,
+        device: str | None = None,
+        seeds_actually_run: list[int] | None = None,
+        steps_requested: int | None = None,
+        steps_done: int | None = None,
+    ) -> None:
         """What was *run*, as against what was configured (§12.4). A five-seed mean
         from a one-seed run is the failure `seeds_actually_run` exists for."""
-        for k, v in (("device", device), ("seeds_actually_run", seeds_actually_run),
-                     ("steps_requested", steps_requested), ("steps_done", steps_done)):
+        for k, v in (
+            ("device", device),
+            ("seeds_actually_run", seeds_actually_run),
+            ("steps_requested", steps_requested),
+            ("steps_done", steps_done),
+        ):
             if v is not None:
                 self.doc[k] = v
 
@@ -417,11 +445,13 @@ class Ledger:
     def note(self, key: str, value: Any, *, how: str) -> None:
         """One observed value. `how` says which artefact it was read out of, so a
         reader can go and look at that artefact instead of trusting the row."""
-        self.doc["rows"].append({"key": key, "kind": "observation",
-                                 "value": value, "how": how})
+        self.doc["rows"].append(
+            {"key": key, "kind": "observation", "value": value, "how": how}
+        )
 
-    def stat(self, key: str, samples: list[float], *, how: str,
-             allow_single: bool = False) -> dict[str, Any]:
+    def stat(
+        self, key: str, samples: list[float], *, how: str, allow_single: bool = False
+    ) -> dict[str, Any]:
         """Mean and sample sd over `samples`, with the samples kept.
 
         Refuses one sample unless asked explicitly, and never reports `sd = 0.0`
@@ -440,8 +470,13 @@ class Ledger:
         else:
             sd = math.sqrt(sum((x - mean) ** 2 for x in xs) / (len(xs) - 1))
         row = {
-            "key": key, "kind": "statistic", "n": len(xs),
-            "samples": xs, "mean": mean, "sd": sd, "how": how,
+            "key": key,
+            "kind": "statistic",
+            "n": len(xs),
+            "samples": xs,
+            "mean": mean,
+            "sd": sd,
+            "how": how,
             "sd_exactly_zero": sd is not None and sd == 0.0,
         }
         self.doc["rows"].append(row)
@@ -461,8 +496,9 @@ class Ledger:
         has not survived anything; it has not been tested.
         """
         if outcome not in {"survived", "falsified", "inconclusive"}:
-            raise ValueError(f"outcome={outcome!r} is not one of "
-                             f"survived / falsified / inconclusive")
+            raise ValueError(
+                f"outcome={outcome!r} is not one of survived / falsified / inconclusive"
+            )
         unrepro = [c for c in self.doc["commands"] if not c["reproducible"]]
         capped_from = None
         if unrepro and outcome != "inconclusive":

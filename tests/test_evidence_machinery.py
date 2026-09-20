@@ -152,8 +152,9 @@ def test_a_dirty_source_path_is_detected_through_porcelain(monkeypatch):
 def test_the_reconciliation_fields_are_written(led, tmp_path):
     """The role files check for these and nothing wrote them; the two evidence
     formats disagreed as a result."""
-    led.run_meta(device="cpu", seeds_actually_run=[0, 1], steps_requested=100,
-                 steps_done=100)
+    led.run_meta(
+        device="cpu", seeds_actually_run=[0, 1], steps_requested=100, steps_done=100
+    )
     led.status("ok")
     led.manifest({"d": 128, "seed": 0})
     p = led.write()
@@ -203,20 +204,16 @@ def test_the_scoreboard_joins_on_run_id_and_refuses_cycle(tmp_path):
 
 
 def test_the_scoreboard_refuses_the_prose_verdict_for_cycle_4():
-    """"cycle 4 survived" is unresolvable: the two ledgers at cycle 4 disagree."""
+    """ "cycle 4 survived" is unresolvable: the two ledgers at cycle 4 disagree."""
     ok, why = render_scoreboard.check_claim(_REPO / "runs", "cycle-4", "survived")
     assert ok is False
     assert "join key" in why or "ambiguous" in why
 
 
 def test_a_claim_that_matches_its_ledger_is_accepted():
-    ok, _ = render_scoreboard.check_claim(
-        _REPO / "runs", "canary/cycle-08", "survived"
-    )
+    ok, _ = render_scoreboard.check_claim(_REPO / "runs", "canary/cycle-08", "survived")
     assert ok is True
-    ok, why = render_scoreboard.check_claim(
-        _REPO / "runs", "canary/cycle-04", "survived"
-    )
+    ok, why = render_scoreboard.check_claim(_REPO / "runs", "canary/cycle-04", "survived")
     assert ok is False
     assert "inconclusive" in why
 
@@ -262,9 +259,7 @@ def test_the_audit_flags_a_number_that_is_in_no_ledger():
 
 
 def test_the_audit_passes_a_number_that_is_in_a_ledger():
-    backed = render_scoreboard.audit_prose(
-        _REPO / "runs", "the canary rel_tol is 0.0001"
-    )
+    backed = render_scoreboard.audit_prose(_REPO / "runs", "the canary rel_tol is 0.0001")
     assert backed == []
 
 
@@ -278,17 +273,26 @@ def test_an_off_gate_failure_makes_a_mutation_unproven():
     was enforced by nothing: `off_gate` was computed, stored, printed, and never
     entered the `unproven` filter."""
     rows = [
-        {"mutation": "m", "gate": "g", "reddened_gate": True,
-         "off_gate": ["tests/test_other.py::test_x"], "off_gate_allowed": []},
+        {
+            "mutation": "m",
+            "gate": "g",
+            "reddened_gate": True,
+            "off_gate": ["tests/test_other.py::test_x"],
+            "off_gate_allowed": [],
+        },
     ]
     assert mutation_battery.unproven(rows) == rows
 
 
 def test_a_declared_coupling_does_not_make_a_mutation_unproven():
     rows = [
-        {"mutation": "m", "gate": "g", "reddened_gate": True,
-         "off_gate": ["tests/t.py::x"],
-         "off_gate_allowed": [("tests/t.py::x", "why")]},
+        {
+            "mutation": "m",
+            "gate": "g",
+            "reddened_gate": True,
+            "off_gate": ["tests/t.py::x"],
+            "off_gate_allowed": [("tests/t.py::x", "why")],
+        },
     ]
     assert mutation_battery.unproven(rows) == []
 
@@ -347,9 +351,7 @@ def test_a_first_canary_reading_exits_3_not_0():
 def test_a_length_mismatch_is_a_move():
     """Compared over the overlap only, a run that produced 2 of 6 beats reports
     "held"."""
-    verdict, _moved, detail = canary.compare(
-        [1.0, 0.9, 0.8, 0.7, 0.6, 0.5], [1.0, 0.9]
-    )
+    verdict, _moved, detail = canary.compare([1.0, 0.9, 0.8, 0.7, 0.6, 0.5], [1.0, 0.9])
     assert verdict == "MOVED"
     assert "length" in detail.lower()
 

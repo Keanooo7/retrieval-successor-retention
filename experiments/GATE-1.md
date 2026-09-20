@@ -62,6 +62,12 @@ Current suite, literal, at `3e19dcb`:
 ```
 passed=239 failed=0 skipped=0 errors=0
 ```
+WARNING: STALE LITERAL, kept as the record of what GATE-1 measured at `3e19dcb`.
+Measured at `b572ad6` on 2026-09-20: `passed=287 failed=0 skipped=0 errors=0`.
+A count with a sha attached is a measurement of that sha, not of the tree you
+are reading.
+```
+```
 
 **Zero skips.** Both former blockers are closed:
 

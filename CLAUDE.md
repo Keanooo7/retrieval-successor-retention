@@ -15,6 +15,12 @@ Brendan is the sole owner and directs. Agents are the implementation layer.
 
 ## Read in this order
 
+0. **`docs/RESEARCH-CONTEXT.md`** — **start here.** The single orientation document:
+   the claim, the sources and what has actually been checked, the mechanism as
+   decided, the measured numbers with provenance, what is broken, the numbers that
+   were retracted, and the decisions no agent may make. It is an index with the
+   load-bearing facts inlined — **the documents below win over it wherever they
+   disagree.**
 1. **`docs/spec-corrections.md`** — read this **before** the spec.
 2. `docs/spec/rsr_model_spec_v0.5.md` — the specification, verbatim.
 3. `docs/decisions/` — ADRs.

@@ -131,7 +131,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_reduction_displaces_no_ranks_on_the_real_model",
                 "test_the_reduction_ran_through_the_score_path",
             )
-        ) + tuple(
+        )
+        + tuple(
             (f"tests/test_device_placement.py::{t}", _REDUCTION_TABLE_COUPLING)
             for t in (
                 "test_rsr_policy_exposes_a_to_method",
@@ -158,14 +159,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        slots.accum.setdefault('lru', {})[winner] = step",
         "gauntlet 0.4: LRU silently becomes FIFO",
         off_gate_allowed=(
-            ("tests/test_policies.py::test_lru_remembers_an_attention_event_older_"
-             "than_one_step",
-             "the same defect: moving LRU's recency into MemoryState.accum is what "
-             "both tests assert it does not do"),
-            ("tests/test_checkpoint.py::test_lru_policy_state_round_trips",
-             "the round-trip asserts LRU's recency lives in the policy's own "
-             "state; moving it into MemoryState.accum is exactly what that test "
-             "is checking cannot happen"),
+            (
+                "tests/test_policies.py::test_lru_remembers_an_attention_event_older_"
+                "than_one_step",
+                "the same defect: moving LRU's recency into MemoryState.accum is what "
+                "both tests assert it does not do",
+            ),
+            (
+                "tests/test_checkpoint.py::test_lru_policy_state_round_trips",
+                "the round-trip asserts LRU's recency lives in the policy's own "
+                "state; moving it into MemoryState.accum is exactly what that test "
+                "is checking cannot happen",
+            ),
         ),
     ),
     Mutation(
@@ -201,10 +206,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        if False:\n            # Gauntlet 0.7 defects 2 and 5.",
         "gauntlet 0.7(2): a ledger row nothing reads",
         off_gate_allowed=(
-            ("tests/test_constants.py::"
-             "test_K_cannot_be_recorded_against_an_arbitrary_experiment",
-             "K is DERIVED, so the same refusal is what stops an arbitrary "
-             "experiment recording it; one guard, two assertions"),
+            (
+                "tests/test_constants.py::"
+                "test_K_cannot_be_recorded_against_an_arbitrary_experiment",
+                "K is DERIVED, so the same refusal is what stops an arbitrary "
+                "experiment recording it; one guard, two assertions",
+            ),
         ),
     ),
     Mutation(
@@ -223,10 +230,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        self.bilinear_multiplier = 1.0",
         "gauntlet 1.6: §4.3's 1/d stored but not applied",
         off_gate_allowed=(
-            ("tests/test_value_head.py::test_multipliers_follow_the_muP_table",
-             _MUP_COUPLING),
-            ("tests/test_value_head_arithmetic.py::test_W_is_not_silently_transposed",
-             _MUP_COUPLING),
+            (
+                "tests/test_value_head.py::test_multipliers_follow_the_muP_table",
+                _MUP_COUPLING,
+            ),
+            (
+                "tests/test_value_head_arithmetic.py::test_W_is_not_silently_transposed",
+                _MUP_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -237,10 +248,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        h = context @ self.W",
         "gauntlet 1.4: every shape test stays green",
         off_gate_allowed=(
-            ("tests/test_value_head_arithmetic.py::"
-             "test_forward_matches_the_formula_computed_by_hand",
-             "the hand-computed forward is the same arithmetic the transpose gate "
-             "checks; one edit cannot break one and not the other"),
+            (
+                "tests/test_value_head_arithmetic.py::"
+                "test_forward_matches_the_formula_computed_by_hand",
+                "the hand-computed forward is the same arithmetic the transpose gate "
+                "checks; one edit cannot break one and not the other",
+            ),
         ),
     ),
     Mutation(
@@ -251,11 +264,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        out = bilinear",
         "gauntlet 1.4: ψ̂ silently becomes purely bilinear",
         off_gate_allowed=(
-            ("tests/test_value_head_arithmetic.py::"
-             "test_forward_matches_the_formula_computed_by_hand", _MUP_COUPLING),
-            ("tests/test_value_head_arithmetic.py::"
-             "test_the_linear_multiplier_is_one_over_fan_in_in_the_output",
-             _MUP_COUPLING),
+            (
+                "tests/test_value_head_arithmetic.py::"
+                "test_forward_matches_the_formula_computed_by_hand",
+                _MUP_COUPLING,
+            ),
+            (
+                "tests/test_value_head_arithmetic.py::"
+                "test_the_linear_multiplier_is_one_over_fan_in_in_the_output",
+                _MUP_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -266,10 +284,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         '"name": "transformer.hidden"',
         "gauntlet 1.6: mis-grouping surfaces in week 9 with no error message",
         off_gate_allowed=(
-            ("tests/test_param_groups.py::test_phi_is_not_also_in_a_transformer_group",
-             _MUP_COUPLING),
-            ("tests/test_param_groups.py::"
-             "test_the_value_head_lr_follows_its_own_one_over_d_rule", _MUP_COUPLING),
+            (
+                "tests/test_param_groups.py::test_phi_is_not_also_in_a_transformer_group",
+                _MUP_COUPLING,
+            ),
+            (
+                "tests/test_param_groups.py::"
+                "test_the_value_head_lr_follows_its_own_one_over_d_rule",
+                _MUP_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -296,17 +319,25 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    return victim_rank, int(((ranks > victim_rank) & (ranks > 0)).sum().item())",
         "ADR-0006: the metric measures the window, not the policy",
         off_gate_allowed=(
-            ("tests/test_instrumentation.py::"
-             "test_evicting_a_middle_slot_displaces_the_slots_older_than_it",
-             _DISPLACEMENT_COUPLING),
-            ("tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_most",
-             _DISPLACEMENT_COUPLING),
-            ("tests/test_reduction.py::test_the_reduction_shifts_no_ranks",
-             _DISPLACEMENT_COUPLING),
-            ("tests/test_reduction.py::"
-             "test_the_reduction_displaces_no_ranks_on_the_real_model",
-             _DISPLACEMENT_COUPLING + " Added 2026-09-18: the on-the-real-model "
-             "variant post-dates docs/mutation-battery.md's table."),
+            (
+                "tests/test_instrumentation.py::"
+                "test_evicting_a_middle_slot_displaces_the_slots_older_than_it",
+                _DISPLACEMENT_COUPLING,
+            ),
+            (
+                "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_most",
+                _DISPLACEMENT_COUPLING,
+            ),
+            (
+                "tests/test_reduction.py::test_the_reduction_shifts_no_ranks",
+                _DISPLACEMENT_COUPLING,
+            ),
+            (
+                "tests/test_reduction.py::"
+                "test_the_reduction_displaces_no_ranks_on_the_real_model",
+                _DISPLACEMENT_COUPLING + " Added 2026-09-18: the on-the-real-model "
+                "variant post-dates docs/mutation-battery.md's table.",
+            ),
         ),
     ),
     Mutation(
@@ -335,7 +366,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_command_refuses_an_undeclared_tool_entry_point",
         "scripts/ledger.py",
         "        if ep in TOOL_ENTRY_POINTS:",
-        "        if ep is not None and not ep.endswith(\".py\"):",
+        '        if ep is not None and not ep.endswith(".py"):',
         "5.1: the declared-tool allowlist stops being an allowlist and every bare "
         "command name passes",
     ),
@@ -354,7 +385,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         '        return {"git_sha": None, "dirty": None, '
         '"provenance_error": "git not found"}',
         '        return {"git_sha": "", "dirty": bool("")}',
-        "5.1: `bool(\"\")` is `False` -- the exact shape that produced two false "
+        '5.1: `bool("")` is `False` -- the exact shape that produced two false '
         "clean bills of health on this project",
     ),
     Mutation(
@@ -363,8 +394,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scripts/ledger.py",
         "        dirty = _dirty_source_paths()\n        if dirty:",
         "        dirty = _dirty_source_paths()\n        if False:",
-        "5.1: a measurement against an uncommitted tree is not reproducible from "
-        "its sha",
+        "5.1: a measurement against an uncommitted tree is not reproducible from its sha",
     ),
     Mutation(
         "runs/ starts gating the ledger write",
@@ -375,10 +405,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "5.1: runs/ churns by design; gating on it makes the gate unusable and it "
         "gets switched off",
         off_gate_allowed=(
-            ("tests/test_evidence_machinery.py::"
-             "test_a_dirty_source_path_is_detected_through_porcelain",
-             "SOURCE_ROOTS is one enumeration: what gates and what does not are "
-             "the same list, so widening it necessarily moves both assertions"),
+            (
+                "tests/test_evidence_machinery.py::"
+                "test_a_dirty_source_path_is_detected_through_porcelain",
+                "SOURCE_ROOTS is one enumeration: what gates and what does not are "
+                "the same list, so widening it necessarily moves both assertions",
+            ),
         ),
     ),
     Mutation(
@@ -419,8 +451,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the prose audit reads timestamps as measurements",
         "test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement",
         "scripts/render_scoreboard.py",
-        "    masked = _MONTHDAY.sub(\" \", _CLOCK.sub(\" \", _DATE.sub(\" \", text)))",
-        "    masked = _DATE.sub(\" \", text)",
+        '    masked = _MONTHDAY.sub(" ", _CLOCK.sub(" ", _DATE.sub(" ", text)))',
+        '    masked = _DATE.sub(" ", text)',
         "5.2: an audit that flags the wall clock is an audit nobody runs on a "
         "document that obeys §9",
     ),
@@ -432,11 +464,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        if False:",
         "5.2: `1.5476` goes back to passing an audit it should fail",
         off_gate_allowed=(
-            ("tests/test_evidence_machinery.py::"
-             "test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement",
-             "the timestamp test asserts both halves of the same behaviour -- a "
-             "clock is skipped AND a real number beside it is still flagged -- so "
-             "an audit that flags nothing necessarily reddens it too"),
+            (
+                "tests/test_evidence_machinery.py::"
+                "test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement",
+                "the timestamp test asserts both halves of the same behaviour -- a "
+                "clock is skipped AND a real number beside it is still flagged -- so "
+                "an audit that flags nothing necessarily reddens it too",
+            ),
         ),
     ),
     Mutation(
@@ -464,14 +498,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         # 📌 split so this literal is not itself the first match in this file
         '        if not r["reddened_gate"]' + " or leaked:",
         '        if not r["reddened_gate"]' + ":",
-        "5.3: clause 2 of the stated discipline goes back to being enforced by "
-        "nothing",
+        "5.3: clause 2 of the stated discipline goes back to being enforced by nothing",
     ),
     Mutation(
         "the coupling allowlist is ignored",
         "test_a_declared_coupling_does_not_make_a_mutation_unproven",
         "scripts/mutation_battery.py",
-        '        allowed = {node for node, _reason in '
+        "        allowed = {node for node, _reason in "
         'r.get("off_gate_allo' + 'wed", ())}',
         "        allowed = set()",
         "5.3: a declared coupling has to be distinguishable from a leak, or the "
@@ -503,9 +536,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scripts/canary.py",
         "    if len(baseline) != len(losses):",
         "    if False:",
-        "5.4: a run that produced 2 of 6 beats reports \"held\"",
+        '5.4: a run that produced 2 of 6 beats reports "held"',
     ),
 )
+
 
 def _markdown(rows: list[dict]) -> str:
     """The committed record, rendered. Every count here is `len()` of something."""
@@ -513,8 +547,7 @@ def _markdown(rows: list[dict]) -> str:
     out = [
         "# The mutation battery — gauntlet 1.7",
         "",
-        "> **A new check is not believed until a mutation has shown it red** — and "
-        "the",
+        "> **A new check is not believed until a mutation has shown it red** — and the",
         "> mutation must redden *only* it. If nothing reddens it, **the check adds "
         "nothing",
         "> and that is the finding.**",
@@ -540,12 +573,17 @@ def _markdown(rows: list[dict]) -> str:
         )
     out += ["", "## What each mutation breaks, and what else went red", ""]
     for r in rows:
-        out += [f"### {r['mutation']}", "",
-                f"**Gate:** `{r['gate']}` — **{r['verdict']}**", "", r["why"], ""]
+        out += [
+            f"### {r['mutation']}",
+            "",
+            f"**Gate:** `{r['gate']}` — **{r['verdict']}**",
+            "",
+            r["why"],
+            "",
+        ]
         if r["off_gate"]:
             out += [f"Also reddened ({len(r['off_gate'])}):", ""]
-            declared = {n: why for n, why in
-                        (tuple(x) for x in r["off_gate_allowed"])}
+            declared = {n: why for n, why in (tuple(x) for x in r["off_gate_allowed"])}
             for f in r["off_gate"]:
                 mark = "✔ declared" if f in declared else "🔴 UNDECLARED"
                 out.append(f"- `{f}` — {mark}")
@@ -658,8 +696,12 @@ def main() -> int:
         "--check", action="store_true", help="exit non-zero on any unproven gate"
     )
     ap.add_argument("--json", type=Path, default=None)
-    ap.add_argument("--markdown", type=Path, default=None,
-                    help="regenerate docs/mutation-battery.md from this run")
+    ap.add_argument(
+        "--markdown",
+        type=Path,
+        default=None,
+        help="regenerate docs/mutation-battery.md from this run",
+    )
     args = ap.parse_args()
 
     baseline = run_suite()
@@ -716,14 +758,18 @@ def main() -> int:
             if not r["reddened_gate"]:
                 print(f"  {r['gate']}  ({r['mutation']}) -- reddens nothing")
             else:
-                print(f"  {r['gate']}  ({r['mutation']}) -- reddens "
-                      f"{len(r['off_gate_undeclared'])} undeclared tests off its "
-                      f"gate:")
+                print(
+                    f"  {r['gate']}  ({r['mutation']}) -- reddens "
+                    f"{len(r['off_gate_undeclared'])} undeclared tests off its "
+                    f"gate:"
+                )
                 for f in r["off_gate_undeclared"]:
                     print(f"      {f}")
-        print("\nA gate whose mutation reddens nothing adds nothing. A mutation "
-              "that reddens tests it did not declare has not isolated the defect. "
-              "Declare the coupling with a reason, or narrow the mutation.")
+        print(
+            "\nA gate whose mutation reddens nothing adds nothing. A mutation "
+            "that reddens tests it did not declare has not isolated the defect. "
+            "Declare the coupling with a reason, or narrow the mutation."
+        )
     return 1 if (args.check and bad) else 0
 
 
