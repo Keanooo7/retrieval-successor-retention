@@ -77,6 +77,18 @@ _MUP_COUPLING = (
     "deliberately -- an attribute set correctly and never applied is precisely the "
     "silent failure §4.3 warns about, so one edit must redden both."
 )
+_CAPTURE_BRIDGE_COUPLING = (
+    "`r_i` is asserted twice on purpose, and S0-02 is the reason: "
+    "tests/test_reward.py checks the property on a hand-built `AttentionTrace`, "
+    "tests/test_capture_bridge.py checks the same property end to end on a real "
+    "`TGModel` forward pass. Those were two disconnected claims until the capture "
+    "bridge existed -- `reward.py` had 11 passing tests and zero callers in "
+    "`src/` precisely because nothing joined them -- so one edit to `reward.py` "
+    "reddening both is the join working. A `reward.py` mutation that reddened "
+    "ONLY the fixture test would mean the bridge does not actually reach the "
+    "reward, which is the failure this file was written to detect."
+)
+
 _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
@@ -302,6 +314,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        scaled = scaled * attn.gate.reshape(-1, 1, 1, 1)",
         "        pass",
         "D-E: layer-specific rescaling silently omitted",
+        off_gate_allowed=(
+            (
+                "tests/test_capture_bridge.py::"
+                "test_the_captured_gate_is_the_models_memory_gate",
+                _CAPTURE_BRIDGE_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "r_i accepts a train-mode trace",
@@ -310,6 +329,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if not attn.eval_mode:",
         "    if False:",
         "D-F: the policy learns from dropout masks",
+        off_gate_allowed=(
+            (
+                "tests/test_capture_bridge.py::"
+                "test_a_train_mode_capture_is_refused_downstream",
+                _CAPTURE_BRIDGE_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "rank shift counts the sliding window",
@@ -347,6 +373,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    return raw / total * (n_live / capacity)",
         "    return raw / total",
         "§3.2.1: the estimator learns 'stream-initial content is valuable'",
+        off_gate_allowed=(
+            (
+                "tests/test_capture_bridge.py::"
+                "test_retrieval_demand_runs_on_a_real_forward_pass",
+                _CAPTURE_BRIDGE_COUPLING,
+            ),
+        ),
     ),
     # -- cycle 0 of the 2026-09-19 run: the evidence machinery itself ---------- #
     # Each of the four repairs in the dispatch's section 5 gets a mutation. A
@@ -565,9 +598,9 @@ MUTATIONS: tuple[Mutation, ...] = (
         "src/rsr/model/tg/policy_loop.py",
         '            wo_vs.append(torch.einsum("bmhk,hkd->bhmd", v, wo))',
         "            wo_vs.append(v.permute(0, 2, 1, 3))",
-        "S0-02 bar item 3, and defect D-6. §3.2.1: *\"`W_O` is not optional... "
+        'S0-02 bar item 3, and defect D-6. §3.2.1: *"`W_O` is not optional... '
         "dropping it reintroduces the confound the norm-weighting was adopted to "
-        "remove.\"* The reason this needs a mutation rather than a code review is "
+        'remove."* The reason this needs a mutation rather than a code review is '
         "that dropping `W_O` is **shape-compatible**: `reward.contribution` norms "
         "over the last axis, and `[L, H, M, Dh]` norms just as happily as "
         "`[L, H, M, D]`. Nothing downstream raises, no shape assertion fires, and "

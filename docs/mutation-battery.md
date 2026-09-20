@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**37/37 gates proven.**
+**36/39 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -25,10 +25,10 @@
 | W transposed | `test_W_is_not_silently_transposed` | **PROVEN** | 1 | 1 |
 | linear term dropped | `test_both_terms_are_present` | **PROVEN** | 2 | 2 |
 | value head shares the transformer group | `test_the_value_head_has_its_own_group` | **PROVEN** | 2 | 2 |
-| r_i drops the memory gate | `test_the_memory_gate_changes_the_answer` | **PROVEN** | 0 | 0 |
-| r_i accepts a train-mode trace | `test_a_train_mode_trace_is_refused` | **PROVEN** | 0 | 0 |
+| r_i drops the memory gate | `test_the_memory_gate_changes_the_answer` | **LEAKS** | 1 | 0 |
+| r_i accepts a train-mode trace | `test_a_train_mode_trace_is_refused` | **LEAKS** | 1 | 0 |
 | rank shift counts the sliding window | `test_evicting_the_oldest_displaces_nothing` | **PROVEN** | 4 | 4 |
-| underfull steps are not rescaled | `test_underfull_steps_are_rescaled_not_masked` | **PROVEN** | 0 | 0 |
+| underfull steps are not rescaled | `test_underfull_steps_are_rescaled_not_masked` | **LEAKS** | 1 | 0 |
 | ledger accepts an unreproducible entry point | `test_command_refuses` | **PROVEN** | 0 | 0 |
 | any console script counts as a committed entry point | `test_command_refuses_an_undeclared_tool_entry_point` | **PROVEN** | 0 | 0 |
 | an unreproducible command stops capping the verdict | `test_the_escape_hatch_caps_the_verdict_at_inconclusive` | **PROVEN** | 0 | 0 |
@@ -49,6 +49,8 @@
 | a first canary reading exits 0 again | `test_a_first_canary_reading_exits_3_not_0` | **PROVEN** | 0 | 0 |
 | a truncated canary run is compared over the overlap | `test_a_length_mismatch_is_a_move` | **PROVEN** | 0 | 0 |
 | the training loss scores padding again | `test_lm_loss` | **PROVEN** | 0 | 0 |
+| W_O dropped from the capture path | `test_capture_bridge` | **PROVEN** | 0 | 0 |
+| observe() is never reached | `test_observe` | **PROVEN** | 0 | 0 |
 
 ## What each mutation breaks, and what else went red
 
@@ -194,19 +196,23 @@ Also reddened (2):
 
 ### r_i drops the memory gate
 
-**Gate:** `test_the_memory_gate_changes_the_answer` — **PROVEN**
+**Gate:** `test_the_memory_gate_changes_the_answer` — **LEAKS**
 
 D-E: layer-specific rescaling silently omitted
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_capture_bridge.py::test_the_captured_gate_is_the_models_memory_gate` — 🔴 UNDECLARED
 
 ### r_i accepts a train-mode trace
 
-**Gate:** `test_a_train_mode_trace_is_refused` — **PROVEN**
+**Gate:** `test_a_train_mode_trace_is_refused` — **LEAKS**
 
 D-F: the policy learns from dropout masks
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_capture_bridge.py::test_a_train_mode_capture_is_refused_downstream` — 🔴 UNDECLARED
 
 ### rank shift counts the sliding window
 
@@ -223,11 +229,13 @@ Also reddened (4):
 
 ### underfull steps are not rescaled
 
-**Gate:** `test_underfull_steps_are_rescaled_not_masked` — **PROVEN**
+**Gate:** `test_underfull_steps_are_rescaled_not_masked` — **LEAKS**
 
 §3.2.1: the estimator learns 'stream-initial content is valuable'
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_capture_bridge.py::test_retrieval_demand_runs_on_a_real_forward_pass` — 🔴 UNDECLARED
 
 ### ledger accepts an unreproducible entry point
 
@@ -390,6 +398,22 @@ Reddened nothing else.
 **Gate:** `test_lm_loss` — **PROVEN**
 
 cycle 1 defect 1: the objective goes back to averaging over every target, 93.4% of which are PAD on the committed synthetic corpus -- so the number minimised, reported and exponentiated into a perplexity is mostly the model's skill at predicting zeros
+
+Reddened nothing else.
+
+### W_O dropped from the capture path
+
+**Gate:** `test_capture_bridge` — **PROVEN**
+
+S0-02 bar item 3, and defect D-6. §3.2.1: *"`W_O` is not optional... dropping it reintroduces the confound the norm-weighting was adopted to remove."* The reason this needs a mutation rather than a code review is that dropping `W_O` is **shape-compatible**: `reward.contribution` norms over the last axis, and `[L, H, M, Dh]` norms just as happily as `[L, H, M, D]`. Nothing downstream raises, no shape assertion fires, and `r_i` becomes norm-weighted raw attention -- which is v0.1's rejected definition wearing the new one's name.
+
+Reddened nothing else.
+
+### observe() is never reached
+
+**Gate:** `test_observe` — **PROVEN**
+
+S0-02 bar item 4. `git grep '\.observe(' -- src/` returned **zero hits** before this cycle: `reward.py` had 160 lines and 11 passing tests and no path from a forward pass to any of it. A call site with no test that notices its removal is the same condition with an extra line of code.
 
 Reddened nothing else.
 
