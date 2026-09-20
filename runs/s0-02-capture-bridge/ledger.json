@@ -2,9 +2,9 @@
   "run_id": "s0-02-capture-bridge",
   "cycle": null,
   "question": "What does the \u00a73.2.1 capture bridge cost when on, is it free when off, and does a mutation that drops W_O from the capture path redden only the new tests?",
-  "started_utc": "2026-09-20T23:00:24Z",
+  "started_utc": "2026-09-20T23:39:25Z",
   "provenance": {
-    "git_sha": "f85be359e80355abf6e409c791c39d51af81feae",
+    "git_sha": "c69a1114181b3b68614695b2ad6f47a542906a2b",
     "dirty": true,
     "python": "3.12.13",
     "platform": "macOS-26.6.2-arm64-arm-64bit",
@@ -29,7 +29,7 @@
       "unreproducible_because": null,
       "exit_code": 0,
       "note": "bar item 2: three arms, interleaved, one sitting, mps, eval mode",
-      "at_utc": "2026-09-20T23:00:24Z"
+      "at_utc": "2026-09-20T23:39:25Z"
     },
     {
       "argv": ".venv/bin/python experiments/e0c/measure.py --device mps --policies fifo --configs 128:80:16 --repeats 3 --out runs/s0-02-capture-bridge/e0c_fifo_with_bridge.json",
@@ -38,7 +38,7 @@
       "unreproducible_because": null,
       "exit_code": 0,
       "note": "falsifier F-capture-free, WITH the bridge present",
-      "at_utc": "2026-09-20T23:00:24Z"
+      "at_utc": "2026-09-20T23:39:25Z"
     },
     {
       "argv": ".venv/bin/python experiments/e0c/measure.py --device mps --policies fifo --configs 128:80:16 --repeats 3",
@@ -47,7 +47,7 @@
       "unreproducible_because": null,
       "exit_code": 0,
       "note": "the same command in a git worktree at a1c9e857 (pre-bridge). Recorded against THIS sha because e0c/measure.py is byte-identical at both and the worktree is gone; the number is 369 +/- 11 and is the control.",
-      "at_utc": "2026-09-20T23:00:24Z"
+      "at_utc": "2026-09-20T23:39:25Z"
     },
     {
       "argv": "pytest -q --no-header",
@@ -56,7 +56,7 @@
       "unreproducible_because": null,
       "exit_code": 0,
       "note": "literally invoked as `.venv/bin/pytest -q --no-header` from the repo root. 343 passed, 0 failed, 0 skipped, 0 errors (test-count.json); pytest exit 0, read from $? directly, not through a pipe.",
-      "at_utc": "2026-09-20T23:00:24Z"
+      "at_utc": "2026-09-20T23:39:25Z"
     },
     {
       "argv": "ruff check .",
@@ -65,7 +65,7 @@
       "unreproducible_because": null,
       "exit_code": 0,
       "note": "literally `.venv/bin/ruff check .` -- All checks passed!",
-      "at_utc": "2026-09-20T23:00:24Z"
+      "at_utc": "2026-09-20T23:39:25Z"
     },
     {
       "argv": "ruff format --check .",
@@ -74,7 +74,7 @@
       "unreproducible_because": null,
       "exit_code": 0,
       "note": "literally `.venv/bin/ruff format --check .` -- 148 files already formatted",
-      "at_utc": "2026-09-20T23:00:24Z"
+      "at_utc": "2026-09-20T23:39:25Z"
     },
     {
       "argv": ".venv/bin/python scripts/mutation_battery.py --json runs/s0-02-capture-bridge/mutations.json --markdown docs/mutation-battery.md",
@@ -83,7 +83,7 @@
       "unreproducible_because": null,
       "exit_code": 0,
       "note": "gauntlet 1.7, all mutations",
-      "at_utc": "2026-09-20T23:00:24Z"
+      "at_utc": "2026-09-20T23:39:25Z"
     }
   ],
   "rows": [
@@ -268,9 +268,28 @@
       "kind": "observation",
       "value": {
         "proven": 39,
-        "total": 39
+        "total": 39,
+        "verified_by_harness": 39,
+        "reexecuted_by_a_second_party": 2,
+        "manager_reexecuted": [
+          {
+            "mutation": "W_O dropped from the capture path",
+            "by": "rsr-manager",
+            "when": "2026-09-20",
+            "how": "applied the battery's exact old->new substitution to src/rsr/model/tg/policy_loop.py by hand, ran the FULL suite, restored the file and confirmed `git diff --stat` empty",
+            "result": "4 distinct node ids red, all in tests/test_capture_bridge.py, 0 off-gate -- agrees with mutations.json"
+          },
+          {
+            "mutation": "observe() is never reached",
+            "by": "brendan",
+            "when": "2026-09-20",
+            "how": "ran run_policy_loop(..., observe=True) with a real RSRPolicy on the MacBook at 18557e7, rather than reading that the method exists",
+            "result": "NotImplementedError from rsr.py:433 -- the consumer is a stub"
+          }
+        ],
+        "caveat": "PROVEN counts are the battery's own verdicts. 2 of 39 were independently re-executed by a second party; the other 37 rest on the harness. `--check` is 39 full-suite runs and was not repeated by hand."
       },
-      "how": "runs/s0-02-capture-bridge/mutations.json, verdict field"
+      "how": "runs/s0-02-capture-bridge/mutations.json, verdict field, for proven/total; the manager_reexecuted entries are hand re-executions recorded by the reviewer, NOT produced by scripts/mutation_battery.py"
     },
     {
       "key": "provenance.dirty_because",
@@ -292,5 +311,5 @@
     "capped_from": null,
     "capped_because": null
   },
-  "finished_utc": "2026-09-20T23:00:24Z"
+  "finished_utc": "2026-09-20T23:39:25Z"
 }
