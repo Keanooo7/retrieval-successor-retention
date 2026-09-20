@@ -176,10 +176,65 @@ for m in new_gates:
         },
         how=f"runs/{RUN}/mutations.json",
     )
+# 🔴 B2 (dispatch 2026-09-20d). This row read `{"proven": 39, "total": 39}` with no
+# qualifier, and the ledger is what future work joins on: a bare `39/39` is read as
+# `39/39 verified`. It is not. The battery ran all 39; the MANAGER re-executed two
+# by hand, and which two is part of the number's meaning. A number that is true and
+# unqualified is how a caveat dies -- so the caveat lives in the row, not in a
+# scoreboard the joiner never opens.
+#
+# `manager_reexecuted` names what a second party reproduced independently of the
+# harness that produced the verdicts. Anyone raising it must have re-run the
+# mutation by hand; do not edit it to match a report.
+_MANAGER_REEXECUTED = (
+    {
+        "mutation": "W_O dropped from the capture path",
+        "by": "rsr-manager",
+        "when": "2026-09-20",
+        "how": (
+            "applied the battery's exact old->new substitution to "
+            "src/rsr/model/tg/policy_loop.py by hand, ran the FULL suite, restored "
+            "the file and confirmed `git diff --stat` empty"
+        ),
+        "result": (
+            "4 distinct node ids red, all in tests/test_capture_bridge.py, "
+            "0 off-gate -- agrees with mutations.json"
+        ),
+    },
+    {
+        "mutation": "observe() is never reached",
+        "by": "brendan",
+        "when": "2026-09-20",
+        "how": (
+            "ran run_policy_loop(..., observe=True) with a real RSRPolicy on the "
+            "MacBook at 18557e7, rather than reading that the method exists"
+        ),
+        "result": "NotImplementedError from rsr.py:433 -- the consumer is a stub",
+    },
+)
+
 led.note(
     "mutations.total_proven",
-    {"proven": sum(1 for m in muts if m["verdict"] == "PROVEN"), "total": len(muts)},
-    how=f"runs/{RUN}/mutations.json, verdict field",
+    {
+        "proven": sum(1 for m in muts if m["verdict"] == "PROVEN"),
+        "total": len(muts),
+        # ⚠️ Read these two together or not at all.
+        "verified_by_harness": len(muts),
+        "reexecuted_by_a_second_party": len(_MANAGER_REEXECUTED),
+        "manager_reexecuted": list(_MANAGER_REEXECUTED),
+        "caveat": (
+            "PROVEN counts are the battery's own verdicts. "
+            f"{len(_MANAGER_REEXECUTED)} of {len(muts)} were independently "
+            "re-executed by a second party; the other "
+            f"{len(muts) - len(_MANAGER_REEXECUTED)} rest on the harness. "
+            "`--check` is 39 full-suite runs and was not repeated by hand."
+        ),
+    },
+    how=(
+        f"runs/{RUN}/mutations.json, verdict field, for proven/total; "
+        "the manager_reexecuted entries are hand re-executions recorded by the "
+        "reviewer, NOT produced by scripts/mutation_battery.py"
+    ),
 )
 
 # ⚠️ `provenance.dirty` is True, and it is worth one row saying exactly why, so a
