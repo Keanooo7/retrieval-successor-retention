@@ -116,8 +116,9 @@ exists to close.
 
 ## The bar
 
-1. **One shared `Exit` enum**, `0/1/2/3`, with the protocol as its docstring, and a result helper
-   every checker uses. §6's conversion queue names this and it is the deliverable.
+1. **One shared `Exit` enum**, `0/1/2/3/4` — **five, not four; see the correction below** — with the
+   protocol as its docstring, and a result helper every checker uses. §6's conversion queue names
+   this and it is the deliverable.
 2. **`canary.py:69` maps `"baseline"` to `2`.** The existing test at
    `test_evidence_machinery.py:346` asserts `3` and **must be changed** — changing it is not
    moving a goalpost, it is correcting a value that was never measured against anything. Say so
@@ -153,3 +154,45 @@ One PR to `main` with the enum, the corrected mappings, the tests, the mutations
 Required, and `none` must be written out. **Assume this brief has some.** Its audit was produced
 by one manager reading each site once; that is exactly the process that produced the defect it
 describes.
+
+---
+
+## 🔴 CORRECTION, same day, before dispatch — the protocol has FIVE codes
+
+The bar above originally said `0/1/2/3`. **That is wrong, and it is the same error the brief
+describes: I read the protocol off `canary.py`, which is the file under suspicion.**
+
+`docs/gates.md:83-90` — read at source, not quoted from a dispatch:
+
+```
+0  at or above the floor
+1  FLOOR DROP              — the thing this exists to catch
+2  floor UNKNOWN           — no recorded floor for this key
+3  ENVIRONMENT / DID NOT RUN   <- NOT A PASS
+4  UNBANKED RISE           — measured above the floor, floor not updated
+```
+
+under the heading **"Exit codes — the same five everywhere."** And the two lines after it are the
+sharpest statement of this brief's whole subject, from the project's own hand:
+
+> **`2` and `3` are separate deliberately, and `3` is where this design can be silently defeated.**
+> "The gate did not run" and "the gate found nothing" are different facts.
+
+**That sentence condemns `canary.py:69` directly.** Cite it in your `RESULTS.md`; it is better
+evidence than anything I wrote above it.
+
+Two further things fall out, and neither was in the original audit:
+
+1. **`canary.py`'s own docstring at `:35` lists only four codes** and omits `4` entirely. The
+   file that got `2` wrong also silently narrowed the protocol it claims to follow. **The
+   docstring is a third defect in that file, alongside `:69` and `:151`.**
+2. 🔑 **No site in this repo returns `4`.** `UNBANKED RISE` — measured above the floor, floor not
+   updated — is specified in `gates.md` and implemented nowhere. `grep -rn 'return 4' --include='*.py' .`
+   ⚠️ **Do not treat that as a defect on sight.** `gates.md` is a specification of intent, not a
+   description of this tree, and an unimplemented code may simply be unreached. **Determine which
+   it is and say so** — "specified and deliberately unimplemented" and "specified and forgotten"
+   are different facts, in exactly the way the quotation above means.
+
+*Found by re-executing a quotation I had published without checking: the `2` definition in this
+brief came from the dispatch that commissioned it, not from `gates.md`. The definition turned out
+correct. The table around it did not. Record this as a `BRIEF ERRORS` entry against me.*
