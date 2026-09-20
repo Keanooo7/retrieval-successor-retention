@@ -1,0 +1,296 @@
+{
+  "run_id": "s0-02-capture-bridge",
+  "cycle": null,
+  "question": "What does the \u00a73.2.1 capture bridge cost when on, is it free when off, and does a mutation that drops W_O from the capture path redden only the new tests?",
+  "started_utc": "2026-09-20T23:00:24Z",
+  "provenance": {
+    "git_sha": "f85be359e80355abf6e409c791c39d51af81feae",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "mps",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 80,
+  "steps_done": 80,
+  "status": "ok",
+  "config_hash": "56baf95a8a4048585733f6496c771e4d2e489fecac6532afbfb36323e8ae8e80",
+  "manifest_written_utc": "pre-run; see runs/s0-02-capture-bridge/manifest.json",
+  "commands": [
+    {
+      "argv": ".venv/bin/python experiments/s0-02/measure_capture_cost.py --device mps --repeats 3 --out runs/s0-02-capture-bridge/capture_cost.json",
+      "entry_point": "experiments/s0-02/measure_capture_cost.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "bar item 2: three arms, interleaved, one sitting, mps, eval mode",
+      "at_utc": "2026-09-20T23:00:24Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/e0c/measure.py --device mps --policies fifo --configs 128:80:16 --repeats 3 --out runs/s0-02-capture-bridge/e0c_fifo_with_bridge.json",
+      "entry_point": "experiments/e0c/measure.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "falsifier F-capture-free, WITH the bridge present",
+      "at_utc": "2026-09-20T23:00:24Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/e0c/measure.py --device mps --policies fifo --configs 128:80:16 --repeats 3",
+      "entry_point": "experiments/e0c/measure.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "the same command in a git worktree at a1c9e857 (pre-bridge). Recorded against THIS sha because e0c/measure.py is byte-identical at both and the worktree is gone; the number is 369 +/- 11 and is the control.",
+      "at_utc": "2026-09-20T23:00:24Z"
+    },
+    {
+      "argv": "pytest -q --no-header",
+      "entry_point": "pytest",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "literally invoked as `.venv/bin/pytest -q --no-header` from the repo root. 343 passed, 0 failed, 0 skipped, 0 errors (test-count.json); pytest exit 0, read from $? directly, not through a pipe.",
+      "at_utc": "2026-09-20T23:00:24Z"
+    },
+    {
+      "argv": "ruff check .",
+      "entry_point": "ruff",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "literally `.venv/bin/ruff check .` -- All checks passed!",
+      "at_utc": "2026-09-20T23:00:24Z"
+    },
+    {
+      "argv": "ruff format --check .",
+      "entry_point": "ruff",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "literally `.venv/bin/ruff format --check .` -- 148 files already formatted",
+      "at_utc": "2026-09-20T23:00:24Z"
+    },
+    {
+      "argv": ".venv/bin/python scripts/mutation_battery.py --json runs/s0-02-capture-bridge/mutations.json --markdown docs/mutation-battery.md",
+      "entry_point": "scripts/mutation_battery.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "gauntlet 1.7, all mutations",
+      "at_utc": "2026-09-20T23:00:24Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "sent_per_s.capture_off",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        390.08,
+        387.95,
+        388.36
+      ],
+      "mean": 388.7966666666666,
+      "sd": 1.1301474830009208,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_off].sent_per_s_samples; 3 interleaved repeats, mps, d=128 S=80 batch=16, eval mode, fwd+bwd, no optimizer step",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "observe_calls.capture_off",
+      "kind": "observation",
+      "value": 0,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_off].observe_calls (harness asserts == batch*S = 1280 on capture arms, == 0 on the control)"
+    },
+    {
+      "key": "sent_per_s.capture_on",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        360.89,
+        360.11,
+        360.38
+      ],
+      "mean": 360.46000000000004,
+      "sd": 0.39610604640675423,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].sent_per_s_samples; 3 interleaved repeats, mps, d=128 S=80 batch=16, eval mode, fwd+bwd, no optimizer step",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "observe_calls.capture_on",
+      "kind": "observation",
+      "value": 1280,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].observe_calls (harness asserts == batch*S = 1280 on capture arms, == 0 on the control)"
+    },
+    {
+      "key": "sent_per_s.capture_on_ri",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        330.75,
+        330.21,
+        328.93
+      ],
+      "mean": 329.9633333333333,
+      "sd": 0.9347370396712229,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].sent_per_s_samples; 3 interleaved repeats, mps, d=128 S=80 batch=16, eval mode, fwd+bwd, no optimizer step",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "observe_calls.capture_on_ri",
+      "kind": "observation",
+      "value": 1280,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].observe_calls (harness asserts == batch*S = 1280 on capture arms, == 0 on the control)"
+    },
+    {
+      "key": "delta_sent_per_s.capture_on_minus_off",
+      "kind": "observation",
+      "value": -28.34,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].delta_vs_off_sent_per_s = mean(capture_on) - mean(capture_off) = 360.46 - 388.8"
+    },
+    {
+      "key": "delta_pct.capture_on_minus_off",
+      "kind": "observation",
+      "value": -7.29,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].delta_vs_off_pct"
+    },
+    {
+      "key": "delta_sent_per_s.capture_on_ri_minus_off",
+      "kind": "observation",
+      "value": -58.83,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].delta_vs_off_sent_per_s = mean(capture_on_ri) - mean(capture_off) = 329.96 - 388.8"
+    },
+    {
+      "key": "delta_pct.capture_on_ri_minus_off",
+      "kind": "observation",
+      "value": -15.13,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].delta_vs_off_pct"
+    },
+    {
+      "key": "r_i_computed.capture_on_ri",
+      "kind": "observation",
+      "value": 1264,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json; 1264 = 1280 - 16, one empty-memory first step per row, where n_live == 0 and there is no demand to apportion"
+    },
+    {
+      "key": "peak_gb.capture_off",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        28.75,
+        28.75,
+        28.74
+      ],
+      "mean": 28.746666666666666,
+      "sd": 0.00577350269189716,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_off].peak_gb_samples",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "peak_gb.capture_on",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        28.79,
+        28.79,
+        28.79
+      ],
+      "mean": 28.790000000000003,
+      "sd": 4.351167857633658e-15,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].peak_gb_samples",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "peak_gb.capture_on_ri",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        28.8,
+        28.8,
+        28.8
+      ],
+      "mean": 28.8,
+      "sd": 0.0,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].peak_gb_samples",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "e0c_fifo_sent_per_s.with_bridge",
+      "kind": "observation",
+      "value": {
+        "mean": 370.2,
+        "sd": 8.7,
+        "repeats": 3
+      },
+      "how": "runs/s0-02-capture-bridge/e0c_fifo_with_bridge.json results[0]; experiments/e0c/measure.py unmodified, sha c81ac35"
+    },
+    {
+      "key": "e0c_fifo_sent_per_s.pre_bridge",
+      "kind": "observation",
+      "value": {
+        "mean": 369.0,
+        "sd": 11.0,
+        "repeats": 3
+      },
+      "how": "stdout of the SAME unmodified experiments/e0c/measure.py run in a git worktree at a1c9e857 (the sha this brief re-baselined to, plus the two briefs), printed as '369+-11'. \ud83d\udd34 Transcribed from a terminal, not from a JSON file: the worktree was removed and --out was not passed. This is the ONE number in this ledger that is not machine-read, and it is the control half of the falsifier. Re-derivable in ~40 s: `git worktree add <dir> a1c9e857` and rerun."
+    },
+    {
+      "key": "mutation.W_O_dropped_from_the_capture_path",
+      "kind": "observation",
+      "value": {
+        "gate": "test_capture_bridge",
+        "verdict": "PROVEN",
+        "n_on_gate": 4,
+        "off_gate": [],
+        "off_gate_undeclared": []
+      },
+      "how": "runs/s0-02-capture-bridge/mutations.json"
+    },
+    {
+      "key": "mutation.observe()_is_never_reached",
+      "kind": "observation",
+      "value": {
+        "gate": "test_observe",
+        "verdict": "PROVEN",
+        "n_on_gate": 2,
+        "off_gate": [],
+        "off_gate_undeclared": []
+      },
+      "how": "runs/s0-02-capture-bridge/mutations.json"
+    },
+    {
+      "key": "mutations.total_proven",
+      "kind": "observation",
+      "value": {
+        "proven": 39,
+        "total": 39
+      },
+      "how": "runs/s0-02-capture-bridge/mutations.json, verdict field"
+    },
+    {
+      "key": "provenance.dirty_because",
+      "kind": "observation",
+      "value": {
+        "untracked": [
+          "uv.lock"
+        ],
+        "source_roots_clean": true,
+        "created_by_this_run": false
+      },
+      "how": "git status --porcelain at write time. `uv.lock` was already untracked at session start (it is in the launch snapshot) and is outside ledger.SOURCE_ROOTS, so write() did not refuse. Left alone deliberately: committing another session's lockfile is not this brief's decision."
+    }
+  ],
+  "verdict": {
+    "falsifier": "F-capture-free / bar item 3 (W_O is in the capture path)",
+    "outcome": "survived",
+    "detail": "capture_off 388.80 +/- 1.13 sent/s; capture_on 360.46 +/- 0.40 (-28.34, -7.29%); +r_i 329.96 +/- 0.94 (-58.83, -15.13%). Free-when-off survives: 369+-11 pre-bridge vs 370+-9 with the bridge, same unmodified e0c harness, same sitting. Bar item 3 survives: dropping W_O from the capture path reddens the new tests and only them. \ud83d\udd34 Pre-registered expectation 4 ('r_i costs less than the bridge') was FALSIFIED: r_i costs 30.5 sent/s against the bridge's 28.3, because it is 1264 Python-level calls launching small MPS kernels, not a FLOP bill.",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-20T23:00:24Z"
+}

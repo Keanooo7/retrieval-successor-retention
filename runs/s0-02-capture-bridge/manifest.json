@@ -1,0 +1,38 @@
+{
+  "M": 40,
+  "S": 80,
+  "arms": [
+    "capture_off",
+    "capture_on",
+    "capture_on_ri"
+  ],
+  "batch": 16,
+  "brief": "docs/lab-notes/dispatch-S0-02-capture-bridge.md (AMENDED at d537cc8)",
+  "d": 128,
+  "device": "mps",
+  "entry_point": "experiments/s0-02/measure_capture_cost.py",
+  "eval_mode_reason": "correction 20 / D-F: attn_dropout=0.2 makes a train-mode alpha stochastically zeroed, and reward refuses the trace. The control runs in eval too or the arms differ in two things.",
+  "expectation": "PRE-REGISTERED. (1) capture_off lands within noise of e0c's 310 +/- 2 sent/s for the RSR arm -- not as a denominator, but as the prediction the amendment names. Expect capture_off to be FASTER than 310 because the policy here is FIFO (e0c measured FIFO at 374 +/- 8), so the honest prediction is ~374, and if it is not, the harness has drifted from e0c's. (2) capture_on is SLOWER than capture_off by a visible margin -- the bridge does 6 einsums of [B,M,H,Dh]x[H,Dh,D] per step plus B python-level trace constructions. (3) capture_off is byte-identical in LOSS to a pre-change run: capture is observation. (4) r_i on top of the bridge costs LESS than the bridge itself, because it is 6x[H,M,D] norms against 6 projections.",
+  "falsifier": "F-capture-free: 'capture is off by default and free when off.' Falsified if capture_off after this change is outside the spread of a capture_off run with the bridge code absent, or if observe() runs at all with observe=False. Secondary, and the brief's bar item 3: 'the capture actually contains W_O' is falsified if zeroing/dropping W_O leaves r_i unchanged -- run as a mutation, not as a timing.",
+  "forward_and_backward": true,
+  "interleaved": true,
+  "model_mode": "eval",
+  "optimizer_step": false,
+  "policy": "FIFOPolicy subclass with an observe counter",
+  "q_tok_collapse": "sum_over_real_query_tokens (ADR-0008)",
+  "repeats": 3,
+  "seed_meaning": "torch.manual_seed(rep) before model construction; the DATA is seed 0 in every repeat, so the seeds vary initialisation, not the workload shape. A timing repeat is not a statistical seed and this run does not claim it is.",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "tokens_per_sentence": 64,
+  "vocab": 50257,
+  "warmup_per_arm": 1,
+  "what_this_does_not_test": [
+    "training throughput: no optimizer step, random tokens, one data shape",
+    "MPS vs CPU: mps only, per ADR-0001 D3 best-effort",
+    "whether r_i is a good target: that is E0d, and it needs this bridge first"
+  ]
+}
