@@ -56,10 +56,39 @@ touches this file" is gone, and any argument that leaned on it is void.
 | (e) `--vocab` at `:274`, then `:275` | **`:369`** |
 | (d) `policy.attribution()` at `:236` | **`:315`**; `attribution_counts` at `rsr.py:450` holds |
 | `value_head=None` at `:161` | **`:210`**, `build_param_groups(model, None, …)`, comment `:207-209` |
-| `from_registry` eager read at `rsr.py:236-243` | **`rsr.py:215`** |
+| `from_registry` eager read at `rsr.py:236-243` | 🔴 **UNCHANGED — `:236-243` was already correct.** See the manager's note below. |
 
 *Three briefs in a row have now carried a wrong line number. **The line number is not the claim** —
 re-run the grep, and if it disagrees with this table, this table is what is wrong.*
+
+### 🔴 Manager's revalidation, 2026-09-20 at `75c0f62` — the table holds except in one place
+
+Re-run rather than read, per the instruction above. **Nine of the ten rows are exact**: `401` lines ·
+`tests/test_train_loss.py:31` imports it · `FIFOPolicy()` unconditional at `:213-215` · parameter
+`:184`, frozen config `:224`, `run_id` `:228` · no `--policy` in the flag table · `grep -c
+srep_norm` → **`0`** · `--vocab` at `:369` · `policy.attribution()` at `:315` ·
+`build_param_groups(model, None, …)` at `:210`.
+
+**The tenth row is a false correction, and it broke a citation that was right.** Measured:
+
+```
+rsr.py:236:  kw: dict[str, Any] = {
+rsr.py:237-241:  "nu" / "beta" / "gamma" / "t_warm" / "a_max"  -- five eager reg.get() calls
+rsr.py:242:  }
+rsr.py:243:  kw.update(overrides)
+```
+
+**`rsr.py:236-243` is exactly the eager `kw` build** — the thing this brief is about, the reason an
+override cannot save you from a registry refusal. `rsr.py:215` is merely `def from_registry(`. Cycle
+1 never touched this function, so there was nothing here to re-baseline; the amendment re-baselined
+it anyway and lost the precision.
+
+📌 **`## Files in scope` at `:83` kept `:236-243` and is therefore the accurate line in this brief.**
+The brief briefly contradicted itself with the stale-*looking* citation being the correct one.
+
+🔑 *The lesson generalises past this row: a re-baselining pass is itself a change, and a correction
+applied to a line that did not move is a new defect wearing a fix's clothes. Re-measure before
+correcting, not only before citing.* **Use `rsr.py:236-243`.**
 
 ---
 
