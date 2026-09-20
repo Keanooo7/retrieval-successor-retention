@@ -48,6 +48,18 @@ Capacity questions are answered by **measuring this machine** — the `(S, d, ba
 ceiling at the widths actually run — not by sizing a card. §4.2's rule stands and now
 applies to hardware in hand: **if `S = 80` does not fit, `S` wins and `d` is cut.**
 
+## Reading an exit code — the worked example
+
+🔴 **Read `$?` directly, and capture it before any other command runs.** A status read after a pipe is the *pipe's*, not the command's.
+
+```zsh
+cmd > out.log 2>&1; rc=$?          # correct
+cmd | tail -3; rc=$?               # WRONG -- this is tail's status, always 0
+cmd | tail -3; rc=$pipestatus[1]   # zsh. NOT ${PIPESTATUS[0]}, which is bash
+```
+
+⚠️ **`${PIPESTATUS[0]}` expands to the EMPTY STRING in zsh** — not to an error. On 2026-09-20 that was caught only because blank compared unequal to `0`; in the same session a `PUSH_EXIT` was then read after a pipe and was `tail`'s. **Two instances, one session, opposite directions.** A status that is empty or borrowed is not a measurement, and "literal output or it did not happen" is defeated at the point the status is captured.
+
 ## Prohibitions — honor these literally
 
 - **Do not fill §15.** It reads: *"This section is a placeholder and must not be
