@@ -73,3 +73,99 @@ My correction at `eedc0c0` earned its keep in the other direction: the CPU arm r
 **Two of the night's corrections were mine against my own brief**, both found by re-executing
 rather than re-reading: the retracted `iters=8` arithmetic (`8a8a116`) and the floor's statistic
 and device (`eedc0c0`).
+
+---
+
+# S0-02 — the capture bridge. Manager's review.
+
+**Verdict: ACCEPTED.** Gates green and re-executed, not read. One claim of my own is retracted
+below, and one defect is filed against the cycle.
+
+## What I re-executed rather than believed
+
+| Claim | How I checked it | Result |
+|---|---|---|
+| `passed=343 failed=0 skipped=0 errors=0` | `.venv/bin/python -m pytest -rs -q`, `$?` read unpiped | ✅ exit `0`, census matches. Baseline was 323; **+20** is `tests/test_capture_bridge.py` |
+| The two headline tests are not skipped | ran `test_reduction.py` and `test_fidelity.py` alone | ✅ `passed=44 failed=0 skipped=0`. **They genuinely run** |
+| `W_O` mutation reddens **only** the new tests | applied the mutation by hand, ran the **full** suite, restored | ✅ exactly **4 distinct** node ids, all in `test_capture_bridge.py`, **0 off-gate** |
+| Throughput rows | opened `runs/s0-02-capture-bridge/ledger.json`, not the prose | ✅ `388.797±1.130 / 360.460±0.396 / 329.963±0.935` — prose matches JSON |
+| The transcribed number is flagged | opened row 15's `how` | ✅ names 🔴 *"Transcribed from a terminal, not from a JSON file"* in the row itself |
+| `.gitignore` fix does not over-track | `git ls-files runs/` | ✅ 70 files, no `.pt`, `.git` 26 MB |
+
+⚠️ **What I did not re-execute:** the other 37 mutations. `--check` is 39 full-suite runs; I
+verified the one the brief's Bar item 3 rests on and the researcher's own `mutations.json` for the
+rest. Stated so nobody reads "39/39" here as mine.
+
+## 🔴 RETRACTED — my amendment's bar-4 argument was wrong, and it is the same error I reviewed
+
+I wrote in `dispatch-S0-02-capture-bridge.md` that Bar item 4 was safe because *"`observe()` is on
+the protocol, on `FIFOPolicy` and on `RSRPolicy` (`rsr.py:427`)."*
+
+**`RSRPolicy.observe` raises `NotImplementedError` at `rsr.py:433`.** An unconditional `observe()`
+call — the plain reading of bar 4 — would have turned `test_checkpoint.py` red on contact, via the
+very call sites I cited as reassurance. **I checked that a method existed, not that it ran.**
+
+That is verbatim the failure recorded three sections above in this same file, against Brendan's own
+brief: *"I checked that a flag existed, not that the gate ran."* I reviewed that sentence and
+reproduced it the next day, in an amendment whose subject was whether a dependency was real.
+**Reached ≠ usable**, and the distinction is the one this project keeps paying for.
+
+The researcher resolved it without routing around it — `observe=False`, opt-in, which Bar item 2
+independently wanted — and drew the honest consequence: **`rsr.retention.reward` still has zero
+real importers in `src/`.** The producer exists; the consumer is a stub. *Anyone reading this cycle
+as "the bridge is wired end to end" is reading it wrong.*
+
+## 🔴 FILED AGAINST THE CYCLE — ADR-0008's three figures are prose-only
+
+`1.49 × 10⁻⁷`, `2.98 × 10⁻⁸` and `0.0383` carry the ADR's whole argument: the first that the
+collapse is algebra, the second that mean-vs-sum is not a fork, the third that EOS-only is. None has
+a ledger row (the ledger has 20, none of them the collapse comparison), no raw artefact, and the ADR
+says only *"Measured on a real forward pass"* — **no command.**
+
+📌 **This is the `310 ± 2 sent/s` disease, in the cycle that diagnosed it.** A real figure from a
+real run that a reader cannot regenerate. Not fatal and not a retraction: the ADR's *claims* are
+pinned by tests that run in CI — `test_mean_and_sum_collapse_give_the_same_r_i`,
+`test_eos_only_collapse_is_a_different_measurement`, `test_the_collapse_reproduces_the_real_increment`
+— which is in one way stronger than a ledger row. But the tests assert **thresholds**, not these
+values. **What is missing is a producer script and a row; write them before ADR-0008 is cited
+again.**
+
+## What the cycle got right that is worth naming
+
+🔑 **Bar item 3's own test was vacuous first, and the battery is what caught it.** The original
+perturbed `attn_out_proj` on every cross block and stayed green under its own mutation, because
+layer `l`'s output moves layer `l+1`'s attention — it detected *"the model changed."* Three other
+tests were silently carrying the gate. This is the project's own rule paying out on the cycle that
+invoked it, and it is a better result than the bridge.
+
+📌 **The pre-registered expectation that `r_i` is cheaper than the bridge was falsified** and
+reported as such: `−30.5` vs `−28.3 sent/s`. Launch-bound, not FLOP-bound — the same finding E0c
+made about the dispatch loop. A cycle that reports its own failed prediction is the point.
+
+⚠️ **`${PIPESTATUS[0]}` returned empty in zsh** (it is `$pipestatus[1]`). Visible only because it
+was blank rather than `0`. **An idiom that silently returned the pipe's status would have read `0`
+and meant nothing** — this belongs in the standing rules, not in one report.
+
+## Numbers, for the record
+
+| arm | mean ± sd (3 repeats) | Δ vs off |
+|---|---|---|
+| `capture_off` | **388.80 ± 1.13** sent/s | — |
+| `capture_on` | **360.46 ± 0.40** | **−28.34 (−7.29 %)** |
+| `capture_on_ri` | **329.96 ± 0.94** | **−58.83 (−15.13 %)** |
+
+Free-when-off measured, not asserted: unmodified `e0c/measure.py`, same machine, same sitting —
+`369 ± 11` pre-bridge vs `370 ± 9` with the bridge present. ⚠️ The pre-bridge figure is the one
+transcribed from a terminal. **`310 ± 2` is correctly not used as a denominator anywhere.**
+
+Three `peak_gb` rows carry sd `0.0` / `4.35e-15` and the ledger flags them. Accepted as **not** the
+broken-seed shape: 2-dp-rounded deterministic allocation, and the throughput rows *from the same
+three trials* carry sd `1.13 / 0.40 / 0.94`. That contrast is the discriminator, and it is the
+reason the standing rule says to report spread rather than to fear a zero.
+
+## Still open, and not this cycle's fault
+
+**S0-01 has not landed** — `tests/test_train_loop.py` absent, no `--policy` flag, `srep_norm` out of
+the objective, `--vocab` still 50257. **S0-04 is not unblocked**: it has a live *producer* now, but
+`RSRPolicy.observe` is a stub, so the positive control still has no live memory to read large on —
+which is the same rejection filed against cycle 1 at the top of this file, still standing.
