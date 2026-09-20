@@ -33,6 +33,36 @@ Four changes, all of them subtractions:
 
 ---
 
+## ⚠️ AMENDED (2) 2026-09-20 at `058e712b0f421d7533c96f30a0a7a0942d7df6b5`
+
+**Cycle 1 landed in `loop.py` between the first amendment and this one, and it moved everything.**
+`src/rsr/train/loop.py` gained 94 lines. Every line citation below was re-measured at `058e712`;
+the numbers in the tables are the new ones, and the stale ones are named so nobody re-derives them.
+
+🔴 **One premise of this brief is now FALSE, and cycle 1 falsified it.** The hypothesis opened
+*"a training loop that no test imports."* `tests/test_train_loss.py:31` reads
+`from rsr.train.loop import build_vocab, encode, lm_loss`. **A test imports it.** That does not
+retire the defects — all three were re-measured and all three stand — but the framing "nothing
+touches this file" is gone, and any argument that leaned on it is void.
+
+| Citation as written | Measured at `058e712` |
+|---|---|
+| `loop.py` is 307 lines | **401** |
+| no test imports it | **false** — `tests/test_train_loss.py:31` |
+| (b) `FIFOPolicy()` at `:164-166` | **`:213-215`**, still unconditional |
+| (b) `policy_name` stamped at `:175` / `:178` / `:207` | parameter `:184`, frozen config `:224`, `run_id` `:228` |
+| (b) no `--policy` flag | ✅ holds — the flag table is `:364-375` and has none |
+| (c) `grep -c srep_norm` → 0 | ✅ **0**, unchanged |
+| (e) `--vocab` at `:274`, then `:275` | **`:369`** |
+| (d) `policy.attribution()` at `:236` | **`:315`**; `attribution_counts` at `rsr.py:450` holds |
+| `value_head=None` at `:161` | **`:210`**, `build_param_groups(model, None, …)`, comment `:207-209` |
+| `from_registry` eager read at `rsr.py:236-243` | **`rsr.py:215`** |
+
+*Three briefs in a row have now carried a wrong line number. **The line number is not the claim** —
+re-run the grep, and if it disagrees with this table, this table is what is wrong.*
+
+---
+
 ## Hypothesis (not instruction)
 
 `src/rsr/train/loop.py` is a training loop that **no test imports**, and it has already shipped
@@ -44,8 +74,8 @@ real, say so and leave it.
 
 | Prediction | Command that tests it | Manager's reading at `8ad64a2` |
 |---|---|---|
-| `loop.py` is 307 lines | `wc -l src/rsr/train/loop.py` | 307 |
-| No test imports it | `grep -rn 'rsr\.train\.loop\|from rsr.train import loop' tests/` | no import; `tests/test_evidence_machinery.py` names the **path as a string literal** at `:124,:130,:147,:149` and is not an import |
+| `loop.py` is 401 lines | `wc -l src/rsr/train/loop.py` | **401** at `058e712`; it was 307 before cycle 1 |
+| 🔴 ~~No test imports it~~ **FALSIFIED** | `grep -rn 'rsr\.train\.loop\|from rsr.train import loop' tests/` | `tests/test_train_loss.py:31` **imports it** (`build_vocab, encode, lm_loss`), landed by cycle 1. `test_evidence_machinery.py` still only names the path as a string literal |
 
 ## Files in scope
 
@@ -58,9 +88,9 @@ real, say so and leave it.
 
 | # | Predicted line | Claim to test | Predicted silent? |
 |---|---|---|---|
-| b | `:164-166` | `policy = FIFOPolicy()` is constructed unconditionally, while `policy_name` is stamped into the frozen config (`:175`), the `run_id` (`:178`) and the heartbeat (`:207`). `main()` has **no `--policy` flag**. | yes |
+| b | `:213-215` | `policy = (FIFOPolicy())` is constructed unconditionally, while `policy_name` (a parameter, `:184`, default `"fifo"`) is stamped into the frozen config (`:224`) and the `run_id` (`:228`). `main()`'s flag table (`:364-375`) has **no `--policy`**. | yes |
 | c | — | The `srep_norm` hinge is absent from the objective. `StepOutput.srep_norm_penalty` is computed at `model.py:424` and discarded. Predicted count: **0**. | yes |
-| e | `:274` | `--vocab` defaults to 50257 against a corpus predicted to hold **156 unique words**, so the derived path (`:144`) is predicted unreachable from the CLI. | no |
+| e | `:369` | `--vocab` defaults to 50257 against a corpus predicted to hold **156 unique words**, so the derived path (`:144`) is predicted unreachable from the CLI. | no |
 
 **The commands:**
 
@@ -76,9 +106,9 @@ python -c "from rsr.train.loop import build_vocab; ..."   # the 156 is yours to 
 
 ⚠️ **Two corrections the manager already found at `8ad64a2`, which you re-check anyway:**
 
-- **(e)'s line number is wrong.** `("--vocab", int, 50257)` is at **`:275`**, not `:274`.
-- **(e)'s "unreachable from the CLI" is too strong.** `:144` reads
-  `V = vocab if vocab else 4 + len(build_vocab(probe))`, and `:292` passes `vocab=a.vocab`.
+- **(e)'s line number was wrong twice.** `("--vocab", int, 50257)` was `:275` at `8ad64a2`, not `:274`; at `058e712` it is **`:369`**.
+- **(e)'s "unreachable from the CLI" is too strong.** the derived read (`V = vocab if vocab else …`) reads
+  `V = vocab if vocab else 4 + len(build_vocab(probe))`, and `main()` passes `vocab=a.vocab`.
   `--vocab 0` is falsy and **does** reach the derived path. The defect is that the *default* is
   50257 and the derived path is unreachable **at the default**, which is a smaller claim. State
   which one you fixed.
@@ -86,11 +116,11 @@ python -c "from rsr.train.loop import build_vocab; ..."   # the 156 is yours to 
 
 ## Downstream, not independent
 
-**(d) `:236` `policy.attribution()` vs `attribution_counts()` (`rsr.py:450`).** The original brief
+**(d) `:315` `policy.attribution()` vs `attribution_counts()` (`rsr.py:450`).** The original brief
 called this independent and "not silent". Both are wrong:
 
-- It is **not independently fixable.** `loop.py:165` constructs `FIFOPolicy()` unconditionally and
-  `attribution_counts` exists only on `RSRPolicy`. Renaming at `:236` leaves `attr` still `None`.
+- It is **not independently fixable.** `loop.py:214` constructs `FIFOPolicy()` unconditionally and
+  `attribution_counts` exists only on `RSRPolicy`. Renaming at `:315` leaves `attr` still `None`.
   It is **downstream of (b)** and cannot be closed before (b) is.
 - It is **not loud.** `hasattr(policy, "attribution")` is False, the expression evaluates to
   `None`, and the ledger records `attribution=attr` — a `null` that looks like "no attribution
@@ -101,10 +131,10 @@ Do not fix (d) in this brief. Cycle 4 owns it, after (b).
 
 ## Less certain, listed separately on purpose
 
-- `:161` passes `value_head=None` into `build_param_groups`, so ψ̂ would train outside its μP
-  group. The comment at `:158-160` says it must be passed. **Check whether anything yet constructs
+- `:210` passes `value_head=None` into `build_param_groups`, so ψ̂ would train outside its μP
+  group. The comment at `:207-209` says it must be passed. **Check whether anything yet constructs
   a value head here; if not, leave a failing test rather than a speculative fix.**
-- `rsr.py:236-243` builds `kw` eagerly, so `from_registry` is predicted to raise on an empty
+- `rsr.py:215`'s `from_registry` builds `kw` eagerly, so `from_registry` is predicted to raise on an empty
   ledger even for overridden fields. **Verify by calling it with `nu=0.0, gamma=0.0` on an empty
   registry.**
 
