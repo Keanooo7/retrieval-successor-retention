@@ -189,9 +189,12 @@ positions the sum collapses over; it has 2 live slots rather than 4. There:
 | `r_i`, EOS-only | 0.1960 | 0.2040 |
 
 **max abs difference 0.00286**, 1.4% of the largest entry. EOS-only still
-differs, so the decision stands; the margin is a **thirteenth** of what row 0
-advertises. Both orderings are `1, 0`. Spearman ρ is recorded as `null` rather
-than `1.0` — over two points it is ±1 by arithmetic and carries no information.
+differs, so the decision stands; the margin is **a thirteenth of row 0's
+`0.0383` in absolute terms, and a tenth of it as a fraction of the largest
+entry** — stated both ways because the two ratios differ and quoting one as
+"the" shrinkage is the kind of thing this ADR is being audited for. Both
+orderings are `1, 0`. Spearman ρ is recorded as `null` rather than `1.0` — over
+two points it is ±1 by arithmetic and carries no information.
 
 **Which row this section should publish is the owner's call.** Both are in
 `runs/s0-02-capture-bridge/qtok_collapse.json`; neither is deleted here, because
