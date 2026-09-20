@@ -169,16 +169,24 @@ def test_the_captured_gate_is_the_models_memory_gate():
 
 
 def test_W_O_is_load_bearing_in_the_capture():
-    """🔴 Bar item 3. Perturb `attn_out_proj` and `r_i` **must** move.
+    """🔴 Bar item 3. Perturb `attn_out_proj` and `r_i` **must** move -- and must
+    move *through the capture*, not around it.
 
     §3.2.1: *"`W_O` is not optional... dropping it reintroduces the confound the
-    norm-weighting was adopted to remove."* The test is a model-level
-    intervention on purpose: if the bridge captured raw `v` instead of `W_O v`,
-    `attn_out_proj` would be outside `r_i` entirely and this would pass a
-    byte-identical tensor back, which is the vacuity the brief names.
+    norm-weighting was adopted to remove."*
 
-    The intervention is **head-asymmetric** because `W_O` is precisely where
-    head-specific rescaling lives (D-6). A uniform scale would cancel in the
+    ⚠️ **The obvious version of this test is vacuous, and it was written that way
+    first.** Perturbing *every* cross-attention layer's `attn_out_proj` changes
+    `r_i` even when the bridge captures raw `v`, because layer `l`'s output enters
+    the residual stream and moves layer `l+1`'s **attention**. Run against the
+    `W_O dropped from the capture path` mutation, that version stayed green: it
+    was detecting "the model changed", not "`W_O` is inside `r_i`".
+
+    So the perturbation is confined to the **last** cross-attention block. Nothing
+    downstream of it attends to memory, so `alpha` is provably unchanged on all
+    six layers -- asserted below -- and any movement in `r_i` has exactly one
+    route left: `wo_v`. The intervention is head-asymmetric because `W_O` is where
+    head-specific rescaling lives (D-6); a uniform scale would cancel in the
     share-of-live rescale and prove nothing.
     """
     cfg = _cfg()
@@ -187,32 +195,33 @@ def test_W_O_is_load_bearing_in_the_capture():
         trace_for_row(cap_before, mem.valid, 0, 0), n_live=4, capacity=M
     )
 
+    cross_idx = [i for i, b in enumerate(model.blocks) if b.block_type == "C"]
+    last = model.blocks[cross_idx[-1]]
+    assert cross_idx[-1] == len(model.blocks) - 1, (
+        "the last cross block must be the last block, or a later block could "
+        "carry the perturbation back into an attention distribution"
+    )
     with torch.no_grad():
-        for block in model.blocks:
-            if block.block_type == "C":
-                block.cross_attn.attn_out_proj.kernel[0] *= 40.0
-                block.cross_attn.attn_out_proj.kernel[1] *= 0.02
+        last.cross_attn.attn_out_proj.kernel[0] *= 40.0
+        last.cross_attn.attn_out_proj.kernel[1] *= 0.02
 
-    bos = torch.zeros(B, cfg.D)
+    bos, bosv = torch.zeros(B, cfg.D), torch.zeros(B, dtype=torch.bool)
     with torch.no_grad():
-        out = model(
-            ids,
-            mask,
-            mem.kv,
-            mem.valid,
-            bos,
-            torch.zeros(B, dtype=torch.bool),
-            capture=True,
-        )
+        out = model(ids, mask, mem.kv, mem.valid, bos, bosv, capture=True)
         cap_after = cross_capture(model, out, mem.kv, mask, mem.valid)
+
+    assert torch.equal(cap_before.alpha, cap_after.alpha), (
+        "the perturbation leaked into an attention distribution, so this test "
+        "cannot attribute a change in r_i to W_O"
+    )
     r_after = retrieval_demand(
         trace_for_row(cap_after, mem.valid, 0, 0), n_live=4, capacity=M
     )
-
     assert not torch.allclose(r_before, r_after, atol=1e-4), (
-        "`W_O` is not in the capture path: rescaling the output projection "
-        "per head left r_i unchanged, so the capture is measuring raw attention "
-        "and the reward is the confound D-6 removed"
+        "`W_O` is not in the capture path: rescaling one output projection per "
+        "head, with every alpha provably unchanged, left r_i untouched -- so the "
+        "capture is norm-weighted raw attention and the reward is the confound "
+        "D-6 removed"
     )
 
 
