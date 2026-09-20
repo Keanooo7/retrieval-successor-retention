@@ -17,6 +17,7 @@ RUNDIR = REPO / "runs" / RUN
 cost = json.loads((RUNDIR / "capture_cost.json").read_text())
 e0c_new = json.loads((RUNDIR / "e0c_fifo_with_bridge.json").read_text())
 muts = json.loads((RUNDIR / "mutations.json").read_text())
+qtok = json.loads((RUNDIR / "qtok_collapse.json").read_text())
 
 led = Ledger(
     RUN,
@@ -93,6 +94,18 @@ led.command(
     "--markdown docs/mutation-battery.md",
     exit_code=int(sys.argv[1]) if len(sys.argv) > 1 else 0,
     note="gauntlet 1.7, all mutations",
+)
+led.command(
+    ".venv/bin/python experiments/s0-02/measure_qtok_collapse.py "
+    "--out runs/s0-02-capture-bridge/qtok_collapse.json",
+    exit_code=0,
+    note=(
+        "B1 (dispatch 2026-09-20d): ADR-0008's three numbers, produced rather "
+        "than typed. 🔴 CPU, not mps -- these are float32 identity checks at the "
+        "1e-7 level and the accumulation order is the measurement. The ledger's "
+        "`device` field says `mps`, which is true of the throughput arms and NOT "
+        "of these rows; every qtok_collapse.* row says `device=cpu` in its `how`."
+    ),
 )
 
 # -- throughput -------------------------------------------------------------- #
@@ -234,6 +247,209 @@ led.note(
         f"runs/{RUN}/mutations.json, verdict field, for proven/total; "
         "the manager_reexecuted entries are hand re-executions recorded by the "
         "reviewer, NOT produced by scripts/mutation_battery.py"
+    ),
+)
+
+# -- ADR-0008: the Q_tok collapse ------------------------------------------- #
+# 🔴 B1 (dispatch 2026-09-20d). `1.49e-7`, `2.98e-8` and `0.0383` were prose in
+# `docs/decisions/ADR-0008-qtok-collapse.md` with no producer, no artefact and no
+# row: `grep -c "1.49\|2.98\|0.0383"` over this file returned `0`. The three CI
+# tests that pin the ADR assert THRESHOLDS (atol=1e-5, atol=1e-6, not-allclose
+# atol=1e-3), which is stronger in one way -- they fail when the property breaks,
+# not when a decimal moves -- and no substitute in the way that matters: nothing
+# in the tree could say what the divergence actually was.
+#
+# ⚠️ **Read every row below as `device=cpu`.** The ledger has one `device` field
+# and it says `mps`, which is true of the throughput arms above and false here.
+_QTOK_HOW = (
+    f"runs/{RUN}/qtok_collapse.json, written by "
+    f"experiments/s0-02/measure_qtok_collapse.py. 🔴 device=cpu, NOT the `mps` in "
+    f"this ledger's device field. Deterministic: one fixture, one row, one seed, "
+    f"no sampling -- there is no spread to report and an absent sd here is not a "
+    f"suppressed one."
+)
+
+led.note(
+    "qtok_collapse.device",
+    {"device": "cpu", "ledger_device_field_applies_to": "the throughput arms only"},
+    how=(
+        "experiments/s0-02/measure_qtok_collapse.py hardcodes CPU. `1.49e-7` is a "
+        "statement about float32 epsilon under a specific accumulation order and "
+        "MPS has a different one, so running it on the ledger's nominal device "
+        "would measure a different thing."
+    ),
+)
+led.note(
+    "qtok_collapse.fixture",
+    qtok["fixture"],
+    how=(
+        "the fixture is IMPORTED from tests/test_capture_bridge.py, not re-typed, "
+        "so ADR-0008's 'every number comes from that file's fixture' is checkable "
+        "rather than claimed; the producer re-derives every parameter and raises "
+        "if it has drifted. 🔴 It raised on first run: ADR-0008 said `Q_tok=8` "
+        "with a 3-token PAD tail; TGConfig.L is 1+8+1=10 and the tail is 5. "
+        "`Q_real=5` is right either way, which is why it went unnoticed. The ADR "
+        "is corrected; no measured number changes."
+    ),
+)
+
+ii = qtok["increment_identity"]
+led.note(
+    "qtok_collapse.increment_identity",
+    {
+        "max_abs_diff_over_layers": ii["max_abs_diff_over_layers"],
+        "max_abs_value_over_layers": ii["max_abs_value_over_layers"],
+        "n_layers": ii["n_layers"],
+        "per_layer_max_abs_diff": [x["max_abs_diff"] for x in ii["per_layer"]],
+        "dtype": ii["dtype"],
+    },
+    how=_QTOK_HOW
+    + " ADR-0008's `1.49e-7 on values up to 8.23e-1`: the whole-sentence cross "
+    "increment vs (sum_q alpha).W_O v, less Q_real*bias, per cross layer. This is "
+    "the row the ADR's 'sum is algebra, not a choice' argument rests on -- if it "
+    "moves off float32 epsilon, the decision loses its justification.",
+)
+
+mv = qtok["mean_vs_sum"]
+led.note(
+    "qtok_collapse.mean_vs_sum",
+    {
+        "max_abs_diff_r_i": mv["max_abs_diff_r_i"],
+        "r_i_sum_collapse": mv["r_i_sum_collapse"],
+        "r_i_mean_collapse": mv["r_i_mean_collapse"],
+        "contribution_sum_collapse": mv["contribution_sum_collapse"],
+        "contribution_mean_collapse": mv["contribution_mean_collapse"],
+        "contribution_ratio": mv["contribution_ratio"],
+        "q_real": mv["q_real"],
+    },
+    how=_QTOK_HOW
+    + " ADR-0008's `2.98e-8`. mean = sum/Q_real is one scalar for every (l,h,i), "
+    "so it cancels in share_i = raw_i/sum_j raw_j: r_i is invariant to float32 "
+    "epsilon and only the UNNORMALISED contribution() moves, by exactly Q_real=5. "
+    "This is what discharges mean-vs-sum as an axis that could change E0d.",
+)
+
+eo = qtok["eos_only"]
+led.note(
+    "qtok_collapse.eos_only",
+    {
+        **{k: eo[k] for k in ("row", "n_live", "q_real", "eos_query_position")},
+        "eos_is_a_real_query_token": eo["eos_is_a_real_query_token"],
+        "max_abs_diff_r_i": eo["max_abs_diff_r_i"],
+        "max_abs_diff_as_frac_of_largest_entry": eo[
+            "max_abs_diff_as_frac_of_largest_entry"
+        ],
+        "r_i_sum_collapse": eo["r_i_sum_collapse"],
+        "r_i_eos_only": eo["r_i_eos_only"],
+        "ranks_agree_on_this_row": eo["ranks_agree_on_this_row"],
+        "spearman_rho_live_slots": eo["spearman_rho_live_slots"],
+        "n_rows_compared": eo["n_rows_compared"],
+        "model_trained": eo["model_trained"],
+        "caveat": eo["caveat"],
+    },
+    how=_QTOK_HOW
+    + " ADR-0008's `0.0383`, the divergence that does NOT cancel. 🔴 Two caveats "
+    "that must travel with this number. (1) Untrained model, ONE row: rho=1.0 "
+    "over four points is not evidence the two collapses rank alike, and ADR-0008 "
+    "says so -- E0d over a held-out subsample is the discriminator. (2) NEW, and "
+    "the ADR did not know it: on row 0 the [EOS] token sits at query position 9, "
+    "which row 0's mask marks PAD, so the sum-collapse excludes the one position "
+    "the EOS-collapse reads. The two share no query position and 0.0383 is a "
+    "divergence guaranteed by the fixture rather than found in the attention. See "
+    "qtok_collapse.eos_only_supplementary_row.",
+)
+
+sup = qtok["eos_only_supplementary_row"]
+led.note(
+    "qtok_collapse.eos_only_supplementary_row",
+    {
+        **{k: sup[k] for k in ("row", "n_live", "q_real", "eos_query_position")},
+        "eos_is_a_real_query_token": sup["eos_is_a_real_query_token"],
+        "max_abs_diff_r_i": sup["max_abs_diff_r_i"],
+        "max_abs_diff_as_frac_of_largest_entry": sup[
+            "max_abs_diff_as_frac_of_largest_entry"
+        ],
+        "r_i_sum_collapse": sup["r_i_sum_collapse"],
+        "r_i_eos_only": sup["r_i_eos_only"],
+        "ranks_agree_on_this_row": sup["ranks_agree_on_this_row"],
+        "spearman_rho_live_slots": sup["spearman_rho_live_slots"],
+        "why": sup["why"],
+    },
+    how=_QTOK_HOW
+    + " ⚠️ **NOT an ADR-0008 published figure** -- do not quote it as one. Row 1 "
+    "has a full mask, so its [EOS] IS one of the positions the sum collapses "
+    "over and the comparison is the one the ADR means to make. EOS-only still "
+    "differs from the sum there, so the ADR's conclusion survives; the margin is "
+    "1.4% of the largest entry rather than 13.8%, and 2 live slots make the rank "
+    "statistic meaningless (rho over two points is +-1 by arithmetic, so it is "
+    "recorded as null). Which row ADR-0008 should publish is the owner's call.",
+)
+
+# 🔑 The point of B1, made machine-checkable: does the produced number agree with
+# the number the ADR published? The left column is TRANSCRIBED FROM ADR PROSE --
+# it is the claim under test, not a measurement, and it is the only typed number
+# in this file. Everything on the right comes out of qtok_collapse.json.
+_ADR_PUBLISHED = {
+    "increment_identity.max_abs_diff": "1.49e-07",
+    "increment_identity.max_abs_value": "0.823",
+    "mean_vs_sum.max_abs_diff_r_i": "2.98e-08",
+    "eos_only.max_abs_diff_r_i": "0.0383",
+    "mean_vs_sum.r_i_sum": [0.27818, 0.17073, 0.19087, 0.16022],
+    "mean_vs_sum.r_i_mean": [0.27818, 0.17073, 0.19087, 0.16022],
+    "mean_vs_sum.contribution_sum": [8.5662, 5.2574, 5.8777, 4.9337],
+    "mean_vs_sum.contribution_mean": [1.7132, 1.0515, 1.1755, 0.9867],
+    "eos_only.r_i_eos": [0.2399, 0.1961, 0.2269, 0.1372],
+}
+_n_live = qtok["fixture"]["n_live"]
+_measured = {
+    "increment_identity.max_abs_diff": f"{ii['max_abs_diff_over_layers']:.3g}",
+    "increment_identity.max_abs_value": f"{ii['max_abs_value_over_layers']:.3g}",
+    "mean_vs_sum.max_abs_diff_r_i": f"{mv['max_abs_diff_r_i']:.3g}",
+    "eos_only.max_abs_diff_r_i": round(eo["max_abs_diff_r_i"], 4),
+    "mean_vs_sum.r_i_sum": [round(x, 5) for x in mv["r_i_sum_collapse"][:_n_live]],
+    "mean_vs_sum.r_i_mean": [round(x, 5) for x in mv["r_i_mean_collapse"][:_n_live]],
+    "mean_vs_sum.contribution_sum": [
+        round(x, 4) for x in mv["contribution_sum_collapse"][:_n_live]
+    ],
+    "mean_vs_sum.contribution_mean": [
+        round(x, 4) for x in mv["contribution_mean_collapse"][:_n_live]
+    ],
+    "eos_only.r_i_eos": [round(x, 4) for x in eo["r_i_eos_only"][:_n_live]],
+}
+_mismatch = [k for k in _ADR_PUBLISHED if _ADR_PUBLISHED[k] != _measured[k]]
+led.note(
+    "qtok_collapse.adr_published_vs_measured",
+    {
+        "adr_prose": _ADR_PUBLISHED,
+        "measured": _measured,
+        "agree": [k for k in _ADR_PUBLISHED if k not in _mismatch],
+        "disagree": _mismatch,
+        "n_agree": len(_ADR_PUBLISHED) - len(_mismatch),
+        "n_checked": len(_ADR_PUBLISHED),
+        "headline_three_reproduce": not (
+            {
+                "increment_identity.max_abs_diff",
+                "mean_vs_sum.max_abs_diff_r_i",
+                "eos_only.max_abs_diff_r_i",
+            }
+            & set(_mismatch)
+        ),
+        "note": (
+            "`mean_vs_sum.contribution_sum` is the one disagreement and it is a "
+            "4th-decimal transcription slip in the ADR: slot 2 is 5.877645..., "
+            "which rounds to 5.8776, and the ADR printed 5.8777. Corrected in the "
+            "ADR. No threshold, test or conclusion depends on it -- it is recorded "
+            "because an uncorrected small error in a cited table is how a reader "
+            "learns the table was never re-derived."
+        ),
+    },
+    how=(
+        "LEFT column transcribed by hand from docs/decisions/ADR-0008-qtok-"
+        "collapse.md prose -- it is the CLAIM, not a measurement, and is the only "
+        "typed number in this file. RIGHT column from "
+        f"runs/{RUN}/qtok_collapse.json, rounded to the precision the ADR prints. "
+        "This row exists so 'the ADR's numbers are real' stops being something a "
+        "reader has to take on trust."
     ),
 )
 
