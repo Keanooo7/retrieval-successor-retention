@@ -22,7 +22,8 @@ everything downstream is a projection, not a permission.
 
 | Document | Role |
 |---|---|
-| [`docs/spec-corrections.md`](docs/spec-corrections.md) | **Read before the spec.** 14 corrections that win over the spec body |
+| [`docs/RESEARCH-CONTEXT.md`](docs/RESEARCH-CONTEXT.md) | **Start here.** The single orientation document — claim, sources, decisions, measured numbers, what is broken, what no agent may touch |
+| [`docs/spec-corrections.md`](docs/spec-corrections.md) | **Read before the spec.** 24 corrections that win over the spec body |
 | [`docs/spec/rsr_model_spec_v0.5.md`](docs/spec/rsr_model_spec_v0.5.md) | The model specification, verbatim |
 | [`CLAUDE.md`](CLAUDE.md) | Standing rules for every agent session |
 | [`docs/decisions/`](docs/decisions/) | ADRs for anything expensive to reverse |
