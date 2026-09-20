@@ -28,6 +28,7 @@ everything downstream is a projection, not a permission.
 | [`CLAUDE.md`](CLAUDE.md) | Standing rules for every agent session |
 | [`docs/decisions/`](docs/decisions/) | ADRs for anything expensive to reverse |
 | [`docs/release-conditions.md`](docs/release-conditions.md) | §16's eight conditions, each linking its evidence |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | **What happens next and in what order.** Supersedes §8's week numbering. Names the blocker that gates four experiments at once |
 | [`docs/cognitive-grounding.md`](docs/cognitive-grounding.md) | What the cognitive literature licenses, and what it does not. Read before writing anything that cites McClelland or Kintsch |
 | [`docs/citation-audit.md`](docs/citation-audit.md) | E0f. 13 of 14 primary sources checked; **[P11], the cognitive claim, did not survive** |
 

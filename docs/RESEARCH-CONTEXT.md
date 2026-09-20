@@ -25,6 +25,7 @@ Read §1–§3 always. Then jump:
 | quote a number | §9, §11 — and resolve it to a ledger key or a command |
 | run an experiment | §6, §10, §14 |
 | change a constant, threshold, bucket edge or arm | §12, §13 — almost certainly **stop** |
+| know what to work on next | **`docs/ROADMAP.md`** — sprints, gates, and the AttentionTrace capture bridge that gates E0d/E0e/E0h/observe/H2O/oracle/shadow at once |
 | write a brief | §14, `docs/lab-notes/overnight-2026-09-19.md` §6 |
 | reason about hardware or cost | §5 |
 

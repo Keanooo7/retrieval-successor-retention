@@ -44,6 +44,34 @@ already produced two false clean bills of health on this project.
 2. Your brief, in full: `docs/lab-notes/dispatch-<id>.md`, plus any `<id>.addendum-*`.
 3. `docs/corpus-sheet.md` §5 — the settled questions. Do not reopen them.
 
+## DO NOT READ
+
+Your context is a budget and most of this repo is not in it. Reading more is not diligence; it is
+how a run arrives at its own conclusion instead of the brief's.
+
+- 🔴 **The spec body, when `docs/spec-corrections.md` already answers it.** The spec is on its fifth
+  revision with three changelogs and several passages were superseded by a correction and never
+  rewritten. **Do not resolve a conflict by re-reading the spec.**
+- 🔴 **`docs/gates.md`.** It specifies ratchet machinery **this tree does not implement** — there is
+  no `src/rsr/gates/`, no `.rsr/`, and `REGISTRY.unset()` does not exist. Do not report a ratchet as
+  checked because that file lists it.
+- 🔴 **`docs/RSR-end-of-day-2026-09-17.md` for any number.** It predates the audit that retracted
+  several of its claims. Its Part 5 — the mistakes — is the part worth reading.
+- **`docs/lab-notes/**` from cycles you are not continuing.** The prose there is not authoritative;
+  the ledgers under `runs/` are, and six numbers in those notes are retracted (`RESEARCH-CONTEXT.md`
+  §11).
+- **Any `runs/*/ledger.json` you are not joining on.** Join on `run_id`, never on `cycle` — the
+  `cycle` field runs one behind the scoreboard, two runs collide on `4`, and one is `null`.
+- **`third_party/`** unless the brief names a file in it. It is a read-only source reference.
+- **Whole reports from other lanes.** If you need a number from one, take the number.
+
+📌 If something you genuinely need is not in your read order and not in `## Files in scope`, that is
+a **brief defect**. Write it under `BRIEF ERRORS`, say what you needed, and keep working on
+everything that does not depend on it.
+
+📌 **A second checkpoint trigger that is not a token count: re-deriving something you already knew
+means you are at your checkpoint.** Stop and hand off; do not push through degraded.
+
 ## The loop you run
 
 ```
@@ -123,12 +151,21 @@ then:
 gates:     <literal output of each, including exit codes>
 ledger:    runs/<run_id>/ledger.json
 numbers:   <every figure, each traceable to a ledger key>
+BRIEF ERRORS: <every error you found in the brief itself — a false premise, a number that
+           does not match the tree, a question that is a theorem rather than a measurement,
+           a stub described as drivable, a contradiction carried from the previous cycle>
 UNANSWERED BY THE BRIEF: <list — a defect log against the manager, not against you>
 BELIEVED, NOT VERIFIED:  <list>
 NEXT (proposed, not decided): <what you would run, and why>
 ```
 
-Those last three are **required**, and `none` must be written out. `BELIEVED, NOT VERIFIED` is not a
+Those last four are **required**, and `none` must be written out.
+
+🔴 **`BRIEF ERRORS` is a requirement, not a courtesy.** On 2026-09-18, **7 of the manager's 11
+briefs contained an error a researcher caught** — and none of those briefs survives, because they
+were in-session prompts to retired subagents, so the errors are now unauditable. *The most valuable
+thing any researcher did that night was refuse the conclusion the brief set up for them.* Correcting
+the brief is part of the job; an empty `BRIEF ERRORS` on a brief that had one is a failed cycle. `BELIEVED, NOT VERIFIED` is not a
 confession — in this project it is the honest feedstock for §13, "where the evidence stops."
 
 🔴 **Commit as you go.** Work that exists only in an uncommitted tree is invisible to everyone and

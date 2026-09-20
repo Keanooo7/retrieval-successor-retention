@@ -56,6 +56,21 @@ rediscover Kintsch & van Dijk's 1978 leading-edge strategy? **The engineering de
 the spec says so.** Drifting toward the engineering framing *is* drift, even when every number is
 honest.
 
+## DO NOT READ
+
+You hold the widest budget in the project and you will spend it on the wrong thing if you browse.
+
+- 🔴 **`src/`.** If the answer is in the source, that is a brief, not a read. The one exception is
+  re-executing a specific claim to verify it — and then you read exactly what that claim touches.
+- 🔴 **`docs/gates.md`** — a specification of intent, not a description of this tree.
+- 🔴 **A prior night's scoreboard or summary for a number.** Resolve it to a ledger key first;
+  `RESEARCH-CONTEXT.md` §11 retracts six numbers that appear in that prose.
+- **Whole researcher reports from cycles you have already closed.** The ledger is the record.
+- **The spec body** where `docs/spec-corrections.md` answers it.
+
+📌 **Re-deriving something you already knew is your checkpoint signal**, ahead of any token count.
+At the checkpoint: self-handoff, `/clear`, reload.
+
 ## Reviewing a report — reject on any of these
 
 | Check | Reject when |
@@ -70,6 +85,26 @@ honest.
 | **Expectation** | The pre-registered expectation was edited after the run. `git log` the manifest. |
 | **Ratchets** | Any floor moved the wrong way. |
 | **Frozen things** | A constant, bucket edge, threshold, or arm changed to make a gate pass. **This is the most serious rejection and it stops the night.** |
+| **Reproducibility** | A ledger whose `commands[].argv` points outside the tree, or at a file that is not committed. 🔴 **The gate is not "the tree is clean" — it is "the code that ran is committed."** 9 of the 13 ledgers from 2026-09-18 cannot be re-executed from any commit, and the sharpest case has `git_dirty: false` and is *still* unreproducible, so a clean-tree check would have passed it. |
+| **Brief errors** | The report has no `BRIEF ERRORS` field. It is required and `none` must be written out. 7 of 11 briefs contained an error on 2026-09-18; a field that is silently absent is how that rate stays invisible. |
+| **Memory is live** | A training run that does not report the shuffle control, or reports it at ≈0. **A run whose memory contributes nothing is refused, not filed** — every number in it is about a model that is not the one under study. |
+
+## Write the brief to disk and commit it BEFORE dispatching
+
+🔴 **In its own commit, ahead of the run in `git log`.** A brief carries the bar, and `CLAUDE.md`
+already requires this of pre-registrations — *"a threshold registered after seeing the data is not a
+threshold."* The ordering is the mechanism, and `git log` is what makes it checkable afterwards.
+
+On 2026-09-18 no brief survived the night: they were in-session prompts to subagents that were then
+retired. **7 of the 11 contained an error a researcher caught, and not one of those errors can be
+audited now.** That is the single largest hole in the record of that run.
+
+- Write to `docs/lab-notes/dispatch-<id>.md`.
+- Read the baseline sha from `git rev-parse HEAD` **at the moment of writing**. Never recall it.
+- **Commit your own infrastructure before writing the brief, not after.** An untracked `canary.py`
+  made the previous manager's "clean tree at dispatch" baseline stale the moment it was written.
+- Never paraphrase the brief into the spawn prompt. Send a verb and a path. **A paraphrase is a
+  second, divergent copy, and every copy rots.**
 
 ## Verify by a different path than the claimant used
 
