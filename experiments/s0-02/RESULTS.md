@@ -120,13 +120,50 @@ requires them to pass **unchanged**.
 Regenerated record: `docs/mutation-battery.md`; raw
 `runs/s0-02-capture-bridge/mutations.json`.
 
-| Mutation | Gate | Verdict |
-|---|---|---|
-| `W_O` dropped from the capture path | `test_capture_bridge` | see `docs/mutation-battery.md` |
-| `observe()` is never reached | `test_observe` | see `docs/mutation-battery.md` |
+**39/39 proven, `--check` exit 0.**
 
-The `W_O` mutation is bar item 3. It is needed *because dropping `W_O` is
-shape-compatible*: `reward.contribution` norms over the last axis, and
-`[L, H, M, Dh]` norms just as happily as `[L, H, M, D]`. Nothing raises, no shape
-assertion fires, and `r_i` silently becomes norm-weighted raw attention — v0.1's
-rejected definition wearing the new one's name.
+| Mutation | Gate | Verdict | on-gate | off-gate |
+|---|---|---|---|---|
+| `W_O` dropped from the capture path | `test_capture_bridge` | **PROVEN** | 4 | **0** |
+| `observe()` is never reached | `test_observe` | **PROVEN** | 2 | **0** |
+
+**The `W_O` mutation turns only the new tests red**, and it is bar item 3. It is
+needed *because dropping `W_O` is shape-compatible*: `reward.contribution` norms
+over the last axis, and `[L, H, M, Dh]` norms just as happily as `[L, H, M, D]`.
+Nothing raises, no shape assertion fires, and `r_i` silently becomes
+norm-weighted raw attention — v0.1's rejected definition wearing the new one's
+name. The four tests it reddens:
+
+```
+tests/test_capture_bridge.py::test_the_trace_has_the_shapes_the_reward_module_declares
+tests/test_capture_bridge.py::test_W_O_is_load_bearing_in_the_capture
+tests/test_capture_bridge.py::test_wo_v_is_the_projected_value_not_the_raw_value
+tests/test_capture_bridge.py::test_the_collapse_reproduces_the_real_increment
+```
+
+### 🔴 The first version of bar item 3's own test was vacuous
+
+`test_W_O_is_load_bearing_in_the_capture` originally perturbed `attn_out_proj` on
+**every** cross-attention block and asserted `r_i` moved. Against the mutation it
+was written for, it **stayed green**: layer `l`'s output enters the residual
+stream and moves layer `l+1`'s *attention*, so `r_i` changes whether or not `W_O`
+is in the capture. It was detecting "the model changed."
+
+That is the brief's own warning landing from the other side — bar item 3 says *"if
+`r_i` is unchanged, the capture is wrong and the test is vacuous"*; here `r_i`
+changed, for the wrong reason. It was caught only because the battery names which
+tests a mutation reddens, and three *other* tests were carrying the gate. The
+perturbation is now confined to the **last** cross-attention block (which is the
+last block, so nothing downstream attends to memory), and the test asserts `alpha`
+is bit-identical before and after — leaving `wo_v` as the only route by which
+`r_i` can move.
+
+### Three pre-existing couplings, now declared
+
+Three `reward.py` mutations now also redden one new test each. Declared with a
+reason rather than tolerated, and the reason is this cycle's whole point:
+`test_reward.py` asserts a property on a hand-built `AttentionTrace`,
+`test_capture_bridge.py` asserts the same property end to end on a real forward
+pass. Those were two disconnected claims until the bridge existed. **A `reward.py`
+mutation that reddened only the fixture test would now mean the bridge does not
+reach the reward.**
