@@ -23,11 +23,13 @@ everything downstream is a projection, not a permission.
 | Document | Role |
 |---|---|
 | [`docs/RESEARCH-CONTEXT.md`](docs/RESEARCH-CONTEXT.md) | **Start here.** The single orientation document — claim, sources, decisions, measured numbers, what is broken, what no agent may touch |
-| [`docs/spec-corrections.md`](docs/spec-corrections.md) | **Read before the spec.** 24 corrections that win over the spec body |
+| [`docs/spec-corrections.md`](docs/spec-corrections.md) | **Read before the spec.** 30 corrections that win over the spec body |
 | [`docs/spec/rsr_model_spec_v0.5.md`](docs/spec/rsr_model_spec_v0.5.md) | The model specification, verbatim |
 | [`CLAUDE.md`](CLAUDE.md) | Standing rules for every agent session |
 | [`docs/decisions/`](docs/decisions/) | ADRs for anything expensive to reverse |
 | [`docs/release-conditions.md`](docs/release-conditions.md) | §16's eight conditions, each linking its evidence |
+| [`docs/cognitive-grounding.md`](docs/cognitive-grounding.md) | What the cognitive literature licenses, and what it does not. Read before writing anything that cites McClelland or Kintsch |
+| [`docs/citation-audit.md`](docs/citation-audit.md) | E0f. 13 of 14 primary sources checked; **[P11], the cognitive claim, did not survive** |
 
 The spec is on its fifth revision and carries three changelogs. Several passages
 were superseded by a correction and never rewritten. `docs/spec-corrections.md` is
