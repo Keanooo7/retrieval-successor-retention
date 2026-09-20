@@ -393,7 +393,13 @@ _ADR_PUBLISHED = {
     "increment_identity.max_abs_diff": "1.49e-07",
     "increment_identity.max_abs_value": "0.823",
     "mean_vs_sum.max_abs_diff_r_i": "2.98e-08",
-    "eos_only.max_abs_diff_r_i": "0.0383",
+    # ⚠️ A float, not the string "0.0383". The first draft of this dict typed it
+    # as a string and `"0.0383" != 0.0383` reported a DISAGREEMENT on a figure
+    # that matches exactly -- a comparison row that cries wolf teaches its reader
+    # to stop looking at it, which is the failure mode this row exists to avoid.
+    # The three `:.3g` entries are strings on both sides deliberately: they carry
+    # the ADR's significant figures, and `float("1.49e-07") != 1.4901161e-07`.
+    "eos_only.max_abs_diff_r_i": 0.0383,
     "mean_vs_sum.r_i_sum": [0.27818, 0.17073, 0.19087, 0.16022],
     "mean_vs_sum.r_i_mean": [0.27818, 0.17073, 0.19087, 0.16022],
     "mean_vs_sum.contribution_sum": [8.5662, 5.2574, 5.8777, 4.9337],
@@ -416,6 +422,17 @@ _measured = {
     ],
     "eos_only.r_i_eos": [round(x, 4) for x in eo["r_i_eos_only"][:_n_live]],
 }
+# A type mismatch between the two columns is a bug in THIS file, not a finding
+# about the ADR, and it reads identically in the output. Refuse instead.
+for _k in _ADR_PUBLISHED:
+    if type(_ADR_PUBLISHED[_k]) is not type(_measured[_k]):
+        raise SystemExit(
+            f"adr_published_vs_measured[{_k!r}]: the claim is "
+            f"{type(_ADR_PUBLISHED[_k]).__name__} and the measurement is "
+            f"{type(_measured[_k]).__name__}. That compares unequal whatever the "
+            f"numbers are and would be filed as a disagreement with the ADR. Fix "
+            f"the dict, not the ADR."
+        )
 _mismatch = [k for k in _ADR_PUBLISHED if _ADR_PUBLISHED[k] != _measured[k]]
 led.note(
     "qtok_collapse.adr_published_vs_measured",
