@@ -144,6 +144,11 @@ CUDA without modification.
   the data is not a threshold.
 - **Measure, don't extrapolate** (§12.4). Documented configuration is not evidence
   of what was actually run.
-- **Never report a skipped or unrun test as passing.** `test_reduction.py` and
-  `test_fidelity.py` are currently skipped pending the transcription; GATE-1 must
-  say so.
+- **Never report a skipped or unrun test as passing.** ⚠️ **This rule used to name
+  `test_reduction.py` and `test_fidelity.py` as "currently skipped pending the
+  transcription", and instructed GATE-1 to say so. Measured 2026-09-20 at `8ad64a2`:
+  `passed=44 failed=0 skipped=0 errors=0`, exit `0`. They are not skipped and have
+  not been for some time, so the rule was instructing an agent to file a false
+  report** — the precise failure the rule exists to prevent, committed by the rule.
+  The rule stands; the example is withdrawn. If a test IS skipped, GATE-1 names it
+  and never counts it as a pass.
