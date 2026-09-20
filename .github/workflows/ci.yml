@@ -8,7 +8,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # 🔴 `fetch-depth: 0`, not the default `1`.
+      # `test_the_tolerance_commit_precedes_the_fixture_commit` asks git which
+      # commit FIRST introduced two paths. On a depth-1 clone both answers are
+      # the one checked-out commit, so the test read `tol == fix` and failed --
+      # red on `main` through PRs #11 and #12 and nobody read it. The finding was
+      # an artefact of the checkout, not a defect in the tree: on a full clone the
+      # two first-commits are 0c200d3 and 7192f82 and the assertion holds.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
