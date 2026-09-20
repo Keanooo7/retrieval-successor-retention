@@ -223,6 +223,41 @@ leaves the memory exactly as dead.
 ⚠️ **It does not retire it at 300 iterations**, which is where the original
 inert-memory finding was made. See "What this run does not establish".
 
+
+### 🔴 REJECTED BY THE MANAGER — the retirement above does not stand
+
+**Rejected claim:** *"This cycle removes the third at 50 iterations"* — that cycle 1
+retires the third of the three candidate causes in
+`docs/lab-notes/for-brendan-2026-09-18.md`.
+
+**Ground.** The retirement is an inference from a **null reading of the shuffle
+control**, and the shuffle control **has no positive control**. It has never been
+observed reading large on a memory known to be live, on either device. A null from
+an instrument never shown to produce a non-null is not evidence that the quantity is
+absent; it is compatible with the instrument not working at all — a mis-wired
+derangement, a memory replayed from the honest pass under a guard that never fired,
+an `eval()` path that bypasses `use_memory`. Every one of those returns exactly the
+`~1e-06` this table reports.
+
+This is S0-04's own Bar item 1, applied to the run that preceded it
+(`docs/lab-notes/dispatch-S0-04-shuffle-control.md:37-38`):
+
+> **A positive control.** On a model with memory deliberately disabled, the shuffle
+> delta must be ≈0 and the gate must go red. *A gate that has never been observed
+> failing is not known to work.*
+
+**What survives.** Everything measured stands. The PAD fraction, the halved
+real-token NLL (§2–3), the `ln(160)` instrument check, the two-run floors and the
+four delta values in the table above are all unaffected — they are measurements. It
+is only the **retirement** that is withdrawn, because a retirement is an inference
+and this one rests on the untested instrument.
+
+**Status of the third candidate cause:** *open*, not retired. It cannot be closed
+before S0-04 lands the positive control. The "50 iterations is not 300" caveat below
+is a **second, independent** reason it is open, and removing that caveat would not
+close it either.
+
+*Filed here rather than returned to Brendan: a defect filed as a lesson recurs.*
 ---
 
 ## What this run does not establish
@@ -358,9 +393,11 @@ Against `docs/lab-notes/dispatch-cycle-01-masked-loss.md` and its two correction
 ## NEXT (proposed, not decided)
 
 1. **Re-run the memory ablation at 300 iterations on the repaired loss**, with the
-   shuffle control as the primary readout. This cycle retires the
-   pad-dominated-loss hypothesis at 50 iterations only, and 300 is where the
-   original finding lives. Cheapest decisive thing available (~10 min of CPU).
+   shuffle control as the primary readout. ⚠️ **Superseded in ordering by the
+   manager's rejection in §4** — this cycle retires the pad-dominated-loss
+   hypothesis **not at all**, at 50 iterations or at 300, until the shuffle control
+   has a positive control. Re-running at 300 iterations with the same untested
+   instrument buys a second null of unknown meaning. **Item 2 now precedes item 1.**
 2. **Give the shuffle control a positive control and promote it out of this
    experiment script** (`docs/lab-notes/dispatch-S0-04-shuffle-control.md`). Until
    a deliberately-live memory makes it read large, every `≈0` in this project is

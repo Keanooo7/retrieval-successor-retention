@@ -35,6 +35,11 @@ does not verify it.**
 
 ### 🔴 Rejected — one claim, and it is the downstream one
 
+📌 **Also filed in the record itself**, at
+`experiments/cycle-01-masked-loss/RESULTS.md` §4, next to the claim it rejects, and the NEXT list
+there is re-ordered behind it. *A defect filed as a lesson recurs; this one is now in the file a
+future session reads instead of the return it was born in.*
+
 The report states this **"retires the third of the three candidate causes"** for the inert memory.
 **Rejected.** The researcher supplied the grounds themselves under *BELIEVED, NOT VERIFIED*: the
 shuffle control **has no positive control** and has never been shown to read large on a
