@@ -1,0 +1,76 @@
+{
+  "device": "mps",
+  "torch": "2.14.0",
+  "platform": "Darwin arm64",
+  "cpu": "Apple M4 Max",
+  "config": {
+    "d": 128,
+    "S": 80,
+    "batch": 16,
+    "vocab": 50257,
+    "tokens_per_sentence": 64,
+    "memory_slots": 40,
+    "repeats": 3,
+    "mode": "eval",
+    "optimizer_step": false
+  },
+  "arms": [
+    {
+      "arm": "capture_off",
+      "sent_per_s_samples": [
+        390.08,
+        387.95,
+        388.36
+      ],
+      "sent_per_s_mean": 388.8,
+      "sent_per_s_sd": 1.13,
+      "peak_gb_samples": [
+        28.75,
+        28.75,
+        28.74
+      ],
+      "delta_vs_off_sent_per_s": 0.0,
+      "delta_vs_off_pct": 0.0,
+      "observe_calls": 0,
+      "r_i_computed": 0
+    },
+    {
+      "arm": "capture_on",
+      "sent_per_s_samples": [
+        360.89,
+        360.11,
+        360.38
+      ],
+      "sent_per_s_mean": 360.46,
+      "sent_per_s_sd": 0.4,
+      "peak_gb_samples": [
+        28.79,
+        28.79,
+        28.79
+      ],
+      "delta_vs_off_sent_per_s": -28.34,
+      "delta_vs_off_pct": -7.29,
+      "observe_calls": 1280,
+      "r_i_computed": 0
+    },
+    {
+      "arm": "capture_on_ri",
+      "sent_per_s_samples": [
+        330.75,
+        330.21,
+        328.93
+      ],
+      "sent_per_s_mean": 329.96,
+      "sent_per_s_sd": 0.94,
+      "peak_gb_samples": [
+        28.8,
+        28.8,
+        28.8
+      ],
+      "delta_vs_off_sent_per_s": -58.83,
+      "delta_vs_off_pct": -15.13,
+      "observe_calls": 1280,
+      "r_i_computed": 1264
+    }
+  ]
+}
