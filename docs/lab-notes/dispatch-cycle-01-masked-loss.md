@@ -175,7 +175,7 @@ stop. Check `loop.py:144`.
   which is an entire row of zeros. Count them separately in your ledger. A single PAD fraction
   hides which one dominates, and the masked-vs-unmasked delta depends on it.
 
-### 2. The falsifier's config is under-specified — `iters` is missing, and the 93.4% implies `iters=8`
+### 2. The falsifier's config is under-specified — `iters` is missing — ~~and the 93.4% implies `iters=8`~~ **[RETRACTED, see below]**
 
 The falsifier names `seed=0, steps_per_stream=48, batch=8` and **does not name `iters`**. The run
 is not reproducible without it, and the two-run floor is a comparison of two runs at "identical
@@ -246,3 +246,43 @@ The body's `## BRIEF ERRORS` section stands. **This revalidation block is also f
 `iters=8` reconstruction is arithmetic on a number that is itself unverified, and its claim that
 `318` still holds was measured at `5440290`, one commit before this brief's baseline — the
 difference is documentation only, which is itself a claim you may check with `git diff --stat`.
+
+---
+
+## 🔴 CORRECTION to the revalidation block, same day, before the run reported
+
+**Revalidation item 2's `iters=8` inference is retracted. It was the manager's, it was wrong,
+and it was wrong in the way this brief warns about.**
+
+I wrote that `8 × 48 × 63 × 8 = 193,536` "pins" the handoff at `iters=8`. There is a simpler
+reading that fits the same number, and I found it by measuring instead of arithmetic:
+
+```
+n_docs × steps × (L−1)  =  64 × 48 × 63  =  193,536
+```
+
+**The denominator is corpus-shaped, not run-shaped** — the whole committed synthetic corpus
+encoded once, not a batched training stream. Both expressions equal 193,536 only because
+`n_docs = 64 = 8 × 8`; my version needed an unstated `iters=8` to work, and this one needs
+nothing. A coincidence of factorisation is not a measurement, and I presented it as one.
+
+**What stands, and what does not:**
+
+- ✅ **The falsifier still does not specify `iters`, and it still must.** "Two runs at identical
+  config" is not a specification until every field is named. Pin it in your manifest.
+- ❌ **Do not pin `iters=8` on my arithmetic.** Pick a value, state it, justify it.
+- ⚠️ **The PAD denominator you report is not necessarily the handoff's denominator.** If you count
+  over a batched stream you will get a run-shaped number; the handoff's appears to be
+  corpus-shaped. **Say which one you counted.** Two different correct numbers that disagree
+  because they count different populations is a worse failure than one wrong number, because it
+  looks like a contradiction.
+- 📌 The "two sources of PAD" split in revalidation item 1 is still worth counting, but **do not
+  assume both are non-empty.** Report each source's count even when one is zero.
+
+🔒 **I have measured the PAD fraction myself, by a path that does not touch `step_fn`, and I am
+deliberately not putting the number here.** You measure it blind; I compare afterwards. A brief
+that hands you the answer cannot verify you found it. If our numbers disagree, that disagreement
+is the finding and we will both show our paths.
+
+*This correction is itself a `BRIEF ERRORS` entry — mine, against my own revalidation block, found
+by re-executing rather than re-reading. Record it as one.*
