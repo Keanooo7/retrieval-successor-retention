@@ -233,12 +233,27 @@ class RSRConfig:
         """
         reg = registry or C.REGISTRY
         s = reg.get("S", scope)
+        # S0-01: the reads are LAZY, one thunk per field, and a field the caller
+        # overrode is never read. Built eagerly, `overrides` could not save you: on
+        # an empty ledger `from_registry(..., nu=0.0, gamma=0.0)` raised
+        # `UnmeasuredConstant` on `nu` -- the value the caller had just supplied --
+        # so the `gamma = 0` control arm and A2's `A_max = M`, the two arms this
+        # docstring names as the reason `overrides` exists, could not be built at
+        # all until E1 had logged constants neither arm uses.
+        #
+        # 🔴 This is not a default, and the distinction is the whole D-1 guard. A
+        # field the caller did NOT override is still read, and still raises naming
+        # its experiment. `tests/test_train_loop.py` asserts both halves so the fix
+        # cannot decay into the thing it is careful not to be.
+        sources: dict[str, Any] = {
+            "nu": lambda: reg.get("nu", scope),
+            "beta": lambda: reg.get("beta", scope),
+            "gamma": lambda: reg.get("gamma", scope),
+            "t_warm": lambda: reg.get("T_warm", steps_per_epoch=steps_per_epoch),
+            "a_max": lambda: reg.get("A_max", scope, S=s),
+        }
         kw: dict[str, Any] = {
-            "nu": reg.get("nu", scope),
-            "beta": reg.get("beta", scope),
-            "gamma": reg.get("gamma", scope),
-            "t_warm": reg.get("T_warm", steps_per_epoch=steps_per_epoch),
-            "a_max": reg.get("A_max", scope, S=s),
+            k: read() for k, read in sources.items() if k not in overrides
         }
         kw.update(overrides)
         cfg = cls(**kw)

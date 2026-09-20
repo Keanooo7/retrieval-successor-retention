@@ -48,10 +48,11 @@ from rsr.data.synthetic import SyntheticConfig, generate
 from rsr.model.tg import TGConfig, TGModel
 from rsr.model.tg.policy_loop import run_policy_loop
 from rsr.mup.param_groups import build_param_groups
+from rsr.retention.rsr import RSRConfig, RSRPolicy
 from rsr.train import checkpoint as ck
 from rsr.train.heartbeat import Heartbeat
 
-__all__ = ["main", "train"]
+__all__ = ["build_policy", "main", "train"]
 
 
 def _sha() -> str:
@@ -165,6 +166,55 @@ def lm_loss_unmasked(logits, ids_t, mask_t):
     return lm_token_losses(logits, ids_t).mean()
 
 
+POLICIES = ("fifo", "rsr")
+"""The names `--policy` accepts. H2O and LRU (section 10.1's real E7 controls) are
+not here because they are not implemented; listing a name that silently fell through
+to FIFO is the defect this tuple exists to prevent."""
+
+
+def build_policy(
+    name: str,
+    *,
+    d_model: int,
+    steps_per_epoch: float,
+    scope: str = "synthetic",
+    generator: torch.Generator | None = None,
+):
+    """Map `policy_name` to the policy that will actually run (S0-01 defect (b)).
+
+    🔴 **The name is stamped into the frozen config and the `run_id`.** Before this
+    existed, `train()` constructed `FIFOPolicy()` unconditionally while
+    `policy_name` flowed straight into both -- so `train(policy_name="rsr")`
+    produced a run directory, a heartbeat and a `run_id` all reading `rsr-...` over
+    a stream in which FIFO evicted every slot. Nothing in the output disagreed with
+    anything else, which is what makes it silent rather than merely wrong.
+
+    Routing both through one function is the fix: there is now no path on which the
+    stamped name and the constructed policy can differ.
+
+    **`"rsr"` raises `UnmeasuredConstant` on today's ledger, and that is correct.**
+    `nu`, `beta` and `gamma` are MEASURED and E1 has not run (§4.5). The registry
+    refusing the read is the D-1 guard; the answer is to run E1, never to supply a
+    default here.
+
+    `steps_per_epoch` feeds `T_warm`'s derivation. This loop's epoch is one
+    optimizer step over one batch of streams, so the caller passes `iters`. That is
+    a choice, not a measurement, and it is recorded as such rather than hidden.
+    """
+    if name == "fifo":
+        return FIFOPolicy()
+    if name == "rsr":
+        cfg = RSRConfig.from_registry(scope, steps_per_epoch=steps_per_epoch)
+        # `value_head=None` until the head is wired here; see the muP note below
+        # and `tests/test_train_loop.py`'s strict xfail.
+        return RSRPolicy(cfg, d_model, generator=generator)
+    raise ValueError(
+        f"unknown policy_name {name!r}; known policies are {POLICIES}. "
+        f"Falling back to FIFO here would stamp {name!r} into the run_id of a FIFO "
+        f"run (S0-01 defect (b)), so this refuses instead."
+    )
+
+
 def train(
     *,
     d: int = 128,
@@ -183,6 +233,7 @@ def train(
     resume: str | Path | None = None,
     policy_name: str = "fifo",
     masked_loss: bool = True,
+    srep_norm_reg_weight: float | None = None,  # None -> TGConfig's 0.01
 ) -> dict:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -204,15 +255,28 @@ def train(
     )
     model = TGModel(cfg).to(device)
 
+    # S0-01 defect (c). `StepOutput.srep_norm_penalty` is computed at `model.py:424`
+    # and was discarded: `grep -c srep_norm src/rsr/train/loop.py` returned 0.
+    # `docs/spec-corrections.md` correction 15 item 4 -- "the hinge penalty is in
+    # TG's loss" -- and §3.1 requires the base model be unmodified, so a loop that
+    # drops it is not training TG. The weight is the documented off-switch
+    # (CLAUDE.md): 0.0 restores the pre-fix objective exactly, and it is stamped
+    # into `frozen` so two different objectives cannot share a config hash.
+    w_srep = (
+        cfg.srep_norm_reg_weight if srep_norm_reg_weight is None else srep_norm_reg_weight
+    )
+
     # muP groups, NOT a flat AdamW. The value head is None until RSRPolicy is wired; when
     # it is,
     # it must be passed here or it will not get its own group and width transfer breaks.
     groups = build_param_groups(model, None, base_lr=lr, d_model=d, base_width=128)
     opt = torch.optim.AdamW(groups, betas=(0.9, 0.95), weight_decay=0.01)
 
-    policy = (
-        FIFOPolicy()
-    )  # RSRPolicy requires beta/nu from the registry; see module docstring.
+    # S0-01 defect (b): built FROM `policy_name`, so the name stamped below into the
+    # frozen config and the run_id cannot disagree with the policy that ran.
+    policy = build_policy(
+        policy_name, d_model=d, steps_per_epoch=float(iters), generator=gen
+    )
 
     frozen = {
         "tg": asdict(cfg),
@@ -224,6 +288,7 @@ def train(
         "policy": policy_name,
         "device": device,
         "masked_loss": masked_loss,
+        "srep_norm_reg_weight": w_srep,
     }
     run_id = f"{policy_name}-d{d}-s{steps_per_stream}-b{batch}-{_config_hash(frozen)}"
 
@@ -264,9 +329,17 @@ def train(
     tally: dict[str, float] = {}
 
     def step_fn(t, o, ids_t, mask_t, row_valid):
-        loss = (lm_loss if masked_loss else lm_loss_unmasked)(o.logits, ids_t, mask_t)
+        lm = (lm_loss if masked_loss else lm_loss_unmasked)(o.logits, ids_t, mask_t)
+        # Defect (c): the squared hinge on the PRE-normalization gestalt norm,
+        # holding it in [target +/- margin]. Gradient flows into the transformer and
+        # `W_sent` -- correctly: this is TG's own regularizer, not the retention
+        # loss, and CLAUDE.md's stop-gradient prohibition is about the latter.
+        hinge = o.srep_norm_penalty.mean()
+        loss = (lm + w_srep * hinge) if w_srep else lm
         with torch.no_grad():
             valid = mask_t[:, 1:].reshape(-1)
+            tally["lm_sum"] = tally.get("lm_sum", 0.0) + float(lm)
+            tally["srep_hinge_sum"] = tally.get("srep_hinge_sum", 0.0) + float(hinge)
             tally["real_sum"] = tally.get("real_sum", 0.0) + float(
                 lm_loss(o.logits, ids_t, mask_t)
             )
@@ -304,6 +377,12 @@ def train(
             # objective this arm actually minimised.
             last = {
                 "loss": float(loss.detach()) / steps_per_stream,
+                # The objective decomposed. `loss_lm` is the language-model term
+                # alone; `loss_srep_hinge` is the (c) hinge UNWEIGHTED, so the term
+                # stays auditable independently of `srep_norm_reg_weight`.
+                "loss_lm": tally["lm_sum"] / steps_per_stream,
+                "loss_srep_hinge": tally["srep_hinge_sum"] / steps_per_stream,
+                "srep_norm_reg_weight": w_srep,
                 "loss_real_tokens": tally["real_sum"] / steps_per_stream,
                 "loss_all_targets": tally["all_sum"] / steps_per_stream,
                 "pad_target_fraction": tally["n_pad_targets"] / tally["n_targets"],
@@ -317,12 +396,21 @@ def train(
                     it,
                     loss=last["loss"],
                     loss_sum=float(loss.detach()),
+                    loss_lm=last["loss_lm"],
+                    loss_srep_hinge=last["loss_srep_hinge"],
+                    srep_norm_reg_weight=w_srep,
                     loss_real_tokens=last["loss_real_tokens"],
                     loss_all_targets=last["loss_all_targets"],
                     pad_target_fraction=last["pad_target_fraction"],
                     n_targets_scored=last["n_targets_scored"],
                     masked_loss=masked_loss,
-                    ppl=float(torch.exp(loss.detach() / steps_per_stream)),
+                    # 🔴 `exp(loss / steps)` was a perplexity only while `loss` WAS
+                    # the LM loss. With (c)'s hinge in the objective it no longer
+                    # is, and leaving it would have shipped a new silent defect
+                    # inside the fix for an old one: a regularizer inside a number
+                    # reported as a perplexity. At `w_srep = 0` this is identical
+                    # to the old expression.
+                    ppl=float(torch.exp(torch.tensor(last["loss_lm"]))),
                     gini=None,  # wired when the policy exposes an attention trace
                     attribution=attr,
                     rank_shift=None,  # wired with RSRPolicy; 0 under FIFO by construction
@@ -350,6 +438,10 @@ def train(
         "run_id": run_id,
         "heartbeat": str(out / "heartbeat.jsonl"),
         "config_hash": _config_hash(frozen),
+        # The frozen config itself, not just its hash: a hash proves two runs agree
+        # and proves nothing about what either of them ran.
+        "config": frozen,
+        "policy": type(policy).__name__,
         "git_sha": _sha(),
         "steps_requested": iters,
         # `steps_done` is the loop's own count, not the request. A resumed or
@@ -366,7 +458,6 @@ def main(argv: list[str] | None = None) -> int:
         ("--batch", int, 16),
         ("--iters", int, 50),
         ("--steps-per-stream", int, 48),
-        ("--vocab", int, 50257),
         ("--memory-slots", int, 16),
         ("--lr", float, 1e-3),
         ("--seed", int, 0),
@@ -374,6 +465,23 @@ def main(argv: list[str] | None = None) -> int:
         ("--ckpt-every", int, 25),
     ):
         p.add_argument(name, type=typ, default=dflt)
+    # S0-01 defect (e). This defaulted to 50257 against a corpus of 156 unique
+    # words, so `V = vocab if vocab else 4 + len(build_vocab(probe))` never reached
+    # its derived branch from the CLI **at the default** -- `--vocab 0` always did,
+    # which is why the original "unreachable from the CLI" was the larger claim and
+    # this is the true one. `None` is falsy, so the default now derives; an explicit
+    # value still wins, which is what the flag is for.
+    p.add_argument(
+        "--vocab",
+        type=int,
+        default=None,
+        help="vocabulary size; omit to derive it from the corpus (4 specials + "
+        "unique words). The synthetic corpus at seed 0 derives V=160.",
+    )
+    # S0-01 defect (b): the policy was unreachable from the CLI while its NAME was
+    # stamped into the run_id. `choices` refuses an unknown name rather than
+    # letting it through to be stamped over a FIFO run.
+    p.add_argument("--policy", default="fifo", choices=POLICIES)
     p.add_argument("--device", default="mps")
     p.add_argument("--out-dir", default="runs/dev")
     p.add_argument("--resume", default=None)
@@ -392,6 +500,7 @@ def main(argv: list[str] | None = None) -> int:
         beat_every=a.beat_every,
         ckpt_every=a.ckpt_every,
         resume=a.resume,
+        policy_name=a.policy,
     )
     print(json.dumps(r, indent=2))
     return 0
