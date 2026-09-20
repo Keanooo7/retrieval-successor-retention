@@ -196,3 +196,83 @@ Two further things fall out, and neither was in the original audit:
 *Found by re-executing a quotation I had published without checking: the `2` definition in this
 brief came from the dispatch that commissioned it, not from `gates.md`. The definition turned out
 correct. The table around it did not. Record this as a `BRIEF ERRORS` entry against me.*
+
+---
+
+## 🔴 THE SWEEP'S BOUNDARY — added 2026-09-20 by the manager, re-executed at `8ad64a2`
+
+The audit above says *"every exit-code site in the repo."* **That is true of trunk and false of the
+project.** A sweep that does not name its own frame invites the reader to promote "not found" to
+"not there", which is the same promotion this brief exists to prevent.
+
+🔑 **A gate that cannot name what it does not catch is not a gate.**
+
+### Trees the sweep covered
+
+| Tree | Covered | How |
+|---|---|---|
+| `origin/main` @ `8ad64a2` (= the audit's `6a775b74` for these files) | ✅ | `git grep` over the working tree |
+| the Studio working tree @ `37ca1c5` | ✅ | same, plus `e76c42e`'s battery re-anchor |
+
+### Trees the sweep structurally could not cover
+
+**1. 🔴 `src/rsr/gates/` is not on trunk, and it holds the only implementation of the protocol.**
+
+```
+git ls-tree origin/main src/rsr/                          -> no `gates` entry
+git merge-base --is-ancestor origin/macbook-local-2026-09-18 origin/main ; echo $?
+1                                                          -- NOT an ancestor
+```
+
+`origin/macbook-local-2026-09-18` (`df508ee`) carries `src/rsr/gates/__init__.py` and
+`src/rsr/gates/floors.py`. That file's `class Exit(IntEnum)` at `:32-37` is
+
+```
+OK = 0   DROP = 1   UNKNOWN = 2   DID_NOT_RUN = 3   UNBANKED_RISE = 4
+```
+
+and it **emits `4` at `floors.py:118` and `:129`** — the rise case for a
+may-rise-never-fall floor and for a may-fall-never-rise ceiling respectively. Both verified by
+`git show origin/macbook-local-2026-09-18:src/rsr/gates/floors.py`.
+
+**This resolves the open question in item 2 of the correction above**, and the answer is neither of
+the two offered. `4` is not *"specified and deliberately unimplemented"* and not *"specified and
+forgotten."* It is **specified on trunk, implemented on a branch trunk cannot reach.** The finding
+*"no site in the repo returns `4`"* is exactly right about trunk, and the reason is larger than a
+missing `return`.
+
+**2. Two trunk documents describe that implementation running.**
+
+- `docs/gates.md:83` heads the block **"Exit codes — the same five everywhere."**
+- `docs/decision-review.md:82`: *"the ratchet correctly reported `UNBANKED_RISE` before it was
+  banked."*
+
+But `git grep -iln ratchet origin/main -- '*.py'` returns **nothing** (exit `1`). The ratchet is
+named on trunk only in prose — including in **both** `.claude/agents/rsr-manager.md` and
+`.claude/agents/rsr-researcher.md`. ⚠️ **Both Studio roles are instructed about an instrument that
+is absent from the tree they work in.** Recorded, not fixed: the `src/rsr/gates/` split is a
+reconciliation decision and not the researcher's or the manager's to take unasked.
+
+**3. The vault repository is out of frame entirely.** The `''`-on-failure git helper attributed to
+this repo by the 2026-09-20b dispatch is not here —
+`git grep -nE "return ''|return \"\"" origin/main` over all file types returns nothing. It lives in
+a different repository. Corrected at source by Brendan; **not swept here, and not to be.**
+
+### ⚠️ The audit's line anchors are trunk-relative and have already drifted
+
+Confirmed at `8ad64a2`, at the exact lines the audit names:
+
+- `scripts/mutation_battery.py:685` → `raise SystemExit(`
+- `scripts/mutation_battery.py:709` → `raise SystemExit(f"the suite is not green before mutating: ...")`
+- `scripts/canary.py:151` → `exit_code=0,`
+
+On the Studio branch at `37ca1c5`, `e76c42e` shifted the battery by **+21 lines**: those two sites
+are now `:706` and `:730`. `canary.py:151` is unmoved. Cite anchors with the sha, or the next reader
+re-reads a line number off a file that has moved under it — which is brief error 2 of the
+2026-09-20c dispatch, in its other direction.
+
+### What still stands
+
+Everything else in this brief is unaffected and re-confirmed at `8ad64a2`: the seven experiment
+stubs returning `3`, the two `mutation_battery.py` sites, `canary.py:151`, and the three defects in
+`canary.py` (`:35` docstring, `:69`, `:151`).
