@@ -77,7 +77,32 @@ from `att` and `v`, summing it over the real query positions, subtracting
 8.23 × 10⁻¹** — float32 epsilon — on all six cross-attention layers. The check is
 `tests/test_capture_bridge.py::test_the_collapse_reproduces_the_real_increment`;
 every number in this ADR comes from that file's fixture (`D=32, H=2, M=5`,
-`Q_tok=8` with a 3-token PAD tail, so `Q_real = 5`, row 0, 4 of 5 slots live).
+`Q_tok = 10` with a 5-token PAD tail, so `Q_real = 5`, row 0, 4 of 5 slots live).
+
+> 📌 **Provenance (added 2026-09-20d, task B1).** Every figure below is now
+> produced by `experiments/s0-02/measure_qtok_collapse.py` into
+> `runs/s0-02-capture-bridge/qtok_collapse.json` and recorded as
+> `qtok_collapse.*` rows in `runs/s0-02-capture-bridge/ledger.json`. Until then
+> they were **prose**: `grep -c "1.49\|2.98\|0.0383"` over that ledger returned
+> `0`, and the three CI tests that pin this ADR assert *thresholds*
+> (`atol=1e-5`, `atol=1e-6`, not-`allclose` at `atol=1e-3`), which is stronger
+> in one way — they fail when the property breaks, not when a decimal moves —
+> and no substitute in the way that matters. The producer **imports** the
+> fixture from `tests/test_capture_bridge.py` rather than re-typing it, so the
+> sentence above is checkable, and it re-derives every parameter and raises on
+> drift. **It raised on its first run**, which is how the `Q_tok` and PAD-tail
+> figures in that sentence were corrected: `TGConfig.L` is
+> `1 + max_sentence_tokens + sentence_tail_len = 1 + 8 + 1 = 10`
+> (`src/rsr/model/tg/config.py:128-130`), and `_sentence` masks `mask[0, 5:] = 0`.
+> This ADR had read `max_sentence_tokens` as the query-axis length and derived
+> the tail as `8 − 5`. `Q_real = 5` is right either way — which is exactly why it
+> survived — and **no measured number changes.**
+>
+> `ledger.json`'s `qtok_collapse.adr_published_vs_measured` row carries this
+> ADR's published figures against the produced ones, so "the numbers are real"
+> is a row rather than something a reader takes on trust. **8 of 9 agree
+> exactly**, including all three headline figures; the ninth is the
+> `contribution()` slip corrected below.
 
 Two deliberate exclusions, both recorded because both are the kind of thing that
 gets quietly added back:
@@ -106,7 +131,13 @@ exactly**. Measured on a real forward pass:
 |---|---|---|
 | `r_i` (slots 0–3) | `0.27818, 0.17073, 0.19087, 0.16022` | `0.27818, 0.17073, 0.19087, 0.16022` |
 | max abs difference in `r_i` | — | **2.98 × 10⁻⁸** |
-| `contribution()` (unnormalised) | `8.5662, 5.2574, 5.8777, 4.9337` | `1.7132, 1.0515, 1.1755, 0.9867` |
+| `contribution()` (unnormalised) | `8.5662, 5.2574, 5.8776, 4.9337` | `1.7132, 1.0515, 1.1755, 0.9867` |
+
+> 📌 Slot 2's sum-collapse entry read `5.8777` until B1 re-derived it. The value
+> is `5.877645…`, which rounds to `5.8776`. Nothing depends on it — no threshold,
+> no test, no conclusion — and it is corrected rather than left because an
+> uncorrected fourth decimal in a cited table is how a reader learns the table
+> was never re-derived.
 
 The unnormalised diagnostic differs by exactly `Q_real = 5`; the target does not
 differ at all. **So this axis of the brief's worry is discharged: mean-vs-sum
@@ -138,6 +169,34 @@ is in the magnitudes, not yet in the order. Spearman ρ is rank-based, so a
 one-row rank agreement is *not* evidence that E0d would score them the same — it
 is evidence that a single untrained row is too small a sample to tell, which is
 why the discriminator below is E0d over a held-out subsample and not this table.
+
+🔴 **A second weakness in this table, found by B1 and worse than the first.**
+Row 0's `[EOS]` is at **query position 9, which row 0's mask marks PAD.**
+`_sentence` writes `ids[:, -1] = eos_id` at index 9 and then sets
+`mask[0, 5:] = 0`. So on the one row this ADR measures, the sum-collapse
+**excludes the single position the EOS-collapse reads**: the two share no query
+position at all, and `0.0383` is a divergence guaranteed by the fixture rather
+than found in the attention. The conclusion — EOS-only does not cancel — is
+still right, and this table is no longer what shows it.
+
+`qtok_collapse.eos_only_supplementary_row` measures the comparison this section
+means to make. **Row 1** has a full mask, so its `[EOS]` *is* one of the
+positions the sum collapses over; it has 2 live slots rather than 4. There:
+
+| | slot 0 | slot 1 |
+|---|---|---|
+| `r_i`, sum-collapse | 0.1932 | 0.2068 |
+| `r_i`, EOS-only | 0.1960 | 0.2040 |
+
+**max abs difference 0.00286**, 1.4% of the largest entry. EOS-only still
+differs, so the decision stands; the margin is a **thirteenth** of what row 0
+advertises. Both orderings are `1, 0`. Spearman ρ is recorded as `null` rather
+than `1.0` — over two points it is ±1 by arithmetic and carries no information.
+
+**Which row this section should publish is the owner's call.** Both are in
+`runs/s0-02-capture-bridge/qtok_collapse.json`; neither is deleted here, because
+`0.0383` has already been quoted and a retracted number must stay visible as a
+retraction.
 
 The case for EOS-only is not empty: the gestalt is read at `[EOS]`
 (`model.py`'s `hit.to(torch.int32).argmax`), it is the gestalt that propagates to
