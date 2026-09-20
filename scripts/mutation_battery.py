@@ -559,6 +559,32 @@ MUTATIONS: tuple[Mutation, ...] = (
         "minimised, reported and exponentiated into a perplexity is mostly the "
         "model's skill at predicting zeros",
     ),
+    Mutation(
+        "W_O dropped from the capture path",
+        "test_capture_bridge",
+        "src/rsr/model/tg/policy_loop.py",
+        '            wo_vs.append(torch.einsum("bmhk,hkd->bhmd", v, wo))',
+        "            wo_vs.append(v.permute(0, 2, 1, 3))",
+        "S0-02 bar item 3, and defect D-6. §3.2.1: *\"`W_O` is not optional... "
+        "dropping it reintroduces the confound the norm-weighting was adopted to "
+        "remove.\"* The reason this needs a mutation rather than a code review is "
+        "that dropping `W_O` is **shape-compatible**: `reward.contribution` norms "
+        "over the last axis, and `[L, H, M, Dh]` norms just as happily as "
+        "`[L, H, M, D]`. Nothing downstream raises, no shape assertion fires, and "
+        "`r_i` becomes norm-weighted raw attention -- which is v0.1's rejected "
+        "definition wearing the new one's name.",
+    ),
+    Mutation(
+        "observe() is never reached",
+        "test_observe",
+        "src/rsr/model/tg/policy_loop.py",
+        "        if observe:\n            # Pre-write memory, deliberately:",
+        "        if False:\n            # Pre-write memory, deliberately:",
+        "S0-02 bar item 4. `git grep '\\.observe(' -- src/` returned **zero hits** "
+        "before this cycle: `reward.py` had 160 lines and 11 passing tests and no "
+        "path from a forward pass to any of it. A call site with no test that "
+        "notices its removal is the same condition with an extra line of code.",
+    ),
 )
 
 
