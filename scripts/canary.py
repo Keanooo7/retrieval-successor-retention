@@ -19,6 +19,20 @@ Tolerance: MPS reductions are not bit-reproducible across runs in general, so an
 exact-equality canary would cry wolf. The threshold is committed here, **before the
 first reading**, at `1e-4` relative on every beat -- far tighter than any real
 regression and far looser than float noise. A move outside it is reported as a move.
+
+## Two repairs from cycle 0 of the 2026-09-19 run
+
+🔴 **A first reading exits 3, not 0.** It used to write `outcome: "inconclusive"`,
+return verdict `"baseline"`, and exit **0** -- the exact `3`-collapsing-to-`0`
+shape, in the one script that had no exit-3 branch at all. `3` means *did not run*
+and it is not *found nothing*.
+
+🔴 **A length mismatch is a `MOVED`, not a comparison over the overlap.** It used to
+note the mismatch and compare the shared prefix, so a run that produced 2 of 6 beats
+could report "held" -- a truncated run reading as a clean environment.
+
+Exit codes follow the run protocol: `0` pass · `1` real failure · `2` nothing to
+compare · `3` did not run.
 """
 
 from __future__ import annotations
@@ -50,6 +64,59 @@ REL_TOL = 1e-4  # committed before the first reading
 BASELINE = _REPO / "runs" / "canary" / "baseline.json"
 
 
+#: `0` pass · `1` real failure · `2` nothing to compare · `3` did not run.
+#: 🔴 A first reading is `3`. It never collapses to `0`.
+EXIT_CODES = {"held": 0, "MOVED": 1, "baseline": 3}
+
+
+def exit_code_for(verdict: str) -> int:
+    """The process exit status for a canary verdict.
+
+    A `baseline` reading did not compare anything against anything: there was no
+    baseline to compare to. That is *did not run*, and `runs/canary/cycle-04`'s own
+    ledger says `inconclusive` while the process exited 0 -- which is how the night
+    reported "3 canaries, all held" over 2 survived and 1 inconclusive.
+    """
+    try:
+        return EXIT_CODES[verdict]
+    except KeyError:
+        raise ValueError(f"unknown canary verdict {verdict!r}") from None
+
+
+def compare(baseline: list[float], losses: list[float]) -> tuple[str, list[dict], str]:
+    """`(verdict, beats_outside_tol, detail)`.
+
+    🔴 **Unequal lengths are a move.** Comparing over the overlap lets a run that
+    produced 2 of 6 beats report "held": the beats it did produce match, and the
+    four it never reached are simply not looked at. A canary that cannot see a
+    truncated run is not an environment check.
+    """
+    n = min(len(baseline), len(losses))
+    if len(baseline) != len(losses):
+        return (
+            "MOVED",
+            [],
+            (
+                f"beat-count length mismatch: baseline has {len(baseline)}, this run "
+                f"produced {len(losses)}. A short run is a moved environment, not a "
+                f"held one -- the overlap is not compared."
+            ),
+        )
+    moved = [
+        {
+            "beat": i,
+            "baseline": baseline[i],
+            "now": losses[i],
+            "rel": abs(losses[i] - baseline[i]) / max(abs(baseline[i]), 1e-12),
+        }
+        for i in range(n)
+        if abs(losses[i] - baseline[i]) / max(abs(baseline[i]), 1e-12) > REL_TOL
+    ]
+    if moved:
+        return "MOVED", moved, f"{len(moved)} of {n} beats outside rel_tol={REL_TOL}"
+    return "held", [], f"all {n} beats within rel_tol={REL_TOL}"
+
+
 def _losses(hb: Path) -> list[float]:
     out = []
     for line in hb.read_text().splitlines():
@@ -66,10 +133,18 @@ def run(cycle: int) -> dict:
     train(out_dir=out_dir, **CONFIG)
     losses = _losses(out_dir / "heartbeat.jsonl")
 
+    run_id = f"canary/cycle-{cycle:02d}"
     led = Ledger(
-        f"canary/cycle-{cycle:02d}",
+        run_id,
         cycle=cycle,
         question="has the environment moved since the canary baseline?",
+    )
+    led.manifest(CONFIG)
+    led.run_meta(
+        device=CONFIG["device"],
+        seeds_actually_run=[CONFIG["seed"]],
+        steps_requested=CONFIG["iters"],
+        steps_done=len(losses),
     )
     led.command(
         f".venv/bin/python scripts/canary.py {cycle}",
@@ -93,45 +168,39 @@ def run(cycle: int) -> dict:
         led.verdict(
             falsifier="the environment has not moved",
             outcome="inconclusive",
-            detail="first reading: this IS the baseline, nothing to compare against yet",
+            detail="first reading: this IS the baseline, nothing to compare "
+            "against yet. Exits 3 (did not run), never 0.",
         )
-        verdict, moved = "baseline", []
+        led.status("partial")
+        verdict, moved, detail = "baseline", [], "first reading"
     else:
         base = json.loads(BASELINE.read_text())["losses"]
-        n = min(len(base), len(losses))
-        moved = [
-            {
-                "beat": i,
-                "baseline": base[i],
-                "now": losses[i],
-                "rel": abs(losses[i] - base[i]) / max(abs(base[i]), 1e-12),
-            }
-            for i in range(n)
-            if abs(losses[i] - base[i]) / max(abs(base[i]), 1e-12) > REL_TOL
-        ]
+        verdict, moved, detail = compare(base, losses)
         led.note("baseline_losses", base, how="runs/canary/baseline.json")
         led.note(
             "beats_outside_tol", moved, how="elementwise |now-base|/|base| vs REL_TOL"
         )
-        if len(base) != len(losses):
-            led.note(
-                "length_mismatch",
-                {"baseline": len(base), "now": len(losses)},
-                how="len of the two beat sequences",
-            )
+        led.note(
+            "beat_counts",
+            {"baseline": len(base), "now": len(losses)},
+            how="len of the two beat sequences",
+        )
         led.verdict(
             falsifier="the environment has not moved since the canary baseline",
-            outcome="falsified" if moved else "survived",
-            detail=(
-                f"{len(moved)} of {n} beats outside rel_tol={REL_TOL}"
-                if moved
-                else f"all {n} beats within rel_tol={REL_TOL}"
-            ),
+            outcome="falsified" if verdict == "MOVED" else "survived",
+            detail=detail,
         )
-        verdict = "MOVED" if moved else "held"
+        led.status("ok")
 
     path = led.write()
-    return {"verdict": verdict, "moved": moved, "losses": losses, "ledger": str(path)}
+    return {
+        "verdict": verdict,
+        "moved": moved,
+        "losses": losses,
+        "detail": detail,
+        "ledger": str(path),
+        "exit_code": exit_code_for(verdict),
+    }
 
 
 if __name__ == "__main__":
@@ -139,5 +208,4 @@ if __name__ == "__main__":
     r = run(cycle)
     print(json.dumps({k: v for k, v in r.items() if k != "losses"}, indent=2))
     print("losses:", [round(x, 6) for x in r["losses"]])
-    if r["verdict"] == "MOVED":
-        sys.exit(2)
+    sys.exit(r["exit_code"])

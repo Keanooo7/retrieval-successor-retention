@@ -38,6 +38,10 @@ __pycache__/
 /runs/**
 !/runs/**/
 !/runs/**/ledger.json
+# The frozen config a ledger's `config_hash` hashes. The hash is in the ledger and
+# the ledger is committed; without the manifest beside it the hash has nothing to
+# be checked against, which is the same gap the ledger rule closed one level up.
+!/runs/**/manifest.json
 !/runs/**/RESULTS.md
 !/runs/**/walls.json
 !/runs/**/baseline.json

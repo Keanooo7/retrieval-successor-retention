@@ -1,0 +1,172 @@
+{
+  "run_id": "cycle-00-evidence-machinery",
+  "cycle": 0,
+  "question": "does the evidence machinery refuse what it cannot re-execute, and does it reproduce the TRUE tallies from last night's 13 unmodified ledgers?",
+  "started_utc": "2026-09-18T19:55:50Z",
+  "provenance": {
+    "git_sha": "5bdf7a726c920ea144efce949f703b903559de43",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "ok",
+  "config_hash": "4a1b011277f07505da6de6b475345731689cde5023986765dfc2b3a63c613ad6",
+  "manifest_written_utc": "2026-09-18T19:55:50Z",
+  "commands": [
+    {
+      "argv": "uv run pytest -rs",
+      "entry_point": "pytest",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "\u00a75.5 acceptance 1",
+      "at_utc": "2026-09-18T19:55:50Z"
+    },
+    {
+      "argv": ".venv/bin/python scripts/mutation_battery.py --check",
+      "entry_point": "scripts/mutation_battery.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "\u00a75.5 acceptance 2",
+      "at_utc": "2026-09-18T19:55:50Z"
+    },
+    {
+      "argv": ".venv/bin/python scripts/render_scoreboard.py --over runs/",
+      "entry_point": "scripts/render_scoreboard.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "\u00a75.5 acceptance 3",
+      "at_utc": "2026-09-18T19:55:50Z"
+    },
+    {
+      "argv": ".venv/bin/python scripts/render_scoreboard.py --over runs/ --claim cycle-4:survived",
+      "entry_point": "scripts/render_scoreboard.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 1,
+      "note": "\u00a75.5: the renderer must REFUSE cycle 4's prose verdict",
+      "at_utc": "2026-09-18T19:55:50Z"
+    },
+    {
+      "argv": ".venv/bin/python scripts/render_scoreboard.py --over runs/ --audit Projects/RSR/morning-2026-09-18.md",
+      "entry_point": "scripts/render_scoreboard.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 1,
+      "note": "the audit flags the fabricated hinge-off figure, which is in no ledger",
+      "at_utc": "2026-09-18T19:55:50Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "suite",
+      "kind": "observation",
+      "value": {
+        "passed": 318,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0,
+        "xfailed": 0,
+        "xpassed": 0,
+        "skip_reasons": {}
+      },
+      "how": "test-count.json, written by tests/conftest.py during the clean `uv run pytest -rs` recorded above. The battery redirects its own census since 211dce6, so this file is no longer the last mutated run's -- it was, and this row was wrong once because of it"
+    },
+    {
+      "key": "suite_floor_at_launch",
+      "kind": "observation",
+      "value": 287,
+      "how": "measured here on d1c221f at 2026-09-18 11:44:45 PDT before cycle 0 started, not quoted from the dispatch"
+    },
+    {
+      "key": "mutation_gates_total",
+      "kind": "observation",
+      "value": 36,
+      "how": "len of the battery's --json rows"
+    },
+    {
+      "key": "mutation_gates_unproven",
+      "kind": "observation",
+      "value": 0,
+      "how": "len of battery rows whose verdict is not PROVEN"
+    },
+    {
+      "key": "mutation_off_gate_undeclared",
+      "kind": "observation",
+      "value": 0,
+      "how": "sum of len(off_gate_undeclared) over the battery rows"
+    },
+    {
+      "key": "ledgers_read",
+      "kind": "observation",
+      "value": 13,
+      "how": "len(render_scoreboard.build().rows)"
+    },
+    {
+      "key": "canary_survived",
+      "kind": "observation",
+      "value": 2,
+      "how": "len over runs/canary/*/ledger.json with verdict.outcome == survived"
+    },
+    {
+      "key": "canary_inconclusive",
+      "kind": "observation",
+      "value": 1,
+      "how": "len over runs/canary/*/ledger.json with verdict.outcome == inconclusive"
+    },
+    {
+      "key": "ledgers_not_re_executable",
+      "kind": "observation",
+      "value": 10,
+      "how": "re-derived per command: entry_point(argv) resolved against that ledger's own recorded sha. The dispatch said 9; this is 10 -- cycle-arm-identity's five inline `python -c` commands name no file at all and sit outside the dispatch's 7+1+1 taxonomy"
+    },
+    {
+      "key": "ledgers_with_null_exit_code",
+      "kind": "observation",
+      "value": 7,
+      "how": "len of board rows with >=1 command whose exit_code is null"
+    },
+    {
+      "key": "cycle_4_resolves_to",
+      "kind": "observation",
+      "value": [
+        "canary/cycle-04",
+        "cycle-zscore-denominator"
+      ],
+      "how": "render_scoreboard.build().cycle_collisions[4]"
+    },
+    {
+      "key": "cycle_4_prose_claim_accepted",
+      "kind": "observation",
+      "value": false,
+      "how": "render_scoreboard.check_claim -> `cycle` is not a join key -- refusing to resolve 'cycle-4'. Cycle 4 is ambiguous across 2 ledgers: ['canary/cycle-04', 'cycle-zscore-denominator']. Name a run_id."
+    },
+    {
+      "key": "historical_scratch_argv_refused",
+      "kind": "observation",
+      "value": true,
+      "how": "ledger.command() on runs/cycle-bias-interface/ledger.json's recorded argv, verbatim -- a gate that only fails on a synthetic input is a gate you have not tested"
+    },
+    {
+      "key": "manager_errors_this_cycle",
+      "kind": "observation",
+      "value": 6,
+      "how": "len of the numbered list in Projects/RSR/morning-2026-09-19.md under 'My own error rate'; each was caught inside the cycle"
+    }
+  ],
+  "verdict": {
+    "falsifier": "The repair dies if any of these is false: (a) render_scoreboard over last night's 13 UNMODIFIED ledgers reports a canary tally other than 2 survived / 1 inconclusive; (b) it accepts the prose claim `cycle-4 = survived`; (c) ledger.command() accepts runs/cycle-bias-interface's recorded argv verbatim; (d) the mutation battery reports any gate unproven or any undeclared off-gate failure; (e) the suite falls below 287 or grows skips.",
+    "outcome": "survived",
+    "detail": "(a) 2 survived / 1 inconclusive, read off the ledgers, against a prose claim of three held. (b) refused: cycle 4 resolves to canary/cycle-04 and cycle-zscore-denominator, which disagree. (c) refused, by Unreproducible. (d) 36/36 PROVEN, 0 undeclared off-gate. (e) 318 passed, 0 skipped, floor 287. Verified by re-execution by a different path than the dispatch used: its '9 of 13 unreproducible' is 10 when re-derived from the argvs; its MUTATIONS[7] 'five values for six fields' is six with gate duplicated into path; and its own `grep -rn` for the fabricated figure returns a hit, because `.` is a regex metacharacter.",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-18T19:55:50Z"
+}
