@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**36/39 gates proven.**
+**39/39 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -25,10 +25,10 @@
 | W transposed | `test_W_is_not_silently_transposed` | **PROVEN** | 1 | 1 |
 | linear term dropped | `test_both_terms_are_present` | **PROVEN** | 2 | 2 |
 | value head shares the transformer group | `test_the_value_head_has_its_own_group` | **PROVEN** | 2 | 2 |
-| r_i drops the memory gate | `test_the_memory_gate_changes_the_answer` | **LEAKS** | 1 | 0 |
-| r_i accepts a train-mode trace | `test_a_train_mode_trace_is_refused` | **LEAKS** | 1 | 0 |
+| r_i drops the memory gate | `test_the_memory_gate_changes_the_answer` | **PROVEN** | 1 | 1 |
+| r_i accepts a train-mode trace | `test_a_train_mode_trace_is_refused` | **PROVEN** | 1 | 1 |
 | rank shift counts the sliding window | `test_evicting_the_oldest_displaces_nothing` | **PROVEN** | 4 | 4 |
-| underfull steps are not rescaled | `test_underfull_steps_are_rescaled_not_masked` | **LEAKS** | 1 | 0 |
+| underfull steps are not rescaled | `test_underfull_steps_are_rescaled_not_masked` | **PROVEN** | 1 | 1 |
 | ledger accepts an unreproducible entry point | `test_command_refuses` | **PROVEN** | 0 | 0 |
 | any console script counts as a committed entry point | `test_command_refuses_an_undeclared_tool_entry_point` | **PROVEN** | 0 | 0 |
 | an unreproducible command stops capping the verdict | `test_the_escape_hatch_caps_the_verdict_at_inconclusive` | **PROVEN** | 0 | 0 |
@@ -196,23 +196,23 @@ Also reddened (2):
 
 ### r_i drops the memory gate
 
-**Gate:** `test_the_memory_gate_changes_the_answer` — **LEAKS**
+**Gate:** `test_the_memory_gate_changes_the_answer` — **PROVEN**
 
 D-E: layer-specific rescaling silently omitted
 
 Also reddened (1):
 
-- `tests/test_capture_bridge.py::test_the_captured_gate_is_the_models_memory_gate` — 🔴 UNDECLARED
+- `tests/test_capture_bridge.py::test_the_captured_gate_is_the_models_memory_gate` — ✔ declared
 
 ### r_i accepts a train-mode trace
 
-**Gate:** `test_a_train_mode_trace_is_refused` — **LEAKS**
+**Gate:** `test_a_train_mode_trace_is_refused` — **PROVEN**
 
 D-F: the policy learns from dropout masks
 
 Also reddened (1):
 
-- `tests/test_capture_bridge.py::test_a_train_mode_capture_is_refused_downstream` — 🔴 UNDECLARED
+- `tests/test_capture_bridge.py::test_a_train_mode_capture_is_refused_downstream` — ✔ declared
 
 ### rank shift counts the sliding window
 
@@ -229,13 +229,13 @@ Also reddened (4):
 
 ### underfull steps are not rescaled
 
-**Gate:** `test_underfull_steps_are_rescaled_not_masked` — **LEAKS**
+**Gate:** `test_underfull_steps_are_rescaled_not_masked` — **PROVEN**
 
 §3.2.1: the estimator learns 'stream-initial content is valuable'
 
 Also reddened (1):
 
-- `tests/test_capture_bridge.py::test_retrieval_demand_runs_on_a_real_forward_pass` — 🔴 UNDECLARED
+- `tests/test_capture_bridge.py::test_retrieval_demand_runs_on_a_real_forward_pass` — ✔ declared
 
 ### ledger accepts an unreproducible entry point
 
@@ -427,6 +427,7 @@ A coupling worth knowing about is one somebody wrote down. These are the reasons
 - K is DERIVED, so the same refusal is what stops an arbitrary experiment recording it; one guard, two assertions
 - the muP multipliers are checked both on the attribute and on the output, deliberately -- an attribute set correctly and never applied is precisely the silent failure §4.3 warns about, so one edit must redden both.
 - the hand-computed forward is the same arithmetic the transpose gate checks; one edit cannot break one and not the other
+- `r_i` is asserted twice on purpose, and S0-02 is the reason: tests/test_reward.py checks the property on a hand-built `AttentionTrace`, tests/test_capture_bridge.py checks the same property end to end on a real `TGModel` forward pass. Those were two disconnected claims until the capture bridge existed -- `reward.py` had 11 passing tests and zero callers in `src/` precisely because nothing joined them -- so one edit to `reward.py` reddening both is the join working. A `reward.py` mutation that reddened ONLY the fixture test would mean the bridge does not actually reach the reward, which is the failure this file was written to detect.
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006).
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006). Added 2026-09-18: the on-the-real-model variant post-dates docs/mutation-battery.md's table.
 - SOURCE_ROOTS is one enumeration: what gates and what does not are the same list, so widening it necessarily moves both assertions
