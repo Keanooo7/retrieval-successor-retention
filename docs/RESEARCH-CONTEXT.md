@@ -806,7 +806,13 @@ by this session**, at source.
 
 ### 10.1 `src/rsr/train/loop.py` — five confirmed defects, all ours
 
-**365 lines of `rsr.train` have zero tests.** Nothing in `tests/` imports `rsr.train` except
+**491 lines of `rsr.train` have no test that imports them.** *(Re-derived 2026-09-20:
+`src/rsr/train/` is 852 lines — `__init__` 25, `checkpoint` 361, `heartbeat` 159, `loop` 307 — and
+only `checkpoint.py` is imported by a test. The figure read **365** until today, which was `loop`
+228 + `heartbeat` 137 before 37 over-long prose lines in those two files were rewrapped to get ruff
+green. **The rewrap is why the number moved; nothing was added and nothing was tested.** A derived
+number in prose rots the moment anyone touches the file it describes, and this one rotted inside a
+day.)* Nothing in `tests/` imports `rsr.train` except
 `checkpoint`.
 
 | # | Defect | Verified at `d1c221f` | Consequence |
