@@ -1,0 +1,26 @@
+{
+  "batch": 8,
+  "corpus": "synthetic, SyntheticConfig(sentences_per_document=48, seed=<seed>)",
+  "d": 128,
+  "device": "mps",
+  "device_note": "MPS. On CPU the floor is 0.0 and half 2 of the falsifier is vacuous; that is measured here too and reported as vacuity.",
+  "expectation": "Masking RAISES the reported per-token loss, because PAD is trivially predictable and currently dominates the mean. A masked loss that is LOWER is a finding, not a bug to tune away.",
+  "falsifier": "The reading dies if the PAD fraction of scored targets is below 0.50, or if masking moves the final training loss by no more than the run-to-run floor at identical seed and config.",
+  "floor_statistic": "|final-beat difference| between two runs differing in nothing. NOT the trajectory sup-norm of runs/cycle-arm-identity, which is >= it by construction.",
+  "iters": 50,
+  "lr": 0.001,
+  "max_tokens": 64,
+  "memory_slots": 16,
+  "policy": "fifo",
+  "replicates_at_seed_0": [
+    "a",
+    "b"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "steps_per_stream": 48,
+  "vocab": "derived from the corpus (NOT --vocab's 50257 default; that is cycle 5)"
+}
