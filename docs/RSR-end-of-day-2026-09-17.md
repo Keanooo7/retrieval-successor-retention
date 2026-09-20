@@ -1,5 +1,22 @@
 # RSR — End of Day Report, 17 September 2026
 
+> CRITICAL: **THIS FILE IS DATED THE DAY BEFORE THE AUDIT THAT RETRACTED SOME OF
+> ITS CLAIMS. Read `docs/RESEARCH-CONTEXT.md` §11 first.**
+>
+> It is the most readable document in the repo and that is exactly why this header
+> is here. Specifically, Part 2's *"a training loop that demonstrably learns"* is
+> **retracted**: that run used `V = 50257` against a 156-word corpus, so
+> `10.817 ≈ ln(50257)` and true chance is `ln(160) = 5.075`. The honest interval is
+> **5.075 → 1.107**, not 10.82 → 1.11. Five other numbers from the 2026-09-18
+> overnight record are retracted in §11 of the research-context file.
+>
+> Two further things this file could not know: the RSR training arm was **FIFO**
+> (`src/rsr/train/loop.py:138` hardcodes `FIFOPolicy()`), and the trained model's
+> working memory is **inert** under a shuffle control. Part 5 -- the mistakes
+> section -- stands unamended and is the part worth reading.
+>
+> *Header added 2026-09-20.*
+
 *What the project is, what we built today, and what we actually learned.*
 
 ---

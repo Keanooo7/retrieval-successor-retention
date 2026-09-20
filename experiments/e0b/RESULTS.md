@@ -1,6 +1,21 @@
 # E0B - Reduction test vs TG
 
-**Status: NOT RUN.**
+**Status: RUN. GREEN, bit-exact.** Corrected 2026-09-20 -- this file said "NOT RUN"
+for a gate that has been passing since `3e19dcb` (2026-09-17).
+
+E0b is a CI test, not a script: `tests/test_reduction.py`, 20 tests. Stock TG, the
+§3.7 reduction and the explicit FIFO policy all give loss `125.310546875`; the
+learned head does not. Re-verified at `b572ad6`:
+
+```
+$ PYTHONPATH=src pytest tests/test_reduction.py::test_loss_curve_is_bit_exact_against_stock_tg
+1 passed in 1.30s
+```
+
+Mutation evidence for this suite is in `docs/mutation-battery.md`, including the
+hole a mutation exposed: dropping the `nu` clause from `is_reduction` reddened
+nothing, which would have let a policy at `nu = 0.5` report itself as the exact-TG
+reduction while `observe` silently no-op'd.
 
 | | |
 |---|---|

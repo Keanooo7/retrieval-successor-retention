@@ -66,16 +66,24 @@ machine's CPU, in a throwaway venv; the exact command is in
 ```
 src/rsr/
   model/        tg base, memory, gestalt write
-  retention/    policy, value_head, reward, shadow, bias
-  baselines/    fifo, lru, h2o, expire_span, leading_edge, random, oracle
-  data/         synthetic generator, pg19, coref
-  metrics/      reintroduction, loo, vacuity, gini
-  mup/          param groups, coordinate check
+  retention/    policy, value_head, reward           [shadow, bias = STUBS, raise]
+  baselines/    fifo, lru, random                     [h2o, expire_span,
+                                                       leading_edge, oracle = STUBS]
+  data/         synthetic generator                   [pg19, coref = STUBS]
+  metrics/      -- ALL FOUR ARE STUBS: reintroduction, loo, vacuity, gini
+  mup/          param groups                          [coord_check = STUB]
   constants.py  the registry that refuses unmeasured reads
 configs/        base + model/ + data/ + experiment/
 experiments/    e0a … e0i, each with run.py + RESULTS.md
 preregistration/  committed BEFORE the experiment they govern
 ```
+
+**A stub raises `NotImplementedError`.** They are marked above rather than omitted
+because the layout is also the work plan. Four of the eight baselines, both
+anti-collapse mechanisms, and every metric -- including leave-one-out, which
+§3.2.1 makes the arbiter of truth -- are not implemented. See
+`docs/RESEARCH-CONTEXT.md` §10 for the full register, and read it before reading
+any result in `runs/`.
 
 ## Licence
 

@@ -41,7 +41,7 @@ already produced two false clean bills of health on this project.
 ## Read before you act
 
 1. `docs/spec-corrections.md` — corrections that **override** the spec body.
-2. Your brief, in full: `Projects/RSR/dispatch/<id>.md`, plus any `<id>.addendum-*`.
+2. Your brief, in full: `docs/lab-notes/dispatch-<id>.md`, plus any `<id>.addendum-*`.
 3. `docs/corpus-sheet.md` §5 — the settled questions. Do not reopen them.
 
 ## The loop you run
