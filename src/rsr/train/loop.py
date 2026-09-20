@@ -117,6 +117,54 @@ def encode(docs, vocab: dict[str, int], *, max_tokens: int, steps: int):
     return ids, mask
 
 
+def lm_token_losses(logits, ids_t):
+    """Per-target next-token cross-entropy, flat, one sentence step.
+
+    The `[:, :-1]` / `[:, 1:]` shift means the population is **targets**, not
+    tokens: `batch x (L - 1)` of them.
+    """
+    lg = logits
+    return F.cross_entropy(
+        lg[:, :-1].reshape(-1, lg.shape[-1]),
+        ids_t[:, 1:].reshape(-1),
+        reduction="none",
+    )
+
+
+def lm_loss(logits, ids_t, mask_t):
+    """Next-token cross-entropy over **real** targets only (cycle 1, defect 1).
+
+    The version this replaces reduced with `reduction="mean"` over every target,
+    including PAD -- while `mask_t` was already being handed to `step_fn` by
+    `rsr.model.tg.policy_loop:140` and already going unused. On the committed
+    synthetic corpus that is not a correction at the margin: sentences are ~5
+    tokens inside a 64-token frame, so the number being minimised, reported and
+    turned into a perplexity was overwhelmingly the model's skill at predicting
+    zeros. `tests/test_train_loss.py` measures the fraction rather than quoting it.
+
+    Selection is on `mask_t` rather than on `ids_t != pad_id` because the mask is
+    what `encode()` built and what the loop already passes; the two agree here and
+    a test says so. **A step with no real target returns 0, not `nan`** -- `0 / 0`
+    would poison the accumulated stream loss for any document shorter than
+    `steps_per_stream`.
+    """
+    per = lm_token_losses(logits, ids_t)
+    valid = mask_t[:, 1:].reshape(-1)
+    n = valid.sum()
+    return (per * valid.to(per.dtype)).sum() / n.clamp(min=1)
+
+
+def lm_loss_unmasked(logits, ids_t, mask_t):
+    """🔴 The pre-cycle-1 objective, scoring PAD. **Never the default.**
+
+    It survives behind `train(masked_loss=False)` for exactly one reason: the
+    masked and unmasked arms have to be comparable *at one sha*, and an arm that
+    only exists at the parent commit is an arm whose ledger cites a different tree.
+    It is a documented off-switch in the sense CLAUDE.md means, not an option.
+    """
+    return lm_token_losses(logits, ids_t).mean()
+
+
 def train(
     *,
     d: int = 128,
@@ -134,6 +182,7 @@ def train(
     ckpt_every: int = 25,
     resume: str | Path | None = None,
     policy_name: str = "fifo",
+    masked_loss: bool = True,
 ) -> dict:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -174,6 +223,7 @@ def train(
         "seed": seed,
         "policy": policy_name,
         "device": device,
+        "masked_loss": masked_loss,
     }
     run_id = f"{policy_name}-d{d}-s{steps_per_stream}-b{batch}-{_config_hash(frozen)}"
 
@@ -207,17 +257,33 @@ def train(
         config=frozen, resumed_from=str(resume) if resume else None, start_step=start
     )
 
-    def step_fn(t, o, ids_t, mask_t, row_valid):
-        lg = o.logits
-        return F.cross_entropy(
-            lg[:, :-1].reshape(-1, lg.shape[-1]),
-            ids_t[:, 1:].reshape(-1),
-            reduction="mean",
-        )
+    # Both numbers are computed every step and only one is optimised. The other is
+    # the *common yardstick*: comparing a masked arm's masked loss against an
+    # unmasked arm's unmasked loss compares two different objectives and is
+    # tautologically different. Real-token NLL is the same quantity in both arms.
+    tally: dict[str, float] = {}
 
+    def step_fn(t, o, ids_t, mask_t, row_valid):
+        loss = (lm_loss if masked_loss else lm_loss_unmasked)(o.logits, ids_t, mask_t)
+        with torch.no_grad():
+            valid = mask_t[:, 1:].reshape(-1)
+            tally["real_sum"] = tally.get("real_sum", 0.0) + float(
+                lm_loss(o.logits, ids_t, mask_t)
+            )
+            tally["all_sum"] = tally.get("all_sum", 0.0) + float(
+                lm_loss_unmasked(o.logits, ids_t, mask_t)
+            )
+            tally["n_targets"] = tally.get("n_targets", 0.0) + valid.numel()
+            tally["n_pad_targets"] = tally.get("n_pad_targets", 0.0) + float(
+                (~valid).sum()
+            )
+        return loss
+
+    last: dict[str, float] = {}
     try:
         for it in range(start, iters):
             t0 = time.time()
+            tally.clear()
             sel = torch.randint(
                 0, all_ids.shape[0], (batch,), generator=gen, device=device
             )
@@ -232,12 +298,30 @@ def train(
                 torch.mps.synchronize()
             dt = time.time() - t0
 
+            # Per sentence step, so the number is a per-token NLL rather than a
+            # stream sum. `loss_real_tokens` is the same quantity in both arms and
+            # is the only honest masked-vs-unmasked comparison; `loss` is whichever
+            # objective this arm actually minimised.
+            last = {
+                "loss": float(loss.detach()) / steps_per_stream,
+                "loss_real_tokens": tally["real_sum"] / steps_per_stream,
+                "loss_all_targets": tally["all_sum"] / steps_per_stream,
+                "pad_target_fraction": tally["n_pad_targets"] / tally["n_targets"],
+                "n_targets_scored": tally["n_targets"],
+                "n_pad_targets_scored": tally["n_pad_targets"],
+                "step": it,
+            }
             if it % beat_every == 0:
                 attr = policy.attribution() if hasattr(policy, "attribution") else None
                 hb.beat(
                     it,
-                    loss=float(loss.detach()) / steps_per_stream,  # per sentence step
+                    loss=last["loss"],
                     loss_sum=float(loss.detach()),
+                    loss_real_tokens=last["loss_real_tokens"],
+                    loss_all_targets=last["loss_all_targets"],
+                    pad_target_fraction=last["pad_target_fraction"],
+                    n_targets_scored=last["n_targets_scored"],
+                    masked_loss=masked_loss,
                     ppl=float(torch.exp(loss.detach() / steps_per_stream)),
                     gini=None,  # wired when the policy exposes an attention trace
                     attribution=attr,
@@ -262,7 +346,17 @@ def train(
         hb.crash(e)
         raise
     hb.footer("completed", final_step=iters)
-    return {"run_id": run_id, "heartbeat": str(out / "heartbeat.jsonl")}
+    return {
+        "run_id": run_id,
+        "heartbeat": str(out / "heartbeat.jsonl"),
+        "config_hash": _config_hash(frozen),
+        "git_sha": _sha(),
+        "steps_requested": iters,
+        # `steps_done` is the loop's own count, not the request. A resumed or
+        # crashed run must not be able to report the number it asked for.
+        "steps_done": (last["step"] + 1) if last else start,
+        "final": last,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:

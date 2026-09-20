@@ -538,6 +538,20 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if False:",
         '5.4: a run that produced 2 of 6 beats reports "held"',
     ),
+    Mutation(
+        "the training loss scores padding again",
+        "test_lm_loss",
+        "src/rsr/train/loop.py",
+        "    per = lm_token_losses(logits, ids_t)\n"
+        "    valid = mask_t[:, 1:].reshape(-1)\n"
+        "    n = valid.sum()\n"
+        "    return (per * valid.to(per.dtype)).sum() / n.clamp(min=1)",
+        "    per = lm_token_losses(logits, ids_t)\n    return per.mean()",
+        "cycle 1 defect 1: the objective goes back to averaging over every target, "
+        "93.4% of which are PAD on the committed synthetic corpus -- so the number "
+        "minimised, reported and exponentiated into a perplexity is mostly the "
+        "model's skill at predicting zeros",
+    ),
 )
 
 
