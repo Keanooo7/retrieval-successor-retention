@@ -1,3 +1,15 @@
+status: MANAGER CLOSE
+run_id: overnight-2026-09-21 (manager)
+updated: 2026-09-21 (Mac Studio, local morning)
+provenance: see each run's ledger · cpu · Python 3.14.6 in worktrees (unpinned; see for-brendan)
+manifest: n/a (manager); runs this night: s0-03-rewardable-corpus, efeas-synthetic-s003, decisive-shuffle
+falsifier: §10.3 "the TG working memory is inert on a corpus whose objective requires retrieval"
+expected: PREREG experiments/decisive-shuffle/PREREG.md, Amendment 1 rule per arm
+observed: A inert, B live, C live -> falsified; answer NLL with own memory at/above ln16 (live is not retrieval)
+morning document: docs/lab-notes/overnight-2026-09-21.md · escalations: docs/lab-notes/for-brendan-2026-09-21.md
+
+---
+
 status: RETURNED
 run_id: decisive-shuffle
 updated: 2026-09-21T13:36:39Z
