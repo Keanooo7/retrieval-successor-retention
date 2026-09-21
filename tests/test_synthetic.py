@@ -218,3 +218,152 @@ def test_a_document_does_not_depend_on_the_documents_before_it():
     assert full[5] == just_one
     sliced = generate(SyntheticConfig(n_documents=6, seed=3))
     assert sliced == full[:6]
+
+
+# --- S0-03: the answer is in the token stream -------------------------------- #
+#
+# Before S0-03 every query read "What does Hal-6 measures?" and its answer lived
+# only in `Sentence.answer`, out of band: no next-token target required retrieving
+# the asserted fact, so "the memory is inert" was a finding about the corpus.
+
+M_SYNTHETIC = 16
+"""`rsr.constants.get("M", "synthetic")`, asserted equal below rather than trusted."""
+
+PRE_S003_DIGEST = "521eb69c7132d846895647e1683e305d9fcb8bcdb8ed96495245045c860d8181"
+"""sha256 of `to_bytes(generate(SyntheticConfig(n_documents=16, seed=0)))` measured
+on the unmodified generator at a802521, before S0-03 touched it."""
+
+
+def test_every_query_carries_its_answer_as_its_final_token(docs):
+    """The S0-03 invariant, and the gate its fixture mutation reddens: re-emitting
+    the answer out of band (`answer_in_stream=False` as the default) must fail
+    here, by name."""
+    from rsr.data.synthetic import answer_symbol
+
+    n_queries = 0
+    for doc in docs:
+        for assert_at, query_at in doc.pairs:
+            q = doc.sentences[query_at]
+            assert q.text.split()[-1] == answer_symbol(q.answer), q.text
+            # ...and the asserted sentence is where it can be retrieved from.
+            assert q.answer in doc.sentences[assert_at].text
+            n_queries += 1
+    assert n_queries > 0
+
+
+def test_an_answer_is_one_symbol_and_chance_on_it_is_ln_16():
+    """Single-symbol, not word-level: one chance figure, `ln 16`, for every answer.
+    A symbol must not collide with any word a model could copy from elsewhere."""
+    import math
+
+    from rsr.data.synthetic import ANSWER_SYMBOLS
+
+    assert len(ANSWER_SYMBOLS) == len(set(ANSWER_SYMBOLS)) == 16
+    assert math.log(len(ANSWER_SYMBOLS)) == pytest.approx(2.7726, abs=1e-4)
+    words = {
+        w
+        for d in generate(SyntheticConfig(seed=0, answer_in_stream=False))
+        for s in d.sentences
+        for w in s.text.split()
+    }
+    assert not words & set(ANSWER_SYMBOLS)
+    assert all(" " not in s for s in ANSWER_SYMBOLS)
+
+
+def test_the_off_switch_is_the_pre_s003_corpus_byte_for_byte():
+    """`answer_in_stream=False` must reproduce the old corpus exactly, so the runs
+    measured on it (`runs/efeas-synthetic`, `runs/shuffle-control`) stay
+    reproducible at this sha."""
+    import hashlib
+
+    off = generate(SyntheticConfig(n_documents=16, seed=0, answer_in_stream=False))
+    assert hashlib.sha256(to_bytes(off)).hexdigest() == PRE_S003_DIGEST
+
+
+def test_the_answer_is_the_only_difference_between_the_two_corpora():
+    """No RNG draw is added, so facts, gaps and fillers are identical and the only
+    change is one appended token per query. Otherwise "the corpus alone" in the
+    decisive run would also change the gap distribution."""
+    from rsr.data.synthetic import answer_symbol
+
+    on = generate(SyntheticConfig(seed=1))
+    off = generate(SyntheticConfig(seed=1, answer_in_stream=False))
+    for a, b in zip(on, off, strict=True):
+        assert a.pairs == b.pairs
+        for sa, sb in zip(a.sentences, b.sentences, strict=True):
+            if sa.kind == "query":
+                assert sa.text == f"{sb.text} {answer_symbol(sb.answer)}"
+            else:
+                assert sa == sb
+
+
+def test_a_reportable_fraction_of_pairs_has_gap_beyond_M():
+    """S0-03 item 4: eviction can only bite on pairs FIFO cannot retrieve, i.e.
+    `gap > M`. Measured at a802521 on the default config: 0.195, 0.174, 0.174 for
+    seeds 0, 1, 2. The floor is 0.10 -- below it the `gap > M` answer-loss bucket
+    rests on too few targets per seed to compare with the `gap <= M` bucket."""
+    from rsr import constants as C
+    from rsr.data.synthetic import fraction_of_pairs_beyond
+
+    assert C.get("M", "synthetic") == M_SYNTHETIC
+    for seed in (0, 1, 2):
+        frac = fraction_of_pairs_beyond(generate(SyntheticConfig(seed=seed)), 16)
+        assert 0.10 <= frac < 1.0, (seed, frac)
+
+
+# --- S0-03: the supervision mask (`rsr.train.loop.answer_targets`) ----------- #
+
+
+def _encoded(seed=0, n_documents=8, **kw):
+    from rsr.train.loop import answer_targets, build_vocab, encode
+
+    d = generate(SyntheticConfig(n_documents=n_documents, seed=seed, **kw))
+    v = build_vocab(d)
+    ids, mask = encode(d, v, max_tokens=64, steps=48)
+    tmask, gap = answer_targets(d, v, max_tokens=64, steps=48)
+    return d, v, ids, mask, tmask, gap
+
+
+def test_the_target_mask_marks_exactly_the_answer_token_of_every_query():
+    """One target per query, zero elsewhere, and the id under it is the answer's.
+    Scored as `target_mask[..., 1:]` against the shifted targets, the same frame
+    `encode()`'s padding mask is scored in."""
+    from rsr.data.synthetic import answer_symbol
+
+    d, v, ids, mask, tmask, _ = _encoded()
+    assert not (tmask & ~mask).any(), "an answer target on a PAD position"
+    assert not tmask[..., 0].any(), "position 0 is never a next-token target"
+    for di, doc in enumerate(d):
+        for si, s in enumerate(doc.sentences):
+            row = tmask[di, si]
+            if s.kind == "query":
+                assert int(row.sum()) == 1
+                pos = int(row.nonzero())
+                assert int(ids[di, si, pos]) == v[answer_symbol(s.answer)]
+                assert int(ids[di, si, pos + 1]) == 2, "the EOS follows the answer"
+            else:
+                assert not row.any()
+
+
+def test_the_gap_tensor_is_the_pairs_gap_at_each_query():
+    d, _, _, _, tmask, gap = _encoded()
+    for di, doc in enumerate(d):
+        want = {q: q - a for a, q in doc.pairs}
+        for si in range(len(doc.sentences)):
+            assert int(gap[di, si]) == want.get(si, 0)
+    assert bool(((gap > 0) == tmask.any(dim=-1)).all())
+
+
+def test_the_answer_targets_are_a_minority_that_a_pooled_loss_would_hide():
+    """Why the mask exists: pooled into the padding mask the answers are a few
+    percent of the real targets (8.5% at seed 0 over 64 documents)."""
+    _, _, _, mask, tmask, _ = _encoded(n_documents=64)
+    frac = int(tmask[..., 1:].sum()) / int(mask[..., 1:].sum())
+    assert 0.0 < frac < 0.15
+
+
+def test_answer_targets_refuse_a_corpus_whose_answers_are_out_of_band():
+    """An empty mask would make every answer-token loss a mean over nothing; the
+    pre-S0-03 corpus must be refused, not silently scored."""
+    with pytest.raises(ValueError, match="out of band"):
+        _encoded(answer_in_stream=False)

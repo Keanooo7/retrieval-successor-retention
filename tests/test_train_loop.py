@@ -218,9 +218,19 @@ def test_the_hinge_is_on_by_default(tmp_path):
 
 
 def test_the_corpus_holds_156_unique_words():
-    """The brief predicted 156 and did not verify it. Measured, and now pinned."""
+    """The brief predicted 156 and did not verify it. Measured, and now pinned.
+
+    S0-03 appends each query's answer as one symbol, which adds the 16 answer
+    symbols and nothing else: 156 words + 16 = 172. The 156 is pinned on the
+    pre-S0-03 corpus (the documented off-switch), so both counts are checked."""
+    from rsr.data.synthetic import ANSWER_SYMBOLS
+
+    old = generate(
+        SyntheticConfig(sentences_per_document=48, seed=0, answer_in_stream=False)
+    )
+    assert len(build_vocab(old)) == 156
     docs = generate(SyntheticConfig(sentences_per_document=48, seed=0))
-    assert len(build_vocab(docs)) == 156
+    assert len(build_vocab(docs)) == 156 + len(ANSWER_SYMBOLS) == 172
 
 
 def test_the_cli_vocab_default_reaches_the_derived_path(monkeypatch, tmp_path):
@@ -251,7 +261,7 @@ def test_an_explicit_vocab_still_overrides_the_derived_path(monkeypatch, tmp_pat
 
 def test_the_derived_vocabulary_is_what_the_model_is_built_with(tmp_path):
     r = train(out_dir=tmp_path / "v", vocab=None, seed=0, **TINY)
-    assert r["config"]["tg"]["V"] == 160  # 4 specials + 156 words
+    assert r["config"]["tg"]["V"] == 176  # 4 specials + 156 words + 16 answers (S0-03)
 
 
 # --------------------------------------------------------------------------- #
