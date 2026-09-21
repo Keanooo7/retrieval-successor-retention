@@ -868,6 +868,94 @@ MUTATIONS: tuple[Mutation, ...] = (
         "memory disabled the kv swap is a no-op but the bos swap is not, so the "
         "disabled-memory reading stops being exactly 0.0.",
     ),
+    # -- decisive run (experiments/decisive-shuffle/PREREG.md, Mutation bar) -- #
+    Mutation(
+        "decisive: two arms swapped in the script",
+        "test_arms_are_the_preregistered_table",
+        "experiments/decisive-shuffle/run.py",
+        '    "A": {"masked_loss": False, "srep_norm_reg_weight": 0.0},\n'
+        '    "B": {"masked_loss": True, "srep_norm_reg_weight": 0.0},',
+        '    "A": {"masked_loss": True, "srep_norm_reg_weight": 0.0},\n'
+        '    "B": {"masked_loss": False, "srep_norm_reg_weight": 0.0},',
+        "PREREG Mutation bar, arm swap: arm A would train B's objective and be "
+        "reported as 'the corpus alone'. The manifest is frozen from ARMS, so it "
+        "would agree with the swap; only the hand-copied PREREG table sees it.",
+    ),
+    Mutation(
+        "decisive: the manifest-hash arm check never refuses",
+        "test_an_arm_swap_is_refused_by_the_manifest_check",
+        "experiments/decisive-shuffle/run.py",
+        "    if why:\n        raise ArmMismatch(",
+        "    if False:\n        raise ArmMismatch(",
+        "PREREG Mutation bar, arm swap: a checkpoint trained under another arm's "
+        "config would be measured and reported as this arm's.",
+        off_gate_allowed=(
+            (
+                "tests/test_decisive_shuffle.py::"
+                "test_a_config_that_does_not_hash_to_its_own_stamp_is_refused",
+                "the same refusal statement guards both the arm hash and the "
+                "config's own stamp; disabling it must redden both, by design.",
+            ),
+        ),
+    ),
+    Mutation(
+        "decisive: the aliasing clause dropped from the decision rule",
+        "test_decisive_shuffle.py::",
+        "experiments/decisive-shuffle/run.py",
+        "    if any(x == 1.0 for x in r.values()):",
+        "    if False:",
+        "PREREG Mutation bar, decoy aliasing: with the decoy pointed at the trained "
+        "checkpoint ratio == 1.0 >= 0.1, and the rule would call the arm 'live' "
+        "on a reading that compares the model with itself.",
+    ),
+    Mutation(
+        "decisive: measure() ignores the decoy checkpoint it is handed",
+        "test_the_decoy_pointed_at_the_trained_checkpoint",
+        "experiments/decisive-shuffle/run.py",
+        "        ck.load(decoy_ckpt, model=decoy, restore_rng=False)",
+        "        pass",
+        "the aliasing test must exercise the decoy-loading path end to end; if "
+        "measure() silently kept the untrained decoy, the aliasing mutation "
+        "could never be run against the real code.",
+    ),
+    Mutation(
+        "random replacement with self perturbs the memory",
+        "test_random_replacement_with_self_reads_exactly_zero",
+        "src/rsr/metrics/memory_liveness.py",
+        "            return kv.clone()",
+        "            return kv.clone() + 1e-3",
+        "PREREG Secondary 2: the replacement path's own control. A path that moves "
+        "tokens by itself would read as 'memory is read' on any model.",
+    ),
+    Mutation(
+        "random replacement is not norm-matched",
+        "test_random_replacement_preserves_each_slots_norm",
+        "src/rsr/metrics/memory_liveness.py",
+        "        return r / norm_r * kv.norm(dim=-1, keepdim=True)",
+        "        return r",
+        "PREREG Secondary 2 requires the Gaussian rescaled to the replaced slot's "
+        "L2 norm; an unscaled draw changes magnitude as well as content, and the "
+        "live-memory reading still moves, so only the norm check sees it.",
+    ),
+    Mutation(
+        "the answer-token mask is ignored",
+        "test_token_mask_on_padding_raises_and_default_adds_no_key",
+        "src/rsr/metrics/memory_liveness.py",
+        "                        sel.setdefault(name, []).append(sel_full[real])",
+        "                        sel.setdefault(name, []).append(real[real])",
+        "PREREG Secondary 1: the answer-token split would silently score every "
+        "real target. A full mask reads the same either way; only an empty mask "
+        "tells them apart.",
+    ),
+    Mutation(
+        "cross-row cosine reports a constant",
+        "test_cross_row_cosine_is_one_for_identical_rows_and_bounded_otherwise",
+        "src/rsr/metrics/memory_liveness.py",
+        "            vals.append(float(c[off].mean()))",
+        "            vals.append(1.0)",
+        "the descriptive cosine would read 'rows collinear' whatever the memory "
+        "holds, which is exactly the rival hypothesis it exists to test.",
+    ),
     Mutation(
         "the oracle evicts the sentence most needed",
         "test_oracle.py::",
@@ -938,6 +1026,12 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
             (
                 "tests/test_train_loop.py::test_the_hinge_is_on_by_default",
+                _S003_REFUSAL_COUPLING,
+            ),
+            (
+                "tests/test_decisive_shuffle.py::"
+                "test_the_decoy_pointed_at_the_trained_checkpoint_reads_ratio_one_"
+                "and_inconclusive",
                 _S003_REFUSAL_COUPLING,
             ),
             (
