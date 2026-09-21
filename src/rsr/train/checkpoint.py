@@ -38,6 +38,7 @@ import hashlib
 import io
 import os
 import platform
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -149,6 +150,23 @@ class Checkpoint:
         return out
 
 
+def _no_op(phase: str) -> None:
+    """Default `_write_hook`: does nothing."""
+
+
+_write_hook: Callable[[str], None] = _no_op
+"""🔴 TEST SEAM ONLY. Called by `atomic_write` at three named points --
+`"mid_write"` (half the bytes written and flushed to the OS), `"before_replace"`
+(file complete and fsynced, not yet renamed) and `"after_replace"`. The default is
+a no-op and nothing in production assigns it.
+
+It exists so `tests/test_checkpoint.py` can SIGKILL a child writer *inside* a
+chosen window by synchronisation (the child signals, then parks in the hook),
+rather than by guessing a wall-clock delay. The delay sweep it replaced caught the
+straight-to-final-path mutation in 1 of 7 battery observations (Brief 0b,
+2026-09-21): green by timing is not green."""
+
+
 def atomic_write(path: Path, payload: dict[str, Any]) -> None:
     """Write so that `SIGKILL` at any instant leaves `path` intact or absent.
 
@@ -181,12 +199,22 @@ def atomic_write(path: Path, payload: dict[str, Any]) -> None:
     data = buffer.getvalue()
 
     tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    half = len(data) // 2
+    view = memoryview(data)
     try:
         with open(tmp, "wb") as fh:
-            fh.write(data)
+            # Two writes of one buffer: the bytes on disk are identical to a single
+            # `fh.write(data)`. The split exists only so the SIGKILL test (gauntlet
+            # 3.6) can stop the writer at a point where the file is provably partial.
+            fh.write(view[:half])
+            fh.flush()
+            _write_hook("mid_write")
+            fh.write(view[half:])
             fh.flush()
             os.fsync(fh.fileno())
+        _write_hook("before_replace")
         os.replace(tmp, path)
+        _write_hook("after_replace")
         dir_fd = os.open(path.parent, os.O_RDONLY)
         try:
             os.fsync(dir_fd)
