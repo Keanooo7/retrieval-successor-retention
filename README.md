@@ -70,10 +70,11 @@ machine's CPU, in a throwaway venv; the exact command is in
 src/rsr/
   model/        tg base, memory, gestalt write
   retention/    policy, value_head, reward           [shadow, bias = STUBS, raise]
-  baselines/    fifo, lru, random                     [h2o, expire_span,
-                                                       leading_edge, oracle = STUBS]
+  baselines/    fifo, lru, random, oracle             [h2o, expire_span,
+                (oracle: synthetic only)                leading_edge = STUBS]
   data/         synthetic generator                   [pg19, coref = STUBS]
-  metrics/      -- ALL FOUR ARE STUBS: reintroduction, loo, vacuity, gini
+  metrics/      memory_liveness (shuffle control),    [reintroduction, loo,
+                headroom (E-feas)                       vacuity, gini = STUBS]
   mup/          param groups                          [coord_check = STUB]
   constants.py  the registry that refuses unmeasured reads
 configs/        base + model/ + data/ + experiment/
@@ -82,11 +83,23 @@ preregistration/  committed BEFORE the experiment they govern
 ```
 
 **A stub raises `NotImplementedError`.** They are marked above rather than omitted
-because the layout is also the work plan. Four of the eight baselines, both
-anti-collapse mechanisms, and every metric -- including leave-one-out, which
-§3.2.1 makes the arbiter of truth -- are not implemented. See
+because the layout is also the work plan. Three baselines, both anti-collapse
+mechanisms, and all four of the spec's metrics -- including leave-one-out, which
+§3.2.1 makes the arbiter of truth -- are not implemented. The two metrics that do
+exist are instruments added since: the shuffle control
+(`runs/shuffle-control/`) and E-feas's retention headroom (`runs/efeas-synthetic/`). See
 `docs/RESEARCH-CONTEXT.md` §10 for the full register, and read it before reading
 any result in `runs/`.
+
+## Provenance
+
+Developed with AI coding agents under my design and review. Of the 112 non-merge
+commits on `main` as of 2026-09-21, 111 carry a `Co-Authored-By` trailer naming one
+(`git log --no-merges --format=%B | grep -i '^co-authored-by'`). Research direction,
+pre-registrations and the decision to accept or reject a result were human calls; the
+agents wrote most of the code and ran most of the experiments. A return is accepted only
+after part of it is re-executed by a separate session (`.claude/agents/rsr-manager.md`).
+The development history is complete in this repository.
 
 ## Licence
 
