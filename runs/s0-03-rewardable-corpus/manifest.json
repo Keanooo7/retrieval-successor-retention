@@ -1,0 +1,47 @@
+{
+  "batch": 16,
+  "buckets": [
+    "all",
+    "gap_eq_1",
+    "gap_ge_2",
+    "gap_2_to_M",
+    "gap_lt_M",
+    "gap_eq_M",
+    "gap_le_M",
+    "gap_gt_M"
+  ],
+  "chance_ln16": 2.772588722239781,
+  "conditions": [
+    "live",
+    "slots_zeroed",
+    "gate_zeroed",
+    "gate_zeroed_bos_off"
+  ],
+  "corpus": "synthetic S0-03, SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+  "d": 128,
+  "device": "cpu",
+  "expected": "Bar 1 passes (zeroed ~ chance or above at gap >= 2 held-out). Gap-1 answers fall below chance live via the bos-copy path. At 2 <= gap <= M, live is at most modestly below zeroed after 300 iters; gap > M ~ chance. Most likely verdict: corpus built, retrieval not shown beyond gap 1.",
+  "falsifier": "'the S0-03 corpus's answer tokens cannot be predicted without the memory' (bar 1) and 'FIFO eviction raises answer loss at gap > M' (bar 2)",
+  "iters": 300,
+  "lr": 0.001,
+  "margin": 0.1,
+  "masked_loss": true,
+  "max_tokens": 64,
+  "measure_heldout": "generate(SyntheticConfig(n_documents=128, seed=<seed>))[64:]",
+  "measure_train": "generate(SyntheticConfig(seed=<seed>))  # docs 0..63",
+  "memory_slots": 16,
+  "policy": "fifo",
+  "prereg": "experiments/s0-03-rewardable-corpus/PREREG.md",
+  "python": "3.14.6",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seeds_trained_in_parallel": true,
+  "srep_norm_reg_weight": 0.0,
+  "steps_per_stream": 48,
+  "threads_per_seed": 5,
+  "torch": "2.14.0",
+  "vocab": "derived from the corpus"
+}

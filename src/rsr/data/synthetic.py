@@ -51,10 +51,13 @@ from dataclasses import asdict, dataclass, field
 from typing import Literal
 
 __all__ = [
+    "ANSWER_SYMBOLS",
     "Document",
     "Sentence",
     "SyntheticConfig",
+    "answer_symbol",
     "discounted_demand",
+    "fraction_of_pairs_beyond",
     "generate",
     "to_bytes",
     "true_demand",
@@ -104,6 +107,24 @@ _OBJECTS: tuple[str, ...] = (
     "the tide table",
     "a bone comb",
 )
+
+
+def answer_symbol(obj: str) -> str:
+    """The single token a query's answer is emitted as (S0-03).
+
+    **Single-symbol, not word-level**, so that chance on the answer is one number
+    -- `ln(len(ANSWER_SYMBOLS)) = ln 16` -- rather than a different figure at each
+    word position (`"the ..."` leaves 6 continuations, `"a ..."` 4). Joined with
+    `_`, which no other word in the corpus contains, so a symbol never collides
+    with a word of the assert sentence it must be retrieved from.
+    """
+    return obj.replace(" ", "_")
+
+
+ANSWER_SYMBOLS: tuple[str, ...] = tuple(answer_symbol(o) for o in _OBJECTS)
+"""The 16 answer tokens, in `_OBJECTS` order. Chance on an answer is
+`ln(len(ANSWER_SYMBOLS))` for a model that knows only that one of these comes next."""
+
 _FILLERS: tuple[str, ...] = (
     "The weather turned.",
     "Nothing else happened that day.",
@@ -138,6 +159,17 @@ class SyntheticConfig:
     heavy_tail_min: int = 12
     seed: int = 0
 
+    answer_in_stream: bool = True
+    """S0-03. `True` appends the query's answer to the query sentence as one token
+    (`answer_symbol`), so the next-token objective has a target that can only be
+    predicted by retrieving the asserted fact. `False` is the **pre-S0-03 corpus,
+    byte for byte**: the answer lived only in `Sentence.answer`, out of band, and
+    no cross-entropy target required retrieval at all -- which made "the memory is
+    inert" a finding about the corpus rather than about TG. It is the documented
+    off-switch, kept so the old corpus stays reproducible at this sha; it draws
+    nothing from the RNG either way, so the two corpora have identical facts and
+    gaps and differ only in the appended token."""
+
     def __post_init__(self) -> None:
         if self.max_gap >= self.sentences_per_document:
             raise ValueError(
@@ -166,7 +198,9 @@ class Sentence:
     (`kind="query"`). `None` for filler."""
 
     answer: str | None = None
-    """The queried fact's object. The supervised target for a query sentence."""
+    """The queried fact's object, as asserted. With `answer_in_stream` (S0-03) it
+    is ALSO the query's final token, as `answer_symbol(answer)`; before S0-03 it
+    existed only here, out of band, and never entered the token stream."""
 
 
 @dataclass(frozen=True)
@@ -226,6 +260,10 @@ def _generate_document(doc_id: int, cfg: SyntheticConfig) -> Document:
         texts[i] = f"{entity} {predicate} {obj}."
         kinds[j], fact_of[j], answers[j] = "query", fact_id, obj
         texts[j] = f"What does {entity} {predicate}?"
+        if cfg.answer_in_stream:
+            # S0-03: the answer as the query's last token. No RNG draw, so the
+            # corpus with and without it has the same facts, gaps and fillers.
+            texts[j] += f" {answer_symbol(obj)}"
         pairs.append((i, j))
         fact_id += 1
 
@@ -270,6 +308,21 @@ def true_demand(doc: Document) -> list[list[float]]:
     for assert_at, query_at in doc.pairs:
         out[query_at][assert_at] = 1.0
     return out
+
+
+def fraction_of_pairs_beyond(docs: tuple[Document, ...], m: int) -> float:
+    """Fraction of assert->query pairs whose gap exceeds `m` (S0-03 item 4).
+
+    Under FIFO with `m` slots and a write on every sentence, the assert of a pair
+    is still in memory at its query iff `gap <= m` (it was written `gap` steps
+    earlier and the last `m` writes survive). So this is the fraction of answers
+    FIFO **cannot** retrieve -- the population on which eviction bites, and the
+    reason answer-token loss is bucketed by gap rather than pooled.
+    """
+    gaps = [g for d in docs for g in d.gaps]
+    if not gaps:
+        raise ValueError("no assert->query pairs: the fraction is undefined")
+    return sum(g > m for g in gaps) / len(gaps)
 
 
 def discounted_demand(doc: Document, gamma: float) -> list[list[float]]:
