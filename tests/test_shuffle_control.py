@@ -117,3 +117,98 @@ def test_the_control_leaves_the_models_mode_as_it_found_it():
     model.train()
     shuffle_control(model, ids, mask)
     assert model.training
+
+
+# --------------------------------------------------------------------------- #
+# decisive run additions (experiments/decisive-shuffle/PREREG.md, Secondary 1-2).
+# Additive: none of the tests above is touched.
+# --------------------------------------------------------------------------- #
+
+
+def test_random_replacement_with_self_reads_exactly_zero():
+    from rsr.metrics.memory_liveness import random_replacement
+
+    ids, mask, V = _batch()
+    g = torch.Generator().manual_seed(10_000)
+    r = random_replacement(_model(V), ids, mask, generator=g, self_replace=True)
+    assert r["replacement"] == "self"
+    assert r["delta_exactly_zero"], r["delta_nats_per_token"]
+    assert r["n_tokens_moved"] == 0
+    assert r["mean_abs_token_delta"] == 0.0
+
+
+def test_matched_norm_random_replacement_moves_a_live_memory():
+    from rsr.metrics.memory_liveness import random_replacement
+
+    ids, mask, V = _batch()
+    g = torch.Generator().manual_seed(10_000)
+    r = random_replacement(_model(V), ids, mask, generator=g)
+    assert r["replacement"] == "matched_norm_gaussian"
+    assert r["n_tokens_moved"] > 0
+    assert r["mean_abs_token_delta"] > 0.0
+
+
+def test_random_replacement_preserves_each_slots_norm_and_draws_off_the_model_rng():
+    from rsr.metrics import memory_liveness as ml
+
+    ids, mask, V = _batch()
+    model = _model(V)
+    seen = []
+    orig = ml.shuffle_control
+
+    def spy(*a, replace=None, **k):
+        def wrapped(kv, valid, t):
+            out = replace(kv, valid, t)
+            seen.append((kv.norm(dim=-1), out.norm(dim=-1), torch.equal(out, kv)))
+            return out
+
+        return orig(*a, replace=wrapped, **k)
+
+    state = torch.get_rng_state()
+    ml.shuffle_control = spy
+    try:
+        ml.random_replacement(model, ids, mask, generator=torch.Generator())
+    finally:
+        ml.shuffle_control = orig
+    assert torch.equal(torch.get_rng_state(), state)  # the model's RNG untouched
+    assert seen
+    for n_in, n_out, unchanged in seen:
+        if bool((n_in > 0).any()):
+            assert not unchanged  # a non-empty memory was actually replaced
+        assert torch.allclose(n_in, n_out, rtol=1e-5, atol=1e-6)
+
+
+def test_token_mask_equal_to_the_real_mask_reproduces_the_whole_reading():
+    ids, mask, V = _batch()
+    r = shuffle_control(_model(V), ids, mask, token_masks={"all": mask.clone()})
+    b = r["by_mask"]["all"]
+    # `mask[..., 1:]` scores exactly the real targets, so the two agree exactly.
+    assert b["n_targets"] == r["n_real_tokens"]
+    assert b["mean_abs_token_delta"] == r["mean_abs_token_delta"]
+    assert b["loss_honest_memory"] == r["loss_real_tokens_honest_memory"]
+
+
+def test_token_mask_on_padding_raises_and_default_adds_no_key():
+    import pytest
+
+    ids, mask, V = _batch()
+    model = _model(V)
+    assert "by_mask" not in shuffle_control(model, ids, mask)
+    pad = ~mask
+    with pytest.raises(ValueError, match="non-real target"):
+        shuffle_control(model, ids, mask, token_masks={"pad": pad})
+    empty = shuffle_control(model, ids, mask, token_masks={"none": mask & False})
+    assert empty["by_mask"]["none"]["n_targets"] == 0
+    assert empty["by_mask"]["none"]["mean_abs_token_delta"] is None
+
+
+def test_cross_row_cosine_is_one_for_identical_rows_and_bounded_otherwise():
+    from rsr.metrics.memory_liveness import cross_row_cosine
+
+    ids, mask, V = _batch()
+    model = _model(V)
+    c = cross_row_cosine(model, ids, mask)
+    assert c["n_slot_steps"] > 0
+    assert -1.0 <= c["mean_offdiag_cosine"] < 1.0 - 1e-6
+    same = cross_row_cosine(model, ids[:1].expand_as(ids), mask[:1].expand_as(mask))
+    assert abs(same["mean_offdiag_cosine"] - 1.0) < 1e-9
