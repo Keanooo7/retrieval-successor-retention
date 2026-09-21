@@ -1,4 +1,39 @@
 status: RETURNED
+run_id: none (S0-05 is code, not an experiment. The audit is in experiments/s0-05/RESULTS.md)
+updated: 2026-09-21T11:11:13Z
+provenance: base 0da72e6 (the brief was written at a802521) · head 7abacdf · cpu · no dataset · no seeds
+manifest: none. No training run and no runs/ ledger
+falsifier: NONE in the experimental sense. The claim tested is "every checker's exit status matches docs/gates.md's five codes", and the battery settles it
+expected: canary baseline 3->2; seven stubs 1->3; battery stale anchor and red baseline 1->3; a new baseline->3 mutation reddens only the corrected test
+observed: all as expected, plus 3 sites the brief missed (extract_golden_tensors ImportError, argparse's 2, empty battery). PR #32 is open and not merged
+
+gates:
+  uv run pytest -rsx -> passed=393 failed=0 skipped=0 errors=0, 1 xfailed (pre-existing, strict), exit 0. Baseline at 0da72e6: passed=373, 1 xfailed, exit 0
+  uv run python scripts/mutation_battery.py --check -> "62/62 gates proven by mutation", exit 0 (was 51/51)
+  ruff check . / ruff format --check . -> exit 0 / 0
+  the SIGKILL row this brief warned about was PROVEN on this run (2 on gate)
+ledger: none (no experiment). The counts above are literal command output, with each exit status captured as 'cmd > log 2>&1; rc=$?'
+numbers: +20 tests = 19 in tests/test_exit_codes.py + 1 new parametrised case in test_no_hardcoded_constants[exit_codes.py], from a diff of node ids. 11 new mutations, all with 0 off-gate failures. The stub-class mutation reddens 7/7 cases
+BRIEF ERRORS:
+  1. src/rsr/cli.py is listed as "Correct -- no nothing-to-compare state exists on this path". That is false. 'uv run rsr constants beta' raises UnmeasuredConstant and exits rc=1 (measured). "No logged value for this key" is exactly gates.md's definition of 2. cli.py is outside the files in scope, so it is unchanged and named in NOT_CONVERTED.
+  2. "Every exit-code site in the repo" is false of trunk too. The brief's own grep also returns: experiments/s0-02/measure_qtok_collapse.py:131,139,141 (precondition refusals via SystemExit(msg) exit 1, which should be 3); s0-02/write_ledger.py (8 typed exit_code=0 rows, the same class as canary:151); cycle-01:271 and shuffle-control:152 (child failure via SystemExit(msg)); efeas/run.py:198 (a literal exit_code=0, but disclosed as SELF-REPORTED, so correct).
+  3. extract_golden_tensors: the brief says to read main(). The actual defect is at module level: 'import jax' raises ImportError and exits 1 in the project venv (measured). The three ABORT returns in main() are correct 1s.
+  4. The anchor table says "canary.py:196 (verdict computed)". At a802521 the verdict is computed at :175 and :178, and the exit code at :202. :196 is 'return {'.
+  5. The battery anchors are +1 at 0da72e6 (:915/:939/:1003), not :914/:938/:1002. Brief 0b landed between them. This is the same drift class the brief itself warns about.
+  6. Bar 5, "one mutation covering the class": the battery mutates one file per mutation, so this is only possible if the seven stubs share a helper. I built not_implemented() for that. The brief did not say so.
+  7. (Brief's own item, carried over as asked) the protocol was read off the suspect file, canary.py.
+UNANSWERED BY THE BRIEF:
+  - Whether cli.py and experiments/s0-02 should be converted. They are listed in NOT_CONVERTED with reasons, and the test refuses a stale exemption.
+  - No exit code exists for a crash. I kept a crash as 1 in canary (train raising) and in cycle-01/shuffle-control child failures, and chose it explicitly. A reviewer may prefer 3.
+  - docs/lab-notes/dispatch-2026-09-21-overnight.md:413 tells the overnight run that canary exits "3 first reading". That is stale once this merges. It is a manager document, so I did not edit it.
+BELIEVED, NOT VERIFIED:
+  - mutation_battery.run_suite treats pytest exit 5 (no tests collected) as clean. I believe conftest's floor makes this unreachable on a whole-suite run. Not tested, not changed.
+  - src/rsr/train/loop.py main: only 'return 0' was read (the brief forbids touching the file). Its behaviour with MPS absent was not probed.
+  - canary.py was not run for real (MPS training, and it writes runs/canary/). The ordering is tested with a fake train().
+  - uv resolves Python 3.14.6 in this venv, but CLAUDE.md says 3.12. Recorded, not investigated.
+NEXT (proposed, not decided): a small follow-up converting src/rsr/cli.py (UnmeasuredConstant -> 2, unknown name -> 3) and experiments/s0-02/measure_qtok_collapse.py (-> 3), then removing both from NOT_CONVERTED. After that, port src/rsr/gates/ onto this enum, which is the only producer of 4.
+
+status: RETURNED
 run_id: b0b-sigkill (Brief 0b, 2026-09-21: test determinism. No training run, no runs/ ledger written)
 updated: 2026-09-21T10:42:46Z
 provenance: base 6e31a40 (brief written at a802521) · head 34ed0ac · cpu (pytest/battery) · no dataset · no seeds (no training)
