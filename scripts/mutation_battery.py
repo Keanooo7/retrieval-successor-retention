@@ -722,6 +722,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "forward un-permuted. The derangement test stays green, so only the "
         "live-memory reading catches it.",
     ),
+    Mutation(
+        "the oracle evicts the sentence most needed",
+        "test_oracle.py::",
+        "src/rsr/baselines/oracle.py",
+        "            v = self._future(int(slots.written_at[k]), step)",
+        "            v = -self._future(int(slots.written_at[k]), step)",
+        "E-feas reads oracle - FIFO as an upper bound on what retention can buy. An "
+        "oracle that is not optimal makes that bound a lower number than the truth, "
+        "and 'oracle ~= FIFO' would then be a finding about the oracle.",
+    ),
 )
 
 

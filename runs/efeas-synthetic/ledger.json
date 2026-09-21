@@ -1,0 +1,744 @@
+{
+  "run_id": "efeas-synthetic",
+  "cycle": null,
+  "question": "On the synthetic corpus, does an optimal eviction rule with perfect knowledge of future demand keep >= 5 points more of what queries need than FIFO does?",
+  "started_utc": "2026-09-21T06:34:48Z",
+  "provenance": {
+    "git_sha": "1fc8199bf342890a8b8dd98e222cbceccb3573c4",
+    "dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": null,
+  "steps_done": null,
+  "status": "ok",
+  "config_hash": "2e591c0b6795f7a915f34833593b47f183511fc365279f0ac7ba9333986cdce0",
+  "manifest_written_utc": "2026-09-21T06:34:48Z",
+  "commands": [
+    {
+      "argv": "uv run python experiments/efeas/run.py",
+      "entry_point": "experiments/efeas/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "SELF-REPORTED: this is the process writing the ledger, so 0 means 'reached write()', not an observed exit status. The caller's $? is the authority, and RESULTS.md quotes it",
+      "at_utc": "2026-09-21T06:34:55Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "headroom_oracle_minus_fifo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.19491525423728817,
+        0.17365771812080533,
+        0.1736227045075125
+      ],
+      "mean": 0.18073189228853534,
+      "sd": 0.012283164234645585,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write; hit(oracle) - hit(FIFO), pooled per seed; PREREG.md statistic",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "hit_rate.fifo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8050847457627118,
+        0.8263422818791947,
+        0.8263772954924875
+      ],
+      "mean": 0.8192681077114647,
+      "sd": 0.012283164234645585,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write; arm fifo",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "hit_rate.oracle",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write; arm oracle",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "hit_rate.random",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.7898305084745763,
+        0.8120805369127517,
+        0.8055091819699499
+      ],
+      "mean": 0.8024734091190927,
+      "sd": 0.011431442558855202,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write; arm random",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "secondary.M8.headroom",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2923728813559322,
+        0.25838926174496635,
+        0.26544240400667785
+      ],
+      "mean": 0.2720681823691921,
+      "sd": 0.017934528280598227,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=8; a query hits if its asserting sentence is resident before the query step's write; secondary row, not judged",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "secondary.M32.headroom",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.041525423728813515,
+        0.03523489932885904,
+        0.024207011686143587
+      ],
+      "mean": 0.033655778247938715,
+      "sd": 0.008766531039189842,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=32; a query hits if its asserting sentence is resident before the query step's write; secondary row, not judged",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "seed0.n_queries",
+      "kind": "observation",
+      "value": 1180,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write"
+    },
+    {
+      "key": "seed0.controls_failed",
+      "kind": "observation",
+      "value": [],
+      "how": "PREREG.md 'Controls'"
+    },
+    {
+      "key": "seed0.by_gap",
+      "kind": "observation",
+      "value": {
+        "fifo": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 688,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 131,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 48,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 83,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 48,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 47,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 53,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 33,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 26,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 23,
+            "hit_rate": 0.0
+          }
+        ],
+        "oracle": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 688,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 131,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 48,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 83,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 48,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 47,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 53,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 33,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 26,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 23,
+            "hit_rate": 1.0
+          }
+        ],
+        "random": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 688,
+            "hit_rate": 0.9709302325581395
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 131,
+            "hit_rate": 0.8396946564885496
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 48,
+            "hit_rate": 0.8333333333333334
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 83,
+            "hit_rate": 0.5060240963855421
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 48,
+            "hit_rate": 0.4583333333333333
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 47,
+            "hit_rate": 0.3829787234042553
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 53,
+            "hit_rate": 0.24528301886792453
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 33,
+            "hit_rate": 0.24242424242424243
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 26,
+            "hit_rate": 0.23076923076923078
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 23,
+            "hit_rate": 0.21739130434782608
+          }
+        ]
+      },
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write; gap buckets [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41]"
+    },
+    {
+      "key": "seed1.n_queries",
+      "kind": "observation",
+      "value": 1192,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write"
+    },
+    {
+      "key": "seed1.controls_failed",
+      "kind": "observation",
+      "value": [],
+      "how": "PREREG.md 'Controls'"
+    },
+    {
+      "key": "seed1.by_gap",
+      "kind": "observation",
+      "value": {
+        "fifo": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 720,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 152,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 54,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 59,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 51,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 44,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 34,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 36,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 27,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 15,
+            "hit_rate": 0.0
+          }
+        ],
+        "oracle": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 720,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 152,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 54,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 59,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 51,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 44,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 34,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 36,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 27,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 15,
+            "hit_rate": 1.0
+          }
+        ],
+        "random": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 720,
+            "hit_rate": 0.9597222222222223
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 152,
+            "hit_rate": 0.8552631578947368
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 54,
+            "hit_rate": 0.6111111111111112
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 59,
+            "hit_rate": 0.5254237288135594
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 51,
+            "hit_rate": 0.5882352941176471
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 44,
+            "hit_rate": 0.5
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 34,
+            "hit_rate": 0.2647058823529412
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 36,
+            "hit_rate": 0.2777777777777778
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 27,
+            "hit_rate": 0.37037037037037035
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 15,
+            "hit_rate": 0.13333333333333333
+          }
+        ]
+      },
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write; gap buckets [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41]"
+    },
+    {
+      "key": "seed2.n_queries",
+      "kind": "observation",
+      "value": 1198,
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write"
+    },
+    {
+      "key": "seed2.controls_failed",
+      "kind": "observation",
+      "value": [],
+      "how": "PREREG.md 'Controls'"
+    },
+    {
+      "key": "seed2.by_gap",
+      "kind": "observation",
+      "value": {
+        "fifo": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 720,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 152,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 52,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 66,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 60,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 51,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 47,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 21,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 17,
+            "hit_rate": 0.0
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 12,
+            "hit_rate": 0.0
+          }
+        ],
+        "oracle": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 720,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 152,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 52,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 66,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 60,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 51,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 47,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 21,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 17,
+            "hit_rate": 1.0
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 12,
+            "hit_rate": 1.0
+          }
+        ],
+        "random": [
+          {
+            "gap_lo": 1,
+            "gap_hi": 5,
+            "n": 720,
+            "hit_rate": 0.9555555555555556
+          },
+          {
+            "gap_lo": 5,
+            "gap_hi": 9,
+            "n": 152,
+            "hit_rate": 0.8223684210526315
+          },
+          {
+            "gap_lo": 9,
+            "gap_hi": 13,
+            "n": 52,
+            "hit_rate": 0.6346153846153846
+          },
+          {
+            "gap_lo": 13,
+            "gap_hi": 17,
+            "n": 66,
+            "hit_rate": 0.6515151515151515
+          },
+          {
+            "gap_lo": 17,
+            "gap_hi": 21,
+            "n": 60,
+            "hit_rate": 0.4166666666666667
+          },
+          {
+            "gap_lo": 21,
+            "gap_hi": 25,
+            "n": 51,
+            "hit_rate": 0.4117647058823529
+          },
+          {
+            "gap_lo": 25,
+            "gap_hi": 29,
+            "n": 47,
+            "hit_rate": 0.44680851063829785
+          },
+          {
+            "gap_lo": 29,
+            "gap_hi": 33,
+            "n": 21,
+            "hit_rate": 0.2857142857142857
+          },
+          {
+            "gap_lo": 33,
+            "gap_hi": 37,
+            "n": 17,
+            "hit_rate": 0.11764705882352941
+          },
+          {
+            "gap_lo": 37,
+            "gap_hi": 41,
+            "n": 12,
+            "hit_rate": 0.08333333333333333
+          }
+        ]
+      },
+      "how": "experiments/efeas/run.py::measure_seed -> rsr.metrics.headroom.simulate over all 64 documents of SyntheticConfig(seed=s), M=16; a query hits if its asserting sentence is resident before the query step's write; gap buckets [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41]"
+    }
+  ],
+  "verdict": {
+    "falsifier": "PREREG.md: every seed headroom < 0.05 => oracle ~= FIFO, the synthetic corpus cannot exhibit the effect; a failed control => inconclusive",
+    "outcome": "survived",
+    "detail": "headroom >= 0.05 on every seed ({0: 0.19491525423728817, 1: 0.17365771812080533, 2: 0.1736227045075125}), and both controls held",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-21T06:34:56Z"
+}
