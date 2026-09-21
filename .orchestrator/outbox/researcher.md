@@ -1,4 +1,70 @@
 status: RETURNED
+run_id: decisive-shuffle
+updated: 2026-09-21T13:36:39Z
+provenance: 90438f3d2a9c1998cca37069a7b4f7ded649a4b9 (ledger git_sha; dirty=true from the untracked uv.lock only) · cpu, torch 2.14.0, py 3.14.6, 1 thread per process, 9 concurrent training subprocesses · corpus = SyntheticConfig defaults (answer_in_stream=True), train batch = first 8 training docs, held-out = S0-03 held-out docs 64..71 · seeds actually run [0,1,2] in every arm, steps 300/300, status ok
+manifest: runs/decisive-shuffle/manifest.json  (config hash 2a299e4afc2dc074ff375d4a38ee8684ae9a7cc3b5bd638e166185bbda487c8d; manifest_written_utc 2026-09-21T11:28:59Z, before any training step)
+falsifier: "the TG working memory is inert on a corpus whose objective requires retrieval" -- PREREG rule (#17 Amendment 1) per arm
+expected: "B and C live (some seed ratio >= 0.1) ... A uncertain, most likely inconclusive or inert ... If B and C read inert, the memory path is broken" (manifest `expected`, written before the run)
+observed: A INERT, B LIVE, C LIVE. Overall (PREREG "Which outcome"): LIVE on B and C -> the memory path is not broken; the corpus alone (A) was not enough. Ledger verdict: falsified.
+  BUT (secondary, descriptive): A's inert shuffle coincides with cross-row cosine 0.9995 and a matched-norm random replacement >= 0.1 on every seed -> A's memory is READ but ROW-AGNOSTIC (the PREREG's second rival), not ignored. And B/C held-out answer NLL with own memory is ~2.9 nats in every gap bucket, at/above ln16: "live" means memory moves the tokens, not that it retrieves the right answer.
+
+gates (final tree, PR head b1b461a + outbox commit, after merging origin/main ed8bdb0):
+  uv run pytest -rs --tb=no  -> passed=420 failed=0 skipped=0 errors=0 (420 passed, 1 xfailed) ; rc=0   (the 1 xfailed is the strict xfail in tests/test_train_loop.py:310; 0 skipped)
+  uv run ruff check src/ tests/ scripts/          -> All checks passed! ; rc=0
+  uv run ruff format --check src/ tests/ scripts/ -> 75 files already formatted ; rc=0
+  uv run python scripts/mutation_battery.py --check -> 71/71 gates proven by mutation ; rc=0
+  uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/decisive-shuffle/RESULTS.md -> OK: every number in experiments/decisive-shuffle/RESULTS.md resolves to a ledger key ; rc=0
+  git diff --stat origin/main -- runs/ -> only runs/decisive-shuffle/ (12 files: ledger, manifest, raw, 9 result.json); no .pt tracked (9 checkpoints stay ignored on disk)
+mutation bar (node ids that redden, measured by applying each battery entry and running tests/test_decisive_shuffle.py):
+  arm swap in ARMS            -> FAILED tests/test_decisive_shuffle.py::test_arms_are_the_preregistered_table
+  manifest-hash check no-op   -> FAILED ...::test_an_arm_swap_is_refused_by_the_manifest_check[A-B] / [B-C] / [C-A]
+                                 (+ declared off-gate ...::test_a_config_that_does_not_hash_to_its_own_stamp_is_refused)
+  decoy aliasing clause gone  -> FAILED ...::test_ratio_exactly_one_is_inconclusive_not_live
+                                 FAILED ...::test_the_decoy_pointed_at_the_trained_checkpoint_reads_ratio_one_and_inconclusive
+  measure() ignores decoy_ckpt-> FAILED ...::test_the_decoy_pointed_at_the_trained_checkpoint_reads_ratio_one_and_inconclusive
+  (that test drives measure(ckpt, decoy_ckpt=ckpt) end to end: A_decoy == A_trained exactly, ratio == 1.0, verdict inconclusive)
+  + 4 liveness entries (random-self perturbed, random not norm-matched, answer mask ignored, cosine constant): each PROVEN, 1 on gate, 0 off.
+ledger:    runs/decisive-shuffle/ledger.json  (0 statistic rows sd_exactly_zero)
+numbers (train batch = PRIMARY; ledger keys armX.ratio etc.; seeds 0/1/2; mean +/- sd):
+  armA.ratio   0.0004656 / 0.003647 / 0.004921   0.003011 +/- 0.002295  -> inert (every seed <= 0.01)
+  armB.ratio   6.742 / 14.73 / 6.502             9.325 +/- 4.683        -> live
+  armC.ratio   2.989 / 14.56 / 5.672             7.741 +/- 6.058        -> live
+  controls, all 9 (arm,seed) x both batches: memory-disabled A = 0.0, own-memory A = 0.0, random-self A = 0.0, decoy A > 0 (train: 0.01021 / 0.005432 / 0.006189)
+  heldout.ratio (descriptive): A 0.002704 +/- 0.001779 · B 8.877 +/- 3.869 · C 8.444 +/- 6.478
+  answer tokens, held-out, shuffle ratio mean +/- sd (n targets per seed 34/26/18 gap1, 85/87/98 gap2..M, 31/32/31 gap>M):
+     A: gap1 0.001635 +/- 0.001502 · gap2..M 0.002864 +/- 0.002172 · gap>M 0.002764 +/- 0.001985
+     B: gap1 18.35 +/- 6.648 · gap2..M 29.31 +/- 24.36 · gap>M 30.84 +/- 22.51
+     C: gap1 20.28 +/- 16.38 · gap2..M 34.74 +/- 40.16 · gap>M 37.44 +/- 45.84
+  answer NLL, own memory, held-out: A 2.803 +/- 0.06157 · B 2.904 +/- 0.05702 · C 2.852 +/- 0.08828 (answer_all)
+  cross-row cosine (train): trained A 0.9995 +/- 0.0005338 · B 0.4833 +/- 0.06134 · C 0.4357 +/- 0.07591 · decoy 0.565 +/- 0.2042
+  random_ratio (train): A 2.098 +/- 1.111 · B 14.08 +/- 5.199 · C 13.23 +/- 8.124  (every seed >= 0.1 in every arm)
+  honest real-token NLL (train): A 1.681 +/- 0.02436 · B 1.573 +/- 0.03259 · C 1.567 +/- 0.02932
+BRIEF ERRORS:
+  1. The brief forbids the researcher from seeing any S0-03 number. But the role requires prepending to .orchestrator/outbox/researcher.md, and the top of that file WAS S0-03's report, numbers included. I read its head to copy the header format and saw them. By then the manifest (11:28:59Z), the expectation, run.py, the thresholds and all 9 trainings were already frozen or running, so nothing in the run could have been conditioned on them. It is still a breach of the brief's blinding, and the brief's own report destination caused it.
+  2. Bar 6, "`git diff --stat origin/main -- runs/` shows only runs/decisive-shuffle/", cannot hold when main moves during the run, and it did (E-feas s003 #33 and S0-05 #32 landed). The two-dot diff then shows main's new runs as deletions. I merged origin/main (ed8bdb0) into s0/decisive, and after that the check holds. A three-dot diff would have been the right instrument.
+  3. "Every existing ... battery entry must stay unchanged" is not literally satisfiable. The existing S0-03 mutation (answer out of band) reddens ANY new test that builds the answer-token mask, and PREREG Secondary 1 requires that mask. I added one declared refusal coupling to that entry (tests/test_decisive_shuffle.py::test_the_decoy_pointed_at_the_trained_checkpoint_reads_ratio_one_and_inconclusive), which follows the pattern its 10 existing couplings already use. No other existing entry changed. My first draft of memory_liveness.py did change the anchor line `out = model(ids_t, mask_t, kv[perm], valid[perm], bc, bv)`, which three battery entries target. I caught that before the counted run, restored the line verbatim, and relaunched (the 04:28 launch was killed at step ~3 and its directory deleted).
+  4. Wall clock: the brief's "~15 min per seed" does not transfer to 9 concurrent 1-thread trainings. I measured 4.6 s/iter at 3 concurrent before launch. Under 9-way parallelism (plus the battery) it ran ~14.5 s/iter, about 75 min per training. All 9 were started at 04:29, well before 06:30, and completed.
+  5. Files in scope omitted the S0-05 exit-code protocol, which landed on main mid-run. Its tests/test_exit_codes.py::test_every_converted_checker_exits_through_the_protocol reddened on the new run.py after the merge. I converted the exit plumbing only, after the run (commit 942ee4c). The ledger's sha 90438f3 is the pre-conversion script. The measurement and decision code is byte-identical.
+  6. Bar 2 lists random-replacement-with-self as a control "on every seed of every arm", but the PREREG decision rule's control list is memory-disabled, own-memory and decoy only. I kept the rule as registered: random-self gates only the random-replacement readout. It read exactly 0.0 everywhere, so the ambiguity did not bite.
+UNANSWERED BY THE BRIEF:
+  - Does "live" satisfy the Sprint 2 precondition when held-out answer NLL with the model's own memory is ~2.9 nats in every gap bucket (at or above ln16)? The memory moves answer tokens a lot (shuffle ratio 18-37x on answers), but nothing here shows it moves them toward the right answer. That is a retrieval-accuracy question this PREREG did not ask.
+  - How #17 should now be read. Arm A reproduces #17's inert shuffle on the new corpus, and the discriminators say why: cross-row cosine 0.9995 and random replacement >= 0.1 on every seed, i.e. the readout uses memory but every row's memory is nearly the same vector. The PREREG calls this rival (b). Whether RESEARCH-CONTEXT §10.3's wording changes is the manager's/owner's call.
+  - The PREREG bands read ratio as "a fraction of a live memory's rate", but B/C ratios are 3-15 (the trained model is more memory-sensitive than the random-init decoy). No verdict changes (the bands are one-sided), but the decoy is not an upper bound, and the unit deserves a sentence in the next PREREG.
+  - The hinge (arm C) remains an open owner decision. B and C are both live and not distinguishable at n=3 (9.325 +/- 4.683 vs 7.741 +/- 6.058). This informs the decision and does not take it.
+BELIEVED, NOT VERIFIED:
+  - That arm A's near-1 cross-row cosine comes from the unmasked objective (padding-dominated loss) collapsing the gestalts. Not tested. srep norms and per-step cosines were not read.
+  - That B/C ratios exceed 1 because a confident trained model moves more per memory change than a near-uniform untrained one. This is a plausible mechanism, not a measurement.
+  - That ln16 is the right chance reference for answer NLL (uniform over 16 answer symbols). The model's softmax is over the full vocab, so chance over the vocab is higher.
+  - That torch thread count (1) does not change any reported value versus #17's default threads. The within-process controls read exactly 0.0, but cross-thread-count bit-equality was not checked.
+  - That `dirty: true` in provenance is due only to the untracked uv.lock. Ledger.write() refused nothing under src/scripts/experiments, which is consistent with this, but porcelain output was not captured at launch.
+NEXT (proposed, not decided):
+  1. Retrieval accuracy under the masked objective. On arm B's (or C's) checkpoints, run held-out answer NLL live vs slots-zeroed vs gate-zeroed by gap bucket (S0-03's instrument), and add answer-symbol top-1 accuracy. "Live" says memory matters; this would say whether it helps. No retraining is needed, because the 9 checkpoints are on disk (untracked) under runs/decisive-shuffle/arm*/seed*/.
+  2. Diagnose arm A's collinear memory: srep norm and cross-row cosine per step, from the arm A checkpoints. This is cheap, reuses cross_row_cosine, and would settle whether #17's null was a representation collapse caused by the unmasked objective.
+  3. Only if 1 shows no retrieval gain: a longer-training arm B (more iters) as its own PREREG. Do not extend this run.
+
+---
+
+status: RETURNED
 run_id: efeas-synthetic-s003
 updated: 2026-09-21T11:22:12Z
 provenance: a2452196508e6732e034406736d96285c7e4677d (dirty=true: untracked uv.lock only) · cpu (no model), Mac Studio macOS-26.6.2-arm64 · corpus_sha256 per seed in manifest (s0 60003e49..., s1 18b9e1e2..., s2 48a7ca7c...) · seeds_actually_run [0, 1, 2]
