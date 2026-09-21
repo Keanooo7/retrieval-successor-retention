@@ -179,15 +179,64 @@ def test_write_refuses_without_a_status(led):
 # --------------------------------------------------------------------------- #
 
 
+# The 2026-09-18 canary tally, by run_id. Pinned to these three ledgers rather than
+# to `len()` of every canary under `runs/`: a later reading is a new fact, not a
+# contradiction of this one, and must not redden the test that guards this one.
+_CANARY_TALLY_2026_09_18 = {
+    "canary/cycle-04": "inconclusive",
+    "canary/cycle-08": "survived",
+    "canary/cycle-12": "survived",
+}
+
+
+def _assert_the_09_18_canary_tally(runs_dir: Path) -> None:
+    board = render_scoreboard.build(runs_dir)
+    by_id = {r["run_id"]: r["outcome"] for r in board.rows}
+    got = {rid: by_id.get(rid, "<missing>") for rid in _CANARY_TALLY_2026_09_18}
+    assert got == _CANARY_TALLY_2026_09_18, got
+
+
 def test_the_scoreboard_reproduces_the_true_canary_tally():
     """The prose said "3 canaries, all held". `runs/canary/cycle-04/ledger.json`
     says `inconclusive` -- it wrote the baseline rather than comparing against one.
-    2 survived, 1 inconclusive."""
-    board = render_scoreboard.build(_REPO / "runs")
-    canaries = [r for r in board.rows if r["run_id"].startswith("canary/")]
-    assert len(canaries) == 3
-    outcomes = sorted(r["outcome"] for r in canaries)
-    assert outcomes == ["inconclusive", "survived", "survived"]
+    2 survived, 1 inconclusive -- over those three ledgers, by run_id."""
+    _assert_the_09_18_canary_tally(_REPO / "runs")
+
+
+def _copy_of_runs(tmp_path: Path) -> Path:
+    import shutil
+
+    dst = tmp_path / "runs"
+    shutil.copytree(_REPO / "runs", dst)
+    return dst
+
+
+def test_a_later_canary_reading_does_not_redden_the_09_18_tally(tmp_path):
+    """A new `runs/canary/cycle-N/` is a new reading; the 09-18 tally still holds."""
+    runs = _copy_of_runs(tmp_path)
+    extra = runs / "canary" / "cycle-99" / "ledger.json"
+    extra.parent.mkdir(parents=True)
+    doc = json.loads((runs / "canary" / "cycle-08" / "ledger.json").read_text())
+    doc["run_id"], doc["cycle"] = "canary/cycle-99", 99
+    doc["verdict"]["outcome"] = "falsified"
+    extra.write_text(json.dumps(doc))
+
+    board = render_scoreboard.build(runs)
+    assert "canary/cycle-99" in {r["run_id"] for r in board.rows}
+    _assert_the_09_18_canary_tally(runs)
+
+
+def test_the_09_18_tally_reddens_when_cycle_04_changes_its_outcome(tmp_path):
+    """The pin is not vacuous: rewrite cycle-04's outcome and the tally fails."""
+    runs = _copy_of_runs(tmp_path)
+    p = runs / "canary" / "cycle-04" / "ledger.json"
+    doc = json.loads(p.read_text())
+    assert doc["verdict"]["outcome"] == "inconclusive"
+    doc["verdict"]["outcome"] = "survived"
+    p.write_text(json.dumps(doc))
+
+    with pytest.raises(AssertionError):
+        _assert_the_09_18_canary_tally(runs)
 
 
 def test_the_scoreboard_joins_on_run_id_and_refuses_cycle(tmp_path):
