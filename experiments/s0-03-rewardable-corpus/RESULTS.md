@@ -3,7 +3,7 @@
 **Command:** `uv run python experiments/s0-03-rewardable-corpus/run.py --device cpu`
 **Git sha:** `851103efd3d1c676b6ae844a923813bd9b1c1da9` (the PREREG commit; the run
 ran on it with a clean source tree). **Hardware:** Mac Studio, CPU, torch 2.14.0,
-Python 3.12.13; the three seeds trained in parallel, 5 threads each, about 1,185 s apiece.
+Python 3.14.6; the three seeds trained in parallel, 5 threads each.
 **Ledger:** `runs/s0-03-rewardable-corpus/ledger.json` (config hash
 `662c339b…4a78da`). **Seeds:** 0, 1, 2 (actually run); steps 300/300.
 Every number below is a ledger key, shown as mean ± sd over the 3 seeds. No row has
@@ -13,7 +13,7 @@ Every number below is a ledger key, shown as mean ± sd over the 3 seeds. No row
 chance)".** Bar 1 passes, bar 2 passes as registered, and H4 fails. This does **not**
 pass the brief's bar. It routes to the decisive run.
 
-Chance = `ln 16 = 2.7726`. The primary set is `heldout` (documents 64..127, never
+Chance = `ln 16 = 2.7726`. The primary set is `heldout` (manifest `measure_heldout`, never
 trained on).
 
 ## Answer-token NLL, held-out, nats per answer token

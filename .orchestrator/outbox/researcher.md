@@ -1,7 +1,7 @@
 status: RETURNED
 run_id: s0-03-rewardable-corpus
 updated: 2026-09-21T11:02:43Z
-provenance: 851103efd3d1c676b6ae844a923813bd9b1c1da9 · cpu (torch 2.14.0, py 3.12.13) · corpus = SyntheticConfig defaults (answer_in_stream=True), held-out = docs 64..127 of each seed · seeds actually run [0,1,2], steps 300/300
+provenance: 851103efd3d1c676b6ae844a923813bd9b1c1da9 · cpu (torch 2.14.0, py 3.14.6) · corpus = SyntheticConfig defaults (answer_in_stream=True), held-out = docs 64..127 of each seed · seeds actually run [0,1,2], steps 300/300
 manifest: runs/s0-03-rewardable-corpus/manifest.json  (config hash 662c339b74acb1abaaf4d78846bb6bf1deb37c3137325dd02dbe215c5f4a78da)
 falsifier: "the S0-03 answer tokens cannot be predicted without the memory" (bar 1) + "FIFO eviction raises answer loss at gap > M" (bar 2); H4 live-vs-zeroed per the brief addendum
 expected: bar 1 passes; gap 1 falls below chance live via the bos-copy path; at 2<=gap<=M live at most modestly below zeroed; most likely "corpus built, retrieval not shown beyond gap 1"
