@@ -169,3 +169,96 @@ reason the standing rule says to report spread rather than to fear a zero.
 the objective, `--vocab` still 50257. **S0-04 is not unblocked**: it has a live *producer* now, but
 `RSRPolicy.observe` is a stub, so the positive control still has no live memory to read large on —
 which is the same rejection filed against cycle 1 at the top of this file, still standing.
+
+---
+
+# B1 — ADR-0008's provenance debt. Manager's review.
+
+**Verdict: the three headline numbers reproduce exactly. The ADR is still not citable**, for a
+reason B1 found that the debt did not predict.
+
+## The debt is paid, and I checked it from the artefact rather than the report
+
+`runs/s0-02-capture-bridge/qtok_collapse.json`, read directly:
+
+| ADR prose | artefact | |
+|---|---|---|
+| `≤ 1.49 × 10⁻⁷`, values up to `8.23 × 10⁻¹` | `1.4901161193847656e-07`, `0.8234491348266602` | ✅ |
+| `r_i` max abs difference `2.98 × 10⁻⁸` | `2.9802322387695312e-08` | ✅ |
+| EOS-only max abs difference `0.0383` | `0.03832480311393738` | ✅ |
+| *"differs by exactly `Q_real = 5`"* | `contribution_ratio = [5.0, 5.0, 5.0, 5.000000476837158]` | ✅ to float32 |
+| `contribution()` sum slot 2 = `5.8777` | `5.877645…` → **`5.8776`** | ⚠️ 4th-decimal slip, corrected |
+
+**8 of 9 published values agree exactly**, and `grep -c` over the generated ledger goes `0 → 17`.
+`n_seeds: 1` and `spread: NONE` are written into the artefact **with the reason** — deterministic
+float32 identity checks on a fixed fixture, not sampled estimates. That is the right way to record
+an absent spread, and it is **not** the sd-of-0.0000 shape the standing rule forbids.
+
+## 🔴 The finding that matters — ADR-0008's EOS table compares two collapses that share no query position
+
+I re-derived this from the fixture's own definitions, without running the model:
+
+```
+TGConfig.L = 1 + max_sentence_tokens + sentence_tail_len = 1 + 8 + 1 = 10
+_sentence: ids[:, -1] = eos_id      -> [EOS] is at query index 9
+_sentence: mask[0, 5:] = 0          -> row 0's real query positions are 0..4
+```
+
+**On row 0 — the row every number in ADR-0008 comes from — `[EOS]` sits at a PAD position.** The
+sum-collapse runs over positions 0–4; the EOS-collapse reads position 9. **They overlap nowhere.**
+So `0.0383` is a divergence *guaranteed by the fixture's construction*, not one found in the
+attention, and the ADR presents it as evidence that EOS-only "does not cancel."
+
+The researcher measured row 1 alongside — full mask, `[EOS]` a real query token, `q_real = 10` —
+and got **`0.00286`, 1.38%** against row 0's **13.78%**. 🔑 **The decision survives: EOS-only still
+does not cancel, so sum-over-real-tokens stands.** What changed is the quality of the evidence, by
+an order of magnitude. The artefact now carries `eos_is_a_real_query_token` and
+`eos_overlaps_the_summed_positions` as explicit machine-readable fields, so this cannot be
+re-published silently.
+
+📌 **B1 was filed as a provenance debt and returned a substantive defect.** The three CI tests
+pinning ADR-0008 assert thresholds and pass on *both* rows at `atol=1e-3`; no threshold test could
+have caught a wrong description of the fixture. *That is the argument for producers over tests,
+made by the case rather than in the abstract.* ADR-0008's fixture line was also wrong — it said
+`Q_tok = 8` with a 3-token tail; it is **10** with a **5**-token tail — and the producer's own drift
+guard caught it on first run.
+
+**Owner's call, deliberately not taken by the researcher or by me:** whether ADR-0008 publishes row
+1, both rows, or keeps row 0 with the caveat.
+
+## 🔴 MY DEFECT — I put two researchers in one working tree, and two of this project's tools are mutually exclusive there
+
+B1 is **BLOCKED on one command**, and the block is mine.
+
+`ledger.write()`'s `DirtyTree` gate is **repo-wide** over `SOURCE_ROOTS = ("src/", "scripts/",
+"experiments/")` (`scripts/ledger.py:84`). `scripts/mutation_battery.py` works by mutating a source
+file, running the suite, restoring, and repeating — so a battery run keeps `scripts/` dirty
+essentially continuously. **Any researcher running the battery blocks every other researcher's
+ledger write for the whole run.** That is not a narrow window; it blocked B1 for its entire session.
+
+🔴 **And it is worse than a scheduling collision. The battery mutates `scripts/ledger.py` itself, at
+eight sites** (verified at `3973d1a`) — the same file that holds the gate. So a ledger written
+during a battery run may be written **under deliberately broken gate logic.**
+
+🔑 **The researcher stopped retrying on purpose, and that judgement is the best thing in the
+return.** One refusal listed `runs/s0-02-capture-bridge/ledger.json` as a *source* path, which is
+impossible under `SOURCE_ROOTS`; the battery had `scripts/ledger.py` mutated at that instant, its
+diff showing `if self.doc["status"] is None:` replaced by `if False:`. **A blind retry loop that
+eventually succeeds is a loop that may succeed inside a mutation window — a gate made to pass.**
+Killing the loop and returning BLOCKED was correct, and a report that says *"did not run"* rather
+than *"found nothing"* is the standard.
+
+**I also restored `runs/s0-02-capture-bridge/ledger.json` to `HEAD`.** The generated copy sitting in
+the tree was produced at `c49d80f`, before the `str`-vs-`float` fix at `bbb3b9d`, and carried
+`headline_three_reproduce: false` — a **false** *"the ADR's headline figures do not reproduce"*,
+aimed straight at the row future work joins on. That is B2's failure mode inverted, and with a
+concurrent agent committing in the same tree, one `git add -A` would have landed it. The file is
+regenerable from committed sources; the risk was not worth keeping it.
+
+**Remaining: one command, once `scripts/` is genuinely clean and `scripts/ledger.py` unmutated** —
+`.venv/bin/python experiments/s0-02/write_ledger.py 0`, then commit the ledger.
+
+**This deserves its own brief, and the cheapest fix is the one I got wrong: do not put two
+researchers in one working tree.** The alternatives — narrowing `DirtyTree` to the paths a run's
+`commands[]` actually name, or making the battery take a lock — are real options, but they are
+changes to the evidence machinery and should not be made to unblock a session.
