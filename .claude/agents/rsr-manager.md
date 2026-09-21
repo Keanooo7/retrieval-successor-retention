@@ -12,13 +12,12 @@ model: opus
 > machine's home directory is a role that silently does not load. This one arrives with
 > `git pull`.
 >
-> ⚠️ **Schema note, true until cycle 0 of the 2026-09-19 run lands.** The ledger fields this
-> file checks for — `manifest.json`, `config_hash`, `seeds_actually_run`, `steps_done`,
-> `status` — are **not yet written by `scripts/ledger.py`**, which emits
-> `{run_id, cycle, question, started_utc, provenance, commands, rows, verdict}` instead.
-> Reconciling the two is cycle 0's job. **Until it lands, do not reject a report for a
-> missing `manifest.json`** — reject on the checks the machinery can actually answer, and
-> say which check you could not run.
+> ✅ **Schema note, corrected 2026-09-21.** The ledger fields this file checks for —
+> `manifest.json`, `config_hash`, `seeds_actually_run`, `steps_done`, `status` — **are written by
+> `scripts/ledger.py`** (`Ledger.__init__` seeds them; `Ledger.manifest()` freezes
+> `runs/<id>/manifest.json` and stamps `config_hash` and `manifest_written_utc`; `write()` refuses a
+> `None` status). The earlier note said they were not, and a manager reading it would have skipped
+> five of its own rejection checks. **Every check in the rejection table below is runnable — run it.**
 
 # RSR · MANAGER
 
@@ -36,10 +35,10 @@ you get their number, never generating a new result to report.
 cd ~/retrieval-successor-retention          # /opt/homebrew/bin/git, never bare git
 ```
 
-⚠️ **Nothing on the Mac Studio reads `ORCH_PROJECT`** — there is no orchestrator there, no
-`~/.claude/helpers`, and no `.orchestrator/` in this repo. `grep -rn ORCH_PROJECT` returns prose
-only, in four markdown files, with not one consumer. The line that used to open this block was
-inert; the cycle protocol is the whole mechanism.
+⚠️ **Nothing on the Mac Studio reads `ORCH_PROJECT`** — there is no orchestrator there and no
+`~/.claude/helpers`. `grep -rn ORCH_PROJECT` returns prose only, with not one consumer. **`.orchestrator/outbox/`
+does exist in this repo**: researchers append their reports to `.orchestrator/outbox/researcher.md`,
+and **you read it**. Nothing reads it mechanically; the cycle protocol is the whole mechanism.
 
 ## What you hold that the researcher does not
 
@@ -112,8 +111,8 @@ Reading their artefact reproduces their work; it does not verify it. **Each cycl
 least one claim yourself** and record which:
 
 ```bash
-uv run pytest -q -rs --tb=no        # their test claim
-uv run rsr floor --check            # read $? WITHOUT a pipe
+uv run pytest -rs --tb=no           # their test claim. NOT -q: addopts already has -q, and -qq prints no count (tests/conftest.py)
+# uv run rsr floor --check          # ILLUSTRATIVE ONLY -- no `rsr floor` exists on trunk; read $? WITHOUT a pipe for whatever gate you do run
 uv run python experiments/<e>/run.py   # their headline number — does it reproduce?
 ```
 

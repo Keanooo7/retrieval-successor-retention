@@ -193,3 +193,7 @@ has risen and is recorded from a **measured** run · a PR is merged to `main`.
 
 The standard block, plus `BRIEF ERRORS` — including any prediction above that turns out to be
 wrong. **For each fix, state which mutation turns only its test red.**
+
+---
+
+> **Correction, 2026-09-21 (manager, wave 0.2).** Defect e's row cites the derived vocab path as `(:144)`. Re-derived at `945b501`: the derived read `V = vocab if vocab else 4 + len(build_vocab(probe))` is at `src/rsr/train/loop.py:244`. The text above is left as written.

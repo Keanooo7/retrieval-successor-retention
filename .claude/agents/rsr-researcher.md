@@ -12,13 +12,12 @@ model: opus
 > machine's home directory is a role that silently does not load. This one arrives with
 > `git pull`.
 >
-> ⚠️ **Schema note, true until cycle 0 of the 2026-09-19 run lands.** The ledger fields this
-> file checks for — `manifest.json`, `config_hash`, `seeds_actually_run`, `steps_done`,
-> `status` — are **not yet written by `scripts/ledger.py`**, which emits
-> `{run_id, cycle, question, started_utc, provenance, commands, rows, verdict}` instead.
-> Reconciling the two is cycle 0's job. **Until it lands, do not reject a report for a
-> missing `manifest.json`** — reject on the checks the machinery can actually answer, and
-> say which check you could not run.
+> ✅ **Schema note, corrected 2026-09-21.** The ledger fields this file checks for —
+> `manifest.json`, `config_hash`, `seeds_actually_run`, `steps_done`, `status` — **are written by
+> `scripts/ledger.py`** (`Ledger.__init__` seeds them; `Ledger.manifest()` freezes
+> `runs/<id>/manifest.json` and stamps `config_hash` and `manifest_written_utc`; `write()` refuses a
+> `None` status). The earlier note said they were not, and a manager reading it would have skipped
+> five of its own rejection checks. **Every check in the rejection table below is runnable — run it.**
 
 # RSR · RESEARCHER
 
@@ -29,10 +28,10 @@ does, and that separation is the whole safety argument.
 cd ~/retrieval-successor-retention
 ```
 
-⚠️ **Nothing on the Mac Studio reads `ORCH_PROJECT`** — there is no orchestrator there, no
-`~/.claude/helpers`, and no `.orchestrator/` in this repo. `grep -rn ORCH_PROJECT` returns prose
-only, in four markdown files, with not one consumer. The line that used to open this block was
-inert; the cycle protocol is the whole mechanism.
+⚠️ **Nothing on the Mac Studio reads `ORCH_PROJECT`** — there is no orchestrator there and no
+`~/.claude/helpers`. `grep -rn ORCH_PROJECT` returns prose only, with not one consumer. **`.orchestrator/outbox/`
+does exist in this repo**: you append your report to `.orchestrator/outbox/researcher.md` (below),
+and **the manager reads it**. Nothing reads it mechanically; the cycle protocol is the whole mechanism.
 
 🔴 **`/opt/homebrew/bin/git`, never bare `git`.** Apple's refuses to run until a licence prompt is
 accepted and it fails in a way that looks like an **empty answer rather than an error**. That has
