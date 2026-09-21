@@ -1,4 +1,78 @@
 status: RETURNED
+run_id: b0-code (Brief 0, 2026-09-21 -- code fixes; no training run, no runs/ ledger written)
+updated: 2026-09-21T10:09:17Z
+provenance: base 3a458ad (brief says 402d328; the only diff 402d328..3a458ad is the brief itself) · cpu (pytest/battery) · no dataset · no seeds (no training)
+manifest: none -- no experiment ran; the brief's falsifiers are about tests, settled by the battery and by tmp_path trials
+falsifier: A/B "the shuffle-control tests catch a replay that perturbs its memory, and one that swaps the bos-copy path" -- refuted if either mutation leaves every test_shuffle_control.py node green. C "a historical-fact test can pin history without pinning the live tree" -- refuted if the rewritten test reddens on an added canary ledger.
+expected: (from the brief, checked not copied) +1e-3 reddens test_replaying_each_rows_own_memory_reads_exactly_zero; bos swap reddens test_disabled_memory_reads_exactly_zero.
+observed: both premises CONFIRMED, each with exactly one on-gate node and 0 off-gate. Neither falsifier fired. Task C: extra ledger green, cycle-04 flip red.
+
+gates:
+  $ uv run pytest -rs --tb=no            # BEFORE, at 3a458ad
+    passed=385 failed=0 skipped=0 errors=0        rc=0
+  $ uv run pytest -rs --tb=no            # AFTER, at b61f2a2 (3 new tests)
+    passed=387 failed=0 skipped=0 errors=0        rc=0
+  $ uv run python scripts/mutation_battery.py --check      # BEFORE, at 3a458ad
+    48/49 gates proven by mutation
+    UNPROVEN: test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint (checkpoints written straight to the final path) -- reddens nothing
+    rc=1
+  $ uv run python scripts/mutation_battery.py --check --markdown docs/mutation-battery.md   # AFTER
+    PROVEN the shuffle replay perturbs the memory it replays -> 1 on gate, 0 off (0 undeclared)
+    PROVEN the shuffle replay hands over the bos gestalt too -> 1 on gate, 0 off (0 undeclared)
+    PROVEN checkpoints written straight to the final path    -> 1 on gate, 0 off (0 undeclared)
+    51/51 gates proven by mutation
+    rc=0
+  $ uv run ruff check src/ tests/ scripts/          All checks passed!   rc=0
+  $ uv run ruff format --check src/ tests/ scripts/ 72 files already formatted  rc=0
+  $ git diff --stat origin/main...HEAD -- runs/ preregistration/     (empty) rc=0
+
+ledger: none (no run). Evidence: battery JSON (scratch), the node ids below.
+numbers:
+  N (measured on baseline) = 49 entries; baseline --check = 48/49 exit 1, NOT 49/49.
+  after = 51/51 exit 0  -> N+2/N+2 literally, but see the checkpoint caveat.
+  A1 "perturbs the memory": FAILED tests/test_shuffle_control.py::test_replaying_each_rows_own_memory_reads_exactly_zero
+     (AssertionError: 3.5040586897849835e-05 at :110); off-gate 0.
+  A2 "bos gestalt too": FAILED tests/test_shuffle_control.py::test_disabled_memory_reads_exactly_zero
+     (AssertionError: 0.005718388603728641 at :99); off-gate 0.
+  C, tmp_path copy of runs/ + canary/cycle-99:
+     old assertion -> RED: len(canaries)=4 ; new assertion -> GREEN
+     cycle-04 outcome -> "survived": new assertion -> RED: {'canary/cycle-04': 'survived', 'canary/cycle-08': 'survived', 'canary/cycle-12': 'survived'}
+     nodes: tests/test_evidence_machinery.py::test_the_scoreboard_reproduces_the_true_canary_tally PASSED
+            tests/test_evidence_machinery.py::test_a_later_canary_reading_does_not_redden_the_09_18_tally PASSED
+            tests/test_evidence_machinery.py::test_the_09_18_tally_reddens_when_cycle_04_changes_its_outcome PASSED
+  B: raise re-derived: `grep -n` -> def observe :442, raise NotImplementedError :448 at 3a458ad;
+     at 18557e7 (the sha the entry's own `how` names) def observe :427, raise :433. So ":433" was TRUE for the
+     measurement it describes. Producer now writes "NotImplementedError from RSRPolicy.observe
+     (src/rsr/retention/rsr.py:433 at 18557e7)" -- symbol + line@sha, which cannot go stale.
+
+BRIEF ERRORS:
+  1. "Both existing test_shuffle_control.py entries use gate test_shuffle_control.py::" -- false. "the shuffle control never
+     applies its permutation" is gated on `test_live_memory_moves_the_loss`. (New entries use the brief's gate as instructed.)
+  2. Task C premise "this test reddened (passed=384 failed=1)" does not hold on this branch: at 3a458ad runs/canary has only
+     cycle-04/08/12 (e26900a kept the new reading out of runs/), and the baseline is passed=385 failed=0. The fix is still
+     correct and needed; the red it describes is not reproducible here.
+  3. Bar "final line reads N+2/N+2" assumes the baseline is N/N. It was 48/49, exit 1: the checkpoint mutation
+     (SIGKILL test) is timing-dependent. Baseline run: ADDS NOTHING. Five isolated probes (-k that test, mutation applied):
+     all 5 green, i.e. mutation NOT caught. Post-edit battery run: caught (PROVEN). So "51/51" is one lucky run on that row,
+     not a stable property; my two entries are stable.
+  4. Task B framing "rsr.py:433" as an error: it was correct at the measurement sha 18557e7; only the live line moved.
+     Fixed the producer anyway (by pinning to the sha), since a bare line number reads as live.
+  5. Baseline sha in the brief (402d328) is not the branch base (3a458ad); harmless, diff is the brief file only.
+UNANSWERED BY THE BRIEF:
+  - Whether docs/mutation-battery.md should be committed from a run whose checkpoint row is a timing flake. I committed it
+    (it is script output and the brief allows it) and said so in the commit message; manager may prefer to drop that commit.
+  - Should the SIGKILL checkpoint entry be excluded from --check, or its test made deterministic? Out of scope; not touched.
+BELIEVED, NOT VERIFIED:
+  - That the checkpoint flake rate on the Studio is roughly "rarely caught": 1 catch in 7 observations (1/2 battery runs,
+    0/5 isolated probes). Small sample.
+  - That the regenerated s0-02 ledger would differ only in that string; I did not re-run write_ledger.py (runs/ is off-limits).
+NEXT (proposed, not decided):
+  - A brief to make test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint deterministic on the M4 Max (e.g. inject the
+    kill between write and rename rather than by wall-clock delay), so --check stops being a coin toss.
+
+---
+
+status: RETURNED
 run_id: s0-01-loop-defects
 updated: 2026-09-20T17:05:00Z
 provenance: 201e2d6 (defects measured at c39b498; HEAD moved to 3973d1a mid-cycle — a concurrent researcher landed B2 on this branch, and `git diff --name-only c39b498 3973d1a -- src/rsr/train/loop.py src/rsr/retention/rsr.py` is empty, so nothing in scope moved) · cpu · dataset 849f94007cc533f14b3ece035fe0941167231bcf65f906e00445a9a04b8dab27 · seeds actually run [0,1,2,3,4]
