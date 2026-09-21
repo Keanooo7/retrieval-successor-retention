@@ -1,0 +1,24 @@
+{
+  "arms": [
+    "fifo",
+    "oracle",
+    "random"
+  ],
+  "corpus": "generate(SyntheticConfig(seed=s)), committed defaults",
+  "device": "cpu (no model)",
+  "gamma": 0.97,
+  "memory_slots": 16,
+  "prereg": "experiments/efeas/PREREG.md",
+  "secondary_memory_slots": [
+    8,
+    32
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "threshold": {
+    "h_min": 0.05
+  }
+}
