@@ -14,6 +14,7 @@ slowly and reads as noise.
 
 from __future__ import annotations
 
+import io
 import signal
 import subprocess
 import sys
@@ -183,87 +184,112 @@ def test_rng_state_round_trips(tmp_path):
 
 _KILLER = textwrap.dedent(
     """
-    import os, signal, sys, threading, time, torch
+    import sys, threading
     from pathlib import Path
     sys.path.insert(0, {src!r})
+    import torch
     from rsr.train import checkpoint as ckpt
 
-    target = Path(sys.argv[1])
+    target, phase = Path(sys.argv[1]), sys.argv[2]
     big = {{"format_version": 1, "step": 1, "model": {{"w": torch.randn(4_000_000)}},
             "optimizer": None, "policy": {{}}, "stream": {{}}, "meta": {{}}, "rng": None}}
 
-    # Die partway through the write, from another thread, with SIGKILL -- which
-    # cannot be caught, so no cleanup handler can rescue the file.
-    def die():
-        time.sleep(float(sys.argv[2]))
-        os.kill(os.getpid(), signal.SIGKILL)
-    threading.Thread(target=die, daemon=True).start()
+    # Synchronisation, not timing: at the requested point in the write, tell the
+    # parent and park forever. The parent SIGKILLs us while we are parked, so the
+    # kill lands inside the window on every run, on any machine.
+    def hook(at):
+        if at == phase:
+            sys.stdout.write("AT " + at + chr(10))
+            sys.stdout.flush()
+            threading.Event().wait()
+    ckpt._write_hook = hook
     ckpt.atomic_write(target, big)
-    print("COMPLETED")
+    print("COMPLETED", flush=True)
     """
 )
 
+_OLD_PAYLOAD = {
+    "format_version": 1,
+    "step": 0,
+    "model": {},
+    "optimizer": None,
+    "policy": {},
+    "stream": {},
+    "meta": {},
+    "rng": None,
+}
 
-#: The kill has to land INSIDE the write to test it, and the write is short: on an
-#: M1 Pro, a non-atomic write only tears when the kill lands ~6 ms in. The four
-#: delays this used to run (2 / 10 / 30 / 60 ms) all missed that window, so a
-#: straight-to-final-path write passed every case -- the gate had never been seen
-#: red on the defect it exists for. A dense 1-16 ms sweep straddles the write on
-#: this machine; 30 and 60 ms keep the "killed after completion" cases.
-_KILL_DELAYS = [f"{ms / 1000:.3f}" for ms in range(1, 17)] + ["0.030", "0.060"]
+#: Where the child is killed, and what the final path must hold afterwards.
+#:
+#: * `mid_write` -- half the bytes are out. A straight-to-final-path write
+#:   (`tmp = path`, the battery's mutation) leaves a torn file here; the atomic
+#:   write leaves the OLD checkpoint byte-identical.
+#: * `before_replace` -- the new bytes are complete and fsynced but not renamed.
+#:   The final path must still be the old checkpoint.
+#: * `after_replace` -- killed after the rename, before the directory fsync and
+#:   the sweep. The final path must be the complete NEW checkpoint ("never
+#:   partial", not "never new" -- the old delay-sweep flake, 4/110).
+#:
+#: Until Brief 0b (2026-09-21) this was a sweep of wall-clock kill delays, which
+#: caught the `tmp = path` mutation in 1 of 7 battery observations.
+_KILL_AT = {"mid_write": "old", "before_replace": "old", "after_replace": "new"}
 
 
-@pytest.mark.parametrize("delay", _KILL_DELAYS)
-def test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint(tmp_path, delay):
+@pytest.mark.parametrize("phase", sorted(_KILL_AT))
+def test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint(tmp_path, phase):
     """🔴 Gauntlet 3.6. `torch.save` straight to the final path leaves a truncated
     file when the process dies during it, and the next resume loads garbage --
     after the run has already been lost.
 
-    The child is killed with `SIGKILL` at several points in the write. Whatever
-    happens, the final path is either **absent** or **a complete, loadable
-    checkpoint**. Never a partial one.
+    The child is SIGKILLed while parked at a named point inside `atomic_write`
+    (see `checkpoint._write_hook`). The final path is then either **the old
+    checkpoint, byte-identical** or **the complete new one** -- never a partial one.
     """
     src = str(Path(__file__).resolve().parents[1] / "src")
     target = tmp_path / "ckpt.pt"
     # A previous good checkpoint: a reader must never see it replaced by rubble.
-    ckpt.atomic_write(
-        target,
-        {
-            "format_version": 1,
-            "step": 0,
-            "model": {},
-            "optimizer": None,
-            "policy": {},
-            "stream": {},
-            "meta": {},
-            "rng": None,
-        },
-    )
+    ckpt.atomic_write(target, _OLD_PAYLOAD)
     good = target.read_bytes()
 
-    proc = subprocess.run(
-        [sys.executable, "-c", _KILLER.format(src=src), str(target), delay],
-        capture_output=True,
-        text=True,
-    )
-    killed = proc.returncode == -signal.SIGKILL
-    payload = torch.load(target, map_location="cpu", weights_only=False)
-    assert payload["format_version"] == 1
-    if killed:
-        # The old checkpoint intact and byte-identical, OR the new one complete.
-        #
-        # 📌 "Killed" does not mean "killed before the rename". `atomic_write` still
-        # fsyncs the directory and sweeps temporaries after `os.replace`, so a kill
-        # can land after the new file is fully in place. That was this test's
-        # flake: it demanded the OLD bytes and read the complete NEW checkpoint
-        # (first differing byte 105, step 1 vs 0; reproduced 4/110 by sweeping the
-        # kill across 10-20 ms). The guarantee is "never partial", not "never new".
-        is_old = target.read_bytes() == good
-        is_new = payload["step"] == 1 and payload["model"]["w"].numel() == 4_000_000
-        assert is_old or is_new, (
-            "SIGKILL during the write left a checkpoint that is neither the old one "
-            f"nor the complete new one (step={payload['step']})"
+    stderr_log = tmp_path / "child.stderr"
+    with open(stderr_log, "w") as err:
+        proc = subprocess.Popen(
+            [sys.executable, "-c", _KILLER.format(src=src), str(target), phase],
+            stdout=subprocess.PIPE,
+            stderr=err,
+            text=True,
         )
+        try:
+            line = proc.stdout.readline()  # blocks until the child is parked
+            reached = line.strip() == f"AT {phase}"
+            if reached:
+                proc.send_signal(signal.SIGKILL)
+        finally:
+            if proc.poll() is None and not reached:
+                proc.kill()
+            proc.wait()
+            proc.stdout.close()
+    assert reached, (
+        f"the child never reached {phase!r} (read {line!r}, rc={proc.returncode}); "
+        f"stderr: {stderr_log.read_text()[-2000:]}"
+    )
+    assert proc.returncode == -signal.SIGKILL, proc.returncode
+
+    try:
+        payload = torch.load(target, map_location="cpu", weights_only=False)
+    except Exception as exc:
+        pytest.fail(
+            f"SIGKILL at {phase!r} left an unloadable checkpoint "
+            f"({type(exc).__name__}: {exc})"
+        )
+    assert payload["format_version"] == 1
+    if _KILL_AT[phase] == "old":
+        assert target.read_bytes() == good, (
+            f"SIGKILL at {phase!r} replaced the old checkpoint "
+            f"(step={payload['step']}) before the atomic rename"
+        )
+    else:
+        assert payload["step"] == 1 and payload["model"]["w"].numel() == 4_000_000
 
     # A temporary file MAY survive: SIGKILL cannot be caught, so no cleanup handler
     # runs. What must be true is that it cannot be mistaken for a checkpoint, and
@@ -288,6 +314,28 @@ def test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint(tmp_path, delay):
         "the next successful write did not sweep the stale temporary"
     )
     assert torch.load(target, map_location="cpu", weights_only=False)["step"] == 99
+
+
+def test_the_write_hook_is_inert_in_production(tmp_path):
+    """The SIGKILL test's seam (`checkpoint._write_hook`) must change nothing when
+    unset. Without the hook, `atomic_write` and `save` produce exactly the bytes
+    of one `torch.save` to the final file -- which is what they wrote before the
+    seam existed (Brief 0b, 2026-09-21)."""
+    assert ckpt._write_hook is ckpt._no_op
+
+    torch.manual_seed(7)
+    payload = dict(_OLD_PAYLOAD, step=3, model={"w": torch.randn(300_001)})
+    expected = io.BytesIO()
+    torch.save(payload, expected)
+    ckpt.atomic_write(tmp_path / "a.pt", payload)
+    assert (tmp_path / "a.pt").read_bytes() == expected.getvalue()
+
+    model = nn.Linear(3, 5)
+    path = ckpt.save(tmp_path / "s.pt", step=4, model=model, capture_rng=False)
+    reference = io.BytesIO()
+    torch.save(ckpt.Checkpoint(step=4, model=model.state_dict()).payload(), reference)
+    assert path.read_bytes() == reference.getvalue()
+    assert not [p.name for p in tmp_path.iterdir() if ".tmp." in p.name]
 
 
 def test_a_live_writers_temporary_is_never_swept(tmp_path):
