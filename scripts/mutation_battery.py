@@ -703,7 +703,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "the shuffle control hands each row its own memory",
-        "tests/test_shuffle_control.py::",
+        "test_shuffle_control.py::",
         "src/rsr/metrics/memory_liveness.py",
         "    return torch.roll(torch.arange(n, device=device), 1)",
         "    return torch.arange(n, device=device)",
@@ -714,7 +714,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "the shuffle control never applies its permutation",
-        "tests/test_shuffle_control.py::test_live_memory_moves_the_loss",
+        "test_live_memory_moves_the_loss",
         "src/rsr/metrics/memory_liveness.py",
         "out = model(ids_t, mask_t, kv[perm], valid[perm], bc, bv)",
         "out = model(ids_t, mask_t, kv, valid, bc, bv)",
