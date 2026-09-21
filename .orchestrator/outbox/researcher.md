@@ -36,7 +36,7 @@ BELIEVED, NOT VERIFIED:
   - Every value is bit-identical across Python 3.12 and 3.14 and between two torch installs. I did not check the old run's torch version, because its manifest does not record it.
   - Side observation, outside scope: query text reads "What does Hal-6 measures?" (the predicate is not uninflected). This is harmless to E-feas. Whether it matters for the LM objective is unexamined.
 NEXT (proposed, not decided): E-feas has nothing further to say about S0-03; it is blind to token content by construction. The informative follow-up is the one S0-03 exists for: answer-token loss bucketed by gap (gap<=16 vs gap>16) for a FIFO-trained model on the new corpus, against the chance line ln 16. Separately, pin the Python interpreter (.python-version 3.12) so ledgers stop drifting to 3.14.
-PR: (see below)
+PR: https://github.com/Keanooo7/retrieval-successor-retention/pull/33 (open, not merged)
 
 ---
 
