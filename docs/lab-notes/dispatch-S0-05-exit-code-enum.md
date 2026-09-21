@@ -1,6 +1,29 @@
 # S0-05 — the exit-code conflation, converted from a lesson into a gate
 
-**Baseline:** `6a775b74` — read from `git rev-parse HEAD` at the moment of writing, 2026-09-20.
+**Baseline:** `a802521f06be561f0457447f0ae706cd8630d000` (re-baselined 2026-09-21 by the manager; was `6a775b74`).
+**Worktree:** `.worktrees/s0-05` on branch `s0/s0-05` from `origin/main`. One agent, one worktree. **run_id:** none (this is code, not an experiment); the re-executed audit goes in `RESULTS.md`.
+
+> **Re-baseline, 2026-09-21. Every anchor below was re-derived with `grep -n` at `a802521`. Anchors further down this brief that are not listed here are stale; use these instead.**
+>
+> | brief says | at `a802521` | what is there |
+> |---|---|---|
+> | `canary.py:35`, `:67`, `:69`, `:151` | **unchanged** (`:34-35` docstring, `:67` comment, `:69` `EXIT_CODES = {"held": 0, "MOVED": 1, "baseline": 3}`, `:151` `exit_code=0,`) | |
+> | `canary.py:196` (verdict computed) | not re-derived. Find it yourself | |
+> | `mutation_battery.py:685` (stale anchor → exit 1) | **`:914`** | `raise SystemExit(` |
+> | `mutation_battery.py:709` (suite not green → exit 1) | **`:938`** | `raise SystemExit(f"the suite is not green before mutating: ...")` |
+> | `mutation_battery.py:773` (`return 1 if (args.check and bad) else 0`) | **`:1002`** | same |
+> | `mutation_battery.py:529-530` (mutation `baseline: 3 → 0`) | **`:565-571`** | `Mutation("a first canary reading exits 0 again", "test_a_first_canary_reading_exits_3_not_0", ...)` |
+> | `test_evidence_machinery.py:346` (`exit_code_for("baseline") == 3`) | **`:395`** | same |
+> | `experiments/e0{a,d,e,f,g,h,i}/run.py:7` | **unchanged**; all seven still `raise NotImplementedError` (`grep -ln`) | |
+> | `render_scoreboard.py:432/437/441/446/450/455/480` | **unchanged** | |
+> | `e0c/run.py:206`, `:210`; `e0c/measure.py:232` | **unchanged** | |
+> | `extract_golden_tensors.py:451`; `tests/conftest.py:85` | **unchanged** | |
+> | `docs/gates.md:83-90`, "the same five everywhere" | **heading rewritten 2026-09-20** to "Exit codes — the protocol, which trunk does not yet implement". The five-code block is now at **`:89-93`**, and the "`2` and `3` are separate deliberately" sentence at **`:96`** | |
+>
+> **Two notes that the original brief could not have made:**
+> - *"Do not touch `src/rsr/train/loop.py`. Cycle 1 is live in that file"*: cycle 1 has landed. The prohibition **stands for a new reason**: **S0-03 is editing `loop.py` tonight** in `.worktrees/s0-03`.
+> - `tests/test_evidence_machinery.py` was edited tonight by Brief 0 (#27): the canary-tally tests. Rebase your mental map of that file on `a802521`.
+> - The Brief 0 researcher found `scripts/mutation_battery.py --check` at **48/49, exit `1`** on the baseline, because the "checkpoints written straight to the final path" row is timing-dependent (caught 1 in 7). **Do not fix that here**; it is a separate brief. It does mean that "`--check` green" in this brief's bar may fail for a reason that is not yours. If so, report the flaky row by name, show that your own rows are PROVEN, and do not call the battery green.
 **Lane:** researcher · CPU, no device required.
 **Sprint:** 0 — make the substrate honest.
 **Opened by:** `docs/lab-notes/dispatch-2026-09-20b-cycle-1.md` Task B2.
@@ -138,7 +161,7 @@ exists to close.
 
 ## Done when
 
-One PR to `main` with the enum, the corrected mappings, the tests, the mutations, and a
+One PR **opened** against `main` (the manager verifies and merges; do not merge), with a `BRIEF ERRORS` field in your report prepended to `.orchestrator/outbox/researcher.md`, and with the enum, the corrected mappings, the tests, the mutations, and a
 `RESULTS.md` carrying the re-executed audit — **including every site that turned out correct.**
 
 ## Do NOT
