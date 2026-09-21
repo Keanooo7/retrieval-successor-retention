@@ -17,8 +17,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 import torch
@@ -30,7 +32,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from rsr.baselines.fifo import FIFOPolicy  # noqa: E402
 from rsr.baselines.oracle import OraclePolicy  # noqa: E402
 from rsr.baselines.random_policy import RandomPolicy  # noqa: E402
-from rsr.data.synthetic import SyntheticConfig, discounted_demand, generate  # noqa: E402
+from rsr.data.synthetic import (  # noqa: E402
+    SyntheticConfig,
+    discounted_demand,
+    generate,
+    to_bytes,
+)
 from rsr.metrics.headroom import hit_rate, hit_rate_by_gap, simulate  # noqa: E402
 
 EXPERIMENT = "experiments/efeas/run.py"
@@ -166,7 +173,20 @@ def write_ledger(per_seed: dict[int, dict], led) -> Path:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-id", default="efeas-synthetic")
+    ap.add_argument(
+        "--prereg",
+        default="experiments/efeas/PREREG.md",
+        help="the pre-registration governing this run, recorded in the manifest",
+    )
+    ap.add_argument(
+        "--expect",
+        default=None,
+        help="the expectation, written before the run and frozen in the manifest",
+    )
     a = ap.parse_args(argv)
+    argv_str = "uv run python " + " ".join(
+        [EXPERIMENT, *(sys.argv[1:] if argv is None else argv)]
+    )
 
     from ledger import Ledger
 
@@ -186,15 +206,27 @@ def main(argv: list[str] | None = None) -> int:
             "secondary_memory_slots": M_SECONDARY,
             "gamma": GAMMA,
             "arms": ["fifo", "oracle", "random"],
-            "prereg": "experiments/efeas/PREREG.md",
+            "prereg": a.prereg,
             "threshold": {"h_min": H_MIN},
             "device": "cpu (no model)",
+            # Added for efeas-synthetic-s003 (PREREG-s003.md): the generator's
+            # defaults verbatim, the corpus bytes it produced, and torch, so a
+            # changed default is visible in the manifest rather than inferred.
+            "synthetic_config_defaults": asdict(SyntheticConfig()),
+            "corpus_sha256": {
+                str(s): hashlib.sha256(
+                    to_bytes(generate(SyntheticConfig(seed=s)))
+                ).hexdigest()
+                for s in SEEDS
+            },
+            "torch_version": torch.__version__,
+            "expected": a.expect,
         }
     )
     per_seed = {s: measure_seed(s) for s in SEEDS}
     led.run_meta(device="cpu", seeds_actually_run=SEEDS)
     led.command(
-        f"uv run python {EXPERIMENT}",
+        argv_str,
         exit_code=0,
         note=(
             "SELF-REPORTED: this is the process writing the ledger, so 0 means "
