@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**45/45 gates proven.**
+**63/63 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -46,7 +46,18 @@
 | off-gate failures stop counting | `test_an_off_gate_failure_makes_a_mutation_unproven` | **PROVEN** | 0 | 0 |
 | the coupling allowlist is ignored | `test_a_declared_coupling_does_not_make_a_mutation_unproven` | **PROVEN** | 0 | 0 |
 | the mutation table is field-shifted again | `test_the_mutation_table_is_well_formed_without_a_runtime_repair` | **PROVEN** | 0 | 0 |
-| a first canary reading exits 0 again | `test_a_first_canary_reading_exits_3_not_0` | **PROVEN** | 0 | 0 |
+| a first canary reading exits 0 again | `test_a_first_canary_reading_exits_2_nothing_to_compare` | **PROVEN** | 0 | 0 |
+| a first canary reading exits 3 again | `test_a_first_canary_reading_exits_2_nothing_to_compare` | **PROVEN** | 0 | 0 |
+| a canary ledger row typed again | `test_the_canary_ledger_row_records_the_exit_code_it_returns` | **PROVEN** | 0 | 0 |
+| unimplemented experiments raise again | `test_an_unimplemented_experiment_exits_3` | **PROVEN** | 0 | 0 |
+| a checker returns a bare boolean | `test_no_checker_returns_a_bare_boolean` | **PROVEN** | 0 | 0 |
+| status() accepts a bool | `test_status_refuses_a_bool` | **PROVEN** | 0 | 0 |
+| a stale battery anchor exits 1 again | `test_a_stale_battery_anchor_exits_3` | **PROVEN** | 0 | 0 |
+| a red baseline exits 1 again | `test_a_red_baseline_exits_3` | **PROVEN** | 0 | 0 |
+| an empty battery passes | `test_a_battery_with_no_mutations_exits_2` | **PROVEN** | 0 | 0 |
+| a usage error exits 2 again | `test_a_usage_error_exits_3_not_2` | **PROVEN** | 0 | 0 |
+| extract_golden_tensors exits 1 without JAX again | `test_extract_golden_tensors_without_jax_exits_3` | **PROVEN** | 0 | 0 |
+| a checker bypasses run_main | `test_every_converted_checker_exits_through_the_protocol` | **PROVEN** | 0 | 0 |
 | a truncated canary run is compared over the overlap | `test_a_length_mismatch_is_a_move` | **PROVEN** | 0 | 0 |
 | the training loss scores padding again | `test_lm_loss` | **PROVEN** | 0 | 0 |
 | W_O dropped from the capture path | `test_capture_bridge` | **PROVEN** | 0 | 0 |
@@ -57,6 +68,13 @@
 | ppl computed from the penalised loss | `test_perplexity_is_a_perplexity` | **PROVEN** | 0 | 0 |
 | --vocab default back to 50257 | `test_the_cli_vocab_default_reaches_the_derived_path` | **PROVEN** | 0 | 0 |
 | from_registry reads every field eagerly again | `test_from_registry` | **PROVEN** | 0 | 0 |
+| the shuffle control hands each row its own memory | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
+| the shuffle control never applies its permutation | `test_live_memory_moves_the_loss` | **PROVEN** | 0 | 0 |
+| the shuffle replay perturbs the memory it replays | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
+| the shuffle replay hands over the bos gestalt too | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
+| the oracle evicts the sentence most needed | `test_oracle.py::` | **PROVEN** | 0 | 0 |
+| checkpoints written straight to the final path | `test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint` | **PROVEN** | 0 | 0 |
+| the synthetic answer goes back out of band | `test_every_query_carries_its_answer_as_its_final_token` | **PROVEN** | 10 | 10 |
 
 ## What each mutation breaks, and what else went red
 
@@ -385,9 +403,97 @@ Reddened nothing else.
 
 ### a first canary reading exits 0 again
 
-**Gate:** `test_a_first_canary_reading_exits_3_not_0` — **PROVEN**
+**Gate:** `test_a_first_canary_reading_exits_2_nothing_to_compare` — **PROVEN**
 
-5.4: `3` collapsing to `0` -- DID NOT RUN reported as FOUND NOTHING
+5.4: the ORIGINAL defect -- a first reading, which compared nothing, reported as a pass
+
+Reddened nothing else.
+
+### a first canary reading exits 3 again
+
+**Gate:** `test_a_first_canary_reading_exits_2_nothing_to_compare` — **PROVEN**
+
+S0-05: the FIX's defect, on the right axis. Cycle 0 mapped a first reading to 3; it ran and had nothing to compare, which is 2. The 0-mutation above only proves the old defect stays dead -- it cannot see the value the fixer actually wrote. This one can: `2` collapsing to `3`.
+
+Reddened nothing else.
+
+### a canary ledger row typed again
+
+**Gate:** `test_the_canary_ledger_row_records_the_exit_code_it_returns` — **PROVEN**
+
+S0-05 bar 6: the row was the literal `exit_code=0`, written before the verdict existed, so a MOVED canary exiting 1 filed a ledger saying 0. A hardcoded 0 is worse than null: it looks measured.
+
+Reddened nothing else.
+
+### unimplemented experiments raise again
+
+**Gate:** `test_an_unimplemented_experiment_exits_3` — **PROVEN**
+
+S0-05 bar 5: seven e0* stubs exiting 1 (real failure) for the state that defines did-not-run. One mutation for the class: all seven go through `not_implemented()`, and all seven parametrised cases redden.
+
+Reddened nothing else.
+
+### a checker returns a bare boolean
+
+**Gate:** `test_no_checker_returns_a_bare_boolean` — **PROVEN**
+
+ROADMAP §6 conversion row: `True` exits 1 and `False` exits 0 -- a claim check that passed would report failure, and a bool has no did-not-run.
+
+Reddened nothing else.
+
+### status() accepts a bool
+
+**Gate:** `test_status_refuses_a_bool` — **PROVEN**
+
+S0-05: the runtime half of the bare-boolean rule; run_main() is the last line a bool would pass through on its way to sys.exit.
+
+Reddened nothing else.
+
+### a stale battery anchor exits 1 again
+
+**Gate:** `test_a_stale_battery_anchor_exits_3` — **PROVEN**
+
+S0-05: nothing was mutated, so the battery did not run; a bare `raise SystemExit(msg)` reported that as 1.
+
+Reddened nothing else.
+
+### a red baseline exits 1 again
+
+**Gate:** `test_a_red_baseline_exits_3` — **PROVEN**
+
+S0-05: a suite red before mutating means no mutation ran.
+
+Reddened nothing else.
+
+### an empty battery passes
+
+**Gate:** `test_a_battery_with_no_mutations_exits_2` — **PROVEN**
+
+S0-05: '0/0 proven' has no unproven gate in it and exited 0. Nothing to compare is 2.
+
+Reddened nothing else.
+
+### a usage error exits 2 again
+
+**Gate:** `test_a_usage_error_exits_3_not_2` — **PROVEN**
+
+S0-05: argparse's 2 gave render_scoreboard's `2` two meanings, bad arguments and an empty board.
+
+Reddened nothing else.
+
+### extract_golden_tensors exits 1 without JAX again
+
+**Gate:** `test_extract_golden_tensors_without_jax_exits_3` — **PROVEN**
+
+S0-05: the ImportError the project venv guarantees (ADR-0001) is did-not-run, not a failed extraction.
+
+Reddened nothing else.
+
+### a checker bypasses run_main
+
+**Gate:** `test_every_converted_checker_exits_through_the_protocol` — **PROVEN**
+
+S0-05: the enum is only the deliverable if the entry points use it; `sys.exit(main())` skips status()'s bool/None refusal.
 
 Reddened nothing else.
 
@@ -471,6 +577,73 @@ S0-01's second 'less certain' item, which measured as real. Every registry read 
 
 Reddened nothing else.
 
+### the shuffle control hands each row its own memory
+
+**Gate:** `test_shuffle_control.py::` — **PROVEN**
+
+S0-04 Bar 1: an instrument that cannot read non-zero. With the identity permutation the control reads exactly 0.0 on ANY model, live or dead -- the reading §10.3's null was, and the one cycle 1 was rejected for not having ruled out. Only the live-memory decoy can see it.
+
+Reddened nothing else.
+
+### the shuffle control never applies its permutation
+
+**Gate:** `test_live_memory_moves_the_loss` — **PROVEN**
+
+the same no-op with a correct `derangement()`: the replay reaches the forward un-permuted. The derangement test stays green, so only the live-memory reading catches it.
+
+Reddened nothing else.
+
+### the shuffle replay perturbs the memory it replays
+
+**Gate:** `test_shuffle_control.py::` — **PROVEN**
+
+the replay hands over memory that is not the memory the reference pass read: a 1e-3 offset on every slot. The derangement is still correct and the live-memory decoy still moves, so neither of the other two entries sees it -- only a replay of each row's OWN memory, which must read exactly 0.0, can tell a faithful replay from a perturbed one.
+
+Reddened nothing else.
+
+### the shuffle replay hands over the bos gestalt too
+
+**Gate:** `test_shuffle_control.py::` — **PROVEN**
+
+the control permutes the bos-copy path along with the memory, so its delta measures memory PLUS the bos gestalt rather than memory alone. With memory disabled the kv swap is a no-op but the bos swap is not, so the disabled-memory reading stops being exactly 0.0.
+
+Reddened nothing else.
+
+### the oracle evicts the sentence most needed
+
+**Gate:** `test_oracle.py::` — **PROVEN**
+
+E-feas reads oracle - FIFO as an upper bound on what retention can buy. An oracle that is not optimal makes that bound a lower number than the truth, and 'oracle ~= FIFO' would then be a finding about the oracle.
+
+Reddened nothing else.
+
+### checkpoints written straight to the final path
+
+**Gate:** `test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint` — **PROVEN**
+
+gauntlet 3.6: the non-atomic write the SIGKILL test exists to catch. The child is killed while parked in `checkpoint._write_hook` (synchronised over a pipe, no wall-clock delay), so it reddens [mid_write] (torn file) and [before_replace] (old checkpoint replaced pre-rename) on every run. Until Brief 0b (2026-09-21) it was a kill-delay sweep that caught this in 1 of 7 battery observations.
+
+Reddened nothing else.
+
+### the synthetic answer goes back out of band
+
+**Gate:** `test_every_query_carries_its_answer_as_its_final_token` — **PROVEN**
+
+S0-03's fixture mutation: the default corpus reverts to the pre-S0-03 generator, whose answer lived only in `Sentence.answer` and never entered the token stream -- so no next-token target required retrieval and 'the memory is inert' was a finding about the corpus. The named gate must redden; the rest are the declared consequences of the refusal.
+
+Also reddened (10):
+
+- `tests/test_synthetic.py::test_the_answer_is_the_only_difference_between_the_two_corpora` — ✔ declared
+- `tests/test_synthetic.py::test_the_answer_targets_are_a_minority_that_a_pooled_loss_would_hide` — ✔ declared
+- `tests/test_synthetic.py::test_the_gap_tensor_is_the_pairs_gap_at_each_query` — ✔ declared
+- `tests/test_synthetic.py::test_the_target_mask_marks_exactly_the_answer_token_of_every_query` — ✔ declared
+- `tests/test_train_loop.py::test_perplexity_is_a_perplexity_and_not_a_penalised_loss` — ✔ declared
+- `tests/test_train_loop.py::test_the_corpus_holds_156_unique_words` — ✔ declared
+- `tests/test_train_loop.py::test_the_derived_vocabulary_is_what_the_model_is_built_with` — ✔ declared
+- `tests/test_train_loop.py::test_the_hinge_has_a_documented_off_switch` — ✔ declared
+- `tests/test_train_loop.py::test_the_hinge_is_on_by_default` — ✔ declared
+- `tests/test_train_loop.py::test_the_hinge_reaches_the_objective` — ✔ declared
+
 ## Declared couplings
 
 A coupling worth knowing about is one somebody wrote down. These are the reasons carried in the table itself, not in prose beside it:
@@ -486,6 +659,8 @@ A coupling worth knowing about is one somebody wrote down. These are the reasons
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006). Added 2026-09-18: the on-the-real-model variant post-dates docs/mutation-battery.md's table.
 - SOURCE_ROOTS is one enumeration: what gates and what does not are the same list, so widening it necessarily moves both assertions
 - the timestamp test asserts both halves of the same behaviour -- a clock is skipped AND a real number beside it is still flagged -- so an audit that flags nothing necessarily reddens it too
+- S0-03: the test reads a property of the in-stream answer token itself (its position, its id under the supervision mask, the vocabulary it adds), so it cannot hold on a corpus that has no such token.
+- S0-03: `rsr.train.loop.answer_targets` REFUSES a corpus whose answers are out of band rather than return an empty supervision mask, and `train()` calls it, so every test that trains reddens when the default corpus reverts to the pre-S0-03 one. The refusal is the design: an empty mask would make every answer-token loss a mean over nothing and pass silently.
 
 ## Not covered here
 

@@ -22,17 +22,25 @@ regression and far looser than float noise. A move outside it is reported as a m
 
 ## Two repairs from cycle 0 of the 2026-09-19 run
 
-🔴 **A first reading exits 3, not 0.** It used to write `outcome: "inconclusive"`,
-return verdict `"baseline"`, and exit **0** -- the exact `3`-collapsing-to-`0`
-shape, in the one script that had no exit-3 branch at all. `3` means *did not run*
-and it is not *found nothing*.
+🔴 **A first reading exits 2 -- not 0, and not 3.** It used to write
+`outcome: "inconclusive"`, return verdict `"baseline"`, and exit **0**. Cycle 0
+"fixed" that to **3**, which is the same collapse inverted (S0-05): a first reading
+*ran* -- it trained, read the beats and wrote `baseline.json` -- and what it could
+not do is *compare*, because there was nothing to compare against. That is `2`,
+`docs/gates.md`'s "no recorded floor for this key". `3` is reserved for a canary
+that did not run.
 
 🔴 **A length mismatch is a `MOVED`, not a comparison over the overlap.** It used to
 note the mismatch and compare the shared prefix, so a run that produced 2 of 6 beats
 could report "held" -- a truncated run reading as a clean environment.
 
-Exit codes follow the run protocol: `0` pass · `1` real failure · `2` nothing to
-compare · `3` did not run.
+Exit codes follow the run protocol, all five of them (`rsr.exit_codes.Exit`,
+`docs/gates.md`): `0` held · `1` MOVED · `2` nothing to compare · `3` did not run ·
+`4` unbanked rise. This script emits `0`, `1` and `2`. It has no floor to bank, so
+`4` is unreachable here, not forgotten; a crash inside `train()` propagates as an
+uncaught exception (`1`), because a fixed-seed fixed-config run that crashes is an
+environment that moved. (This docstring listed four codes until S0-05 and silently
+dropped `4`.)
 """
 
 from __future__ import annotations
@@ -46,6 +54,8 @@ sys.path.insert(0, str(_REPO / "scripts"))
 sys.path.insert(0, str(_REPO / "src"))
 
 from ledger import Ledger  # noqa: E402
+
+from rsr.exit_codes import Exit, run_main  # noqa: E402
 
 # -- the frozen canary config. Do not tune these. ----------------------------- #
 CONFIG = dict(
@@ -64,18 +74,20 @@ REL_TOL = 1e-4  # committed before the first reading
 BASELINE = _REPO / "runs" / "canary" / "baseline.json"
 
 
-#: `0` pass · `1` real failure · `2` nothing to compare · `3` did not run.
-#: 🔴 A first reading is `3`. It never collapses to `0`.
-EXIT_CODES = {"held": 0, "MOVED": 1, "baseline": 3}
+#: `0` held · `1` MOVED · `2` nothing to compare. See `rsr.exit_codes.Exit`.
+#: 🔴 A first reading is `2`: it ran and had nothing to compare. Not `0`, not `3`.
+EXIT_CODES = {"held": Exit.OK, "MOVED": Exit.FAIL, "baseline": Exit.UNKNOWN}
 
 
-def exit_code_for(verdict: str) -> int:
+def exit_code_for(verdict: str) -> Exit:
     """The process exit status for a canary verdict.
 
-    A `baseline` reading did not compare anything against anything: there was no
-    baseline to compare to. That is *did not run*, and `runs/canary/cycle-04`'s own
-    ledger says `inconclusive` while the process exited 0 -- which is how the night
-    reported "3 canaries, all held" over 2 survived and 1 inconclusive.
+    A `baseline` reading ran and compared nothing against anything: there was no
+    baseline to compare to. That is *nothing to compare* (`2`). It is not a pass --
+    `runs/canary/cycle-04`'s own ledger says `inconclusive` while the process exited
+    0, which is how the night reported "3 canaries, all held" over 2 survived and 1
+    inconclusive -- and it is not *did not run* either, which is what cycle 0's fix
+    mapped it to (S0-05; `docs/gates.md`: "`2` and `3` are separate deliberately").
     """
     try:
         return EXIT_CODES[verdict]
@@ -146,11 +158,6 @@ def run(cycle: int) -> dict:
         steps_requested=CONFIG["iters"],
         steps_done=len(losses),
     )
-    led.command(
-        f".venv/bin/python scripts/canary.py {cycle}",
-        exit_code=0,
-        note="frozen config, seed 0; see CONFIG in scripts/canary.py",
-    )
     led.note("losses", losses, how="heartbeat.jsonl beat records, field 'loss'")
     led.note("config", CONFIG, how="frozen literal in scripts/canary.py")
     led.note(
@@ -169,7 +176,8 @@ def run(cycle: int) -> dict:
             falsifier="the environment has not moved",
             outcome="inconclusive",
             detail="first reading: this IS the baseline, nothing to compare "
-            "against yet. Exits 3 (did not run), never 0.",
+            "against yet. Exits 2 (nothing to compare): never 0, and not 3 -- "
+            "it ran.",
         )
         led.status("partial")
         verdict, moved, detail = "baseline", [], "first reading"
@@ -192,6 +200,18 @@ def run(cycle: int) -> dict:
         )
         led.status("ok")
 
+    # 🔴 The row is written here, after the verdict, so its exit code is the one
+    # this process returns -- READ from the verdict, not typed. It used to be written
+    # above the verdict as the literal `exit_code=0`, so a MOVED canary exiting 1
+    # filed a ledger saying 0. A hardcoded 0 is worse than `null`: it looks measured
+    # (scripts/ledger.py made `exit_code` required because `null` hid this).
+    code = exit_code_for(verdict)
+    led.command(
+        f".venv/bin/python scripts/canary.py {cycle}",
+        exit_code=int(code),
+        note="frozen config, seed 0; see CONFIG in scripts/canary.py. The exit code "
+        "is the one run() returns for this verdict, recorded before sys.exit().",
+    )
     path = led.write()
     return {
         "verdict": verdict,
@@ -199,7 +219,7 @@ def run(cycle: int) -> dict:
         "losses": losses,
         "detail": detail,
         "ledger": str(path),
-        "exit_code": exit_code_for(verdict),
+        "exit_code": code,
     }
 
 
@@ -208,4 +228,4 @@ if __name__ == "__main__":
     r = run(cycle)
     print(json.dumps({k: v for k, v in r.items() if k != "losses"}, indent=2))
     print("losses:", [round(x, 6) for x in r["losses"]])
-    sys.exit(r["exit_code"])
+    run_main(lambda: r["exit_code"])
