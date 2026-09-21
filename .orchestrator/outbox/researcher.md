@@ -1,4 +1,164 @@
 status: RETURNED
+run_id: s0-01-loop-defects
+updated: 2026-09-20T17:05:00Z
+provenance: 201e2d6 (defects measured at c39b498; HEAD moved to 3973d1a mid-cycle — a concurrent researcher landed B2 on this branch, and `git diff --name-only c39b498 3973d1a -- src/rsr/train/loop.py src/rsr/retention/rsr.py` is empty, so nothing in scope moved) · cpu · dataset 849f94007cc533f14b3ece035fe0941167231bcf65f906e00445a9a04b8dab27 · seeds actually run [0,1,2,3,4]
+manifest: runs/s0-01-loop-defects/manifest.json  (config hash cfacc035d54946c4891b1b5d445ddf315d6e01213ba3dba7951869cdbe4f9775; pre-registration committed alone at 5133135, ordered ahead of the fix, where the same content hashed to d98be1a2… before `Ledger.manifest()` re-serialised it with sorted keys — verified semantically identical, `old == new` is True and no key differs)
+falsifier: the brief's own Bar. If reverting a fix reddens NOTHING the test is vacuous and that is the finding; if it reddens tests other than its own the defects were not the separable things the brief claims. Secondary, for (c): if TGConfig's hinge weight were already 0, "absent from the objective" would be inert rather than a defect.
+expected: all three predicted defects real at this sha; corpus 156 unique words; `from_registry` raising even through a full override; nothing constructing a value head, so the muP item stays a recorded xfail.
+observed: all three real, all three fixed, all six mutations PROVEN with ZERO off-gate. Corpus 156 → V=160, exactly as predicted. `from_registry` raises on `nu` even when `nu` is supplied. 🔴 The falsifier's first clause FIRED, on my own work: `test_the_hinge_is_on_by_default` survived its mutation and was vacuous.
+
+gates:
+  $ pytest -rs                          # BEFORE any edit, at c39b498
+    passed=343 failed=0 skipped=0 errors=0        exit 0
+  $ pytest -rs                          # after, at 201e2d6
+    passed=358 failed=0 skipped=0 errors=0
+    358 passed, 1 xfailed, 1 warning in 10.51s    exit 0
+  $ ruff check src/ tests/ scripts/
+    All checks passed!                            exit 0
+  $ python scripts/mutation_battery.py --check --markdown docs/mutation-battery.md
+    45/45 gates proven by mutation                exit 0
+  $ grep -c srep_norm src/rsr/train/loop.py       # 0 before, 9 after; COUNT read, not $? (=1)
+ledger:  runs/s0-01-loop-defects/ledger.json   (status ok · verdict survived, not capped · 4 commands, all reproducible)
+
+numbers: every figure below is a ledger key in runs/s0-01-loop-defects/ledger.json.
+  loop_py_lines 401 · grep_c_srep_norm_prefix 0 · corpus_unique_words 156 · derived_V 160
+  cli_vocab_default_prefix 50257 · vocab_over_allocation_factor 314.1
+  tests_passed_before 343 → tests_passed_after 358 (xfailed 1, skipped 0)
+  hinge_contribution_at_default_weight 6.235937e-4 vs float32_accumulation_noise 2.086e-7
+  loss_lm_final         4.926144 ± 2.670e-02  (n=5, sd_exactly_zero False)
+  loss_final            4.926171 ± 2.671e-02  (n=5, sd_exactly_zero False)
+  loss_srep_hinge_final 0.002719 ± 1.648e-03  (n=5, sd_exactly_zero False)
+
+mutations — each reverts exactly one fix; node ids collected from a full suite run, tree restored:
+  policy built unconditionally again   → test_train_does_not_stamp_a_policy_it_did_not_build      1 on, 0 off
+  --policy stops reaching train()      → test_the_policy_is_selectable_from_the_command_line      1 on, 0 off
+  srep-norm hinge back out             → test_the_hinge_{reaches_the_objective,has_a_documented_off_switch,is_on_by_default}  3 on, 0 off
+  ppl computed from the penalised loss → test_perplexity_is_a_perplexity_and_not_a_penalised_loss 1 on, 0 off
+  --vocab default back to 50257        → test_the_cli_vocab_default_reaches_the_derived_path      1 on, 0 off
+  from_registry reads eagerly again    → test_from_registry_{honours_an_override…,still_raises…}  2 on, 0 off
+
+BRIEF ERRORS:
+  1. 🔴 A FOURTH wrong line number, and it is inside the amendment that says every
+     citation was re-measured. The defect table gives (e)'s derived path as `:144`.
+     At 058e712 — the sha the amendment names — and at c39b498, `V = vocab if vocab
+     else 4 + len(build_vocab(probe))` is at **:193**. Line 144 is a blank line inside
+     `lm_loss`'s docstring at both shas. The brief warns "three briefs in a row have
+     carried a wrong line number"; this is the fourth, and it survived a pass whose
+     entire purpose was to catch it. Every OTHER citation I re-ran was exact,
+     including `model.py:424` and `rsr.py:236-243`.
+  2. 🔴 Defect (b)'s "four-line test" is not runnable as written. It says: "construct
+     with policy_name='rsr', assert the constructed policy is not a FIFOPolicy."
+     On an empty ledger nothing is constructed — `from_registry` raises
+     `UnmeasuredConstant`, so the assertion is never reached and the test errors
+     rather than passing. The claim that IS testable, and what I wrote, is the
+     disjunction: asking for "rsr" yields a non-FIFO policy **or** a loud refusal
+     naming E1, and never a FIFOPolicy.
+  3. 🔴 "Done when" contradicts "Less certain". "Done when" requires "0 failures and
+     0 new skips"; "Less certain" instructs "leave a failing test rather than a
+     speculative fix". Those cannot both hold. Resolved with `xfail(strict=True)`,
+     which `conftest.py` counts as neither passed nor skipped — so the record exists,
+     the suite stays green, and `strict=True` means it cannot go green unnoticed. The
+     brief should say which of the two it means.
+  4. "Done when … a PR is merged to main" is not a thing this lane can do. The
+     researcher role forbids choosing what happens next, this branch carries a second
+     researcher's commits, and the merge is the manager's call. NOT DONE, and not
+     reported as done.
+  5. Minor, and the manager already half-corrected it: (e)'s "unreachable from the
+     CLI" is the larger claim. I fixed and pinned the smaller true one — unreachable
+     **at the default**. `--vocab 0` always reached the derived path and still does.
+  6. Standing-file error, not the brief's: `.claude/agents/rsr-researcher.md`'s schema
+     note says `manifest.json`, `config_hash`, `seeds_actually_run`, `steps_done` and
+     `status` are "not yet written by scripts/ledger.py" and that reconciling them is
+     cycle 0's job. **Cycle 0 landed it.** `Ledger.__init__` writes all five and
+     `Ledger.manifest()` exists. The warning now instructs a researcher not to expect
+     fields the tree does produce. Same file says there is "no `.orchestrator/` in
+     this repo" while also telling me to report into `.orchestrator/outbox/` — the
+     directory exists, untracked.
+
+  Confirmed correct, re-run rather than read: 401 lines · tests/test_train_loss.py:31
+  imports it · FIFOPolicy() unconditional at :214 · policy_name param :184, frozen
+  config :224, run_id :228 · no --policy in the flag table · grep -c srep_norm = 0 ·
+  --vocab at :369 · policy.attribution() at :315 · build_param_groups(model, None, …)
+  at :210 · rsr.py:236-243 is the eager kw build, exactly as the manager revalidated ·
+  model.py:424 is the penalty assignment · 156 unique words.
+
+THE VACUITY FINDING — my own test, caught by the rule that exists for it:
+  `test_the_hinge_is_on_by_default` asserted `loss > loss_lm`. It SURVIVES the hinge
+  mutation. With `loss = lm` the two still differ by ~2.1e-7, because `loss` is a
+  float32 tensor accumulated across 48 sentence steps inside `run_policy_loop` while
+  `loss_lm` is a Python-float sum of the same 48 terms. A strict `>` against
+  accumulation noise is not an assertion about the hinge. Rewritten with a **measured**
+  margin: the hinge contributes 6.236e-4 at the default weight, three thousand times
+  the noise, so 1e-4 sits between them with room on both sides. The mutation now
+  reddens 3 of 3. Reported rather than quietly repaired — S0-02 had the same thing
+  happen to Bar 3, and it is now twice in two cycles.
+
+A DEFECT THE FIX FOR (c) WOULD HAVE INTRODUCED, had I not pinned it:
+  `ppl` was `float(torch.exp(loss.detach() / steps_per_stream))`. That is a perplexity
+  only while `loss` IS the LM loss. The moment a regulariser enters the objective the
+  field keeps its name and stops being the thing the name says — a new silent defect
+  shipped inside the fix for an old one. It now reads `loss_lm`, is identical to the
+  old expression at weight 0, and has its own mutation. `loss_real_tokens`, cycle 1's
+  common yardstick, is untouched and remains hinge-free.
+
+⚠️ CONSEQUENCE FOR EXISTING LEDGERS — the manager should decide, not me:
+  (c) changes the training objective, so `loss` and `ppl` from runs before 3b02ee2 are
+  not comparable with runs after it. `loss_real_tokens` is unaffected and remains the
+  cross-arm yardstick. `srep_norm_reg_weight` is now in `frozen`, so every config hash
+  and every run_id changes — loudly, which is the point: two different objectives
+  cannot share a hash. Cycle 1's `experiments/cycle-01-masked-loss/` results were
+  produced under the old objective.
+
+UNANSWERED BY THE BRIEF:
+  1. What `steps_per_epoch` should be when building an RSR policy in this loop. It
+     derives `T_warm`. I pass `float(iters)` — a choice, not a measurement, documented
+     in `build_policy`'s docstring rather than hidden. It is inert today (the registry
+     refuses first) and stops being inert the day E1 logs.
+  2. Whether the hinge should default ON. I read `docs/spec-corrections.md` correction
+     15 item 4 — "the hinge penalty is in TG's loss" — plus §3.1's "the base model be
+     unmodified", and defaulted it on. If the intent was to keep the loop's objective
+     frozen against cycle 1's runs, that is the owner's call and flipping the default
+     is a one-line change with a test either way.
+  3. Nothing in the brief says which scope `build_policy` should read the registry in.
+     I hardcoded `"synthetic"` as a keyword-default, matching what this loop's corpus
+     is. `M` and `S` have no global value (CLAUDE.md), so this will need revisiting
+     for `corpora` and `e7`.
+  4. The brief never says whether `masked_loss` should also get a CLI flag. It is a
+     `train()` parameter with no `--masked-loss`, which is structurally the same defect
+     as (b) — the unmasked control arm is unreachable from the command line. It sits
+     against defect (a), which cycle 1 owns, so I did not touch it. Flagging, not fixing.
+
+BELIEVED, NOT VERIFIED:
+  1. That adding the hinge does not break `test_reduction.py` or `test_fidelity.py`.
+     Both currently pass in the suite, but neither exercises `train()` — they are not
+     evidence about the objective. The fidelity fixtures are the real check and I did
+     not regenerate them.
+  2. That `build_policy("rsr", …)` returns a working `RSRPolicy` once E1 logs. I could
+     not execute that path: the registry refuses, correctly, and I did not fabricate a
+     populated registry to find out. The construction arguments are believed right by
+     reading `RSRPolicy.__init__`, not by running it.
+  3. That `value_head=None` into `build_param_groups` is genuinely a latent defect
+     rather than a non-issue. I verified only that nothing constructs a head today.
+     The strict xfail records the belief; it does not test the μP consequence.
+  4. That my 5-seed spread generalises. It is 3 iterations at d=32 on CPU — enough to
+     show the seeds reach the RNG and the sd is not 0.0000, and nothing more.
+  5. That regenerating `docs/mutation-battery.md` did not collide with the concurrent
+     researcher. HEAD moved under me once during this cycle; I re-verified my files
+     were untouched, pushed cleanly, and `git status` is clean but for a pre-existing
+     untracked `uv.lock` that is not mine.
+
+NEXT (proposed, not decided):
+  1. **Defect (d) is now unblocked.** The brief says it is downstream of (b) and cycle
+     4 owns it. (b) is closed: `build_policy` exists and a non-FIFO policy is now
+     constructible in principle, so `policy.attribution()` vs `attribution_counts()`
+     at `:315` can be fixed against a real policy rather than against `None`.
+  2. **Decide the ledger-comparability question above** before any further training
+     run, so nobody joins a pre-3b02ee2 `loss` against a post one.
+  3. **Fix the brief's `:144` citation and the "Done when"/"Less certain"
+     contradiction** in the file itself, since briefs here outlive their cycle.
+  4. `--masked-loss` as a flag, if the owner wants the unmasked control arm drivable
+     from the CLI — smallest possible follow-up, same shape as (b)'s CLI half.
+status: RETURNED
 run_id: s0-02-capture-bridge
 updated: 2026-09-20T00:00:00Z
 provenance: f85be35 (measurements taken at c81ac35) · mps · Apple M4 Max 64 GB · torch 2.14.0 · random-token synthetic batch, seeds 0,1,2
