@@ -1,0 +1,3434 @@
+{
+  "run_id": "decisive-shuffle",
+  "cycle": null,
+  "question": "On S0-03's rewardable corpus, does handing a row another document's entire memory move the real-token loss, per arm (A corpus only, B masked loss, C masked + hinge), in units of a live decoy?",
+  "started_utc": "2026-09-21T11:28:59Z",
+  "provenance": {
+    "git_sha": "90438f3d2a9c1998cca37069a7b4f7ded649a4b9",
+    "dirty": true,
+    "python": "3.14.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 300,
+  "steps_done": 300,
+  "status": "ok",
+  "config_hash": "2a299e4afc2dc074ff375d4a38ee8684ae9a7cc3b5bd638e166185bbda487c8d",
+  "manifest_written_utc": "2026-09-21T11:28:59Z",
+  "commands": [
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm A --seed 0 --iters 300 --out-dir runs/decisive-shuffle/armA/seed0",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 84efe3abd13c1b82",
+      "at_utc": "2026-09-21T12:44:04Z"
+    },
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm A --seed 1 --iters 300 --out-dir runs/decisive-shuffle/armA/seed1",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash dfe2f4fb2ac9fb7c",
+      "at_utc": "2026-09-21T12:44:18Z"
+    },
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm A --seed 2 --iters 300 --out-dir runs/decisive-shuffle/armA/seed2",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 22954dab9a0664e2",
+      "at_utc": "2026-09-21T12:44:32Z"
+    },
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm B --seed 0 --iters 300 --out-dir runs/decisive-shuffle/armB/seed0",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 430ca59a03bea373",
+      "at_utc": "2026-09-21T12:44:45Z"
+    },
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm B --seed 1 --iters 300 --out-dir runs/decisive-shuffle/armB/seed1",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 260b799869b6926c",
+      "at_utc": "2026-09-21T12:44:59Z"
+    },
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm B --seed 2 --iters 300 --out-dir runs/decisive-shuffle/armB/seed2",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 52ceabc0416204a4",
+      "at_utc": "2026-09-21T12:45:13Z"
+    },
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm C --seed 0 --iters 300 --out-dir runs/decisive-shuffle/armC/seed0",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 1a3105d35d79d289",
+      "at_utc": "2026-09-21T12:45:27Z"
+    },
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm C --seed 1 --iters 300 --out-dir runs/decisive-shuffle/armC/seed1",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 12c5c53a1b832a84",
+      "at_utc": "2026-09-21T12:45:41Z"
+    },
+    {
+      "argv": "uv run python experiments/decisive-shuffle/run.py --single --arm C --seed 2 --iters 300 --out-dir runs/decisive-shuffle/armC/seed2",
+      "entry_point": "experiments/decisive-shuffle/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 2dd802f230dcd2fb",
+      "at_utc": "2026-09-21T12:45:54Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "seeds_actually_run_per_arm",
+      "kind": "observation",
+      "value": {
+        "A": [
+          0,
+          1,
+          2
+        ],
+        "B": [
+          0,
+          1,
+          2
+        ],
+        "C": [
+          0,
+          1,
+          2
+        ]
+      },
+      "how": "run_trainings + verify_arm"
+    },
+    {
+      "key": "training_threads_per_process",
+      "kind": "observation",
+      "value": {
+        "armA.seed0": 1,
+        "armA.seed1": 1,
+        "armA.seed2": 1,
+        "armB.seed0": 1,
+        "armB.seed1": 1,
+        "armB.seed2": 1,
+        "armC.seed0": 1,
+        "armC.seed1": 1,
+        "armC.seed2": 1
+      },
+      "how": "torch.get_num_threads() inside each training subprocess"
+    },
+    {
+      "key": "armA.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0004656237532899539,
+        0.0036474990209377795,
+        0.004921042294585448
+      ],
+      "mean": 0.0030113883562710602,
+      "sd": 0.0022948128851405223,
+      "how": "PRIMARY. mean_abs_token_delta(trained) / mean_abs_token_delta(untrained decoy, same seed, same config) on #17's measurement batch (first 8 training docs) -- PREREG decision rule; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0006885979434437145,
+        0.0033682191805699284,
+        0.0040553607237735845
+      ],
+      "mean": 0.0027040592825957424,
+      "sd": 0.0017789334395393887,
+      "how": "DESCRIPTIVE, no verdict (Amendment 1): the same on held-out docs 64..71",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.random_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.075437533301628,
+        3.2802179575848043,
+        1.9382831763457566
+      ],
+      "mean": 2.097979555744063,
+      "sd": 1.1110316737250434,
+      "how": "DESCRIPTIVE. mean_abs_token_delta(trained, matched-norm Gaussian replacement, generator seed 10000+seed) / mean_abs_token_delta(decoy shuffle) -- PREREG Secondary 2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.cosine_trained",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9999794164948647,
+        0.9997008971423333,
+        0.9989476769937319
+      ],
+      "mean": 0.9995426635436434,
+      "sd": 0.0005337602489556815,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.cosine_decoy",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.349291750876764,
+        0.755406207635249,
+        0.5901874710216195
+      ],
+      "mean": 0.5649618098445441,
+      "sd": 0.20422900989679527,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.reading.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        4.755006266768551e-06,
+        1.98123886521662e-05,
+        3.045744664417558e-05
+      ],
+      "mean": 1.834161385437011e-05,
+      "sd": 1.2914187710340705e-05,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field mean_abs_token_delta",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.reading.delta_nats_per_token",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.608691823142607e-07,
+        8.271099396495174e-07,
+        -9.299683196850594e-07
+      ],
+      "mean": 8.600360075957288e-08,
+      "sd": 9.102166326205559e-07,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field delta_nats_per_token",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.reading.loss_real_tokens_honest_memory",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.6651772027886265,
+        1.7087089544988199,
+        1.6680126362811092
+      ],
+      "mean": 1.6806329311895185,
+      "sd": 0.02435584600092755,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field loss_real_tokens_honest_memory",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.reading.n_tokens_moved",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1240.0,
+        1345.0,
+        1294.0
+      ],
+      "mean": 1293.0,
+      "sd": 52.507142371300304,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field n_tokens_moved",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.decoy.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.010212121338679873,
+        0.005431773535355849,
+        0.006189226757446786
+      ],
+      "mean": 0.007277707210494169,
+      "sd": 0.0025693430196620077,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; untrained decoy; batch train",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.train.random_decoy_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.761611518312946,
+        4.052129349864621,
+        3.5718309844005
+      ],
+      "mean": 3.1285239508593556,
+      "sd": 1.207894378103621,
+      "how": "DESCRIPTIVE. decoy's random-replacement A / decoy's shuffle A",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.random_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.1835981050647792,
+        2.831254505966039,
+        1.7995359565965234
+      ],
+      "mean": 1.9381295225424473,
+      "sd": 0.8325256970502042,
+      "how": "DESCRIPTIVE. mean_abs_token_delta(trained, matched-norm Gaussian replacement, generator seed 10000+seed) / mean_abs_token_delta(decoy shuffle) -- PREREG Secondary 2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.cosine_trained",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9999801166801104,
+        0.9996641584916807,
+        0.9989349449642083
+      ],
+      "mean": 0.9995264067119999,
+      "sd": 0.000536029517409612,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.cosine_decoy",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32858470435129744,
+        0.7662682798217599,
+        0.5768028186792905
+      ],
+      "mean": 0.5572186009507826,
+      "sd": 0.21949802788904554,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.reading.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        6.416211910682392e-06,
+        2.1220980445865676e-05,
+        2.6182474300213123e-05
+      ],
+      "mean": 1.7939888885587063e-05,
+      "sd": 1.0283503954545014e-05,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field mean_abs_token_delta",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.reading.delta_nats_per_token",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -1.9412431462306756e-07,
+        9.198783053054882e-07,
+        -1.0082102375186253e-06
+      ],
+      "mean": -9.415208227873488e-08,
+      "sd": 9.679241667983786e-07,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field delta_nats_per_token",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.reading.loss_real_tokens_honest_memory",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.662247200916676,
+        1.734358373565075,
+        1.6454970036868666
+      ],
+      "mean": 1.6807008593895392,
+      "sd": 0.047217463903017336,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field loss_real_tokens_honest_memory",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.reading.n_tokens_moved",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1240.0,
+        1320.0,
+        1298.0
+      ],
+      "mean": 1286.0,
+      "sd": 41.32795663954365,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field n_tokens_moved",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.decoy.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.009317791276858277,
+        0.006300356155051324,
+        0.0064562627306430755
+      ],
+      "mean": 0.0073581367208508915,
+      "sd": 0.0016988999968328216,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; untrained decoy; batch heldout",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.random_decoy_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.879869437170714,
+        3.5182287858155368,
+        3.4583289173016794
+      ],
+      "mean": 2.9521423800959767,
+      "sd": 0.9290984590769683,
+      "how": "DESCRIPTIVE. decoy's random-replacement A / decoy's shuffle A",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.answer_all.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.00040204447411904795,
+        0.0032924287502480954,
+        0.0037627694438559255
+      ],
+      "mean": 0.0024857475560743562,
+      "sd": 0.0018197991626353748,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket answer_all (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.answer_all.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        150.0,
+        145.0,
+        147.0
+      ],
+      "mean": 147.33333333333334,
+      "sd": 2.5166114784235836,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.answer_all.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.784296859105428,
+        2.871255032769565,
+        2.7522621333193618
+      ],
+      "mean": 2.802604675064785,
+      "sd": 0.061572799382461116,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_1.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0003816399767077192,
+        0.001221918687723848,
+        0.0033000845201503004
+      ],
+      "mean": 0.0016345477281939557,
+      "sd": 0.001502340401529196,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_1 (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_1.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34.0,
+        26.0,
+        18.0
+      ],
+      "mean": 26.0,
+      "sd": 8.0,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_1.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.759547268643099,
+        2.751322177740244,
+        2.728221204545763
+      ],
+      "mean": 2.746363550309702,
+      "sd": 0.016241045608389598,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_2_to_M.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.00035690541850555706,
+        0.00415031095066274,
+        0.0040861268196520865
+      ],
+      "mean": 0.0028644477296067947,
+      "sd": 0.00217183245950064,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_2_to_M (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_2_to_M.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        85.0,
+        87.0,
+        98.0
+      ],
+      "mean": 90.0,
+      "sd": 7.0,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_2_to_M.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8019839062410243,
+        2.908817346068634,
+        2.7487852524737924
+      ],
+      "mean": 2.81986216826115,
+      "sd": 0.08150025726789004,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_gt_M.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0006419916272347777,
+        0.004575603223410032,
+        0.0030738217016810223
+      ],
+      "mean": 0.002763805517441944,
+      "sd": 0.0019850459876936673,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_gt_M (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_gt_M.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        31.0,
+        32.0,
+        31.0
+      ],
+      "mean": 31.333333333333332,
+      "sd": 0.5773502691896258,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.heldout.answer.gap_gt_M.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7629448290794127,
+        2.8665779381990433,
+        2.777212812054542
+      ],
+      "mean": 2.8022451931109997,
+      "sd": 0.056168678126399585,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armA.seed0.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed0.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed0.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed0.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed0.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.010212121338679873,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed0.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed0.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed0.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed0.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armA.seed0.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9766381978988647,
+        0.9646709561347961,
+        0.9690241813659668,
+        0.9753794074058533,
+        0.9784626960754395,
+        0.9869962334632874
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.00019168853759765625,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.00013136863708496094,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed0.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed0.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed0.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed0.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.009317791276858277,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed0.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed0.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed0.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed0.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armA.seed0.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9766381978988647,
+        0.9646709561347961,
+        0.9690241813659668,
+        0.9753794074058533,
+        0.9784626960754395,
+        0.9869962334632874
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.00012445449829101562,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed0.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.00015854835510253906,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed1.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed1.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed1.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed1.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.005431773535355849,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed1.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed1.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed1.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed1.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armA.seed1.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9822977185249329,
+        0.9842718839645386,
+        0.9825693964958191,
+        0.9861360788345337,
+        0.9855994582176208,
+        0.9800775051116943
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.002263665199279785,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.0016741752624511719,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed1.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed1.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed1.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed1.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.006300356155051324,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed1.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed1.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed1.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed1.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armA.seed1.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9822977185249329,
+        0.9842718839645386,
+        0.9825693964958191,
+        0.9861360788345337,
+        0.9855994582176208,
+        0.9800775051116943
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.001512289047241211,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed1.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.0013272762298583984,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed2.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed2.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed2.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed2.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.006189226757446786,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed2.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed2.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed2.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed2.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armA.seed2.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9728991389274597,
+        0.9699345231056213,
+        0.9550350904464722,
+        0.9709922671318054,
+        0.9833287596702576,
+        0.9631325006484985
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.0007598400115966797,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.0006515979766845703,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed2.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armA.seed2.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed2.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armA.seed2.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0064562627306430755,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed2.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armA.seed2.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed2.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armA.seed2.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armA.seed2.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9728991389274597,
+        0.9699345231056213,
+        0.9550350904464722,
+        0.9709922671318054,
+        0.9833287596702576,
+        0.9631325006484985
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.0006587505340576172,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.seed2.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.0005712509155273438,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armA.verdict",
+      "kind": "observation",
+      "value": {
+        "outcome": "inert",
+        "detail": "every seed has ratio <= 0.01: {0: 0.0004656237532899539, 1: 0.0036474990209377795, 2: 0.004921042294585448}"
+      },
+      "how": "decide_arm: PREREG decision rule per arm on the train batch"
+    },
+    {
+      "key": "armB.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        6.742341357985247,
+        14.730651260527619,
+        6.502355832069447
+      ],
+      "mean": 9.325116150194104,
+      "sd": 4.682868312791696,
+      "how": "PRIMARY. mean_abs_token_delta(trained) / mean_abs_token_delta(untrained decoy, same seed, same config) on #17's measurement batch (first 8 training docs) -- PREREG decision rule; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        7.238860867866243,
+        13.29522409793953,
+        6.09625566868394
+      ],
+      "mean": 8.876780211496571,
+      "sd": 3.8688979624091244,
+      "how": "DESCRIPTIVE, no verdict (Amendment 1): the same on held-out docs 64..71",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.random_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        10.370114170281209,
+        20.02282328589666,
+        11.84790971865913
+      ],
+      "mean": 14.080282391612334,
+      "sd": 5.199164753196669,
+      "how": "DESCRIPTIVE. mean_abs_token_delta(trained, matched-norm Gaussian replacement, generator seed 10000+seed) / mean_abs_token_delta(decoy shuffle) -- PREREG Secondary 2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.cosine_trained",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5164200096991973,
+        0.41246485575877395,
+        0.5208729223548123
+      ],
+      "mean": 0.48325259593759456,
+      "sd": 0.06134439850139367,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.cosine_decoy",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.349291750876764,
+        0.755406207635249,
+        0.5901874710216195
+      ],
+      "mean": 0.5649618098445441,
+      "sd": 0.20422900989679527,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.reading.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06885360805454498,
+        0.0800135616754902,
+        0.04024455470228438
+      ],
+      "mean": 0.06303724147743985,
+      "sd": 0.020512583187599083,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field mean_abs_token_delta",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.reading.delta_nats_per_token",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.01575989656616339,
+        0.01584249800545834,
+        0.004231687854604926
+      ],
+      "mean": 0.011944694142075551,
+      "sd": 0.006679787065645464,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field delta_nats_per_token",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.reading.loss_real_tokens_honest_memory",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.5838882922846473,
+        1.536068764785471,
+        1.5983296761076182
+      ],
+      "mean": 1.5727622443925788,
+      "sd": 0.032587527920026754,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field loss_real_tokens_honest_memory",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.reading.n_tokens_moved",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1700.0,
+        1699.0,
+        1678.0
+      ],
+      "mean": 1692.3333333333333,
+      "sd": 12.423096769056148,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field n_tokens_moved",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.decoy.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.010212121338679873,
+        0.005431773535355849,
+        0.006189226757446786
+      ],
+      "mean": 0.007277707210494169,
+      "sd": 0.0025693430196620077,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; untrained decoy; batch train",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.train.random_decoy_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.761611518312946,
+        4.052129349864621,
+        3.5718309844005
+      ],
+      "mean": 3.1285239508593556,
+      "sd": 1.207894378103621,
+      "how": "DESCRIPTIVE. decoy's random-replacement A / decoy's shuffle A",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.random_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        11.976146612858825,
+        14.847264558873944,
+        11.008002011109717
+      ],
+      "mean": 12.610471060947495,
+      "sd": 1.996687220560224,
+      "how": "DESCRIPTIVE. mean_abs_token_delta(trained, matched-norm Gaussian replacement, generator seed 10000+seed) / mean_abs_token_delta(decoy shuffle) -- PREREG Secondary 2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.cosine_trained",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.4878444704720823,
+        0.42098287660474143,
+        0.44301683306839185
+      ],
+      "mean": 0.4506147267150718,
+      "sd": 0.034072190632831394,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.cosine_decoy",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32858470435129744,
+        0.7662682798217599,
+        0.5768028186792905
+      ],
+      "mean": 0.5572186009507826,
+      "sd": 0.21949802788904554,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.reading.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06745019464899481,
+        0.08376464697824,
+        0.0393590282701957
+      ],
+      "mean": 0.0635246232991435,
+      "sd": 0.02246157443342148,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field mean_abs_token_delta",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.reading.delta_nats_per_token",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.0026596447409217294,
+        0.006120588192660037,
+        0.0026536665803733595
+      ],
+      "mean": 0.0020382033440372225,
+      "sd": 0.004422354445139996,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field delta_nats_per_token",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.reading.loss_real_tokens_honest_memory",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.6899734936458748,
+        1.6727082096726942,
+        1.6832946691450847
+      ],
+      "mean": 1.6819921241545515,
+      "sd": 0.008706030970420147,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field loss_real_tokens_honest_memory",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.reading.n_tokens_moved",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1696.0,
+        1691.0,
+        1683.0
+      ],
+      "mean": 1690.0,
+      "sd": 6.557438524302,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field n_tokens_moved",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.decoy.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.009317791276858277,
+        0.006300356155051324,
+        0.0064562627306430755
+      ],
+      "mean": 0.0073581367208508915,
+      "sd": 0.0016988999968328216,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; untrained decoy; batch heldout",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.random_decoy_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.879869437170714,
+        3.5182287858155368,
+        3.4583289173016794
+      ],
+      "mean": 2.9521423800959767,
+      "sd": 0.9290984590769683,
+      "how": "DESCRIPTIVE. decoy's random-replacement A / decoy's shuffle A",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.answer_all.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        18.97796206435803,
+        46.93732815843254,
+        12.049408613257
+      ],
+      "mean": 25.988232945349193,
+      "sd": 18.470237029240174,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket answer_all (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.answer_all.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        150.0,
+        145.0,
+        147.0
+      ],
+      "mean": 147.33333333333334,
+      "sd": 2.5166114784235836,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.answer_all.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.869741930961609,
+        2.8732277648202302,
+        2.970198089168185
+      ],
+      "mean": 2.904389261650008,
+      "sd": 0.057018760894203574,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_1.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        16.387875558753926,
+        25.753611859456534,
+        12.89794468836756
+      ],
+      "mean": 18.34647736885934,
+      "sd": 6.6478669805709,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_1 (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_1.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34.0,
+        26.0,
+        18.0
+      ],
+      "mean": 26.0,
+      "sd": 8.0,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_1.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7658306570614086,
+        2.6017995064075174,
+        2.8082743187745414
+      ],
+      "mean": 2.725301494081156,
+      "sd": 0.10904091811980196,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_2_to_M.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        17.933499035709687,
+        57.272701103861024,
+        12.710232004666294
+      ],
+      "mean": 29.305477381412334,
+      "sd": 24.360723135315972,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_2_to_M (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_2_to_M.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        85.0,
+        87.0,
+        98.0
+      ],
+      "mean": 90.0,
+      "sd": 7.0,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_2_to_M.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.9317800101111917,
+        2.8792539149865335,
+        3.022761045670023
+      ],
+      "mean": 2.9445983235892492,
+      "sd": 0.07260720356526854,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_gt_M.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        28.490556253396583,
+        54.43475976000986,
+        9.592307208162797
+      ],
+      "mean": 30.83920774052308,
+      "sd": 22.5132963062309,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_gt_M (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_gt_M.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        31.0,
+        32.0,
+        31.0
+      ],
+      "mean": 31.333333333333332,
+      "sd": 0.5773502691896258,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.heldout.answer.gap_gt_M.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.81360472402265,
+        3.0773796290159225,
+        2.8980515772296536
+      ],
+      "mean": 2.929678643422742,
+      "sd": 0.13470153530319906,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armB.seed0.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed0.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed0.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed0.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed0.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.010212121338679873,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed0.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed0.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed0.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed0.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armB.seed0.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9372527003288269,
+        0.9617108106613159,
+        0.9950621128082275,
+        1.0101635456085205,
+        1.0207266807556152,
+        1.0178433656692505
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 1.1903302669525146,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.8916029930114746,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed0.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed0.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed0.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed0.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.009317791276858277,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed0.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed0.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed0.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed0.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armB.seed0.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9372527003288269,
+        0.9617108106613159,
+        0.9950621128082275,
+        1.0101635456085205,
+        1.0207266807556152,
+        1.0178433656692505
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.7707211971282959,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed0.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.8136987686157227,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed1.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed1.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed1.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed1.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.005431773535355849,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed1.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed1.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed1.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed1.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armB.seed1.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9436208605766296,
+        0.9696061611175537,
+        0.9870625138282776,
+        1.0111091136932373,
+        1.0451037883758545,
+        1.027970314025879
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 3.4823296666145325,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -1.0228981971740723,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed1.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed1.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed1.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed1.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.006300356155051324,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed1.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed1.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed1.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed1.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armB.seed1.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9436208605766296,
+        0.9696061611175537,
+        0.9870625138282776,
+        1.0111091136932373,
+        1.0451037883758545,
+        1.027970314025879
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 3.359245538711548,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed1.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -1.4467945098876953,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed2.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed2.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed2.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed2.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.006189226757446786,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed2.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed2.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed2.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed2.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armB.seed2.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9341961741447449,
+        0.9488121271133423,
+        0.9901567697525024,
+        0.9781622290611267,
+        1.002539038658142,
+        1.00450599193573
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.6988415718078613,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.4873991012573242,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed2.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armB.seed2.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed2.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armB.seed2.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0064562627306430755,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed2.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armB.seed2.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed2.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armB.seed2.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armB.seed2.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9341961741447449,
+        0.9488121271133423,
+        0.9901567697525024,
+        0.9781622290611267,
+        1.002539038658142,
+        1.00450599193573
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.6867527961730957,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.seed2.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.6631524562835693,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armB.verdict",
+      "kind": "observation",
+      "value": {
+        "outcome": "live",
+        "detail": "some seed has ratio >= 0.1: {0: 6.742341357985247, 1: 14.730651260527619, 2: 6.502355832069447}"
+      },
+      "how": "decide_arm: PREREG decision rule per arm on the train batch"
+    },
+    {
+      "key": "armC.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.988830321556934,
+        14.561983678608987,
+        5.672022916377245
+      ],
+      "mean": 7.740945638847722,
+      "sd": 6.057623344194264,
+      "how": "PRIMARY. mean_abs_token_delta(trained) / mean_abs_token_delta(untrained decoy, same seed, same config) on #17's measurement batch (first 8 training docs) -- PREREG decision rule; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.1033438804923463,
+        15.64982358662546,
+        6.579350697430331
+      ],
+      "mean": 8.444172721516045,
+      "sd": 6.477785820806279,
+      "how": "DESCRIPTIVE, no verdict (Amendment 1): the same on held-out docs 64..71",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.random_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        5.889915549586126,
+        21.957599377280022,
+        11.838302443158698
+      ],
+      "mean": 13.228605790008283,
+      "sd": 8.123565931527846,
+      "how": "DESCRIPTIVE. mean_abs_token_delta(trained, matched-norm Gaussian replacement, generator seed 10000+seed) / mean_abs_token_delta(decoy shuffle) -- PREREG Secondary 2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.cosine_trained",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.4658731414744205,
+        0.34937486620662916,
+        0.49192172864878675
+      ],
+      "mean": 0.43572324544327884,
+      "sd": 0.07590562674164768,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.cosine_decoy",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.349291750876764,
+        0.755406207635249,
+        0.5901874710216195
+      ],
+      "mean": 0.5649618098445441,
+      "sd": 0.20422900989679527,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.reading.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.030522297904464993,
+        0.07909739756775211,
+        0.0351054360028934
+      ],
+      "mean": 0.048241710491703504,
+      "sd": 0.026819887348916875,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field mean_abs_token_delta",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.reading.delta_nats_per_token",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.004601635275850224,
+        0.01881170676605226,
+        0.0037415289158229115
+      ],
+      "mean": 0.009051623652575133,
+      "sd": 0.008463413172244747,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field delta_nats_per_token",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.reading.loss_real_tokens_honest_memory",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.5905620020816185,
+        1.5338672023602282,
+        1.575186238123435
+      ],
+      "mean": 1.566538480855094,
+      "sd": 0.029320007813628687,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field loss_real_tokens_honest_memory",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.reading.n_tokens_moved",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1699.0,
+        1702.0,
+        1680.0
+      ],
+      "mean": 1693.6666666666667,
+      "sd": 11.930353445448855,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch train; field n_tokens_moved",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.decoy.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.010212121338679873,
+        0.005431773535355849,
+        0.006189226757446786
+      ],
+      "mean": 0.007277707210494169,
+      "sd": 0.0025693430196620077,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; untrained decoy; batch train",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.train.random_decoy_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.761611518312946,
+        4.052129349864621,
+        3.5718309844005
+      ],
+      "mean": 3.1285239508593556,
+      "sd": 1.207894378103621,
+      "how": "DESCRIPTIVE. decoy's random-replacement A / decoy's shuffle A",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.random_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        6.838144001414244,
+        16.538474765269406,
+        10.972257270302224
+      ],
+      "mean": 11.449625345661957,
+      "sd": 4.867752504141743,
+      "how": "DESCRIPTIVE. mean_abs_token_delta(trained, matched-norm Gaussian replacement, generator seed 10000+seed) / mean_abs_token_delta(decoy shuffle) -- PREREG Secondary 2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.cosine_trained",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.42131191411454066,
+        0.33139771808571167,
+        0.44711568624942283
+      ],
+      "mean": 0.3999417728165584,
+      "sd": 0.0607468043876072,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.cosine_decoy",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32858470435129744,
+        0.7662682798217599,
+        0.5768028186792905
+      ],
+      "mean": 0.5572186009507826,
+      "sd": 0.21949802788904554,
+      "how": "DESCRIPTIVE. memory_liveness.cross_row_cosine: mean over (step, slot valid in every row) of the mean off-diagonal cosine between rows' memory vectors",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.reading.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0289163105387431,
+        0.09859946235946311,
+        0.04247801669964997
+      ],
+      "mean": 0.05666459653261873,
+      "sd": 0.03694427827736354,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field mean_abs_token_delta",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.reading.delta_nats_per_token",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.0008653109989864571,
+        0.016687301669087384,
+        0.006185384136467631
+      ],
+      "mean": 0.007335791602189519,
+      "sd": 0.00883267404989837,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field delta_nats_per_token",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.reading.loss_real_tokens_honest_memory",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.6795749751707292,
+        1.6489729453721305,
+        1.6689402041754897
+      ],
+      "mean": 1.6658293749061164,
+      "sd": 0.01553637670134105,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field loss_real_tokens_honest_memory",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.reading.n_tokens_moved",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1697.0,
+        1692.0,
+        1693.0
+      ],
+      "mean": 1694.0,
+      "sd": 2.6457513110645907,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; batch heldout; field n_tokens_moved",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.decoy.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.009317791276858277,
+        0.006300356155051324,
+        0.0064562627306430755
+      ],
+      "mean": 0.0073581367208508915,
+      "sd": 0.0016988999968328216,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU; untrained decoy; batch heldout",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.random_decoy_ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.879869437170714,
+        3.5182287858155368,
+        3.4583289173016794
+      ],
+      "mean": 2.9521423800959767,
+      "sd": 0.9290984590769683,
+      "how": "DESCRIPTIVE. decoy's random-replacement A / decoy's shuffle A",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.answer_all.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        5.31521181709729,
+        68.34682076704878,
+        17.852876802544678
+      ],
+      "mean": 30.504969795563582,
+      "sd": 33.36618834288537,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket answer_all (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.answer_all.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        150.0,
+        145.0,
+        147.0
+      ],
+      "mean": 147.33333333333334,
+      "sd": 2.5166114784235836,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.answer_all.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.850542416572571,
+        2.765155626165456,
+        2.9416938505205166
+      ],
+      "mean": 2.8524639644195147,
+      "sd": 0.08828479724281808,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_1.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        4.673664020558525,
+        37.346493809364944,
+        18.828690396674908
+      ],
+      "mean": 20.282949408866127,
+      "sd": 16.384889488732707,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_1 (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_1.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34.0,
+        26.0,
+        18.0
+      ],
+      "mean": 26.0,
+      "sd": 8.0,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_1.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8462699932210587,
+        2.5096322343899655,
+        2.4722838501135507
+      ],
+      "mean": 2.609395359241525,
+      "sd": 0.20598766860959963,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_2_to_M.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        5.273718290968534,
+        80.47906637363123,
+        18.456278598988764
+      ],
+      "mean": 34.736354421196175,
+      "sd": 40.15895599540943,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_2_to_M (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_2_to_M.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        85.0,
+        87.0,
+        98.0
+      ],
+      "mean": 90.0,
+      "sd": 7.0,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_2_to_M.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.899855132663951,
+        2.7309027526570464,
+        3.0185289480248274
+      ],
+      "mean": 2.883095611115275,
+      "sd": 0.14454365512654518,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_gt_M.ratio",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        6.700382009901601,
+        90.13267500391433,
+        15.491736501007948
+      ],
+      "mean": 37.441597838274625,
+      "sd": 45.843038600245755,
+      "how": "SECONDARY 1, descriptive. The shuffle ratio restricted to the answer-token supervision mask (loop.answer_targets) on held-out docs, bucket gap_gt_M (Amendment 1)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_gt_M.n_targets",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        31.0,
+        32.0,
+        31.0
+      ],
+      "mean": 31.333333333333332,
+      "sd": 0.5773502691896258,
+      "how": "count of answer targets in the bucket, held-out 8 docs",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.heldout.answer.gap_gt_M.honest_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7200160141914123,
+        3.06589338183403,
+        2.971356445743192
+      ],
+      "mean": 2.9190886139228778,
+      "sd": 0.1787644624757508,
+      "how": "trained model's answer-token NLL with its own memory, held-out",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "armC.seed0.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed0.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed0.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed0.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed0.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.010212121338679873,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed0.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed0.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed0.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed0.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armC.seed0.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9081248641014099,
+        0.9668174386024475,
+        0.9897753000259399,
+        1.0046985149383545,
+        1.0218411684036255,
+        1.021894931793213
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.4648458957672119,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.4996206760406494,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed0.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed0.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed0.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed0.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.009317791276858277,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed0.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed0.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed0.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed0.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armC.seed0.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9081248641014099,
+        0.9668174386024475,
+        0.9897753000259399,
+        1.0046985149383545,
+        1.0218411684036255,
+        1.021894931793213
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.3147909641265869,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed0.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.5230438709259033,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed1.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed1.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed1.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed1.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.005431773535355849,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed1.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed1.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed1.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed1.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armC.seed1.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.931284487247467,
+        0.9571541547775269,
+        0.9939753413200378,
+        1.0143803358078003,
+        1.0439422130584717,
+        1.0604839324951172
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 2.0235493183135986,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -1.5427112579345703,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed1.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed1.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed1.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed1.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.006300356155051324,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed1.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed1.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed1.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed1.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armC.seed1.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.931284487247467,
+        0.9571541547775269,
+        0.9939753413200378,
+        1.0143803358078003,
+        1.0439422130584717,
+        1.0604839324951172
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 2.713787317276001,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed1.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -1.7152328491210938,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.train.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed2.train.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed2.train.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed2.train.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed2.train.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.006189226757446786,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed2.train.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed2.train.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed2.train.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed2.train.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armC.seed2.train.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9188711047172546,
+        0.9468342065811157,
+        1.0003089904785156,
+        1.0118038654327393,
+        1.0384479761123657,
+        1.040750503540039
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.train.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.train.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.train.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.train.reading.max_token_delta",
+      "kind": "observation",
+      "value": 0.7806092500686646,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.train.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.49570512771606445,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.heldout.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed2.heldout.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_memory_disabled"
+    },
+    {
+      "key": "armC.seed2.heldout.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed2.heldout.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_own_memory"
+    },
+    {
+      "key": "armC.seed2.heldout.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0064562627306430755,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed2.heldout.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_live_decoy"
+    },
+    {
+      "key": "armC.seed2.heldout.control_random_self.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed2.heldout.control_random_self.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/decisive-shuffle/run.py::measure, control_random_self"
+    },
+    {
+      "key": "armC.seed2.heldout.random_band",
+      "kind": "observation",
+      "value": ">=0.1",
+      "how": "Amendment 1 bands applied descriptively to random_ratio"
+    },
+    {
+      "key": "armC.seed2.heldout.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9188711047172546,
+        0.9468342065811157,
+        1.0003089904785156,
+        1.0118038654327393,
+        1.0384479761123657,
+        1.040750503540039
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.heldout.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.heldout.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.heldout.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.heldout.reading.max_token_delta",
+      "kind": "observation",
+      "value": 1.1026427745819092,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.seed2.heldout.reading.min_token_delta",
+      "kind": "observation",
+      "value": -0.6171631813049316,
+      "how": "experiments/decisive-shuffle/run.py::measure -> memory_liveness.shuffle_control, roll-by-1 derangement of whole 16-slot memory, contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(), CPU"
+    },
+    {
+      "key": "armC.verdict",
+      "kind": "observation",
+      "value": {
+        "outcome": "live",
+        "detail": "some seed has ratio >= 0.1: {0: 2.988830321556934, 1: 14.561983678608987, 2: 5.672022916377245}"
+      },
+      "how": "decide_arm: PREREG decision rule per arm on the train batch"
+    }
+  ],
+  "verdict": {
+    "falsifier": "PREREG: 'the TG working memory is inert on a corpus whose objective requires retrieval'; any arm with a seed ratio >= 0.1 falsifies it",
+    "outcome": "falsified",
+    "detail": "per arm {'A': 'inert', 'B': 'live', 'C': 'live'}; live on at least one arm: the cause was the objective or the corpus; arm A (corpus alone) is 'inert'",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-21T12:46:08Z"
+}
