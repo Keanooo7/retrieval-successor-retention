@@ -122,9 +122,7 @@ def shuffle_control(
                     mem = write_at(mem, out.srep, write, victim, t)
                 if cfg.bos_replacement_mode == "copy":
                     bos_ctx = out.srep
-                    bos_valid = write & (
-                        torch.full((B,), t + 1, device=device) < lengths
-                    )
+                    bos_valid = write & (torch.full((B,), t + 1, device=device) < lengths)
 
             for t in range(S):
                 ids_t, mask_t = ids[:, t], mask[:, t]

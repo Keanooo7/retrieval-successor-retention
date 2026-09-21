@@ -43,7 +43,9 @@ S, L, M, N_DOCS = 6, 16, 4, 4
 def _batch():
     # The generator needs `max_gap < sentences_per_document`; encode only the
     # first `S` sentences of each document.
-    docs = generate(SyntheticConfig(n_documents=N_DOCS, sentences_per_document=48, seed=0))
+    docs = generate(
+        SyntheticConfig(n_documents=N_DOCS, sentences_per_document=48, seed=0)
+    )
     vmap = build_vocab(docs)
     ids, mask = encode(docs, vmap, max_tokens=L, steps=S)
     return ids[:N_DOCS], mask[:N_DOCS], 4 + len(vmap)
