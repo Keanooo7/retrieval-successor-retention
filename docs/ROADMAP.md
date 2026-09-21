@@ -13,7 +13,7 @@ that calendar was built around rented GPU windows and ADR-0007 deleted them.
 
 287 tests pass with zero skips, E0b is green and bit-exact, E0c is measured on the machine that will
 run it, and E0g passed. Against that: **the trained model's working memory is inert** (a shuffle
-control moves the loss by exactly 0.0), **the synthetic corpus cannot reward retrieval** (the answer
+control moves tokens at 7.8e-4 of a live memory's rate, `runs/shuffle-control/ledger.json`), **the synthetic corpus cannot reward retrieval** (the answer
 is stored out of band and never enters the token stream), **the RSR training arm is FIFO**
 (`train/loop.py` hardcodes it), and **12 of 41 source files are stubs** — including all four metrics
 and leave-one-out, which §3.2.1 makes the arbiter of truth. The 13-cycle overnight run produced real
@@ -73,8 +73,10 @@ Sprint 1 is CPU-only and runs beside Sprint 0.
 | **Make the corpus rewardable** — answer span in the token stream, a target mask, and the answer-token loss bucketed by gap | `data/synthetic.py`, `loop.py` |
 
 **GATE: the shuffle control, as a permanent instrument, green.** Hand a row another document's
-memory; the loss must move by a stated non-zero amount, reported with spread. It currently moves by
-**exactly 0.0** against the base paper's own −54% for removing working memory. A run where memory
+memory; the loss must move by a stated non-zero amount, reported with spread. It currently moves
+tokens at **7.8e-4 ± 2.7e-4 of a live memory's rate** (`runs/shuffle-control/ledger.json`) against the
+base paper's own −54% for removing working memory. *(This line said "exactly 0.0" until
+2026-09-20; §11 retracts it.)* A run where memory
 contributes ≈0 is **refused, not filed**.
 
 ### Sprint 1 — the data kill gate (CPU, parallel with Sprint 0)

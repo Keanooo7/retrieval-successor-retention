@@ -848,10 +848,16 @@ about TG.** This is upstream of all three causes the overnight loop proposed.
 
 ### 10.3 The model this repo trains has no usable memory
 
-✅ **Verified by a stronger test than the loop ran.** Hand a document's row **another document's
-entire 16-slot memory** at every step and the loss moves by **exactly 0.0** — max per-token delta
-1.2e-4 nats, min −1.9e-4, across 384 sentences. **Not a mean hiding a few tokens; no single token
-moves.** Zeroed slot contents cost +0.018%. The gestalt cloud collapses: uncentered participation
+✅ **Verified by a stronger test than the loop ran, and re-derived from committed code on
+2026-09-20** (`runs/shuffle-control/ledger.json`, verdict `survived`). Hand a document's row
+**another document's entire 16-slot memory** at every step: max per-token delta 1.2e-4 nats, min
+−1.9e-4, across 384 sentences. The re-derivation's seed 0 gives **1.17e-4 / −1.91e-4**, with
+`memory_gate` 0.949–0.989 and 384/384 sentences with EOS. **Tokens move, but only slightly:** mean
+|per-token Δ| is **7.8e-4 ± 2.7e-4 of what a live, untrained memory produces** at the same seed,
+over three seeds (`ratio_to_live_decoy`). 🔴 **Two phrases this paragraph used to carry are
+retracted (§11):** *"the loss moves by exactly 0.0"* (the signed mean is −1.46e-8 on seed 0,
+not zero) and *"no single token moves"* (1,100–1,254 of ~1,580 real tokens move on each seed).
+Zeroed slot contents cost +0.018%. The gestalt cloud collapses: uncentered participation
 ratio **1.0001 of 128**.
 
 **It is not the known dead-memory trap** — `has_eos` is true for 384/384 sentences, all rows fill
@@ -972,6 +978,7 @@ while its prose is not.** An audit re-derived the load-bearing claims. These fai
 | **"proven to learn, 10.82 → 1.11 from chance"** | That run used `V = 50257` against a **156-word** corpus. `10.817 ≈ ln(50257)`; true chance is `ln(160) = 5.075`. **The first ~5.75 of the 9.71 nats is the model learning that ~50,100 output tokens are dead** | **The learning is real** — final ppl **3.024** against true-chance **160** — but the honest interval is **5.075 → 1.107** |
 | **"12.8 pp"** as the order-statistic effect on `b`'s authority | That arm also varied `γ_b` **and** the EMA half-life | The isolated effect is **~17 pp** |
 | **"50 escalations"** | it was **54** | — |
+| **"the loss moves by exactly 0.0"** and **"no single token moves"** (the shuffle control, §10.3) | Re-derived from committed code on 2026-09-20: the signed mean Δ is **−1.46e-8** on seed 0, not zero, and **1,100–1,254 of ~1,580** real tokens move on each seed. And the signed mean is **the wrong statistic**: a live, untrained memory moves it by only ~5e-5 relative, because swapped memory pushes tokens both ways (`experiments/shuffle-control/PREREG.md`, Amendment 1) | **The per-token figures reproduce** (seed 0: max **1.17e-4**, min **−1.91e-4**, gates 0.949–0.989). The claim holds as: mean \|per-token Δ\| is **7.8e-4 ± 2.7e-4** of a live memory's (`runs/shuffle-control/ledger.json`, `ratio_to_live_decoy`) |
 | **"every number traces to a ledger row"** | **false**, and it fails first at the canary headline itself — cycle 4's four advertising numbers appear in no ledger | — |
 
 🔴 **If you are about to repeat a number from `docs/lab-notes/overnight-2026-09-18.md` or
