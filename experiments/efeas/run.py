@@ -16,7 +16,6 @@ Usage:
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -31,6 +30,7 @@ from rsr.baselines.fifo import FIFOPolicy  # noqa: E402
 from rsr.baselines.oracle import OraclePolicy  # noqa: E402
 from rsr.baselines.random_policy import RandomPolicy  # noqa: E402
 from rsr.data.synthetic import SyntheticConfig, discounted_demand, generate  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, run_main  # noqa: E402
 from rsr.metrics.headroom import hit_rate, hit_rate_by_gap, simulate  # noqa: E402
 
 EXPERIMENT = "experiments/efeas/run.py"
@@ -163,8 +163,8 @@ def write_ledger(per_seed: dict[int, dict], led) -> Path:
     return led.write()
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser()
+def main(argv: list[str] | None = None) -> Exit:
+    ap = ArgumentParser()
     ap.add_argument("--run-id", default="efeas-synthetic")
     a = ap.parse_args(argv)
 
@@ -217,8 +217,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(json.dumps(led.doc["verdict"], indent=2))
     print(f"ledger: {p}")
-    return 0
+    return Exit.OK
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)

@@ -43,7 +43,6 @@ Both policies, because the difference is the open question:
 
 from __future__ import annotations
 
-import argparse
 import gc
 import json
 import platform
@@ -59,6 +58,7 @@ import torch.nn.functional as F
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from rsr.baselines.fifo import FIFOPolicy
+from rsr.exit_codes import ArgumentParser, Exit, did_not_run, run_main
 from rsr.model.tg import TGConfig, TGModel
 from rsr.model.tg.policy_loop import run_policy_loop
 from rsr.retention.rsr import RSRConfig, RSRPolicy
@@ -215,8 +215,8 @@ def trial(d, s, batch, *, policy_name, vocab, m, tokens, device):
     }
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
+def main() -> Exit:
+    ap = ArgumentParser()
     ap.add_argument("--device", default="mps", choices=["mps", "cpu"])
     ap.add_argument("--vocab", type=int, default=50257)
     ap.add_argument("--tokens", type=int, default=64)
@@ -228,8 +228,7 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.device == "mps" and not torch.backends.mps.is_available():
-        print("MPS unavailable (ADR-0001 D3: best-effort, not required)")
-        return 3
+        return did_not_run("MPS unavailable (ADR-0001 D3: best-effort, not required)")
 
     rows = []
     print(
@@ -314,8 +313,8 @@ def main() -> int:
     if args.out:
         args.out.write_text(json.dumps(payload, indent=2) + "\n")
         print(f"\nwrote {args.out}")
-    return 0
+    return Exit.OK
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_main(main)

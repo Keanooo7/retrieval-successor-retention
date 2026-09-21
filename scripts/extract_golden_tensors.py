@@ -84,7 +84,6 @@ place to put one.
 
 from __future__ import annotations
 
-import argparse
 import dataclasses
 import hashlib
 import json
@@ -93,11 +92,26 @@ import re
 import sys
 from pathlib import Path
 
-import jax
-import jax.numpy as jnp
-import numpy as np
-from tg.models import tg_model
-from tg.models.tg_config import TgConfig
+# Stdlib-only import, so it works inside the throwaway JAX venv (no torch there).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main
+
+# 🔴 Missing JAX/Flax/the vendored tree is DID NOT RUN (3). Uncaught, the
+# ImportError exited 1 -- a real failure -- which is what this tool reported in the
+# project venv, where JAX is correctly absent (S0-05).
+try:
+    import jax
+    import jax.numpy as jnp
+    import numpy as np
+    from tg.models import tg_model
+    from tg.models.tg_config import TgConfig
+except ImportError as _exc:
+    refuse(
+        Exit.DID_NOT_RUN,
+        f"{_exc}. This tool runs in a throwaway JAX venv with "
+        f"PYTHONPATH=third_party/ThoughtGestaltCode, never in the project venv; "
+        f"see this file's docstring and third_party/PINS.md.",
+    )
 
 D_MODEL = 128
 N_HEADS = 2  # preserves the reference's head_dim = 64
@@ -228,8 +242,8 @@ def _flat(tree, prefix=""):
     return out
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
+def main() -> Exit:
+    ap = ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
 
@@ -271,7 +285,7 @@ def main() -> int:
             "The fixtures would encode the generator's bug, not the model.",
             file=sys.stderr,
         )
-        return 1
+        return Exit.FAIL  # a self-check failed: a real finding
 
     # --- gradients, through the reference loop ------------------------------ #
     grads = jax.grad(loss_through_reference_loop)(params, model, cfg, ids, mask, lengths)
@@ -329,7 +343,7 @@ def main() -> int:
             "it barely moved the gradients (so the tolerance cannot detect it).",
             file=sys.stderr,
         )
-        return 1
+        return Exit.FAIL  # a self-check failed: a real finding
 
     payload: dict[str, np.ndarray] = {}
 
@@ -367,7 +381,7 @@ def main() -> int:
             f"captured {len(xattn_keys)}: {xattn_keys}",
             file=sys.stderr,
         )
-        return 1
+        return Exit.FAIL  # a self-check failed: a real finding
     for key in xattn_keys:
         payload[f"cross_attention/{key}"] = np.stack([s[key] for s in per_step_flat])
 
@@ -444,8 +458,8 @@ def main() -> int:
     print(f"steps at full memory (i.e. evicting): {n_evictions} of {N_STEPS}")
     norms = np.linalg.norm(payload["gestalts"], axis=-1)
     print(f"gestalt L2 norms: min={norms.min():.6f} max={norms.max():.6f}  (expect 1.0)")
-    return 0
+    return Exit.OK
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)
