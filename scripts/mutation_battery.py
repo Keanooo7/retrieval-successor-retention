@@ -701,6 +701,27 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the `gamma = 0` control and A2's `A_max = M` -- are unbuildable until "
         "E1 logs constants neither of them uses.",
     ),
+    Mutation(
+        "the shuffle control hands each row its own memory",
+        "tests/test_shuffle_control.py::",
+        "src/rsr/metrics/memory_liveness.py",
+        "    return torch.roll(torch.arange(n, device=device), 1)",
+        "    return torch.arange(n, device=device)",
+        "S0-04 Bar 1: an instrument that cannot read non-zero. With the identity "
+        "permutation the control reads exactly 0.0 on ANY model, live or dead -- "
+        "the reading §10.3's null was, and the one cycle 1 was rejected for not "
+        "having ruled out. Only the live-memory decoy can see it.",
+    ),
+    Mutation(
+        "the shuffle control never applies its permutation",
+        "tests/test_shuffle_control.py::test_live_memory_moves_the_loss",
+        "src/rsr/metrics/memory_liveness.py",
+        "out = model(ids_t, mask_t, kv[perm], valid[perm], bc, bv)",
+        "out = model(ids_t, mask_t, kv, valid, bc, bv)",
+        "the same no-op with a correct `derangement()`: the replay reaches the "
+        "forward un-permuted. The derangement test stays green, so only the "
+        "live-memory reading catches it.",
+    ),
 )
 
 
