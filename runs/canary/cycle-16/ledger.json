@@ -1,0 +1,144 @@
+{
+  "run_id": "canary/cycle-16",
+  "cycle": 16,
+  "question": "has the environment moved since the canary baseline?",
+  "started_utc": "2026-09-21T09:19:40Z",
+  "provenance": {
+    "git_sha": "3796d89b723c09a3d898049354154b968bd65825",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "mps",
+  "seeds_actually_run": [
+    0
+  ],
+  "steps_requested": 6,
+  "steps_done": 6,
+  "status": "ok",
+  "config_hash": "453077e9abc3a0f529a177195549b02c2e4cfd2ba9a1896b5d9858ff408c1893",
+  "manifest_written_utc": "2026-09-21T09:19:40Z",
+  "commands": [
+    {
+      "argv": ".venv/bin/python scripts/canary.py 16",
+      "entry_point": "scripts/canary.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "frozen config, seed 0; see CONFIG in scripts/canary.py",
+      "at_utc": "2026-09-21T09:19:40Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "losses",
+      "kind": "observation",
+      "value": [
+        5.075664202372233,
+        4.754579226175944,
+        4.558619499206543,
+        4.435361862182617,
+        4.332830429077148,
+        4.222333590189616
+      ],
+      "how": "heartbeat.jsonl beat records, field 'loss'"
+    },
+    {
+      "key": "config",
+      "kind": "observation",
+      "value": {
+        "d": 128,
+        "steps_per_stream": 48,
+        "batch": 8,
+        "iters": 6,
+        "seed": 0,
+        "memory_slots": 16,
+        "lr": 0.001,
+        "device": "mps",
+        "beat_every": 1,
+        "ckpt_every": 0
+      },
+      "how": "frozen literal in scripts/canary.py"
+    },
+    {
+      "key": "rel_tol",
+      "kind": "observation",
+      "value": 0.0001,
+      "how": "committed in scripts/canary.py before the first reading"
+    },
+    {
+      "key": "baseline_losses",
+      "kind": "observation",
+      "value": [
+        4.965003331502278,
+        4.134424209594727,
+        3.174421946207682,
+        2.775899887084961,
+        2.539914925893148,
+        2.3805060386657715
+      ],
+      "how": "runs/canary/baseline.json"
+    },
+    {
+      "key": "beats_outside_tol",
+      "kind": "observation",
+      "value": [
+        {
+          "beat": 0,
+          "baseline": 4.965003331502278,
+          "now": 5.075664202372233,
+          "rel": 0.022288176559283793
+        },
+        {
+          "beat": 1,
+          "baseline": 4.134424209594727,
+          "now": 4.754579226175944,
+          "rel": 0.14999791631009435
+        },
+        {
+          "beat": 2,
+          "baseline": 3.174421946207682,
+          "now": 4.558619499206543,
+          "rel": 0.43604712179251726
+        },
+        {
+          "beat": 3,
+          "baseline": 2.775899887084961,
+          "now": 4.435361862182617,
+          "rel": 0.5978104552035185
+        },
+        {
+          "beat": 4,
+          "baseline": 2.539914925893148,
+          "now": 4.332830429077148,
+          "rel": 0.7058958884434017
+        },
+        {
+          "beat": 5,
+          "baseline": 2.3805060386657715,
+          "now": 4.222333590189616,
+          "rel": 0.7737126147162198
+        }
+      ],
+      "how": "elementwise |now-base|/|base| vs REL_TOL"
+    },
+    {
+      "key": "beat_counts",
+      "kind": "observation",
+      "value": {
+        "baseline": 6,
+        "now": 6
+      },
+      "how": "len of the two beat sequences"
+    }
+  ],
+  "verdict": {
+    "falsifier": "the environment has not moved since the canary baseline",
+    "outcome": "falsified",
+    "detail": "6 of 6 beats outside rel_tol=0.0001",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-21T09:19:40Z"
+}
