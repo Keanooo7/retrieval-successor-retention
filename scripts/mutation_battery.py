@@ -774,11 +774,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "src/rsr/train/checkpoint.py",
         '    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")',
         "    tmp = path",
-        "gauntlet 3.6: the non-atomic write the SIGKILL test exists to catch. Until "
-        "2026-09-21 the test's four kill delays all missed the ~6 ms window where "
-        "this tears a file, so it had never been seen red on it. TIMING-DEPENDENT: "
-        "it reddens the 5-6 ms cases on an M1 Pro; a faster or slower machine moves "
-        "the window, which is why the sweep is dense.",
+        "gauntlet 3.6: the non-atomic write the SIGKILL test exists to catch. The "
+        "child is killed while parked in `checkpoint._write_hook` (synchronised over "
+        "a pipe, no wall-clock delay), so it reddens [mid_write] (torn file) and "
+        "[before_replace] (old checkpoint replaced pre-rename) on every run. Until "
+        "Brief 0b (2026-09-21) it was a kill-delay sweep that caught this in 1 of 7 "
+        "battery observations.",
     ),
     Mutation(
         "the synthetic answer goes back out of band",

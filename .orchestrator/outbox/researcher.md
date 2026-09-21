@@ -60,6 +60,78 @@ PR: see below (opened, not merged).
 ---
 
 status: RETURNED
+run_id: b0b-sigkill (Brief 0b, 2026-09-21: test determinism. No training run, no runs/ ledger written)
+updated: 2026-09-21T10:42:46Z
+provenance: base 6e31a40 (brief written at a802521) · head 34ed0ac · cpu (pytest/battery) · no dataset · no seeds (no training)
+manifest: none. No experiment ran; the falsifier is about a test and the battery settles it
+falsifier: "The SIGKILL test detects a non-atomic checkpoint write every time." Refuted by any run where `tmp = path` leaves the test green.
+expected: mutated 20/20 red, unmutated 20/20 green, battery --check rc 0 twice
+observed: all as expected. Falsifier NOT fired: mutated 0/20 green.
+
+change:
+  src/rsr/train/checkpoint.py: `_write_hook(phase)` test seam, default `_no_op`, called at
+    "mid_write" (half the buffer written and flushed), "before_replace" and "after_replace".
+    The single fh.write(data) is now two writes of one memoryview (same bytes).
+  tests/test_checkpoint.py: the child parks in the hook at the chosen phase and writes
+    "AT <phase>" to its stdout pipe. The parent blocks on readline, then SIGKILLs it.
+    No wall-clock delay. Parametrised over the 3 phases, replacing the 18-point kill-delay sweep.
+    mid_write/before_replace: old checkpoint must be byte-identical. after_replace: must be the complete new one.
+    New test_the_write_hook_is_inert_in_production: hook is _no_op by default; atomic_write and
+    save(capture_rng=False) output == one torch.save of the same payload, byte for byte.
+  scripts/mutation_battery.py: that row's `why` rewritten (was "TIMING-DEPENDENT").
+
+gates:
+  20x isolated, UNMUTATED  (pytest tests/test_checkpoint.py::test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint):
+    passed_runs=20 failed_runs=0 of 20;   20 x "passed=3 failed=0 skipped=0 errors=0"
+  20x isolated, MUTATED by hand (`tmp = path`, then git checkout):
+    passed_runs=0 failed_runs=20 of 20;   20 x "passed=1 failed=2 skipped=0 errors=0"
+    20 FAILED ...[before_replace]  "SIGKILL at 'before_replace' replaced the old checkpoint (step=1) before the atomic rename"
+    20 FAILED ...[mid_write]       "left an unloadable checkpoint (RuntimeError: PytorchStreamReader failed reading zip archive: failed finding central directory ...)"
+    [after_replace] stays green under the mutation. That is correct: a complete file is in place by then.
+  $ uv run python scripts/mutation_battery.py --check     # run 1
+    PROVEN        checkpoints written straight to the final path -> 2 on gate, 0 off (0 undeclared)
+    51/51 gates proven by mutation            rc=0
+  $ uv run python scripts/mutation_battery.py --check     # run 2
+    PROVEN        checkpoints written straight to the final path -> 2 on gate, 0 off (0 undeclared)
+    51/51 gates proven by mutation            rc=0
+  $ uv run pytest -rs --tb=no
+    passed=373 failed=0 skipped=0 errors=0    rc=0   (pytest line: 373 passed, 1 xfailed, 1 warning)
+    373 = 387 - 15 (sweep went from 18 params to 3) + 1 (new test)
+  $ uv run ruff check           rc=0  All checks passed!
+  $ uv run ruff format --check  rc=0  173 files already formatted
+ledger: none (no run)
+numbers: every figure above is literal command output. None comes from a ledger because no run happened.
+
+BRIEF ERRORS:
+  1. The suggested seam, "a hook called between the write and the atomic rename", cannot catch the
+     battery's mutation on its own. With `tmp = path` the whole payload is written and fsynced to the
+     final path before that point, so a kill there leaves a COMPLETE new file. The old test's assertion
+     accepts "complete new", so it would stay green 20/20. The kill has to land MID-write (partial
+     bytes on disk). I split the write into two writes of one buffer and put the hook between them.
+     The before-rename hook is kept as well, with a stricter "old bytes must survive" assertion.
+  2. "N/N" for the battery: at 3a458ad the battery showed 48/49. This base shows 51 gates (51/51).
+     The brief does not give an expected N; I am flagging it so nobody compares 51 to 49.
+  3. Files in scope omit docs/mutation-battery.md, the generated record (`--markdown`). The `why` for
+     this row changed, so that record is now stale for this row until it is regenerated. I did not
+     touch it because it is out of scope.
+  4. "Run the test alone 20 times" is ambiguous for a parametrised test. I ran the whole parametrised
+     node 20 times and gave per-parametrisation counts.
+UNANSWERED BY THE BRIEF:
+  - Whether to keep a "kill after the rename" case. The old sweep had one (30/60 ms). I kept it as the
+    deterministic [after_replace] phase.
+  - The census line does not count the 1 xfailed test (tests/test_train_loop.py). It is not mine; it is
+    reported here so it is not silently dropped.
+BELIEVED, NOT VERIFIED:
+  - That no other production caller assigns `_write_hook` (git grep shows only the test child).
+  - torch.save byte-determinism beyond this torch version. The inert-hook test depends on it and passes here.
+  - That fh.flush() before the mid_write hook puts the partial bytes into the file visible to another
+    process. The 20/20 torn-file reading under the mutation is evidence for it on APFS, not proof on other filesystems.
+NEXT (proposed, not decided): regenerate docs/mutation-battery.md (`--check --markdown docs/mutation-battery.md`)
+  in whichever brief owns it, so the committed record matches the row's new `why`.
+
+---
+
+status: RETURNED
 run_id: b0-code (Brief 0, 2026-09-21 -- code fixes; no training run, no runs/ ledger written)
 updated: 2026-09-21T10:09:17Z
 provenance: base 3a458ad (brief says 402d328; the only diff 402d328..3a458ad is the brief itself) · cpu (pytest/battery) · no dataset · no seeds (no training)
