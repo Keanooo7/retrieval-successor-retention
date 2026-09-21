@@ -103,6 +103,16 @@ RANDOM_SEED_BASE = 10_000
 #: Brief: stop starting new trainings at 06:30 local.
 NO_NEW_TRAININGS_AFTER = (6, 30)
 
+#: The researcher's pre-registered expectation, written before the 300-iter run
+#: (only a 2-iter plumbing smoke had been seen, which says nothing about a
+#: trained model).
+EXPECTED = (
+    "B and C live (some seed ratio >= 0.1): the answer token is now a target that "
+    "only memory can predict at gap >= 2. A uncertain, most likely inconclusive "
+    "or inert: its unmasked loss is dominated by padding targets, as in #17. If B "
+    "and C read inert, the memory path is broken (PREREG escalation)."
+)
+
 #: PREREG "Primary readout": #17's Amendment 1 thresholds, fixed in ba71e86.
 INERT_MAX_RATIO = 0.01
 LIVE_MIN_RATIO = 0.1
@@ -654,6 +664,11 @@ def main(argv: list[str] | None = None) -> int:
             "random_replacement_generator_seed": f"{RANDOM_SEED_BASE} + seed",
             "no_new_trainings_after_local": "06:30",
             "prereg": "experiments/decisive-shuffle/PREREG.md (+ Amendment 1)",
+            "falsifier": (
+                "the TG working memory is inert on a corpus whose objective "
+                "requires retrieval"
+            ),
+            "expected": EXPECTED,
             "thresholds": {
                 "inert_max_ratio": INERT_MAX_RATIO,
                 "live_min_ratio": LIVE_MIN_RATIO,
