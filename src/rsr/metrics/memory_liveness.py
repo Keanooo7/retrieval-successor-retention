@@ -158,10 +158,11 @@ def shuffle_control(
                 ids_t, mask_t = ids[:, t], mask[:, t]
                 kv, valid = snaps[t]
                 bc, bv = bos_snaps[t]
-                kv_b = kv[perm]
-                if replace is not None:
-                    kv_b = replace(kv_b, valid[perm], t)
-                out = model(ids_t, mask_t, kv_b, valid[perm], bc, bv)
+                if replace is None:
+                    out = model(ids_t, mask_t, kv[perm], valid[perm], bc, bv)
+                else:
+                    kv_b = replace(kv[perm], valid[perm], t)
+                    out = model(ids_t, mask_t, kv_b, valid[perm], bc, bv)
                 real = mask_t[:, 1:].reshape(-1)
                 per = lm_token_losses(out.logits, ids_t)
                 shuffled_tok.append(per[real])
