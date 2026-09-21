@@ -1,4 +1,46 @@
 status: RETURNED
+run_id: efeas-synthetic-s003
+updated: 2026-09-21T11:22:12Z
+provenance: a2452196508e6732e034406736d96285c7e4677d (dirty=true: untracked uv.lock only) · cpu (no model), Mac Studio macOS-26.6.2-arm64 · corpus_sha256 per seed in manifest (s0 60003e49..., s1 18b9e1e2..., s2 48a7ca7c...) · seeds_actually_run [0, 1, 2]
+manifest: runs/efeas-synthetic-s003/manifest.json  (config hash f1bc3829d10cd9230b570d4d6f66b15a0989963921e1a963ada0fd906688cfb5)
+falsifier: PREREG-s003.md (= PREREG.md rule): every seed H < 0.05 at M=16 -> "no headroom over FIFO on the S0-03 corpus"
+expected: (manifest.expected, frozen before the run) every headroom and hit-rate row bit-identical to runs/efeas-synthetic, verdict survived, both controls hold, because answer_in_stream draws no RNG and simulate() reads only gaps/positions.
+observed: exactly that. verdict.outcome = survived. All 15 ledger rows have the same keys and values as runs/efeas-synthetic/ledger.json, by_gap included.
+
+gates:
+  run:     uv run python experiments/efeas/run.py --run-id efeas-synthetic-s003 --prereg experiments/efeas/PREREG-s003.md --expect "<...>"  -> rc=0 (read directly as `cmd > log 2>&1; rc=$?`)
+  audit:   uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/efeas/RESULTS-s003.md -> rc=0
+           "OK: every number in experiments/efeas/RESULTS-s003.md resolves to a ledger key"
+  diff:    git diff --stat origin/main -- runs/  -> only runs/efeas-synthetic-s003/{ledger.json,manifest.json,raw.json}, 3 files changed, 1438 insertions(+)
+  pytest:  uv run pytest -rs --tb=no -q -> rc=0; census "passed=382 failed=0 skipped=0 errors=0" (one UserWarning in tests/test_capture_bridge.py:516, not a failure)
+ledger:    runs/efeas-synthetic-s003/ledger.json
+numbers:
+  headroom_oracle_minus_fifo (M=16) samples [0.19491525423728817, 0.17365771812080533, 0.1736227045075125], mean 0.18073189228853534, sd 0.012283164234645585. Old run: the same values.
+  secondary.M32.headroom samples [0.041525423728813515, 0.03523489932885904, 0.024207011686143587], mean 0.033655778247938715, sd 0.008766531039189842. Old run: the same. Every seed is below 0.05. This row is not judged.
+  secondary.M8.headroom mean 0.2720681823691921, sd 0.017934528280598227 (same as the old run)
+  hit_rate.fifo mean 0.8192681077114647, sd 0.012283164234645585. hit_rate.oracle 1.0 on every seed, sd 0.0: the ledger flags sd_exactly_zero, but that is a perfect oracle, not a broken seed loop, because FIFO and random vary across the same seeds. hit_rate.random mean 0.8024734091190927, sd 0.011431442558855202.
+  controls: seed0/seed1/seed2.controls_failed = [] (both controls held on every seed)
+  seed{0,1,2}.n_queries = 1180, 1192, 1198
+  changed SyntheticConfig default vs old run's sha 1fc8199: answer_in_stream (new field, True; the old behaviour equals False). No other field changed.
+BRIEF ERRORS:
+  1. The question is a theorem, not a measurement. The PREREG-s003 premise says S0-03 "may change the gap distribution" through a gap>M invariant. It did not. S0-03 added only answer_in_stream (no RNG draw) and the read-only helper fraction_of_pairs_beyond. simulate() never reads text, so the re-run could only reproduce the old numbers. It did, bit for bit. That makes it a consistency check, not new evidence about headroom.
+  2. The brief's scope rules contradict its Bar. The scope rule is "run.py only if it cannot run unchanged", but the Bar ("manifest records the torch version") and PREREG-s003 ("manifest records the new defaults verbatim") need content that run.py did not write. The old manifest has neither. I changed run.py in commit a245219. The manifest now also records synthetic_config_defaults, corpus_sha256, torch_version, prereg (--prereg) and expected (--expect), and the ledger records the real argv, not a hardcoded string. The measurement is unchanged, and runs/efeas-synthetic stays reproducible from 1fc8199.
+  3. "Name every field whose default differs from the old run's manifest" cannot be done as written, because the old manifest records no SyntheticConfig fields. I compared against SyntheticConfig at the old run's provenance sha 1fc8199 instead.
+  4. The Bar's literal command has no way to record which prereg governs the run, and the old run.py hardcoded PREREG.md. I added --prereg and --expect. The command therefore differs from the Bar's literal one only by those two flags.
+UNANSWERED BY THE BRIEF:
+  - Python version. uv picked Python 3.14.6 in this worktree: no .python-version, and requires-python is ">=3.11". The old run used 3.12.13, and CLAUDE.md says 3.12. The numbers are identical anyway. Pinning the interpreter is an owner/manager decision; I did not change it.
+  - uv.lock is untracked in every checkout, so every ledger records dirty=true. Should it be committed or gitignored?
+BELIEVED, NOT VERIFIED:
+  - The claim that facts, gaps and texts are equal apart from the appended token was checked at the command line, not in a ledger. I compared gaps with answer_in_stream True vs False for seeds 0-2: gaps equal, texts differ.
+  - The prose audit backs a literal with ANY number in ANY ledger under runs/. Small integers such as 32 and 8 pass because some ledger contains them, not because this ledger does. The audit passing is weaker than "every number traces to this run".
+  - Every value is bit-identical across Python 3.12 and 3.14 and between two torch installs. I did not check the old run's torch version, because its manifest does not record it.
+  - Side observation, outside scope: query text reads "What does Hal-6 measures?" (the predicate is not uninflected). This is harmless to E-feas. Whether it matters for the LM objective is unexamined.
+NEXT (proposed, not decided): E-feas has nothing further to say about S0-03; it is blind to token content by construction. The informative follow-up is the one S0-03 exists for: answer-token loss bucketed by gap (gap<=16 vs gap>16) for a FIFO-trained model on the new corpus, against the chance line ln 16. Separately, pin the Python interpreter (.python-version 3.12) so ledgers stop drifting to 3.14.
+PR: (see below)
+
+---
+
+status: RETURNED
 run_id: s0-03-rewardable-corpus
 updated: 2026-09-21T11:17:32Z
 provenance: 851103efd3d1c676b6ae844a923813bd9b1c1da9 · cpu (torch 2.14.0, py 3.14.6) · corpus = SyntheticConfig defaults (answer_in_stream=True), held-out = docs 64..127 of each seed · seeds actually run [0,1,2], steps 300/300
