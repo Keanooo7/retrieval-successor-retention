@@ -1,0 +1,566 @@
+{
+  "run_id": "shuffle-control",
+  "cycle": null,
+  "question": "Does handing a row another document's entire memory move the real-token loss of the audit's model (300 iters, unmasked, hinge off), with an instrument shown to read both ways?",
+  "started_utc": "2026-09-21T04:10:03Z",
+  "provenance": {
+    "git_sha": "8e60df1dad078044d9e03f2d4b67125da1c7dcd8",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 300,
+  "steps_done": 300,
+  "status": "ok",
+  "config_hash": "e8faebd62694f79f1a350483e283c87d2199dd89189632aa0cc059d00bc4608e",
+  "manifest_written_utc": "2026-09-21T04:10:03Z",
+  "commands": [
+    {
+      "argv": "uv run python experiments/shuffle-control/run.py --single --seed 0 --iters 300 --device cpu --out-dir runs/shuffle-control/seed0",
+      "entry_point": "experiments/shuffle-control/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash dd6a92f615ddb22b",
+      "at_utc": "2026-09-21T04:25:12Z"
+    },
+    {
+      "argv": "uv run python experiments/shuffle-control/run.py --single --seed 1 --iters 300 --device cpu --out-dir runs/shuffle-control/seed1",
+      "entry_point": "experiments/shuffle-control/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 211126cfe52fd4f9",
+      "at_utc": "2026-09-21T04:40:34Z"
+    },
+    {
+      "argv": "uv run python experiments/shuffle-control/run.py --single --seed 2 --iters 300 --device cpu --out-dir runs/shuffle-control/seed2",
+      "entry_point": "experiments/shuffle-control/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 50e3f6891cf289e0",
+      "at_utc": "2026-09-21T04:55:47Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "ratio_to_live_decoy",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0009913241306859642,
+        0.0008765567882922645,
+        0.0004705000245672635
+      ],
+      "mean": 0.0007794603145151641,
+      "sd": 0.00027365166049842687,
+      "how": "mean_abs_token_delta(trained) / mean_abs_token_delta(untrained decoy, same seed) -- PREREG.md Amendment 1's primary statistic",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "reading.mean_abs_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        5.7338859433025566e-06,
+        9.085651261575595e-06,
+        3.671396278113374e-06
+      ],
+      "mean": 6.1636444943305084e-06,
+      "sd": 2.732591913481156e-06,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(); field mean_abs_token_delta; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "reading.delta_nats_per_token",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -1.464733645484273e-08,
+        3.5269958353900677e-07,
+        -4.609053716464473e-08
+      ],
+      "mean": 9.732056997317311e-08,
+      "sd": 2.2172279798232956e-07,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(); field delta_nats_per_token; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "reading.delta_relative",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -9.41283589257023e-09,
+        2.1693719474803747e-07,
+        -2.945708605911087e-08
+      ],
+      "mean": 5.935575759878546e-08,
+      "sd": 1.3683703808436684e-07,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(); field delta_relative; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "reading.max_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.00011730194091796875,
+        0.00023126602172851562,
+        6.008148193359375e-05
+      ],
+      "mean": 0.00013621648152669272,
+      "sd": 8.714560546022443e-05,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(); field max_token_delta; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "reading.min_token_delta",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.00019109249114990234,
+        -0.00017136335372924805,
+        -0.00015807151794433594
+      ],
+      "mean": -0.0001735091209411621,
+      "sd": 1.6614734591815715e-05,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(); field min_token_delta; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "reading.loss_real_tokens_honest_memory",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.5561023927341826,
+        1.6258142544373317,
+        1.564667227170939
+      ],
+      "mean": 1.5821946247808178,
+      "sd": 0.0380176691258267,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval(); field loss_real_tokens_honest_memory; seeds [0, 1, 2]",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "seed0.reading.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed0.reading.n_tokens_moved",
+      "kind": "observation",
+      "value": 1122,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed0.reading.n_real_tokens",
+      "kind": "observation",
+      "value": 1588,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed0.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed0.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed0.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed0.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9886278510093689,
+        0.9485945105552673,
+        0.958672046661377,
+        0.977956235408783,
+        0.9702619910240173,
+        0.9751072525978088
+      ],
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed0.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_memory_disabled.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_memory_disabled.n_tokens_moved",
+      "kind": "observation",
+      "value": 0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_own_memory.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_own_memory.n_tokens_moved",
+      "kind": "observation",
+      "value": 0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.005784067759285646,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_live_decoy.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.00021674290712248023,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed0.control_live_decoy.n_tokens_moved",
+      "kind": "observation",
+      "value": 1551,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.reading.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed1.reading.n_tokens_moved",
+      "kind": "observation",
+      "value": 1254,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed1.reading.n_real_tokens",
+      "kind": "observation",
+      "value": 1596,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed1.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed1.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed1.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed1.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9845026731491089,
+        0.9823050498962402,
+        0.9866729378700256,
+        0.9861043095588684,
+        0.9829016327857971,
+        0.9947673082351685
+      ],
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed1.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_memory_disabled.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_memory_disabled.n_tokens_moved",
+      "kind": "observation",
+      "value": 0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_own_memory.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_own_memory.n_tokens_moved",
+      "kind": "observation",
+      "value": 0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.01036515988801655,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_live_decoy.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.00023981622585989015,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed1.control_live_decoy.n_tokens_moved",
+      "kind": "observation",
+      "value": 1556,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.reading.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed2.reading.n_tokens_moved",
+      "kind": "observation",
+      "value": 1100,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed2.reading.n_real_tokens",
+      "kind": "observation",
+      "value": 1568,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed2.reading.n_sentences",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed2.reading.n_sentences_with_eos",
+      "kind": "observation",
+      "value": 384,
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed2.reading.final_slots_filled_per_row",
+      "kind": "observation",
+      "value": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed2.reading.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9981212615966797,
+        0.9681251049041748,
+        0.9721936583518982,
+        0.9872901439666748,
+        0.9893481135368347,
+        0.9793189167976379
+      ],
+      "how": "experiments/shuffle-control/run.py::measure -> memory_liveness.shuffle_control on the trained checkpoint; every row handed another document's 16-slot memory (roll-by-1 derangement), contents replayed from the honest pass; real-token NLL over 8 docs x 48 sentences, model.eval()"
+    },
+    {
+      "key": "seed2.control_memory_disabled.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_memory_disabled.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_memory_disabled.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_memory_disabled.n_tokens_moved",
+      "kind": "observation",
+      "value": 0,
+      "how": "experiments/shuffle-control/run.py::measure, control_memory_disabled (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_own_memory.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_own_memory.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_own_memory.delta_exactly_zero",
+      "kind": "observation",
+      "value": true,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_own_memory.n_tokens_moved",
+      "kind": "observation",
+      "value": 0,
+      "how": "experiments/shuffle-control/run.py::measure, control_own_memory (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_live_decoy.mean_abs_token_delta",
+      "kind": "observation",
+      "value": 0.007803179779831244,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_live_decoy.delta_nats_per_token",
+      "kind": "observation",
+      "value": 0.0003071628054795994,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_live_decoy.delta_exactly_zero",
+      "kind": "observation",
+      "value": false,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "seed2.control_live_decoy.n_tokens_moved",
+      "kind": "observation",
+      "value": 1533,
+      "how": "experiments/shuffle-control/run.py::measure, control_live_decoy (PREREG.md 'Controls')"
+    },
+    {
+      "key": "audit_2026_09_18_for_comparison",
+      "kind": "observation",
+      "value": {
+        "delta": "exactly 0.0",
+        "max_token_delta": 0.00012,
+        "min_token_delta": -0.00019,
+        "n_sentences": 384,
+        "memory_gate_range": [
+          0.949,
+          0.989
+        ]
+      },
+      "how": "docs/RESEARCH-CONTEXT.md \u00a710.3 -- PROSE, from an uncommitted script on uncommitted checkpoints. Reported beside the reading, NOT the bar."
+    }
+  ],
+  "verdict": {
+    "falsifier": "PREREG.md Amendment 1: any seed whose mean |token delta| is >= 0.1 of the live decoy's falsifies 'the memory is inert'; any failed control makes the run inconclusive",
+    "outcome": "survived",
+    "detail": "every seed's mean |token delta| is <= 0.01 of the live decoy's ({0: 0.0009913241306859642, 1: 0.0008765567882922645, 2: 0.0004705000245672635}), and all three controls read as required on every seed",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-21T04:55:53Z"
+}

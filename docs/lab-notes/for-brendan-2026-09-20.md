@@ -82,3 +82,23 @@ this run" rather than "the call never resolved" — which is silent by this proj
 definition. I recorded that in the amendment.
 
 `BRIEF ERRORS` for today's dispatch are in my report, not here. There are four.
+
+---
+
+## 6. (2026-09-20f) `RESEARCH-CONTEXT.md` §10.3 still says "exactly 0.0", and that did not reproduce
+
+`experiments/shuffle-control/RESULTS.md` re-derives *inert* (`survived`, ratio to live decoy
+~7.8e-4, seed 2 bit-identical on my re-execution) but the signed mean is non-zero on all three
+seeds. The wording in the orientation document is yours to change; I have not edited it.
+
+## 7. (2026-09-20f) Next run needs a decision: a trained *live* memory, or the cause of inertness
+
+Both are proposed, neither is decided. The role file's "memory is live" row now refuses every
+training run in the audit's configuration, so the project cannot produce a filed training number
+until one of these lands. Which comes first is a research-direction call.
+
+## 8. (2026-09-20f) `rsr-manager.md` / `rsr-researcher.md` schema note is stale
+
+Both say `scripts/ledger.py` does not write `manifest.json`, `config_hash`, `seeds_actually_run`,
+`steps_done`. It wrote all four in `runs/shuffle-control/`. The researcher's role file also points
+reports at `.orchestrator/outbox/`, which does not exist. Role files are yours; not edited.
