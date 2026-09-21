@@ -45,7 +45,6 @@ process per point is the only way the numbers mean what the table says.
 
 from __future__ import annotations
 
-import argparse
 import gc
 import json
 import platform
@@ -60,6 +59,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
+from rsr.exit_codes import ArgumentParser, Exit, did_not_run, run_main
 from rsr.model.tg import TGConfig, TGModel, run_sentence_loop
 
 
@@ -185,8 +185,8 @@ def measure_isolated(
     )
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
+def main() -> Exit:
+    ap = ArgumentParser()
     ap.add_argument("--point", default=None, help="internal: d,S,batch,M for one child")
     ap.add_argument("--device", default="cpu", choices=["cpu", "mps"])
     ap.add_argument("--vocab", type=int, default=2048)
@@ -203,11 +203,13 @@ def main() -> int:
         d, s, batch, m = (int(x) for x in args.point.split(","))
         point = measure(d, s, batch, m, args.device, args.vocab, args.tokens)
         print("POINT " + json.dumps(asdict(point)))
-        return 0
+        return Exit.OK
 
     if args.device == "mps" and not torch.backends.mps.is_available():
-        print("MPS unavailable; ADR-0001 D3 makes it best-effort, not required.")
-        return 3  # did not run -- never report as 0
+        # did not run -- never report as 0. The template rsr.exit_codes generalises.
+        return did_not_run(
+            "MPS unavailable; ADR-0001 D3 makes it best-effort, not required."
+        )
 
     plans: list[tuple[int, int, int]] = []  # (M, S, label index)
     scopes = {"synthetic": (16, 48), "e3": (40, 80)}
@@ -261,8 +263,8 @@ def main() -> int:
     if args.out:
         args.out.write_text(json.dumps(payload, indent=2) + "\n")
         print(f"\nwrote {args.out}")
-    return 0
+    return Exit.OK
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_main(main)

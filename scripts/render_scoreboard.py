@@ -30,7 +30,6 @@ compare · `3` did not run. 🔴 `3` must never collapse to `0`.
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
 import sys
@@ -40,8 +39,11 @@ from typing import Any
 
 _REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO / "scripts"))
+sys.path.insert(0, str(_REPO / "src"))
 
 from ledger import _exists_at_sha, entry_point  # noqa: E402
+
+from rsr.exit_codes import ArgumentParser, Exit, did_not_run, run_main  # noqa: E402
 
 OUTCOMES = ("survived", "falsified", "inconclusive")
 
@@ -403,8 +405,11 @@ def render(board: Board, *, runs_dir: Path) -> str:
     return "\n".join(out)
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
+def main(argv: list[str] | None = None) -> Exit:
+    # A usage error exits 3 (did not run), not argparse's 2: in this script `2` is
+    # reserved for "no rows" below, and giving it two meanings is the conflation
+    # S0-05 exists to remove.
+    ap = ArgumentParser(description=__doc__)
     ap.add_argument(
         "--over", type=Path, default=_REPO / "runs", help="the runs/ directory to read"
     )
@@ -428,31 +433,28 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     if not args.over.exists():
-        print(f"DID NOT RUN: {args.over} does not exist", file=sys.stderr)
-        return 3
+        return did_not_run(f"{args.over} does not exist")
 
     if args.claim:
         if ":" not in args.claim:
-            print("--claim takes RUN_ID:OUTCOME", file=sys.stderr)
-            return 3
+            return did_not_run("--claim takes RUN_ID:OUTCOME")
         ident, outcome = args.claim.rsplit(":", 1)
         ok, why = check_claim(args.over, ident, outcome)
         print(("OK      " if ok else "REFUSED ") + why)
-        return 0 if ok else 1
+        return Exit.OK if ok else Exit.FAIL
 
     if args.audit:
         if not args.audit.exists():
-            print(f"DID NOT RUN: {args.audit} does not exist", file=sys.stderr)
-            return 3
+            return did_not_run(f"{args.audit} does not exist")
         unbacked = audit_prose(args.over, args.audit.read_text())
         if not unbacked:
             print(f"OK: every number in {args.audit} resolves to a ledger key")
-            return 0
+            return Exit.OK
         print(f"{len(unbacked)} numbers in {args.audit} resolve to no ledger key:")
         for lit in unbacked:
             print(f"  {lit}")
         print("\nDelete it or fetch the key. Those are the only two options.")
-        return 1
+        return Exit.FAIL
 
     board = build(args.over)
     text = render(board, runs_dir=args.over)
@@ -477,8 +479,9 @@ def main(argv: list[str] | None = None) -> int:
             )
             + "\n"
         )
-    return 2 if not board.rows else 0
+    # The repo's one correct `2` before S0-05: ran, and there was nothing to render.
+    return Exit.UNKNOWN if not board.rows else Exit.OK
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)

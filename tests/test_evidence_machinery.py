@@ -389,10 +389,22 @@ def test_the_mutation_table_is_well_formed_without_a_runtime_repair():
 # --------------------------------------------------------------------------- #
 
 
-def test_a_first_canary_reading_exits_3_not_0():
-    """The one script with no exit-3 branch, and the exact 3-collapsing-to-0 shape:
-    it wrote `outcome: inconclusive`, returned verdict `baseline`, and exited 0."""
-    assert canary.exit_code_for("baseline") == 3
+def test_a_first_canary_reading_exits_2_nothing_to_compare():
+    """A first reading RAN and had nothing to compare: `2`. Not `0`, and not `3`.
+
+    Two collapses, both real. Before cycle 0 it wrote `outcome: inconclusive`,
+    returned verdict `baseline`, and exited **0** (`3`-shaped absence reported as a
+    pass). Cycle 0's fix asserted **3** here -- and this test pinned that value,
+    written by the same hand and mutated only against the old defect, so it could
+    not see that `3` was itself wrong (S0-05). `docs/gates.md`: *"`2` and `3` are
+    separate deliberately"*; `2` is "no recorded floor for this key", which is
+    precisely and only a first reading.
+
+    Changing this assertion from `3` to `2` is not moving a goalpost: `3` was never
+    measured against anything but the fixer's reading of the protocol. The battery
+    now mutates `baseline` to BOTH wrong values, `0` and `3`.
+    """
+    assert canary.exit_code_for("baseline") == 2
     assert canary.exit_code_for("held") == 0
     assert canary.exit_code_for("MOVED") == 1
 

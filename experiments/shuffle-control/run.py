@@ -25,7 +25,6 @@ Usage:
 
 from __future__ import annotations
 
-import argparse
 import json
 import subprocess
 import sys
@@ -38,6 +37,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from rsr.data.synthetic import SyntheticConfig, generate  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
 from rsr.metrics.memory_liveness import (  # noqa: E402
     shuffle_control,
     with_memory_disabled,
@@ -149,9 +149,13 @@ def _spawn(seed: int, iters: int, device: str, root: Path) -> tuple[dict, list[s
     proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True)
     res = out_dir / "result.json"
     if proc.returncode != 0 or not res.exists():
-        raise SystemExit(
+        # A real failure (1), chosen explicitly rather than defaulted by a bare
+        # `raise SystemExit(msg)`: the arm's child crashed or wrote no result on
+        # a committed, fixed config. S0-05 records this as a decided ambiguity.
+        refuse(
+            Exit.FAIL,
             f"seed{seed} exited {proc.returncode}\n"
-            f"{proc.stdout[-3000:]}\n{proc.stderr[-3000:]}"
+            f"{proc.stdout[-3000:]}\n{proc.stderr[-3000:]}",
         )
     d = json.loads(res.read_text())
     d["exit_code"] = proc.returncode
@@ -314,8 +318,8 @@ def write_ledger(out: dict, led) -> Path:
     return led.write()
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser()
+def main(argv: list[str] | None = None) -> Exit:
+    ap = ArgumentParser()
     ap.add_argument("--single", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--iters", type=int, default=CONFIG["iters"])
@@ -329,7 +333,7 @@ def main(argv: list[str] | None = None) -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         r = single(a.seed, a.iters, a.device, out_dir)
         (out_dir / "result.json").write_text(json.dumps(r, indent=2, default=str) + "\n")
-        return 0
+        return Exit.OK
 
     from ledger import Ledger
 
@@ -393,8 +397,8 @@ def main(argv: list[str] | None = None) -> int:
     p = write_ledger(out, led)
     print(json.dumps(out["verdict"], indent=2))
     print(f"ledger: {p}")
-    return 0
+    return Exit.OK
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)
