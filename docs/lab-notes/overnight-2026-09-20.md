@@ -262,3 +262,36 @@ regenerable from committed sources; the risk was not worth keeping it.
 researchers in one working tree.** The alternatives — narrowing `DirtyTree` to the paths a run's
 `commands[]` actually name, or making the battery take a lock — are real options, but they are
 changes to the evidence machinery and should not be made to unblock a session.
+
+### ✅ B1 unblocked and closed at `88257b1` — ADR-0008 is citable
+
+The section above recorded B1 as BLOCKED. That was true when written and is now closed. The
+researcher waited for the battery to finish rather than letting a retry win, and **checked the
+specific hazard rather than the general one** before acting:
+
+```
+git status --porcelain                                    -> `?? uv.lock` only
+git diff --stat scripts/ledger.py scripts/mutation_battery.py  -> EMPTY, i.e. ledger.py unmutated
+.venv/bin/python experiments/s0-02/write_ledger.py 0      -> WRITE_EXIT=0
+```
+
+🔑 *That second command is the one that matters.* A clean `git status` alone would have been the
+blind check; confirming `scripts/ledger.py` itself is unmutated is the check that addresses why the
+loop was killed. **Verified at `HEAD` by the manager:**
+
+| | |
+|---|---|
+| `grep -c "1.49\|2.98\|0.0383"` over the ledger | **`17`** (was `0`) |
+| rows / commands / status | `20 → 27` · `7 → 8` · `ok` |
+| `headline_three_reproduce` | **`True`**, `n_agree` 8 of 9 |
+| sole disagreement | `mean_vs_sum.contribution_sum` — the genuine `5.8777` → `5.8776` ADR slip |
+| `verdict` block | **untouched** — still `survived`, `capped_from: null`. Correct: these rows are a provenance debt, not a falsifier, and B1 had no business moving F-capture-free's outcome |
+
+📌 **The flawed ledger never entered history.** `git log -- runs/s0-02-capture-bridge/ledger.json`
+ends at three commits — `68bab05`, `3973d1a`, `88257b1`. The restore-to-`HEAD` above closed the
+window rather than undoing a landing; nothing had to be reverted.
+
+⚠️ **Neither finding above is retired by this.** The EOS-at-a-PAD-position defect stands and the
+row-to-publish is still the owner's call. And **the `ledger.write()` / `mutation_battery.py`
+exclusion stands** — B1 got through on timing, not because the hazard went away. *A hazard survived
+by scheduling is not a hazard fixed.*
