@@ -35,7 +35,6 @@ The source tree is restored after every mutation, including on failure.
 
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import subprocess
@@ -44,6 +43,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
+
 PYTEST = ROOT / ".venv" / "bin" / "pytest"
 
 
@@ -564,11 +567,118 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "a first canary reading exits 0 again",
-        "test_a_first_canary_reading_exits_3_not_0",
+        "test_a_first_canary_reading_exits_2_nothing_to_compare",
         "scripts/canary.py",
-        'EXIT_CODES = {"held": 0, "MOVED": 1, "baseline": 3}',
-        'EXIT_CODES = {"held": 0, "MOVED": 1, "baseline": 0}',
-        "5.4: `3` collapsing to `0` -- DID NOT RUN reported as FOUND NOTHING",
+        '"baseline": Exit.UNKNOWN}',
+        '"baseline": Exit.OK}',
+        "5.4: the ORIGINAL defect -- a first reading, which compared nothing, "
+        "reported as a pass",
+    ),
+    Mutation(
+        "a first canary reading exits 3 again",
+        "test_a_first_canary_reading_exits_2_nothing_to_compare",
+        "scripts/canary.py",
+        '"baseline": Exit.UNKNOWN}',
+        '"baseline": Exit.DID_NOT_RUN}',
+        "S0-05: the FIX's defect, on the right axis. Cycle 0 mapped a first reading "
+        "to 3; it ran and had nothing to compare, which is 2. The 0-mutation above "
+        "only proves the old defect stays dead -- it cannot see the value the fixer "
+        "actually wrote. This one can: `2` collapsing to `3`.",
+    ),
+    Mutation(
+        "a canary ledger row typed again",
+        "test_the_canary_ledger_row_records_the_exit_code_it_returns",
+        "scripts/canary.py",
+        "        exit_code=int(code),",
+        "        exit_code=0,",
+        "S0-05 bar 6: the row was the literal `exit_code=0`, written before the "
+        "verdict existed, so a MOVED canary exiting 1 filed a ledger saying 0. A "
+        "hardcoded 0 is worse than null: it looks measured.",
+    ),
+    Mutation(
+        "unimplemented experiments raise again",
+        "test_an_unimplemented_experiment_exits_3",
+        "src/rsr/exit_codes.py",
+        '    return did_not_run(f"{experiment} is not implemented yet.")',
+        '    raise NotImplementedError(f"{experiment} is not implemented yet.")',
+        "S0-05 bar 5: seven e0* stubs exiting 1 (real failure) for the state that "
+        "defines did-not-run. One mutation for the class: all seven go through "
+        "`not_implemented()`, and all seven parametrised cases redden.",
+    ),
+    Mutation(
+        "a checker returns a bare boolean",
+        "test_no_checker_returns_a_bare_boolean",
+        "scripts/render_scoreboard.py",
+        "        return Exit.OK if ok else Exit.FAIL",
+        "        return ok",
+        "ROADMAP §6 conversion row: `True` exits 1 and `False` exits 0 -- a claim "
+        "check that passed would report failure, and a bool has no did-not-run.",
+    ),
+    Mutation(
+        "status() accepts a bool",
+        "test_status_refuses_a_bool",
+        "src/rsr/exit_codes.py",
+        "    if isinstance(code, bool):",
+        "    if False:",
+        "S0-05: the runtime half of the bare-boolean rule; run_main() is the "
+        "last line a bool would pass through on its way to sys.exit.",
+    ),
+    Mutation(
+        "a stale battery anchor exits 1 again",
+        "test_a_stale_battery_anchor_exits_3",
+        "scripts/mutation_battery.py",
+        "        refuse(\n"
+        "            Exit.DID_NOT_RUN,\n"
+        '            f"mutation {mutation',
+        '        refuse(\n            Exit.FAIL,\n            f"mutation {mutation',
+        "S0-05: nothing was mutated, so the battery did not run; a bare "
+        "`raise SystemExit(msg)` reported that as 1.",
+    ),
+    Mutation(
+        "a red baseline exits 1 again",
+        "test_a_red_baseline_exits_3",
+        "scripts/mutation_battery.py",
+        "        refuse(\n"
+        "            Exit.DID_NOT_RUN,\n"
+        '            f"the suite is not green',
+        '        refuse(\n            Exit.FAIL,\n            f"the suite is not green',
+        "S0-05: a suite red before mutating means no mutation ran.",
+    ),
+    Mutation(
+        "an empty battery passes",
+        "test_a_battery_with_no_mutations_exits_2",
+        "scripts/mutation_battery.py",
+        "        return Exit.UNKNOWN\n\n    baseline = run_suite()",
+        "        return Exit.OK\n\n    baseline = run_suite()",
+        "S0-05: '0/0 proven' has no unproven gate in it and exited 0. Nothing to "
+        "compare is 2.",
+    ),
+    Mutation(
+        "a usage error exits 2 again",
+        "test_a_usage_error_exits_3_not_2",
+        "src/rsr/exit_codes.py",
+        '        refuse(Exit.DID_NOT_RUN, f"{self.prog}: {message}")',
+        "        raise SystemExit(2)",
+        "S0-05: argparse's 2 gave render_scoreboard's `2` two meanings, bad "
+        "arguments and an empty board.",
+    ),
+    Mutation(
+        "extract_golden_tensors exits 1 without JAX again",
+        "test_extract_golden_tensors_without_jax_exits_3",
+        "scripts/extract_golden_tensors.py",
+        '        Exit.DID_NOT_RUN,\n        f"{_exc}.',
+        '        Exit.FAIL,\n        f"{_exc}.',
+        "S0-05: the ImportError the project venv guarantees (ADR-0001) is "
+        "did-not-run, not a failed extraction.",
+    ),
+    Mutation(
+        "a checker bypasses run_main",
+        "test_every_converted_checker_exits_through_the_protocol",
+        "experiments/e0c/run.py",
+        "    run_main(main)",
+        "    sys.exit(main())",
+        "S0-05: the enum is only the deliverable if the entry points use it; "
+        "`sys.exit(main())` skips status()'s bool/None refusal.",
     ),
     Mutation(
         "a truncated canary run is compared over the overlap",
@@ -912,16 +1022,20 @@ def apply(mutation: Mutation) -> str:
     path = ROOT / mutation.path
     original = path.read_text()
     if mutation.old not in original:
-        raise SystemExit(
+        # 🔴 DID NOT RUN (3), not 1: nothing was mutated, so nothing was tested.
+        # A bare `raise SystemExit("...")` exits 1 -- a stale anchor reported as a
+        # failed gate (S0-05).
+        refuse(
+            Exit.DID_NOT_RUN,
             f"mutation {mutation.name!r}: anchor not found in {mutation.path}.\n"
-            f"The battery is stale -- fix the anchor, do not drop the mutation."
+            f"The battery is stale -- fix the anchor, do not drop the mutation.",
         )
     path.write_text(original.replace(mutation.old, mutation.new, 1))
     return original
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
+def main() -> Exit:
+    ap = ArgumentParser()
     ap.add_argument(
         "--check", action="store_true", help="exit non-zero on any unproven gate"
     )
@@ -934,9 +1048,20 @@ def main() -> int:
     )
     args = ap.parse_args()
 
+    if not MUTATIONS:
+        # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has no
+        # unproven gate in it and would otherwise exit 0.
+        print("UNKNOWN: the battery has no mutations to run", file=sys.stderr)
+        return Exit.UNKNOWN
+
     baseline = run_suite()
     if baseline:
-        raise SystemExit(f"the suite is not green before mutating: {sorted(baseline)}")
+        # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
+        # `raise SystemExit(msg)` (S0-05).
+        refuse(
+            Exit.DID_NOT_RUN,
+            f"the suite is not green before mutating: {sorted(baseline)}",
+        )
 
     rows = []
     for m in MUTATIONS:
@@ -1000,8 +1125,11 @@ def main() -> int:
             "that reddens tests it did not declare has not isolated the defect. "
             "Declare the coupling with a reason, or narrow the mutation."
         )
-    return 1 if (args.check and bad) else 0
+    # Without --check this is the table renderer and exits 0 once the table is
+    # rendered; --check is the gate. Documented in the module docstring, and
+    # decided in S0-05's RESULTS.md.
+    return Exit.FAIL if (args.check and bad) else Exit.OK
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)
