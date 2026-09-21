@@ -1,0 +1,70 @@
+{
+  "arms": {
+    "A": {
+      "arm_hash": "d1157236ec349b2d",
+      "as_registered": {
+        "masked_loss": false,
+        "srep_norm_reg_weight": 0.0
+      },
+      "resolved": {
+        "masked_loss": false,
+        "srep_norm_reg_weight": 0.0
+      }
+    },
+    "B": {
+      "arm_hash": "2a19105b1376cb5f",
+      "as_registered": {
+        "masked_loss": true,
+        "srep_norm_reg_weight": 0.0
+      },
+      "resolved": {
+        "masked_loss": true,
+        "srep_norm_reg_weight": 0.0
+      }
+    },
+    "C": {
+      "arm_hash": "466c5de0ebb08333",
+      "as_registered": {
+        "masked_loss": true,
+        "srep_norm_reg_weight": null
+      },
+      "resolved": {
+        "masked_loss": true,
+        "srep_norm_reg_weight": 0.01
+      }
+    }
+  },
+  "batch": 16,
+  "corpus": "synthetic, S0-03 rewardable: SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+  "d": 128,
+  "device": "cpu",
+  "expected": "B and C live (some seed ratio >= 0.1): the answer token is now a target that only memory can predict at gap >= 2. A uncertain, most likely inconclusive or inert: its unmasked loss is dominated by padding targets, as in #17. If B and C read inert, the memory path is broken (PREREG escalation).",
+  "falsifier": "the TG working memory is inert on a corpus whose objective requires retrieval",
+  "iters": 300,
+  "lr": 0.001,
+  "max_tokens": 64,
+  "measure_documents": 8,
+  "measure_heldout": "generate(SyntheticConfig(sentences_per_document=48, seed=<seed>, n_documents=128))[64:72]",
+  "measure_train": "generate(SyntheticConfig(sentences_per_document=48, seed=<seed>))[:8]",
+  "memory_slots": 16,
+  "no_new_trainings_after_local": "06:30",
+  "parallel": "all 9 (arm, seed) trainings as concurrent subprocesses",
+  "policy": "fifo",
+  "prereg": "experiments/decisive-shuffle/PREREG.md (+ Amendment 1)",
+  "random_replacement_generator_seed": "10000 + seed",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "steps_per_stream": 48,
+  "thresholds": {
+    "inert_max_ratio": 0.01,
+    "live_min_ratio": 0.1,
+    "statistic": "mean |token delta|, trained / live decoy (#17 Amendment 1)"
+  },
+  "torch_num_threads_measure_process": 1,
+  "torch_num_threads_per_training_process": 1,
+  "torch_version": "2.14.0",
+  "vocab": "derived from the training corpus"
+}
