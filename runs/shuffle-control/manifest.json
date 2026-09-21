@@ -1,0 +1,27 @@
+{
+  "batch": 16,
+  "corpus": "synthetic, SyntheticConfig(sentences_per_document=48, seed=<seed>)",
+  "d": 128,
+  "device": "cpu",
+  "iters": 300,
+  "lr": 0.001,
+  "masked_loss": false,
+  "max_tokens": 64,
+  "measure_documents": 8,
+  "memory_slots": 16,
+  "policy": "fifo",
+  "prereg": "experiments/shuffle-control/PREREG.md",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "srep_norm_reg_weight": 0.0,
+  "steps_per_stream": 48,
+  "thresholds": {
+    "inert_max_ratio": 0.01,
+    "live_min_ratio": 0.1,
+    "statistic": "mean |token delta|, trained / live decoy (Amendment 1)"
+  },
+  "vocab": "derived from the corpus"
+}
