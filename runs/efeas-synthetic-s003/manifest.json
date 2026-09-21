@@ -1,0 +1,41 @@
+{
+  "arms": [
+    "fifo",
+    "oracle",
+    "random"
+  ],
+  "corpus": "generate(SyntheticConfig(seed=s)), committed defaults",
+  "corpus_sha256": {
+    "0": "60003e49da660463e17508794c8995fbfe70140737de574b6b28723950c40bac",
+    "1": "18b9e1e2cce1a8386b994286b8932f627faca0c6144af8250ea1332ee731c4a9",
+    "2": "48a7ca7c6a2f59d8c89dd33ac2d05c88cc0d7a14885fc17b521ade112d9abc0d"
+  },
+  "device": "cpu (no model)",
+  "expected": "Per-seed headroom at M=8/16/32 and every arm's hit rate equal to runs/efeas-synthetic/ledger.json exactly: S0-03's only SyntheticConfig change is answer_in_stream=True, which draws no RNG and so leaves facts, gaps and query positions unchanged, and simulate() reads only those. Verdict survived, both controls hold. Addresses PREREG-s003 falsifier (every seed H<0.05 at M=16). Any difference means something other than the appended token changed.",
+  "gamma": 0.97,
+  "memory_slots": 16,
+  "prereg": "experiments/efeas/PREREG-s003.md",
+  "secondary_memory_slots": [
+    8,
+    32
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "synthetic_config_defaults": {
+    "answer_in_stream": true,
+    "geometric_p": 0.3,
+    "heavy_tail_min": 12,
+    "heavy_tail_weight": 0.35,
+    "max_gap": 40,
+    "n_documents": 64,
+    "seed": 0,
+    "sentences_per_document": 48
+  },
+  "threshold": {
+    "h_min": 0.05
+  },
+  "torch_version": "2.14.0"
+}
