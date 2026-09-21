@@ -204,7 +204,16 @@ _KILLER = textwrap.dedent(
 )
 
 
-@pytest.mark.parametrize("delay", ["0.002", "0.010", "0.030", "0.060"])
+#: The kill has to land INSIDE the write to test it, and the write is short: on an
+#: M1 Pro, a non-atomic write only tears when the kill lands ~6 ms in. The four
+#: delays this used to run (2 / 10 / 30 / 60 ms) all missed that window, so a
+#: straight-to-final-path write passed every case -- the gate had never been seen
+#: red on the defect it exists for. A dense 1-16 ms sweep straddles the write on
+#: this machine; 30 and 60 ms keep the "killed after completion" cases.
+_KILL_DELAYS = [f"{ms / 1000:.3f}" for ms in range(1, 17)] + ["0.030", "0.060"]
+
+
+@pytest.mark.parametrize("delay", _KILL_DELAYS)
 def test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint(tmp_path, delay):
     """🔴 Gauntlet 3.6. `torch.save` straight to the final path leaves a truncated
     file when the process dies during it, and the next resume loads garbage --
@@ -241,9 +250,19 @@ def test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint(tmp_path, delay):
     payload = torch.load(target, map_location="cpu", weights_only=False)
     assert payload["format_version"] == 1
     if killed:
-        # The old checkpoint must be intact and byte-identical.
-        assert target.read_bytes() == good, (
-            "SIGKILL during the write replaced a good checkpoint with a partial one"
+        # The old checkpoint intact and byte-identical, OR the new one complete.
+        #
+        # 📌 "Killed" does not mean "killed before the rename". `atomic_write` still
+        # fsyncs the directory and sweeps temporaries after `os.replace`, so a kill
+        # can land after the new file is fully in place. That was this test's
+        # flake: it demanded the OLD bytes and read the complete NEW checkpoint
+        # (first differing byte 105, step 1 vs 0; reproduced 4/110 by sweeping the
+        # kill across 10-20 ms). The guarantee is "never partial", not "never new".
+        is_old = target.read_bytes() == good
+        is_new = payload["step"] == 1 and payload["model"]["w"].numel() == 4_000_000
+        assert is_old or is_new, (
+            "SIGKILL during the write left a checkpoint that is neither the old one "
+            f"nor the complete new one (step={payload['step']})"
         )
 
     # A temporary file MAY survive: SIGKILL cannot be caught, so no cleanup handler
