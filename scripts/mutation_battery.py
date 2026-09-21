@@ -773,12 +773,20 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "decisive: the manifest-hash arm check never refuses",
-        "is_refused",
+        "test_an_arm_swap_is_refused_by_the_manifest_check",
         "experiments/decisive-shuffle/run.py",
         "    if why:\n        raise ArmMismatch(",
         "    if False:\n        raise ArmMismatch(",
         "PREREG Mutation bar, arm swap: a checkpoint trained under another arm's "
         "config would be measured and reported as this arm's.",
+        off_gate_allowed=(
+            (
+                "tests/test_decisive_shuffle.py::"
+                "test_a_config_that_does_not_hash_to_its_own_stamp_is_refused",
+                "the same refusal statement guards both the arm hash and the "
+                "config's own stamp; disabling it must redden both, by design.",
+            ),
+        ),
     ),
     Mutation(
         "decisive: the aliasing clause dropped from the decision rule",
@@ -792,7 +800,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "decisive: measure() ignores the decoy checkpoint it is handed",
-        "reads_ratio_one",
+        "test_the_decoy_pointed_at_the_trained_checkpoint",
         "experiments/decisive-shuffle/run.py",
         "        ck.load(decoy_ckpt, model=decoy, restore_rng=False)",
         "        pass",
@@ -811,7 +819,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "random replacement is not norm-matched",
-        "preserves_each_slots_norm",
+        "test_random_replacement_preserves_each_slots_norm",
         "src/rsr/metrics/memory_liveness.py",
         "        return r / norm_r * kv.norm(dim=-1, keepdim=True)",
         "        return r",
