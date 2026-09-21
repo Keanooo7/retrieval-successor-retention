@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**62/62 gates proven.**
+**63/63 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -74,6 +74,7 @@
 | the shuffle replay hands over the bos gestalt too | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
 | the oracle evicts the sentence most needed | `test_oracle.py::` | **PROVEN** | 0 | 0 |
 | checkpoints written straight to the final path | `test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint` | **PROVEN** | 0 | 0 |
+| the synthetic answer goes back out of band | `test_every_query_carries_its_answer_as_its_final_token` | **PROVEN** | 10 | 10 |
 
 ## What each mutation breaks, and what else went red
 
@@ -624,6 +625,25 @@ gauntlet 3.6: the non-atomic write the SIGKILL test exists to catch. The child i
 
 Reddened nothing else.
 
+### the synthetic answer goes back out of band
+
+**Gate:** `test_every_query_carries_its_answer_as_its_final_token` — **PROVEN**
+
+S0-03's fixture mutation: the default corpus reverts to the pre-S0-03 generator, whose answer lived only in `Sentence.answer` and never entered the token stream -- so no next-token target required retrieval and 'the memory is inert' was a finding about the corpus. The named gate must redden; the rest are the declared consequences of the refusal.
+
+Also reddened (10):
+
+- `tests/test_synthetic.py::test_the_answer_is_the_only_difference_between_the_two_corpora` — ✔ declared
+- `tests/test_synthetic.py::test_the_answer_targets_are_a_minority_that_a_pooled_loss_would_hide` — ✔ declared
+- `tests/test_synthetic.py::test_the_gap_tensor_is_the_pairs_gap_at_each_query` — ✔ declared
+- `tests/test_synthetic.py::test_the_target_mask_marks_exactly_the_answer_token_of_every_query` — ✔ declared
+- `tests/test_train_loop.py::test_perplexity_is_a_perplexity_and_not_a_penalised_loss` — ✔ declared
+- `tests/test_train_loop.py::test_the_corpus_holds_156_unique_words` — ✔ declared
+- `tests/test_train_loop.py::test_the_derived_vocabulary_is_what_the_model_is_built_with` — ✔ declared
+- `tests/test_train_loop.py::test_the_hinge_has_a_documented_off_switch` — ✔ declared
+- `tests/test_train_loop.py::test_the_hinge_is_on_by_default` — ✔ declared
+- `tests/test_train_loop.py::test_the_hinge_reaches_the_objective` — ✔ declared
+
 ## Declared couplings
 
 A coupling worth knowing about is one somebody wrote down. These are the reasons carried in the table itself, not in prose beside it:
@@ -639,6 +659,8 @@ A coupling worth knowing about is one somebody wrote down. These are the reasons
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006). Added 2026-09-18: the on-the-real-model variant post-dates docs/mutation-battery.md's table.
 - SOURCE_ROOTS is one enumeration: what gates and what does not are the same list, so widening it necessarily moves both assertions
 - the timestamp test asserts both halves of the same behaviour -- a clock is skipped AND a real number beside it is still flagged -- so an audit that flags nothing necessarily reddens it too
+- S0-03: the test reads a property of the in-stream answer token itself (its position, its id under the supervision mask, the vocabulary it adds), so it cannot hold on a corpus that has no such token.
+- S0-03: `rsr.train.loop.answer_targets` REFUSES a corpus whose answers are out of band rather than return an empty supervision mask, and `train()` calls it, so every test that trains reddens when the default corpus reverts to the pre-S0-03 one. The refusal is the design: an empty mask would make every answer-token loss a mean over nothing and pass silently.
 
 ## Not covered here
 
