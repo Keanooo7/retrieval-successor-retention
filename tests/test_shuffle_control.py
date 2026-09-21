@@ -87,6 +87,7 @@ def test_live_memory_moves_the_loss():
     assert not r["delta_exactly_zero"]
     assert r["n_tokens_moved"] > 0
     assert max(abs(r["max_token_delta"]), abs(r["min_token_delta"])) > 1e-4
+    assert r["mean_abs_token_delta"] > 0.0
 
 
 def test_disabled_memory_reads_exactly_zero():
@@ -97,6 +98,7 @@ def test_disabled_memory_reads_exactly_zero():
     assert r["memory_gates"] and all(g == 0.0 for g in r["memory_gates"])
     assert r["delta_exactly_zero"], r["delta_nats_per_token"]
     assert r["n_tokens_moved"] == 0
+    assert r["mean_abs_token_delta"] == 0.0
     # The copy is what was disabled, not the model handed in.
     assert all(g == 1.0 for g in memory_gates(model))
 

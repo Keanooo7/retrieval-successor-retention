@@ -90,3 +90,44 @@ That is the rest of S0-04 (`docs/lab-notes/dispatch-S0-04-shuffle-control.md`). 
 randomly initialised model is a **live decoy, not a trained live memory**: it shows the
 instrument can read non-zero, not what a trained, memory-using TG would read. S0-04's
 negative control on a trained live memory still needs a model that has one.
+
+---
+
+## Amendment 1 — 2026-09-20, before the 300-iteration run, prompted by the smoke run
+
+🔴 **The decision rule above cannot discriminate, and a plumbing run showed it.** Written
+here before the real measurement, and naming the data that prompted it. The original
+text above is left as committed.
+
+**What was seen.** `run.py --iters 2 --run-id shuffle-control-smoke` (plumbing only, CPU,
+not committed as evidence). The **live decoy**, an untrained model whose memory reaches
+the logits by construction, moved the *signed mean* real-token loss by only
+`|Δ|/honest` = **4.3e-5, 4.6e-5, 6.1e-5** (seeds 0–1–2), while single tokens moved by up to
+**±0.06–0.11 nats**. Handing a row another document's memory pushes tokens both ways, and
+the signed mean cancels them. **A memory known to be live therefore passes the original
+"inert" test (`≤ 1e-3`) by a factor of ~20.** The original rule would have returned
+`survived` whether or not the memory is used.
+
+⚠️ **This also bears on §10.3's own headline.** *"The loss moves by exactly 0.0"* is a
+statement about the signed mean, and the signed mean is this weak. The **per-token**
+figures (max 1.2e-4, min −1.9e-4) carry the claim. The mean does not.
+
+**The amended rule. It supersedes the table above for this experiment.**
+
+The primary statistic is **`A` = mean |per-token Δ|** (`mean_abs_token_delta`), read on the
+trained checkpoint and on the live decoy at the same seed. **`ratio = A_trained / A_decoy`**
+states the trained model's sensitivity to whose memory it holds, in units of what a live
+random memory produces at this exact shape.
+
+| condition | verdict |
+|---|---|
+| any control fails on any seed (unchanged), **or** the decoy's `A` is 0 | `inconclusive` |
+| every seed `ratio ≤ 0.01` | `survived`: the memory is inert; tokens move at ≤1% of a live memory's rate |
+| any seed `ratio ≥ 0.1` | `falsified`: the trained model uses whose memory it holds at ≥10% of a live memory's rate |
+| otherwise | `inconclusive` |
+
+The signed mean Δ, its relative form and §10.3's digits are still reported, and none of
+them is the bar. For scale, the smoke run's 2-iteration checkpoints, re-read with this
+statistic, give `ratio` = **0.105, 0.052, 0.107** (seeds 0–1–2; `A_decoy` 5.8e-3, 1.04e-2,
+7.8e-3 nats). A barely trained model is not inert by this measure, which is the
+discriminating power the original rule lacked.

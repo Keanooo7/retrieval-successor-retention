@@ -149,6 +149,10 @@ def shuffle_control(
         "delta_nats_per_token": sm - hm,
         "delta_relative": (sm - hm) / hm if hm else None,
         "delta_exactly_zero": sm == hm,
+        # Mean |per-token delta|: a swapped memory pushes tokens both ways, and
+        # the signed mean cancels them -- on a live random-init memory the signed
+        # mean moves ~5e-5 relative while single tokens move ~0.1 nats.
+        "mean_abs_token_delta": float(d.abs().mean()),
         "max_token_delta": float(d.max()),
         "min_token_delta": float(d.min()),
         "n_tokens_moved": int((d != 0).sum()),
