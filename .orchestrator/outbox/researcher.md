@@ -1,22 +1,21 @@
 status: RETURNED
 run_id: s0-03-rewardable-corpus
-updated: 2026-09-21T11:02:43Z
+updated: 2026-09-21T11:17:32Z
 provenance: 851103efd3d1c676b6ae844a923813bd9b1c1da9 · cpu (torch 2.14.0, py 3.14.6) · corpus = SyntheticConfig defaults (answer_in_stream=True), held-out = docs 64..127 of each seed · seeds actually run [0,1,2], steps 300/300
 manifest: runs/s0-03-rewardable-corpus/manifest.json  (config hash 662c339b74acb1abaaf4d78846bb6bf1deb37c3137325dd02dbe215c5f4a78da)
 falsifier: "the S0-03 answer tokens cannot be predicted without the memory" (bar 1) + "FIFO eviction raises answer loss at gap > M" (bar 2); H4 live-vs-zeroed per the brief addendum
 expected: bar 1 passes; gap 1 falls below chance live via the bos-copy path; at 2<=gap<=M live at most modestly below zeroed; most likely "corpus built, retrieval not shown beyond gap 1"
 observed: VERDICT inconclusive -- "retrieval not shown (not both at chance)". Bar 1 PASS, H4 FAIL, bar 2 PASS as registered but confounded. NOT a pass of the brief's bar; routes to the decisive run.
 
-gates:
-  uv run pytest -rs --tb=short          -> passed=396 failed=0 skipped=0 errors=0 (1 xfailed, the pre-existing strict xfail) ; rc=0
+gates (re-run after merging origin/main incl. #29, at merge f5de37a):
+  uv run pytest -rs --tb=no             -> passed=382 failed=0 skipped=0 errors=0 (1 xfailed) ; rc=0
+     (396 -> 382 is entirely tests/test_checkpoint.py 30 -> 16 collected, #29's deterministic gate replacing the delay sweep)
   uv run ruff check .                   -> All checks passed! ; rc=0
-  uv run ruff format --check .          -> 175 files already formatted ; rc=0
-  pytest tests/test_synthetic.py::test_byte_identical_across_two_separate_processes -> passed=1 ; rc=0
-  uv run python scripts/mutation_battery.py --check -> 51/52 proven ; rc=1  ** DONE-WHEN NOT MET **
-     the one unproven gate is the pre-existing SIGKILL timing flake (test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint, "reddens nothing"), the one b0b is dispatched for; not touched here.
-     S0-03 entry: "PROVEN  the synthetic answer goes back out of band -> 1 on gate, 10 off (0 undeclared)"
+  uv run ruff format --check .          -> 176 files already formatted ; rc=0
+  uv run python scripts/mutation_battery.py --check -> 52/52 gates proven by mutation ; rc=0
+     S0-03 entry: PROVEN the synthetic answer goes back out of band -> 1 on gate, 10 off (0 undeclared)
      gate node id: tests/test_synthetic.py::test_every_query_carries_its_answer_as_its_final_token
-     docs/mutation-battery.md NOT regenerated/committed (timing-dependent row; a802521's history reverted exactly that).
+  uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/s0-03-rewardable-corpus/RESULTS.md -> OK ; rc=0
 ledger:    runs/s0-03-rewardable-corpus/ledger.json  (0 of 234 statistic rows sd_exactly_zero)
 numbers (held-out, answer NLL, nats/answer token, mean +/- sd over seeds 0,1,2; chance ln16 = 2.7726):
   heldout.live.gap_2_to_M.answer_nll                 2.881 +/- 0.096  [2.833, 2.818, 2.992]
@@ -41,7 +40,7 @@ BRIEF ERRORS:
   4. "gap > M vs gap < M" leaves gap == M unassigned; under FIFO gap == M is still in memory. Reported both lt_M and le_M; gap==M has only 20/6/9 targets.
   5. Bar 2 as worded ("gap>M worse than gap<M under FIFO") is not a memory test on its own: the contrast is 0.073 +/- 0.034 with the memory zeroed (position/gap-1 composition confound).
   6. Files in scope omitted tests/test_train_loop.py (pins V=160 / 156 words, necessarily changes: now V=176) and scripts/mutation_battery.py (where the fixture mutation must live to be checked by --check).
-  7. Done-when "mutation_battery.py --check exits 0" is not achievable on this tree independent of S0-03: the SIGKILL gate is timing-dependent (b0b's lane).
+  7. (Withdrawn after #29 merged: battery --check now 52/52, rc=0.) Was: SIGKILL gate timing-dependent.
   8. Baseline says 3a458ad; the worktree branch was cut at a802521 (origin/main). Scoped files identical between the two (git diff --stat empty).
 UNANSWERED BY THE BRIEF:
   - "near chance" tolerance: none given; I pre-registered MARGIN=0.10 nats for all three clauses. A manager may prefer another.
@@ -54,7 +53,6 @@ BELIEVED, NOT VERIFIED:
 NEXT (proposed, not decided):
   - The decisive run as pre-registered, but its answer-token secondary should be scored on held-out docs (see brief error 3) -- a PREREG amendment decision for the manager.
   - A cheap follow-up: same condition at longer training (e.g. 1000-3000 iters) to see whether the seed-spread (0.008..0.174) resolves; plus a position-matched bar-2 contrast.
-  - Merge b0b before requiring battery --check exit 0 on this PR.
 PR: see below (opened, not merged).
 
 ---
