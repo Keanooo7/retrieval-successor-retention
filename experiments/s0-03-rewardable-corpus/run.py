@@ -278,7 +278,7 @@ def measure(ckpt: Path, seed: int, device: str) -> dict:
             r = answer_readout(model, ids, mask, tmask, gap, sym_ids, cond=cond)
             res[name][cond] = _summarise(r)
     res["memory_gates"] = [
-        float(b.memory_gate) for b in trained.blocks if b.block_type == "C"
+        float(b.memory_gate.detach()) for b in trained.blocks if b.block_type == "C"
     ]
     return res
 
