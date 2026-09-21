@@ -222,7 +222,13 @@ _MANAGER_REEXECUTED = (
             "ran run_policy_loop(..., observe=True) with a real RSRPolicy on the "
             "MacBook at 18557e7, rather than reading that the method exists"
         ),
-        "result": "NotImplementedError from rsr.py:433 -- the consumer is a stub",
+        # The line number is pinned to the sha in `how`, where it was measured:
+        # `git show 18557e7:src/rsr/retention/rsr.py` raises at :433. The live
+        # tree has moved it (:448 at 3a458ad), so the symbol is the durable anchor.
+        "result": (
+            "NotImplementedError from RSRPolicy.observe "
+            "(src/rsr/retention/rsr.py:433 at 18557e7) -- the consumer is a stub"
+        ),
     },
 )
 

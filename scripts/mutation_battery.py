@@ -723,6 +723,29 @@ MUTATIONS: tuple[Mutation, ...] = (
         "live-memory reading catches it.",
     ),
     Mutation(
+        "the shuffle replay perturbs the memory it replays",
+        "test_shuffle_control.py::",
+        "src/rsr/metrics/memory_liveness.py",
+        "out = model(ids_t, mask_t, kv[perm], valid[perm], bc, bv)",
+        "out = model(ids_t, mask_t, kv[perm] + 1e-3, valid[perm], bc, bv)",
+        "the replay hands over memory that is not the memory the reference pass "
+        "read: a 1e-3 offset on every slot. The derangement is still correct and "
+        "the live-memory decoy still moves, so neither of the other two entries "
+        "sees it -- only a replay of each row's OWN memory, which must read "
+        "exactly 0.0, can tell a faithful replay from a perturbed one.",
+    ),
+    Mutation(
+        "the shuffle replay hands over the bos gestalt too",
+        "test_shuffle_control.py::",
+        "src/rsr/metrics/memory_liveness.py",
+        "out = model(ids_t, mask_t, kv[perm], valid[perm], bc, bv)",
+        "out = model(ids_t, mask_t, kv[perm], valid[perm], bc[perm], bv[perm])",
+        "the control permutes the bos-copy path along with the memory, so its "
+        "delta measures memory PLUS the bos gestalt rather than memory alone. With "
+        "memory disabled the kv swap is a no-op but the bos swap is not, so the "
+        "disabled-memory reading stops being exactly 0.0.",
+    ),
+    Mutation(
         "the oracle evicts the sentence most needed",
         "test_oracle.py::",
         "src/rsr/baselines/oracle.py",
