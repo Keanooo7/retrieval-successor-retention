@@ -66,9 +66,16 @@ CONFIG = {
 SEEDS = [0, 1, 2]
 EXPERIMENT = "experiments/shuffle-control/run.py"
 
-#: PREREG.md "Decision rule".
-INERT_MAX_REL = 1e-3
-LIVE_MIN_REL = 1e-2
+#: PREREG.md "Amendment 1", which supersedes its original decision rule: the
+#: signed mean passes a live memory (it cancels), so the statistic is mean
+#: |per-token delta| as a ratio to the live decoy's at the same seed.
+INERT_MAX_RATIO = 0.01
+LIVE_MIN_RATIO = 0.1
+
+
+def ratio(m: dict) -> float | None:
+    decoy = m["control_live_decoy"]["mean_abs_token_delta"]
+    return m["reading"]["mean_abs_token_delta"] / decoy if decoy else None
 
 
 def _cfg(V: int) -> TGConfig:
@@ -185,12 +192,12 @@ def controls_pass(m: dict) -> tuple[bool, list[str]]:
         why.append("memory disabled did not read exactly 0.0")
     if not m["control_own_memory"]["delta_exactly_zero"]:
         why.append("own memory replayed did not read exactly 0.0")
-    if m["control_live_decoy"]["n_tokens_moved"] == 0:
+    if m["control_live_decoy"]["mean_abs_token_delta"] == 0.0:
         why.append("the live decoy read zero -- the instrument cannot register memory")
     return (not why), why
 
 
-#: 🔒 Transcribed from PREREG.md, which is committed ahead of this file.
+#: 🔒 Transcribed from PREREG.md Amendment 1, committed ahead of this change.
 def decide(per_seed: dict[int, dict]) -> tuple[str, str]:
     broken = {
         s: controls_pass(m)[1] for s, m in per_seed.items() if not controls_pass(m)[0]
@@ -200,20 +207,20 @@ def decide(per_seed: dict[int, dict]) -> tuple[str, str]:
             "inconclusive",
             f"a control failed, so the instrument is not shown to work: {broken}",
         )
-    rel = {s: abs(m["reading"]["delta_relative"]) for s, m in per_seed.items()}
-    if any(r > LIVE_MIN_REL for r in rel.values()):
+    r = {s: ratio(m) for s, m in per_seed.items()}
+    if any(x >= LIVE_MIN_RATIO for x in r.values()):
         return (
             "falsified",
-            f"memory contributes more than {LIVE_MIN_REL:.0e} of the loss on "
-            f"some seed: {rel}",
+            f"on some seed the trained model's tokens move at >= {LIVE_MIN_RATIO} "
+            f"of a live memory's rate (mean |token delta| ratio to decoy): {r}",
         )
-    if all(r <= INERT_MAX_REL for r in rel.values()):
+    if all(x <= INERT_MAX_RATIO for x in r.values()):
         return (
             "survived",
-            f"every seed |delta|/honest <= {INERT_MAX_REL:.0e} ({rel}), and all three "
-            f"controls read as required on every seed",
+            f"every seed's mean |token delta| is <= {INERT_MAX_RATIO} of the live "
+            f"decoy's ({r}), and all three controls read as required on every seed",
         )
-    return "inconclusive", f"between the two thresholds: {rel}"
+    return "inconclusive", f"between the two thresholds: {r}"
 
 
 # --------------------------------------------------------------------------- #
@@ -229,7 +236,16 @@ def write_ledger(out: dict, led) -> Path:
         f"real-token NLL over {CONFIG['measure_documents']} docs x 48 sentences, "
         f"model.eval()"
     )
+    led.stat(
+        "ratio_to_live_decoy",
+        [ratio(per[s]) for s in seeds],
+        how=(
+            "mean_abs_token_delta(trained) / mean_abs_token_delta(untrained decoy, "
+            "same seed) -- PREREG.md Amendment 1's primary statistic"
+        ),
+    )
     for key in (
+        "mean_abs_token_delta",
         "delta_nats_per_token",
         "delta_relative",
         "max_token_delta",
@@ -259,7 +275,12 @@ def write_ledger(out: dict, led) -> Path:
             "control_live_decoy",
         ):
             c = per[s][ctl]
-            for key in ("delta_nats_per_token", "delta_exactly_zero", "n_tokens_moved"):
+            for key in (
+                "mean_abs_token_delta",
+                "delta_nats_per_token",
+                "delta_exactly_zero",
+                "n_tokens_moved",
+            ):
                 led.note(
                     f"seed{s}.{ctl}.{key}",
                     c[key],
@@ -283,8 +304,9 @@ def write_ledger(out: dict, led) -> Path:
     out["verdict"] = {"outcome": outcome, "detail": detail}
     led.verdict(
         falsifier=(
-            "PREREG.md: any seed |delta|/honest > 1e-2 falsifies 'the memory is "
-            "inert'; any failed control makes the run inconclusive"
+            "PREREG.md Amendment 1: any seed whose mean |token delta| is >= 0.1 of "
+            "the live decoy's falsifies 'the memory is inert'; any failed control "
+            "makes the run inconclusive"
         ),
         outcome=outcome,
         detail=detail,
@@ -328,7 +350,11 @@ def main(argv: list[str] | None = None) -> int:
             "device": a.device,
             "seeds": SEEDS,
             "prereg": "experiments/shuffle-control/PREREG.md",
-            "thresholds": {"inert_max_rel": INERT_MAX_REL, "live_min_rel": LIVE_MIN_REL},
+            "thresholds": {
+                "inert_max_ratio": INERT_MAX_RATIO,
+                "live_min_ratio": LIVE_MIN_RATIO,
+                "statistic": "mean |token delta|, trained / live decoy (Amendment 1)",
+            },
         }
     )
     print(f"manifest frozen: {manifest}", flush=True)
