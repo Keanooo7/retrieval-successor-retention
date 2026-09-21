@@ -30,7 +30,6 @@ Usage:
 
 from __future__ import annotations
 
-import argparse
 import dataclasses
 import datetime as _dt
 import hashlib
@@ -46,6 +45,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from rsr.data.synthetic import SyntheticConfig, generate  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
 from rsr.metrics.memory_liveness import (  # noqa: E402
     cross_row_cosine,
     random_replacement,
@@ -208,7 +208,10 @@ def batches(seed: int) -> tuple[dict, int]:
     vmap = build_vocab(tr)
     missing = set(build_vocab(ho)) - set(vmap)
     if missing:
-        raise SystemExit(f"seed {seed}: held-out words not in the vocab: {missing}")
+        # A precondition of the measurement, not a finding (S0-05 protocol).
+        refuse(
+            Exit.DID_NOT_RUN, f"seed {seed}: held-out words not in the vocab: {missing}"
+        )
     out = {}
     for name, docs in (("train", tr[:n]), ("heldout", ho[:n])):
         ids, mask = encode(docs, vmap, max_tokens=L, steps=S)
@@ -619,8 +622,8 @@ def write_ledger(out: dict, led) -> Path:
     return led.write()
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser()
+def main(argv: list[str] | None = None) -> Exit:
+    ap = ArgumentParser()
     ap.add_argument("--single", action="store_true")
     ap.add_argument("--arm", default="A")
     ap.add_argument("--seed", type=int, default=0)
@@ -634,7 +637,7 @@ def main(argv: list[str] | None = None) -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         r = single(a.arm, a.seed, a.iters, out_dir)
         (out_dir / "result.json").write_text(json.dumps(r, indent=2, default=str) + "\n")
-        return 0
+        return Exit.OK
 
     from ledger import Ledger
 
@@ -727,8 +730,10 @@ def main(argv: list[str] | None = None) -> int:
     p = write_ledger(out, led)
     print(json.dumps({"verdicts": out["verdicts"], "overall": out["overall"]}, indent=2))
     print(f"ledger: {p}")
-    return 0
+    # A partial run is recorded, and it is still "did not run" for the arms that
+    # did not: 3 never collapses to 0.
+    return Exit.OK if complete else Exit.DID_NOT_RUN
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)
