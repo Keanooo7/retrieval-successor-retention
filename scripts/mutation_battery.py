@@ -732,6 +732,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "oracle that is not optimal makes that bound a lower number than the truth, "
         "and 'oracle ~= FIFO' would then be a finding about the oracle.",
     ),
+    Mutation(
+        "checkpoints written straight to the final path",
+        "test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint",
+        "src/rsr/train/checkpoint.py",
+        '    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")',
+        "    tmp = path",
+        "gauntlet 3.6: the non-atomic write the SIGKILL test exists to catch. Until "
+        "2026-09-21 the test's four kill delays all missed the ~6 ms window where "
+        "this tears a file, so it had never been seen red on it. TIMING-DEPENDENT: "
+        "it reddens the 5-6 ms cases on an M1 Pro; a faster or slower machine moves "
+        "the window, which is why the sweep is dense.",
+    ),
 )
 
 
