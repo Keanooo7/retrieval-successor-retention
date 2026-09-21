@@ -92,6 +92,19 @@ _CAPTURE_BRIDGE_COUPLING = (
     "reward, which is the failure this file was written to detect."
 )
 
+_S003_REFUSAL_COUPLING = (
+    "S0-03: `rsr.train.loop.answer_targets` REFUSES a corpus whose answers are out "
+    "of band rather than return an empty supervision mask, and `train()` calls it, "
+    "so every test that trains reddens when the default corpus reverts to the "
+    "pre-S0-03 one. The refusal is the design: an empty mask would make every "
+    "answer-token loss a mean over nothing and pass silently."
+)
+_S003_CORPUS_COUPLING = (
+    "S0-03: the test reads a property of the in-stream answer token itself (its "
+    "position, its id under the supervision mask, the vocabulary it adds), so it "
+    "cannot hold on a corpus that has no such token."
+)
+
 _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
@@ -877,6 +890,66 @@ MUTATIONS: tuple[Mutation, ...] = (
         "[before_replace] (old checkpoint replaced pre-rename) on every run. Until "
         "Brief 0b (2026-09-21) it was a kill-delay sweep that caught this in 1 of 7 "
         "battery observations.",
+    ),
+    Mutation(
+        "the synthetic answer goes back out of band",
+        "test_every_query_carries_its_answer_as_its_final_token",
+        "src/rsr/data/synthetic.py",
+        "    answer_in_stream: bool = True",
+        "    answer_in_stream: bool = False",
+        "S0-03's fixture mutation: the default corpus reverts to the pre-S0-03 "
+        "generator, whose answer lived only in `Sentence.answer` and never entered "
+        "the token stream -- so no next-token target required retrieval and 'the "
+        "memory is inert' was a finding about the corpus. The named gate must "
+        "redden; the rest are the declared consequences of the refusal.",
+        off_gate_allowed=(
+            (
+                "tests/test_synthetic.py::"
+                "test_the_answer_is_the_only_difference_between_the_two_corpora",
+                _S003_CORPUS_COUPLING,
+            ),
+            (
+                "tests/test_synthetic.py::"
+                "test_the_target_mask_marks_exactly_the_answer_token_of_every_query",
+                _S003_REFUSAL_COUPLING,
+            ),
+            (
+                "tests/test_synthetic.py::"
+                "test_the_gap_tensor_is_the_pairs_gap_at_each_query",
+                _S003_REFUSAL_COUPLING,
+            ),
+            (
+                "tests/test_synthetic.py::"
+                "test_the_answer_targets_are_a_minority_that_a_pooled_loss_would_hide",
+                _S003_REFUSAL_COUPLING,
+            ),
+            (
+                "tests/test_train_loop.py::test_the_hinge_reaches_the_objective",
+                _S003_REFUSAL_COUPLING,
+            ),
+            (
+                "tests/test_train_loop.py::test_the_hinge_has_a_documented_off_switch",
+                _S003_REFUSAL_COUPLING,
+            ),
+            (
+                "tests/test_train_loop.py::"
+                "test_perplexity_is_a_perplexity_and_not_a_penalised_loss",
+                _S003_REFUSAL_COUPLING,
+            ),
+            (
+                "tests/test_train_loop.py::test_the_hinge_is_on_by_default",
+                _S003_REFUSAL_COUPLING,
+            ),
+            (
+                "tests/test_train_loop.py::test_the_corpus_holds_156_unique_words",
+                _S003_CORPUS_COUPLING,
+            ),
+            (
+                "tests/test_train_loop.py::"
+                "test_the_derived_vocabulary_is_what_the_model_is_built_with",
+                _S003_REFUSAL_COUPLING,
+            ),
+        ),
     ),
 )
 

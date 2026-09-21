@@ -1,4 +1,63 @@
 status: RETURNED
+run_id: s0-03-rewardable-corpus
+updated: 2026-09-21T11:17:32Z
+provenance: 851103efd3d1c676b6ae844a923813bd9b1c1da9 · cpu (torch 2.14.0, py 3.14.6) · corpus = SyntheticConfig defaults (answer_in_stream=True), held-out = docs 64..127 of each seed · seeds actually run [0,1,2], steps 300/300
+manifest: runs/s0-03-rewardable-corpus/manifest.json  (config hash 662c339b74acb1abaaf4d78846bb6bf1deb37c3137325dd02dbe215c5f4a78da)
+falsifier: "the S0-03 answer tokens cannot be predicted without the memory" (bar 1) + "FIFO eviction raises answer loss at gap > M" (bar 2); H4 live-vs-zeroed per the brief addendum
+expected: bar 1 passes; gap 1 falls below chance live via the bos-copy path; at 2<=gap<=M live at most modestly below zeroed; most likely "corpus built, retrieval not shown beyond gap 1"
+observed: VERDICT inconclusive -- "retrieval not shown (not both at chance)". Bar 1 PASS, H4 FAIL, bar 2 PASS as registered but confounded. NOT a pass of the brief's bar; routes to the decisive run.
+
+gates (re-run after merging origin/main incl. #29, at merge f5de37a):
+  uv run pytest -rs --tb=no             -> passed=382 failed=0 skipped=0 errors=0 (1 xfailed) ; rc=0
+     (396 -> 382 is entirely tests/test_checkpoint.py 30 -> 16 collected, #29's deterministic gate replacing the delay sweep)
+  uv run ruff check .                   -> All checks passed! ; rc=0
+  uv run ruff format --check .          -> 176 files already formatted ; rc=0
+  uv run python scripts/mutation_battery.py --check -> 52/52 gates proven by mutation ; rc=0
+     S0-03 entry: PROVEN the synthetic answer goes back out of band -> 1 on gate, 10 off (0 undeclared)
+     gate node id: tests/test_synthetic.py::test_every_query_carries_its_answer_as_its_final_token
+  uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/s0-03-rewardable-corpus/RESULTS.md -> OK ; rc=0
+ledger:    runs/s0-03-rewardable-corpus/ledger.json  (0 of 234 statistic rows sd_exactly_zero)
+numbers (held-out, answer NLL, nats/answer token, mean +/- sd over seeds 0,1,2; chance ln16 = 2.7726):
+  heldout.live.gap_2_to_M.answer_nll                 2.881 +/- 0.096  [2.833, 2.818, 2.992]
+  heldout.slots_zeroed.gap_2_to_M.answer_nll         2.950 +/- 0.081  [2.856, 2.992, 3.000]
+  heldout.slots_zeroed_minus_live.gap_2_to_M         0.068 +/- 0.092  [0.023, 0.174, 0.008]   H4 needs >= 0.10 every seed -> FAIL
+  heldout.slots_zeroed.gap_ge_2.answer_nll           2.959 +/- 0.080  (bar 1 needs >= 2.673) -> PASS
+  heldout.gate_zeroed.gap_ge_2.answer_nll            2.959 +/- 0.078  -> PASS
+  heldout.live.gap_gt_M.answer_nll                   3.011 +/- 0.087
+  heldout.live.gap_lt_M.answer_nll                   2.847 +/- 0.106
+  heldout.live.gap_gt_M_minus_gap_lt_M               0.164 +/- 0.144  [0.099, 0.329, 0.064]  bar 2 PASS
+  heldout.slots_zeroed.gap_gt_M_minus_gap_lt_M       0.073 +/- 0.034  <- same contrast with NO memory: bar 2 is partly not memory
+  heldout.slots_zeroed_minus_live.gap_gt_M          -0.025 +/- 0.023  (live worse than zeroed once evicted, all 3 seeds)
+  heldout.live.gap_eq_1 / slots_zeroed / gate_zeroed_bos_off   2.744 / 2.804 / 2.927
+  heldout.live.gap_2_to_M.answer_acc 0.082 +/- 0.021 vs zeroed 0.076 +/- 0.009 (1/16 = 0.0625)
+  train.slots_zeroed.gap_ge_2.answer_nll             2.636 +/- 0.104 [2.699, 2.692, 2.516]  memorisation: below chance with NO memory on trained docs
+  heldout.fraction_of_pairs_gap_gt_M                 0.192 +/- 0.008 ; train 0.181 +/- 0.012
+  seed*.train_final.answer_target_fraction           0.085 / 0.085 / 0.086
+BRIEF ERRORS:
+  1. "the answer tokens are ~6 of 193,536 targets" -- 193,536 = 64 docs x 48 x 63 (ALL targets incl. PAD, whole corpus). The same corpus has 1,180 answer targets (seed 0), 8.5% of 13,904 real targets. They do not "drown" at ~6; the mask is still needed to READ their loss, not to rescue them.
+  2. The brief says the zeroed ablation with "all M slots zeroed" is the bar, but bos_replacement_mode="copy" carries the previous sentence's gestalt OUTSIDE the memory, so at gap 1 (21-24% of pairs) zeroing the memory does not remove the assert. Measured: gap-1 live 2.744 vs gate_zeroed 2.803 vs gate_zeroed_bos_off 2.927. Gap 1 was set aside in the pre-registered bars.
+  3. The brief states no evaluation set. Scoring on the trained documents (as #17/decisive do with the first 8 train docs) is contaminated: 300 iters x 16 = 75 passes over 64 docs, and zeroed-memory answer NLL on train docs is 2.636 (seed 2: 2.516, 0.26 below chance) -- bar 1 would FAIL on train docs. Held-out was made primary (PREREG). The decisive-shuffle PREREG's "answer tokens only" secondary on the first 8 training docs inherits this contamination.
+  4. "gap > M vs gap < M" leaves gap == M unassigned; under FIFO gap == M is still in memory. Reported both lt_M and le_M; gap==M has only 20/6/9 targets.
+  5. Bar 2 as worded ("gap>M worse than gap<M under FIFO") is not a memory test on its own: the contrast is 0.073 +/- 0.034 with the memory zeroed (position/gap-1 composition confound).
+  6. Files in scope omitted tests/test_train_loop.py (pins V=160 / 156 words, necessarily changes: now V=176) and scripts/mutation_battery.py (where the fixture mutation must live to be checked by --check).
+  7. (Withdrawn after #29 merged: battery --check now 52/52, rc=0.) Was: SIGKILL gate timing-dependent.
+  8. Baseline says 3a458ad; the worktree branch was cut at a802521 (origin/main). Scoped files identical between the two (git diff --stat empty).
+UNANSWERED BY THE BRIEF:
+  - "near chance" tolerance: none given; I pre-registered MARGIN=0.10 nats for all three clauses. A manager may prefer another.
+  - Whether answer tokens should be up-weighted in the objective: not done (the objective is unchanged; the decisive PREREG trains train() arms by masked_loss/hinge only). answer_targets makes a weight trivially addable.
+  - Which zeroing is "all M slots zeroed": reported both slots-kv-zeroed (primary) and memory_gate=0; they agree to <=0.01.
+BELIEVED, NOT VERIFIED:
+  - That the bar-2 residual under zeroing is a position effect (late-in-document queries), not measured.
+  - That more iterations would widen live-vs-zeroed at 2<=gap<=M (seed 1 already at 0.174); not run.
+  - That parallel training (5 threads/seed) does not change numbers vs sequential beyond float noise.
+NEXT (proposed, not decided):
+  - The decisive run as pre-registered, but its answer-token secondary should be scored on held-out docs (see brief error 3) -- a PREREG amendment decision for the manager.
+  - A cheap follow-up: same condition at longer training (e.g. 1000-3000 iters) to see whether the seed-spread (0.008..0.174) resolves; plus a position-matched bar-2 contrast.
+PR: see below (opened, not merged).
+
+---
+
+status: RETURNED
 run_id: none (S0-05 is code, not an experiment. The audit is in experiments/s0-05/RESULTS.md)
 updated: 2026-09-21T11:11:13Z
 provenance: base 0da72e6 (the brief was written at a802521) · head 7abacdf · cpu · no dataset · no seeds

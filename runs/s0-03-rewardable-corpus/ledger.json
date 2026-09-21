@@ -1,0 +1,3547 @@
+{
+  "run_id": "s0-03-rewardable-corpus",
+  "cycle": null,
+  "question": "On the S0-03 corpus, is answer-token NLL at chance with memory zeroed, does live memory beat zeroed at 2 <= gap <= M, and is gap > M worse than gap < M under FIFO?",
+  "started_utc": "2026-09-21T10:22:56Z",
+  "provenance": {
+    "git_sha": "851103efd3d1c676b6ae844a923813bd9b1c1da9",
+    "dirty": true,
+    "python": "3.14.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 300,
+  "steps_done": 300,
+  "status": "ok",
+  "config_hash": "662c339b74acb1abaaf4d78846bb6bf1deb37c3137325dd02dbe215c5f4a78da",
+  "manifest_written_utc": "2026-09-21T10:22:56Z",
+  "commands": [
+    {
+      "argv": "uv run python experiments/s0-03-rewardable-corpus/run.py --single --seed 0 --iters 300 --device cpu --out-dir runs/s0-03-rewardable-corpus/seed0",
+      "entry_point": "experiments/s0-03-rewardable-corpus/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 430ca59a03bea373",
+      "at_utc": "2026-09-21T10:42:47Z"
+    },
+    {
+      "argv": "uv run python experiments/s0-03-rewardable-corpus/run.py --single --seed 1 --iters 300 --device cpu --out-dir runs/s0-03-rewardable-corpus/seed1",
+      "entry_point": "experiments/s0-03-rewardable-corpus/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 260b799869b6926c",
+      "at_utc": "2026-09-21T10:42:47Z"
+    },
+    {
+      "argv": "uv run python experiments/s0-03-rewardable-corpus/run.py --single --seed 2 --iters 300 --device cpu --out-dir runs/s0-03-rewardable-corpus/seed2",
+      "entry_point": "experiments/s0-03-rewardable-corpus/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "config_hash 52ceabc0416204a4",
+      "at_utc": "2026-09-21T10:42:47Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "heldout.live.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.833379215433116,
+        2.8245391381382436,
+        2.9776674412702597
+      ],
+      "mean": 2.8785285982805395,
+      "sd": 0.08597045645830945,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07398170977830887,
+        0.10160880535840988,
+        0.06867671757936478
+      ],
+      "mean": 0.08142241090536118,
+      "sd": 0.01768201420422094,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.827023183714818,
+        2.8165545297012198,
+        2.9659959683366357
+      ],
+      "mean": 2.869857893917558,
+      "sd": 0.08342239024368829,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7672027267109263,
+        2.5818541524773937,
+        2.883622572777119
+      ],
+      "mean": 2.7442264839884793,
+      "sd": 0.15219058995147663,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.09090909361839294,
+        0.1355932205915451,
+        0.06808510422706604
+      ],
+      "mean": 0.09819580614566803,
+      "sd": 0.034338878525097066,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7604630054127086,
+        2.573178782301434,
+        2.8699133525503444
+      ],
+      "mean": 2.7345183800881627,
+      "sd": 0.15005896835119428,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.852989705086782,
+        2.8851461821762974,
+        3.0007128470011124
+      ],
+      "mean": 2.912949578088064,
+      "sd": 0.0776872144077144,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06896551698446274,
+        0.09312169253826141,
+        0.06882169097661972
+      ],
+      "mean": 0.0769696334997813,
+      "sd": 0.013988278302458941,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8467473744832237,
+        2.8773340814328066,
+        2.989540717773318
+      ],
+      "mean": 2.904540724563116,
+      "sd": 0.07518401289373754,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.833300079112343,
+        2.8183460763738126,
+        2.991847649975033
+      ],
+      "mean": 2.8811646018203962,
+      "sd": 0.09614550645286142,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07072135806083679,
+        0.1054852306842804,
+        0.06877578794956207
+      ],
+      "mean": 0.08166079223155975,
+      "sd": 0.020655488652052675,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8271757349097912,
+        2.810648096261648,
+        2.9805234078691947
+      ],
+      "mean": 2.8727824130135446,
+      "sd": 0.09367167228775626,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.816917592051619,
+        2.7588372920955533,
+        2.964418871267645
+      ],
+      "mean": 2.846724585138272,
+      "sd": 0.10598249407979414,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07484407722949982,
+        0.11370882391929626,
+        0.06925498694181442
+      ],
+      "mean": 0.08593596269687016,
+      "sd": 0.02421380490383697,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.810605975917372,
+        2.750882436567868,
+        2.9524906524080796
+      ],
+      "mean": 2.8379930216311067,
+      "sd": 0.10355677610983738,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.712459111213684,
+        2.8492914040883384,
+        3.07037353515625
+      ],
+      "mean": 2.877374683486091,
+      "sd": 0.18060228861460723,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15000000596046448,
+        0.0,
+        0.0
+      ],
+      "mean": 0.050000001986821495,
+      "sd": 0.08660254381971963,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7068811118602754,
+        2.843436042467753,
+        3.060729291703966
+      ],
+      "mean": 2.8703488153439984,
+      "sd": 0.1784526732850744,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.814790128083433,
+        2.759410391009974,
+        2.9654101311169145
+      ],
+      "mean": 2.84653688340344,
+      "sd": 0.10660612358604485,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07637474685907364,
+        0.11298838257789612,
+        0.06860706955194473
+      ],
+      "mean": 0.08599006632963817,
+      "sd": 0.02370160359274523,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8084934532278183,
+        2.7514688374500214,
+        2.9535032800106396
+      ],
+      "mean": 2.8378218568961597,
+      "sd": 0.10416139131892786,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.9159786895389472,
+        3.088115734422309,
+        3.028493011819905
+      ],
+      "mean": 3.0108624785937206,
+      "sd": 0.0874123408431202,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06334841996431351,
+        0.0555555559694767,
+        0.06896551698446274
+      ],
+      "mean": 0.06262316430608432,
+      "sd": 0.006734334446194846,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.90935890922719,
+        3.0799568825297885,
+        3.017797546653912
+      ],
+      "mean": 3.00237111280363,
+      "sd": 0.08633885724134506,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.real_token_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.6776031663470858,
+        1.6765669436535373,
+        1.6975492880470482
+      ],
+      "mean": 1.6839064660158904,
+      "sd": 0.011826385081589324,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition live; all real targets",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8494074659751836,
+        2.94779199518257,
+        2.9837408894470188
+      ],
+      "mean": 2.9269801168682577,
+      "sd": 0.06954292109656575,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07315045595169067,
+        0.08044030517339706,
+        0.06700167804956436
+      ],
+      "mean": 0.07353081305821736,
+      "sd": 0.006727382729540295,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8443978046835805,
+        2.940576140503072,
+        2.9731137522900326
+      ],
+      "mean": 2.919362565825562,
+      "sd": 0.06692877262437627,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7913206950100986,
+        2.7245374013811854,
+        2.896050101138176
+      ],
+      "mean": 2.8039693991764865,
+      "sd": 0.0864531308415114,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07999999821186066,
+        0.08474576473236084,
+        0.07234042882919312
+      ],
+      "mean": 0.0790287305911382,
+      "sd": 0.006259441693226596,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7865752376209607,
+        2.7171114779124825,
+        2.885596711077589
+      ],
+      "mean": 2.796427808870344,
+      "sd": 0.08467362823715063,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8666206793538453,
+        3.0035465815710642,
+        3.005229247374629
+      ],
+      "mean": 2.9584655027665128,
+      "sd": 0.07954439975152046,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07112068682909012,
+        0.0793650820851326,
+        0.0656934306025505
+      ],
+      "mean": 0.07205973317225774,
+      "sd": 0.006884030039973652,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.861532724879939,
+        2.996383188515113,
+        2.994559534026137
+      ],
+      "mean": 2.950825149140396,
+      "sd": 0.0773348834721816,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8561492450166455,
+        2.992236586059699,
+        3.000150907482373
+      ],
+      "mean": 2.9495122461862393,
+      "sd": 0.08095150777743743,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07637906819581985,
+        0.08438818901777267,
+        0.06602475792169571
+      ],
+      "mean": 0.07559733837842941,
+      "sd": 0.009206640350075568,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8510885955252103,
+        2.984947520469311,
+        2.989633935517753
+      ],
+      "mean": 2.941890017170758,
+      "sd": 0.0786712415762011,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.840590323207284,
+        2.926179796678987,
+        2.973722130654366
+      ],
+      "mean": 2.913497416846879,
+      "sd": 0.06746592923236222,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07692307978868484,
+        0.08395323902368546,
+        0.06820566952228546
+      ],
+      "mean": 0.07636066277821858,
+      "sd": 0.007888835210004209,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8356155851031044,
+        2.9188447844842793,
+        2.963206765033766
+      ],
+      "mean": 2.905889044873717,
+      "sd": 0.06477473034036615,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7131408214569093,
+        2.8226417899131775,
+        3.080476999282837
+      ],
+      "mean": 2.8720865368843076,
+      "sd": 0.1885936216769266,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10000000149011612,
+        0.1666666716337204,
+        0.0
+      ],
+      "mean": 0.08888889104127884,
+      "sd": 0.08388705168212965,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7082817256450653,
+        2.8171756068865457,
+        3.07145012749566
+      ],
+      "mean": 2.8656358200090906,
+      "sd": 0.18637091033095954,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8379946103406777,
+        2.925523800859985,
+        2.974720876826566
+      ],
+      "mean": 2.9127464293424095,
+      "sd": 0.06925289816293721,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0773930773139,
+        0.08447729796171188,
+        0.06756756454706192
+      ],
+      "mean": 0.0764793132742246,
+      "sd": 0.008491819273794355,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.833022227476668,
+        2.91820062918799,
+        2.96421943682395
+      ],
+      "mean": 2.905147431162869,
+      "sd": 0.06656550472384996,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.9001197928217204,
+        3.0379115679325204,
+        3.021142838330104
+      ],
+      "mean": 2.9863913996947815,
+      "sd": 0.07518237950121533,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.05429864302277565,
+        0.06410256773233414,
+        0.06465516984462738
+      ],
+      "mean": 0.06101879353324572,
+      "sd": 0.0058263761838861835,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.894944487114298,
+        3.031130026038895,
+        3.0099944914209433
+      ],
+      "mean": 2.978689668191379,
+      "sd": 0.07329133114578733,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.real_token_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.6956034947154919,
+        1.7013659434096065,
+        1.7088389521326566
+      ],
+      "mean": 1.7019361300859182,
+      "sd": 0.006636125970381941,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition slots_zeroed; all real targets",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.852046581971477,
+        2.94079497888066,
+        2.9889277602160598
+      ],
+      "mean": 2.9272564403560657,
+      "sd": 0.06943762134781667,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07481297105550766,
+        0.07874682545661926,
+        0.07035175710916519
+      ],
+      "mean": 0.07463718454043071,
+      "sd": 0.00420029389611828,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8468779642583923,
+        2.9335548611236364,
+        2.9778149069553645
+      ],
+      "mean": 2.919415910779131,
+      "sd": 0.06660370243718314,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7929172294790097,
+        2.7167220312660025,
+        2.8993687320262826
+      ],
+      "mean": 2.8030026642570984,
+      "sd": 0.09174007478006073,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07999999821186066,
+        0.08898305147886276,
+        0.0765957459807396
+      ],
+      "mean": 0.08185959855715434,
+      "sd": 0.006399603070434947,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7880494395169344,
+        2.7092915828955375,
+        2.888417979250563
+      ],
+      "mean": 2.795253000554345,
+      "sd": 0.08978020347771097,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8695687500053437,
+        2.9967539372267544,
+        3.0108739245795606
+      ],
+      "mean": 2.9590655372705528,
+      "sd": 0.07782737120580673,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0732758641242981,
+        0.07619047909975052,
+        0.06882169097661972
+      ],
+      "mean": 0.07276267806688945,
+      "sd": 0.0037111022012385154,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8643109861375957,
+        2.9895613517710773,
+        2.999721349093663
+      ],
+      "mean": 2.951197895667445,
+      "sd": 0.07541755546379728,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.85878855167049,
+        2.986420087673493,
+        3.0053026102268054
+      ],
+      "mean": 2.950170416523596,
+      "sd": 0.07970019656511286,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07637906819581985,
+        0.08157524466514587,
+        0.06877578794956207
+      ],
+      "mean": 0.07557670027017593,
+      "sd": 0.006437341747150171,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.85356157031727,
+        2.979101200814656,
+        2.9943010423337575
+      ],
+      "mean": 2.942321271155228,
+      "sd": 0.07724294249434242,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.842988054990273,
+        2.9198203066583646,
+        2.9783548744627963
+      ],
+      "mean": 2.913721078703811,
+      "sd": 0.06788920672505973,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07692307978868484,
+        0.08289054036140442,
+        0.07135362178087234
+      ],
+      "mean": 0.07705574731032054,
+      "sd": 0.0057696033734503166,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.837859076422614,
+        2.912461703185954,
+        2.967350485880252
+      ],
+      "mean": 2.9058904218296067,
+      "sd": 0.06499532740766553,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7130617618560793,
+        2.823362191518148,
+        3.0927171442243786
+      ],
+      "mean": 2.876380365866202,
+      "sd": 0.19530168316915597,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10000000149011612,
+        0.1666666716337204,
+        0.0
+      ],
+      "mean": 0.08888889104127884,
+      "sd": 0.08388705168212965,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7080597281455994,
+        2.817884107430776,
+        3.0833410951826306
+      ],
+      "mean": 2.8697616435863353,
+      "sd": 0.19294425407219112,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.840341898307295,
+        2.919209167597286,
+        2.979424791747468
+      ],
+      "mean": 2.912991952550683,
+      "sd": 0.06974957443686941,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0773930773139,
+        0.08342132717370987,
+        0.07068607211112976
+      ],
+      "mean": 0.07716682553291321,
+      "sd": 0.00637064147308125,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8352155051746095,
+        2.9118624787144323,
+        2.968435637110732
+      ],
+      "mean": 2.9051712069999245,
+      "sd": 0.0668616536299956,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.904055628841279,
+        3.028152941638588,
+        3.028332310503927
+      ],
+      "mean": 2.9868469603279313,
+      "sd": 0.07169945237097008,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06334841996431351,
+        0.05982905998826027,
+        0.06896551698446274
+      ],
+      "mean": 0.06404766564567883,
+      "sd": 0.004608190534585707,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8986993887845207,
+        3.0213441181386638,
+        3.0167065345007797
+      ],
+      "mean": 2.9789166804746547,
+      "sd": 0.06950890022201925,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed.real_token_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.6978003442714436,
+        1.70253265969847,
+        1.71125231237826
+      ],
+      "mean": 1.7038617721160578,
+      "sd": 0.006823764822342634,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed; all real targets",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8440386707943275,
+        2.951547575743899,
+        3.008779137877364
+      ],
+      "mean": 2.934788461471863,
+      "sd": 0.08363914339035046,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06151288375258446,
+        0.06943268328905106,
+        0.05611390247941017
+      ],
+      "mean": 0.06235315650701523,
+      "sd": 0.00669903159346137,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.839381573107078,
+        2.9438861059395567,
+        2.995960603207599
+      ],
+      "mean": 2.926409427418078,
+      "sd": 0.0797390988531492,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.826544146971269,
+        2.9292552072112845,
+        3.0236122359620765
+      ],
+      "mean": 2.92647053004821,
+      "sd": 0.0985635518069388,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06181818246841431,
+        0.050847455859184265,
+        0.059574469923973083
+      ],
+      "mean": 0.05741336941719055,
+      "sd": 0.005795858619215,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.821879430250688,
+        2.921769607875307,
+        3.0107001487244953
+      ],
+      "mean": 2.91811639561683,
+      "sd": 0.09446335480542344,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.849222931625514,
+        2.95711477042506,
+        3.005144332820109
+      ],
+      "mean": 2.9371606782902275,
+      "sd": 0.0798529597592692,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06142241507768631,
+        0.07407407462596893,
+        0.05526590347290039
+      ],
+      "mean": 0.06358746439218521,
+      "sd": 0.009589181635126067,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.844568091733702,
+        2.949409379530205,
+        2.992348722919309
+      ],
+      "mean": 2.928775398061072,
+      "sd": 0.0760203895797403,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.844102933012276,
+        2.9398476951735937,
+        2.997151710636186
+      ],
+      "mean": 2.927034112940685,
+      "sd": 0.07732478904124417,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.059405941516160965,
+        0.08298171311616898,
+        0.05089408531785011
+      ],
+      "mean": 0.06442724665006001,
+      "sd": 0.016622698137385882,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.839456511015939,
+        2.9319902137026674,
+        2.984389435966208
+      ],
+      "mean": 2.918612053561605,
+      "sd": 0.07338678055501563,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8414770969482075,
+        2.9379460869889455,
+        3.0032703152233258
+      ],
+      "mean": 2.9275644997201593,
+      "sd": 0.08139468278468551,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.059251558035612106,
+        0.07438895106315613,
+        0.05351521447300911
+      ],
+      "mean": 0.062385241190592446,
+      "sd": 0.010783932371615018,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.836823250300671,
+        2.930167614970273,
+        2.990461215142313
+      ],
+      "mean": 2.9191506934710856,
+      "sd": 0.07740920797721575,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.728972339630127,
+        2.8214453856150308,
+        3.0401731861962213
+      ],
+      "mean": 2.8635303038137927,
+      "sd": 0.1598119112604278,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10000000149011612,
+        0.1666666716337204,
+        0.0
+      ],
+      "mean": 0.08888889104127884,
+      "sd": 0.08388705168212965,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7244314908981324,
+        2.815823952356974,
+        3.028457429673937
+      ],
+      "mean": 2.8562376243096814,
+      "sd": 0.1559900366134102,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8391857576952932,
+        2.937207962165035,
+        3.0036155603779577
+      ],
+      "mean": 2.9266697600794287,
+      "sd": 0.08271989047359048,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.060081467032432556,
+        0.07497359812259674,
+        0.05301455408334732
+      ],
+      "mean": 0.06268987307945888,
+      "sd": 0.011209493314108648,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.834534212430966,
+        2.9294431567066197,
+        2.9908166890828376
+      ],
+      "mean": 2.9182646860734742,
+      "sd": 0.07873862953711336,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.865602293704969,
+        3.009580114458361,
+        3.0301901790602455
+      ],
+      "mean": 2.9684575290745254,
+      "sd": 0.08966935526097276,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06787330657243729,
+        0.04700854793190956,
+        0.06896551698446274
+      ],
+      "mean": 0.06128245716293653,
+      "sd": 0.012373624951796941,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8609205241656412,
+        3.002336844929263,
+        3.0172901091904474
+      ],
+      "mean": 2.9601824927617835,
+      "sd": 0.08628791245129536,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_bos_off.real_token_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.2002331403443214,
+        3.0616697341039285,
+        3.1761014335321933
+      ],
+      "mean": 3.146001435993481,
+      "sd": 0.07402338668358736,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set heldout; condition gate_zeroed_bos_off; all real targets",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed_minus_live.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.016028250542067468,
+        0.12325285704432654,
+        0.006073448176759033
+      ],
+      "mean": 0.04845151858771768,
+      "sd": 0.06497079881537705,
+      "how": "per seed: heldout.slots_zeroed.all.answer_nll - heldout.live.all.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed_minus_live.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.024117968299172343,
+        0.1426832489037917,
+        0.012427528361056872
+      ],
+      "mean": 0.05974291518800697,
+      "sd": 0.07206587829306581,
+      "how": "per seed: heldout.slots_zeroed.gap_eq_1.answer_nll - heldout.live.gap_eq_1.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed_minus_live.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0136309742670635,
+        0.11840039939476688,
+        0.004516400373516749
+      ],
+      "mean": 0.04551592467844904,
+      "sd": 0.06328411218718653,
+      "how": "per seed: heldout.slots_zeroed.gap_ge_2.answer_nll - heldout.live.gap_ge_2.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed_minus_live.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.022849165904302637,
+        0.17389050968588649,
+        0.008303257507340067
+      ],
+      "mean": 0.06834764436584306,
+      "sd": 0.09169170179327477,
+      "how": "per seed: heldout.slots_zeroed.gap_2_to_M.answer_nll - heldout.live.gap_2_to_M.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed_minus_live.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.015858896717226845,
+        -0.05020416648978854,
+        -0.007350173489800937
+      ],
+      "mean": -0.024471078898938774,
+      "sd": 0.022687958049568805,
+      "how": "per seed: heldout.slots_zeroed.gap_gt_M.answer_nll - heldout.live.gap_gt_M.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_minus_live.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.018667366538360763,
+        0.11625584074241635,
+        0.01126031894580004
+      ],
+      "mean": 0.04872784207552572,
+      "sd": 0.05859811465803574,
+      "how": "per seed: heldout.gate_zeroed.all.answer_nll - heldout.live.all.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_minus_live.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.025714502768083403,
+        0.13486787878860884,
+        0.01574615924916367
+      ],
+      "mean": 0.05877618026861864,
+      "sd": 0.06608556503405723,
+      "how": "per seed: heldout.gate_zeroed.gap_eq_1.answer_nll - heldout.live.gap_eq_1.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_minus_live.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.01657904491856188,
+        0.11160775505045706,
+        0.010161077578448197
+      ],
+      "mean": 0.04611595918248904,
+      "sd": 0.05680826586601096,
+      "how": "per seed: heldout.gate_zeroed.gap_ge_2.answer_nll - heldout.live.gap_ge_2.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_minus_live.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.025488472558147013,
+        0.16807401129968058,
+        0.013454960251772619
+      ],
+      "mean": 0.06900581470320007,
+      "sd": 0.08600629068426391,
+      "how": "per seed: heldout.gate_zeroed.gap_2_to_M.answer_nll - heldout.live.gap_2_to_M.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.gate_zeroed_minus_live.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.01192306069766813,
+        -0.059962792783720964,
+        -0.00016070131597833992
+      ],
+      "mean": -0.024015518265789144,
+      "sd": 0.031681906247993816,
+      "how": "per seed: heldout.gate_zeroed.gap_gt_M.answer_nll - heldout.live.gap_gt_M.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_gt_M_minus_gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.09906109748732828,
+        0.3292784423267556,
+        0.06407414055226024
+      ],
+      "mean": 0.16413789345544805,
+      "sd": 0.1440818255368512,
+      "how": "per seed: heldout.live.gap_gt_M.answer_nll - heldout.live.gap_lt_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_gt_M_minus_gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10118856145551414,
+        0.3287053434123348,
+        0.06308288070299062
+      ],
+      "mean": 0.16432559519027987,
+      "sd": 0.1436263796994234,
+      "how": "per seed: heldout.live.gap_gt_M.answer_nll - heldout.live.gap_le_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.live.gap_gt_M_minus_gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0826786104266044,
+        0.2697696580484963,
+        0.036645361844872326
+      ],
+      "mean": 0.12969787677332434,
+      "sd": 0.12347000820420558,
+      "how": "per seed: heldout.live.gap_gt_M.answer_nll - heldout.live.gap_2_to_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_gt_M_minus_gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.05952946961443617,
+        0.11173177125353329,
+        0.04742070767573825
+      ],
+      "mean": 0.07289398284790256,
+      "sd": 0.03417507695825165,
+      "how": "per seed: heldout.slots_zeroed.gap_gt_M.answer_nll - heldout.slots_zeroed.gap_lt_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_gt_M_minus_gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06212518248104271,
+        0.11238776707253528,
+        0.04642196150353817
+      ],
+      "mean": 0.07364497035237205,
+      "sd": 0.03445868556027642,
+      "how": "per seed: heldout.slots_zeroed.gap_gt_M.answer_nll - heldout.slots_zeroed.gap_le_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.slots_zeroed.gap_gt_M_minus_gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.04397054780507492,
+        0.04567498187282126,
+        0.02099193084773132
+      ],
+      "mean": 0.036879153508542505,
+      "sd": 0.013785106339033725,
+      "how": "per seed: heldout.slots_zeroed.gap_gt_M.answer_nll - heldout.slots_zeroed.gap_2_to_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "heldout.fraction_of_pairs_gap_gt_M",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.18370739817123857,
+        0.19813717188823032,
+        0.19430485762144054
+      ],
+      "mean": 0.1920498092269698,
+      "sd": 0.00747452505694845,
+      "how": "rsr.data.synthetic.fraction_of_pairs_beyond(docs, 16); set heldout",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "seed0.heldout.n_answer_targets_by_bucket",
+      "kind": "observation",
+      "value": {
+        "all": 1203,
+        "gap_eq_1": 275,
+        "gap_ge_2": 928,
+        "gap_2_to_M": 707,
+        "gap_lt_M": 962,
+        "gap_eq_M": 20,
+        "gap_le_M": 982,
+        "gap_gt_M": 221
+      },
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; counts of answer targets per bucket"
+    },
+    {
+      "key": "seed1.heldout.n_answer_targets_by_bucket",
+      "kind": "observation",
+      "value": {
+        "all": 1181,
+        "gap_eq_1": 236,
+        "gap_ge_2": 945,
+        "gap_2_to_M": 711,
+        "gap_lt_M": 941,
+        "gap_eq_M": 6,
+        "gap_le_M": 947,
+        "gap_gt_M": 234
+      },
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; counts of answer targets per bucket"
+    },
+    {
+      "key": "seed2.heldout.n_answer_targets_by_bucket",
+      "kind": "observation",
+      "value": {
+        "all": 1194,
+        "gap_eq_1": 235,
+        "gap_ge_2": 959,
+        "gap_2_to_M": 727,
+        "gap_lt_M": 953,
+        "gap_eq_M": 9,
+        "gap_le_M": 962,
+        "gap_gt_M": 232
+      },
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; counts of answer targets per bucket"
+    },
+    {
+      "key": "train.live.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6501242044618576,
+        2.4347171565430274,
+        2.4718366793181143
+      ],
+      "mean": 2.5188926801076668,
+      "sd": 0.11515532762753986,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.13983051478862762,
+        0.21644295752048492,
+        0.20701168477535248
+      ],
+      "mean": 0.187761719028155,
+      "sd": 0.04177663798448525,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.643744038626299,
+        2.4263204089147132,
+        2.4590243053356673
+      ],
+      "mean": 2.509696250958893,
+      "sd": 0.11723477830478697,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6047163136362093,
+        2.1644155361898427,
+        2.376527562420419
+      ],
+      "mean": 2.3818864707488236,
+      "sd": 0.2201993008136558,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.17716535925865173,
+        0.3096085488796234,
+        0.24822695553302765
+      ],
+      "mean": 0.24500028789043427,
+      "sd": 0.06628052622981342,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.5975770893998034,
+        2.1548091417105595,
+        2.361966190397317
+      ],
+      "mean": 2.3714508071692264,
+      "sd": 0.2215363002799287,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6625795006494544,
+        2.5180922995937904,
+        2.50117856901806
+      ],
+      "mean": 2.560616789753768,
+      "sd": 0.08870633788177168,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.12958963215351105,
+        0.18770581483840942,
+        0.19432313740253448
+      ],
+      "mean": 0.17053952813148499,
+      "sd": 0.035617660295625596,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6564075430577567,
+        2.5100686702586947,
+        2.4889046420306618
+      ],
+      "mean": 2.5517936184490377,
+      "sd": 0.0912142200494983,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6562687007860206,
+        2.498868190006099,
+        2.496872993007218
+      ],
+      "mean": 2.5506699612664456,
+      "sd": 0.091456632038679,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.12787356972694397,
+        0.1974431872367859,
+        0.1977401077747345
+      ],
+      "mean": 0.17435228824615479,
+      "sd": 0.04025202475456963,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6500403607028655,
+        2.490845182317902,
+        2.484156914265816
+      ],
+      "mean": 2.541680819095528,
+      "sd": 0.09390168222879933,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6410735603542617,
+        2.4011002281790046,
+        2.46257553143379
+      ],
+      "mean": 2.5015831066556853,
+      "sd": 0.12465148708436229,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.14038877189159393,
+        0.23069001734256744,
+        0.21230769157409668
+      ],
+      "mean": 0.19446216026941934,
+      "sd": 0.047722384403536516,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6345917242649564,
+        2.392624334130056,
+        2.4493230505478687
+      ],
+      "mean": 2.4921797029809603,
+      "sd": 0.12654870195107443,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6969517717758813,
+        2.5668321337018694,
+        2.4637139002482096
+      ],
+      "mean": 2.5758326019086533,
+      "sd": 0.11687913628892743,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1666666716337204,
+        0.1428571492433548,
+        0.20000000298023224
+      ],
+      "mean": 0.16984127461910248,
+      "sd": 0.028703397209818904,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6908639619747796,
+        2.5584391951560974,
+        2.45117244720459
+      ],
+      "mean": 2.566825201445156,
+      "sd": 0.12006560452234898,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6424852204322815,
+        2.4034558085620708,
+        2.4625927794461298
+      ],
+      "mean": 2.5028446028134943,
+      "sd": 0.12449466614298313,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.14105263352394104,
+        0.22944162786006927,
+        0.21212121844291687
+      ],
+      "mean": 0.19420515994230905,
+      "sd": 0.046839005583871315,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.63601333869131,
+        2.3949810935761118,
+        2.449351071709334
+      ],
+      "mean": 2.493448501325585,
+      "sd": 0.12642220244240485,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6816765298014102,
+        2.5834728462108667,
+        2.515834087362656
+      ],
+      "mean": 2.593661154458311,
+      "sd": 0.08338932873708467,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.134782612323761,
+        0.15458936989307404,
+        0.18269230425357819
+      ],
+      "mean": 0.1573547621568044,
+      "sd": 0.02407426407975377,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.675675190531689,
+        2.575447102675691,
+        2.5050651769225416
+      ],
+      "mean": 2.5853958233766403,
+      "sd": 0.08573900494301005,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.real_token_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.5690696497122132,
+        1.5481637712173868,
+        1.563945303429029
+      ],
+      "mean": 1.5603929081195431,
+      "sd": 0.010896264187153986,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition live; all real targets",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.689271695128942,
+        2.630500947269017,
+        2.491184977438295
+      ],
+      "mean": 2.603652539945418,
+      "sd": 0.10173600475359729,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.12627118825912476,
+        0.15436241030693054,
+        0.20033389329910278
+      ],
+      "mean": 0.16032249728838602,
+      "sd": 0.03738934403114854,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.684214519747233,
+        2.6228097110186646,
+        2.480169198847374
+      ],
+      "mean": 2.5957311432044237,
+      "sd": 0.10468314033995361,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.655406012779146,
+        2.4302097406251573,
+        2.409745267942442
+      ],
+      "mean": 2.4984536737822487,
+      "sd": 0.1363093034168731,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15354330837726593,
+        0.1708185076713562,
+        0.25531914830207825
+      ],
+      "mean": 0.19322698811690012,
+      "sd": 0.05446269727996401,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6505322554918727,
+        2.4223544830953525,
+        2.3991692658011794
+      ],
+      "mean": 2.490685334796135,
+      "sd": 0.1389160434117551,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.698560985967871,
+        2.6922812206684954,
+        2.5162570277416028
+      ],
+      "mean": 2.6356997447926562,
+      "sd": 0.10348807107805881,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.11879049986600876,
+        0.14928649365901947,
+        0.18340611457824707
+      ],
+      "mean": 0.15049436936775842,
+      "sd": 0.032324737260431495,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6934534993593946,
+        2.684640577150883,
+        2.505105859457666
+      ],
+      "mean": 2.6277333119893145,
+      "sd": 0.10628986774507071,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6960010725533827,
+        2.7215329554270613,
+        2.507463047901789
+      ],
+      "mean": 2.6416656919607444,
+      "sd": 0.11692190348724134,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.12212643772363663,
+        0.1463068127632141,
+        0.1878531128168106
+      ],
+      "mean": 0.15209545443455377,
+      "sd": 0.03324349912389326,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.690911038853656,
+        2.7137646173888985,
+        2.496377790883436
+      ],
+      "mean": 2.63368448237533,
+      "sd": 0.11945885132255497,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.684697730752356,
+        2.6400866986057663,
+        2.480142836693006
+      ],
+      "mean": 2.6016424220170427,
+      "sd": 0.10755997384125142,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1317494660615921,
+        0.15242017805576324,
+        0.2071794867515564
+      ],
+      "mean": 0.16378304362297058,
+      "sd": 0.038977660791098406,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6796760629886687,
+        2.632327825598319,
+        2.4692209970034087
+      ],
+      "mean": 2.593741628530132,
+      "sd": 0.1104060897453295,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7024906277656555,
+        2.5231395278658186,
+        2.4461825132369994
+      ],
+      "mean": 2.5572708896228247,
+      "sd": 0.13151872408463128,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0833333358168602,
+        0.2142857164144516,
+        0.20000000298023224
+      ],
+      "mean": 0.16587301840384802,
+      "sd": 0.07183745404210594,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6970517337322235,
+        2.5129701239722118,
+        2.434049121538798
+      ],
+      "mean": 2.5480236597477446,
+      "sd": 0.13495983210909923,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6851472355190076,
+        2.6384245053160615,
+        2.479628286337612
+      ],
+      "mean": 2.6010666757242267,
+      "sd": 0.10773214558345945,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1305263191461563,
+        0.1532994955778122,
+        0.2070707082748413
+      ],
+      "mean": 0.16363217433293661,
+      "sd": 0.03930437716671436,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.68011502730219,
+        2.6306313709559173,
+        2.4686880897993992
+      ],
+      "mean": 2.5931448293525023,
+      "sd": 0.1105860211622187,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7063075065612794,
+        2.5927970599437105,
+        2.546190382196353
+      ],
+      "mean": 2.6150983162337806,
+      "sd": 0.08235522389508686,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10869564861059189,
+        0.15942029654979706,
+        0.16826923191547394
+      ],
+      "mean": 0.14546172569195429,
+      "sd": 0.03214629422252265,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7011472059332804,
+        2.5855907011723174,
+        2.5348148621045627
+      ],
+      "mean": 2.607184256403387,
+      "sd": 0.08524273207450957,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.real_token_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.5990042179484865,
+        1.5876121430626144,
+        1.584758685712618
+      ],
+      "mean": 1.5904583489079063,
+      "sd": 0.007537205248374396,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition slots_zeroed; all real targets",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6898916671841833,
+        2.621777510783016,
+        2.4942649784987676
+      ],
+      "mean": 2.601978052155322,
+      "sd": 0.09930490548289875,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.12627118825912476,
+        0.15855704247951508,
+        0.20116861164569855
+      ],
+      "mean": 0.16199894746144614,
+      "sd": 0.037567153737213095,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.684678930751348,
+        2.6140135941689446,
+        2.4827319981160265
+      ],
+      "mean": 2.59380817434544,
+      "sd": 0.10247846184875543,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6554759609417653,
+        2.4170622108669892,
+        2.4128174278753023
+      ],
+      "mean": 2.4951185332280192,
+      "sd": 0.1388898232877005,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15354330837726593,
+        0.1708185076713562,
+        0.25531914830207825
+      ],
+      "mean": 0.19322698811690012,
+      "sd": 0.05446269727996401,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6504755625574608,
+        2.409137497168843,
+        2.401729426485427
+      ],
+      "mean": 2.487114162070577,
+      "sd": 0.14152360317130733,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6993318285076975,
+        2.6849224057077183,
+        2.5193394427736773
+      ],
+      "mean": 2.634531225663031,
+      "sd": 0.10001883822699677,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.11879049986600876,
+        0.1547749787569046,
+        0.18449781835079193
+      ],
+      "mean": 0.15268776565790176,
+      "sd": 0.03290334739058731,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6940608481609023,
+        2.677208087316067,
+        2.5076694710416043
+      ],
+      "mean": 2.626312802172858,
+      "sd": 0.10309308368393835,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6964010752138052,
+        2.7128569395704702,
+        2.5101664389594127
+      ],
+      "mean": 2.639808151247896,
+      "sd": 0.1125741046677639,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.12068965286016464,
+        0.1505681872367859,
+        0.1878531128168106
+      ],
+      "mean": 0.15303698430458704,
+      "sd": 0.03364972225083714,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.691152424134057,
+        2.7050024819645015,
+        2.4985716470048924
+      ],
+      "mean": 2.6315755177011506,
+      "sd": 0.11539271311749642,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6849406935741267,
+        2.629860695186776,
+        2.4829130066358127
+      ],
+      "mean": 2.5992381317989053,
+      "sd": 0.10443707490036513,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.13066954910755157,
+        0.15550978481769562,
+        0.2071794867515564
+      ],
+      "mean": 0.1644529402256012,
+      "sd": 0.039031111450480625,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.6797700864192477,
+        2.622024520172763,
+        2.471478700943482
+      ],
+      "mean": 2.591091102511831,
+      "sd": 0.10753595939030228,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7054566740989685,
+        2.5322165489196777,
+        2.451478131612142
+      ],
+      "mean": 2.563050451543596,
+      "sd": 0.12976641389126523,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0833333358168602,
+        0.2142857164144516,
+        0.20000000298023224
+      ],
+      "mean": 0.16587301840384802,
+      "sd": 0.07183745404210594,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.699824169278145,
+        2.521683922835759,
+        2.438979395230611
+      ],
+      "mean": 2.5534958291148384,
+      "sd": 0.1333004016228343,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.685458992029491,
+        2.628472859605315,
+        2.4824367206506053
+      ],
+      "mean": 2.598789524095137,
+      "sd": 0.10471550016219101,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.12947368621826172,
+        0.1563451737165451,
+        0.2070707082748413
+      ],
+      "mean": 0.16429652273654938,
+      "sd": 0.03940485276511977,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.680276715880946,
+        2.6205983593984303,
+        2.47098628722056
+      ],
+      "mean": 2.5906204541666455,
+      "sd": 0.10781756342904637,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.708200542823128,
+        2.5899180006865716,
+        2.5505629365260782
+      ],
+      "mean": 2.616227160011926,
+      "sd": 0.08204591780260045,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.11304347962141037,
+        0.16908212006092072,
+        0.17307692766189575
+      ],
+      "mean": 0.15173417578140894,
+      "sd": 0.03356660690256313,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.702861992172573,
+        2.582680291023807,
+        2.538637064397335
+      ],
+      "mean": 2.6080597825312384,
+      "sd": 0.0850032097486757,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed.real_token_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.6005769422634972,
+        1.5880739518710787,
+        1.5864558028861613
+      ],
+      "mean": 1.5917022323402457,
+      "sd": 0.0077281924601255375,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed; all real targets",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.713655768006535,
+        2.6598417112891304,
+        2.5673850959847884
+      ],
+      "mean": 2.646960858426818,
+      "sd": 0.07398117768235883,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10932203382253647,
+        0.13171140849590302,
+        0.16777963936328888
+      ],
+      "mean": 0.1362710272272428,
+      "sd": 0.029494330024954628,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.708901710631484,
+        2.651785791220281,
+        2.5539105242003184
+      ],
+      "mean": 2.638199342017361,
+      "sd": 0.07838373982716516,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.724584772830873,
+        2.6831351730747155,
+        2.548470546590521
+      ],
+      "mean": 2.652063497498703,
+      "sd": 0.09207682628319257,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.11417322605848312,
+        0.10676156729459763,
+        0.1773049682378769
+      ],
+      "mean": 0.13274658719698587,
+      "sd": 0.038766224502097144,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7198645970014135,
+        2.6751838561903116,
+        2.5355573879911546
+      ],
+      "mean": 2.643535280394293,
+      "sd": 0.09614318013112035,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7106579632275047,
+        2.6526567905846856,
+        2.5732081341170847
+      ],
+      "mean": 2.6455076293097584,
+      "sd": 0.06900323732131781,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10799136012792587,
+        0.13940724730491638,
+        0.16484716534614563
+      ],
+      "mean": 0.13741525759299597,
+      "sd": 0.02848019775233897,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.705894612210358,
+        2.644568605428208,
+        2.5595607255223536
+      ],
+      "mean": 2.6366746477203065,
+      "sd": 0.07348562801340848,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.710751430570394,
+        2.6806256605142895,
+        2.558592776289094
+      ],
+      "mean": 2.649989955791259,
+      "sd": 0.08057278585900819,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1048850566148758,
+        0.1306818127632141,
+        0.17231638729572296
+      ],
+      "mean": 0.13596108555793762,
+      "sd": 0.03402424327267648,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7059964249873985,
+        2.672303418713537,
+        2.5449630308285944
+      ],
+      "mean": 2.6410876248431765,
+      "sd": 0.08493384395394929,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.714424540620643,
+        2.6828202034982667,
+        2.557545395508791
+      ],
+      "mean": 2.6515967132092335,
+      "sd": 0.08296955045152657,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10691145062446594,
+        0.12461379915475845,
+        0.1733333319425583
+      ],
+      "mean": 0.13495286057392755,
+      "sd": 0.03439678361025489,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7096829859793314,
+        2.6747058809233253,
+        2.5441568659513423
+      ],
+      "mean": 2.642848577618,
+      "sd": 0.08724041456398349,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.715433473388354,
+        2.578787931374141,
+        2.436374608675639
+      ],
+      "mean": 2.5768653378127113,
+      "sd": 0.1395393663744721,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.125,
+        0.0714285746216774,
+        0.20000000298023224
+      ],
+      "mean": 0.13214285920063654,
+      "sd": 0.06458264763626402,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7105281005303064,
+        2.563489999089922,
+        2.4205376625061037
+      ],
+      "mean": 2.564851920708777,
+      "sd": 0.14500001606634105,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.714450029448459,
+        2.681341572219345,
+        2.555709474496167
+      ],
+      "mean": 2.650500358721324,
+      "sd": 0.08374381340829487,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10736842453479767,
+        0.12385787069797516,
+        0.17373737692832947
+      ],
+      "mean": 0.13498789072036743,
+      "sd": 0.034556004828797296,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7097043362416717,
+        2.6731251475774696,
+        2.5422838477173237
+      ],
+      "mean": 2.6417044438454886,
+      "sd": 0.08802187490443804,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.710375122920327,
+        2.557535609761298,
+        2.622956563646977
+      ],
+      "mean": 2.6302890987762004,
+      "sd": 0.07668313862406916,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.11739130318164825,
+        0.16908212006092072,
+        0.13942307233810425
+      ],
+      "mean": 0.14196549852689108,
+      "sd": 0.025939026304117343,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.70558651789375,
+        2.5502434433370396,
+        2.6092490324607263
+      ],
+      "mean": 2.621692997897172,
+      "sd": 0.07841560374071292,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_bos_off.real_token_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.135413213708458,
+        2.942998070503814,
+        3.0555166466136914
+      ],
+      "mean": 3.0446426436086544,
+      "sd": 0.0966673667254418,
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; set train; condition gate_zeroed_bos_off; all real targets",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed_minus_live.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.03914749066708456,
+        0.19578379072598961,
+        0.019348298120180463
+      ],
+      "mean": 0.08475985983775154,
+      "sd": 0.09665783428561052,
+      "how": "per seed: train.slots_zeroed.all.answer_nll - train.live.all.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed_minus_live.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.05068969914293664,
+        0.26579420443531454,
+        0.03321770552202308
+      ],
+      "mean": 0.11656720303342476,
+      "sd": 0.12952930595360274,
+      "how": "per seed: train.slots_zeroed.gap_eq_1.answer_nll - train.live.gap_eq_1.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed_minus_live.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.035981485318416606,
+        0.17418892107470496,
+        0.015078458723542632
+      ],
+      "mean": 0.07508295503888807,
+      "sd": 0.08646229529757969,
+      "how": "per seed: train.slots_zeroed.gap_ge_2.answer_nll - train.live.gap_ge_2.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed_minus_live.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.03973237176736211,
+        0.22266476542096214,
+        0.01059005489457121
+      ],
+      "mean": 0.09099573069429849,
+      "sd": 0.11495594672554811,
+      "how": "per seed: train.slots_zeroed.gap_2_to_M.answer_nll - train.live.gap_2_to_M.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed_minus_live.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.02463097675986914,
+        0.009324213732843756,
+        0.03035629483369684
+      ],
+      "mean": 0.02143716177546991,
+      "sd": 0.010873704496359332,
+      "how": "per seed: train.slots_zeroed.gap_gt_M.answer_nll - train.live.gap_gt_M.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_minus_live.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.039767462722325675,
+        0.18706035423998868,
+        0.022428299180653255
+      ],
+      "mean": 0.08308537204765587,
+      "sd": 0.09046136932140238,
+      "how": "per seed: train.gate_zeroed.all.answer_nll - train.live.all.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_minus_live.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.050759647305556044,
+        0.2526466746771465,
+        0.03628986545488333
+      ],
+      "mean": 0.1132320624791953,
+      "sd": 0.12095316952205246,
+      "how": "per seed: train.gate_zeroed.gap_eq_1.answer_nll - train.live.gap_eq_1.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_minus_live.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.03675232785824312,
+        0.1668301061139279,
+        0.018160873755617146
+      ],
+      "mean": 0.07391443590926272,
+      "sd": 0.08100248063237996,
+      "how": "per seed: train.gate_zeroed.gap_ge_2.answer_nll - train.live.gap_ge_2.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_minus_live.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.04013237442778461,
+        0.21398874956437108,
+        0.013293445952194727
+      ],
+      "mean": 0.08913818998145014,
+      "sd": 0.108953332631709,
+      "how": "per seed: train.gate_zeroed.gap_2_to_M.answer_nll - train.live.gap_2_to_M.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.gate_zeroed_minus_live.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.026524013021717696,
+        0.006445154475704928,
+        0.034728849163422115
+      ],
+      "mean": 0.022566005553614914,
+      "sd": 0.014551330304654912,
+      "how": "per seed: train.gate_zeroed.gap_gt_M.answer_nll - train.live.gap_gt_M.answer_nll",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_gt_M_minus_gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.040602969447148585,
+        0.1823726180318621,
+        0.05325855592886608
+      ],
+      "mean": 0.09207804780262559,
+      "sd": 0.07845299883982099,
+      "how": "per seed: train.live.gap_gt_M.answer_nll - train.live.gap_lt_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_gt_M_minus_gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.039191309369128735,
+        0.18001703764879595,
+        0.05324130791652637
+      ],
+      "mean": 0.09081655164481701,
+      "sd": 0.0775686511569268,
+      "how": "per seed: train.live.gap_gt_M.answer_nll - train.live.gap_le_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.live.gap_gt_M_minus_gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.025407829015389627,
+        0.08460465620476754,
+        0.018961094355438135
+      ],
+      "mean": 0.0429911931918651,
+      "sd": 0.036182182422963435,
+      "how": "per seed: train.live.gap_gt_M.answer_nll - train.live.gap_2_to_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_gt_M_minus_gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.021609775808923537,
+        -0.04728963866205582,
+        0.06604754550334713
+      ],
+      "mean": 0.013455894216738281,
+      "sd": 0.057106861824128885,
+      "how": "per seed: train.slots_zeroed.gap_gt_M.answer_nll - train.slots_zeroed.gap_lt_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_gt_M_minus_gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.021160271042271805,
+        -0.04562744537235108,
+        0.06656209585874118
+      ],
+      "mean": 0.014031640509553966,
+      "sd": 0.05643346808733923,
+      "how": "per seed: train.slots_zeroed.gap_gt_M.answer_nll - train.slots_zeroed.gap_le_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.slots_zeroed.gap_gt_M_minus_gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.010306434007896659,
+        -0.12873589548335085,
+        0.038727334294563764
+      ],
+      "mean": -0.026567375726963476,
+      "sd": 0.08961440573470683,
+      "how": "per seed: train.slots_zeroed.gap_gt_M.answer_nll - train.slots_zeroed.gap_2_to_M.answer_nll (FIFO)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "train.fraction_of_pairs_gap_gt_M",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.19491525423728814,
+        0.17365771812080538,
+        0.17362270450751252
+      ],
+      "mean": 0.18073189228853534,
+      "sd": 0.012283164234645544,
+      "how": "rsr.data.synthetic.fraction_of_pairs_beyond(docs, 16); set train",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "seed0.train.n_answer_targets_by_bucket",
+      "kind": "observation",
+      "value": {
+        "all": 1180,
+        "gap_eq_1": 254,
+        "gap_ge_2": 926,
+        "gap_2_to_M": 696,
+        "gap_lt_M": 926,
+        "gap_eq_M": 24,
+        "gap_le_M": 950,
+        "gap_gt_M": 230
+      },
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; counts of answer targets per bucket"
+    },
+    {
+      "key": "seed1.train.n_answer_targets_by_bucket",
+      "kind": "observation",
+      "value": {
+        "all": 1192,
+        "gap_eq_1": 281,
+        "gap_ge_2": 911,
+        "gap_2_to_M": 704,
+        "gap_lt_M": 971,
+        "gap_eq_M": 14,
+        "gap_le_M": 985,
+        "gap_gt_M": 207
+      },
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; counts of answer targets per bucket"
+    },
+    {
+      "key": "seed2.train.n_answer_targets_by_bucket",
+      "kind": "observation",
+      "value": {
+        "all": 1198,
+        "gap_eq_1": 282,
+        "gap_ge_2": 916,
+        "gap_2_to_M": 708,
+        "gap_lt_M": 975,
+        "gap_eq_M": 15,
+        "gap_le_M": 990,
+        "gap_gt_M": 208
+      },
+      "how": "experiments/s0-03-rewardable-corpus/run.py::measure -> answer_readout; trained ckpt, eval(), FIFO, answer targets from rsr.train.loop.answer_targets, NLL over the full softmax (nats per answer token), mean within seed; seeds [0, 1, 2]; counts of answer targets per bucket"
+    },
+    {
+      "key": "seed0.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9398863911628723,
+        0.972432553768158,
+        0.9979708790779114,
+        1.010927438735962,
+        1.0205918550491333,
+        1.019335389137268
+      ],
+      "how": "trained ckpt"
+    },
+    {
+      "key": "seed0.train_final.loss_answer_tokens",
+      "kind": "observation",
+      "value": 2.6953836266199747,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "seed0.train_final.answer_target_fraction",
+      "kind": "observation",
+      "value": 0.0854457419538593,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "seed0.train_final.loss_real_tokens",
+      "kind": "observation",
+      "value": 1.5849550887942314,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "seed1.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9366268515586853,
+        0.9736247658729553,
+        0.993369460105896,
+        1.006832480430603,
+        1.0163302421569824,
+        1.032797932624817
+      ],
+      "how": "trained ckpt"
+    },
+    {
+      "key": "seed1.train_final.loss_answer_tokens",
+      "kind": "observation",
+      "value": 2.4982822676836434,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "seed1.train_final.answer_target_fraction",
+      "kind": "observation",
+      "value": 0.08489208633093526,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "seed1.train_final.loss_real_tokens",
+      "kind": "observation",
+      "value": 1.578337736427784,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "seed2.memory_gates",
+      "kind": "observation",
+      "value": [
+        0.9244470000267029,
+        0.9431727528572083,
+        0.9877306818962097,
+        0.9966398477554321,
+        1.0035886764526367,
+        1.0173605680465698
+      ],
+      "how": "trained ckpt"
+    },
+    {
+      "key": "seed2.train_final.loss_answer_tokens",
+      "kind": "observation",
+      "value": 2.444208303024139,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "seed2.train_final.answer_target_fraction",
+      "kind": "observation",
+      "value": 0.08619198616315941,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "seed2.train_final.loss_real_tokens",
+      "kind": "observation",
+      "value": 1.566870391368866,
+      "how": "rsr.train.loop.train return['final'] -- last training batch"
+    },
+    {
+      "key": "chance_ln16",
+      "kind": "observation",
+      "value": 2.772588722239781,
+      "how": "math.log(len(ANSWER_SYMBOLS))"
+    },
+    {
+      "key": "margin",
+      "kind": "observation",
+      "value": 0.1,
+      "how": "PREREG.md, fixed before the run"
+    },
+    {
+      "key": "decision",
+      "kind": "observation",
+      "value": {
+        "bar1_zeroed_not_below_chance": true,
+        "bar2_fifo_gt_M_worse_than_lt_M": true,
+        "h4_retrieval_shown": false,
+        "h4_live_and_zeroed_both_at_chance": false,
+        "outcome": "inconclusive",
+        "detail": "retrieval not shown (not both at chance)"
+      },
+      "how": "experiments/s0-03-rewardable-corpus/run.py::decide (PREREG.md rule)"
+    }
+  ],
+  "verdict": {
+    "falsifier": "PREREG.md: the S0-03 corpus tests retrieval only if (bar 1) answer NLL with memory zeroed is not below ln16 - 0.10 at gap >= 2 on held-out documents, every seed. H4: retrieval is shown only if live beats slots-zeroed by >= 0.10 at 2 <= gap <= M on every seed",
+    "outcome": "inconclusive",
+    "detail": "retrieval not shown (not both at chance)",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-21T10:43:26Z"
+}

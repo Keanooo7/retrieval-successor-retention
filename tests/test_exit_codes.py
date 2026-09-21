@@ -303,6 +303,11 @@ NOT_CONVERTED = {
         "protocol says 2 (no recorded value for this key) -- filed as a brief error"
     ),
     "experiments/s0-02/measure_capture_cost.py": "not in S0-05's files in scope",
+    "experiments/s0-03-rewardable-corpus/run.py": (
+        "landed on main (S0-03, #30) after S0-05 was written; not converted in the "
+        "merge. :190 exits 1 via `raise SystemExit(msg)` on a corpus precondition, "
+        "and argparse's usage error is 2 -- needs its own brief"
+    ),
     "experiments/s0-02/measure_qtok_collapse.py": (
         "not in S0-05's files in scope; three precondition refusals exit 1 via bare "
         "`raise SystemExit(msg)` -- filed as a brief error"

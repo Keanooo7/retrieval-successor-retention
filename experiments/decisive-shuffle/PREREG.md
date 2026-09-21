@@ -63,3 +63,19 @@ These thresholds were fixed on 2026-09-20 in `ba71e86`, before any of tonight's 
 ## What this does not establish
 
 Nothing here tests whether RSR discovers Kintsch & van Dijk's leading-edge strategy. It establishes whether TG has a working memory that **any** retention policy could act on. That is the precondition for E1/E3/E7 meaning anything.
+
+---
+
+## Amendment 1 — 2026-09-21, manager, before the decisive run started, prompted by S0-03's return (PR #30)
+
+**What prompted it.** These are three methodological findings in S0-03's return. They are not its effect sizes.
+1. Scoring on training documents is contaminated. 300 iters × 16 streams is ~75 passes over 64 docs, and answer NLL with memory zeroed was **below chance on train docs**, so memorisation reads as retrieval.
+2. At `gap = 1`, `bos_replacement_mode="copy"` carries the previous sentence outside the memory, so zeroing or shuffling memory does not remove the assert there.
+3. "`gap > M` vs `gap < M`" leaves `gap == M` unassigned, and under FIFO a `gap == M` assert is still resident.
+
+The manager had read S0-03's numbers when writing this. **For that reason this amendment changes no threshold, no arm, no condition, and not the primary readout's population.**
+
+**Changes (secondary readouts only):**
+- **Secondary 1 (answer tokens)** is scored on **held-out documents**: S0-03's held-out set, docs 64..127 of each seed's generator stream, using its first `measure_documents = 8`. It is bucketed **`gap = 1` (reported separately)**, **`2 ≤ gap ≤ M`** (the assert is resident under FIFO), and **`gap > M`** (evicted).
+- The **primary** readout stays on the #17 measurement batch, for comparability with `runs/shuffle-control/`. It is **also** reported on the held-out batch as a descriptive row, and that row carries no verdict.
+- The discriminators (cross-row cosine, matched-norm random replacement) are reported on both batches.

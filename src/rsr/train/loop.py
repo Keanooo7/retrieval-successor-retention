@@ -44,7 +44,7 @@ import torch
 import torch.nn.functional as F
 
 from rsr.baselines.fifo import FIFOPolicy
-from rsr.data.synthetic import SyntheticConfig, generate
+from rsr.data.synthetic import SyntheticConfig, answer_symbol, generate
 from rsr.model.tg import TGConfig, TGModel
 from rsr.model.tg.policy_loop import run_policy_loop
 from rsr.mup.param_groups import build_param_groups
@@ -52,7 +52,7 @@ from rsr.retention.rsr import RSRConfig, RSRPolicy
 from rsr.train import checkpoint as ck
 from rsr.train.heartbeat import Heartbeat
 
-__all__ = ["build_policy", "main", "train"]
+__all__ = ["answer_targets", "build_policy", "main", "train"]
 
 
 def _sha() -> str:
@@ -116,6 +116,56 @@ def encode(docs, vocab: dict[str, int], *, max_tokens: int, steps: int):
             ids[di, si, : len(toks)] = torch.tensor(toks)
             mask[di, si, : len(toks)] = True
     return ids, mask
+
+
+def answer_targets(docs, vocab: dict[str, int], *, max_tokens: int, steps: int):
+    """-> `target_mask` (n_docs, steps, L) bool and `gap` (n_docs, steps) long (S0-03).
+
+    `target_mask` is a **supervision** mask, in the same token frame as `encode()`'s
+    `ids` and `mask`: True at exactly one position per query sentence, the answer
+    token. Score it the way `mask` is scored -- `target_mask[..., 1:]` against the
+    shifted targets of `lm_token_losses`. `encode()`'s mask is a *padding* mask;
+    pooled into it, the answer targets are ~7% of real targets on this corpus and
+    their loss cannot be read off the total.
+
+    `gap[d, s]` is `query_index - assert_index` for a query sentence and 0
+    elsewhere, so answer-token loss can be bucketed by gap. Bucketing is what makes
+    this an eviction test rather than a memorization test: under FIFO with `M`
+    slots the assert is in memory iff `gap <= M`.
+
+    🔴 **Raises if a query does not carry its answer as its final token.** An empty
+    mask would score as "no answer targets" and every answer-token loss downstream
+    would be a mean over nothing -- the pre-S0-03 corpus, where the answer lived
+    only in `Sentence.answer`, would pass through silently.
+    """
+    n, L = len(docs), max_tokens
+    target_mask = torch.zeros(n, steps, L, dtype=torch.bool)
+    gap = torch.zeros(n, steps, dtype=torch.long)
+    for di, doc in enumerate(docs):
+        assert_of = {q: a for a, q in doc.pairs}
+        for si, sent in enumerate(doc.sentences[:steps]):
+            if sent.kind != "query":
+                continue
+            words = sent.text.split()
+            sym = answer_symbol(sent.answer) if sent.answer is not None else None
+            if sym is None or not words or words[-1] != sym:
+                raise ValueError(
+                    f"doc {doc.doc_id} sentence {si}: query {sent.text!r} does not "
+                    f"end in its answer {sym!r}. The answer is out of band, so no "
+                    f"next-token target requires retrieval (S0-03); generate with "
+                    f"SyntheticConfig(answer_in_stream=True)."
+                )
+            pos = len(words) - 1
+            if pos >= L - 1:  # encode() truncates to L - 1 words before the EOS
+                raise ValueError(
+                    f"doc {doc.doc_id} sentence {si}: the answer at word {pos} is "
+                    f"truncated away by max_tokens={L}"
+                )
+            if vocab.get(words[-1]) is None:
+                raise ValueError(f"answer token {words[-1]!r} is not in the vocab")
+            target_mask[di, si, pos] = True
+            gap[di, si] = si - assert_of[si]
+    return target_mask, gap
 
 
 def lm_token_losses(logits, ids_t):
@@ -305,6 +355,14 @@ def train(
         docs, vocab_map, max_tokens=max_tokens, steps=steps_per_stream
     )
     all_ids, all_mask = all_ids.to(device), all_mask.to(device)
+    # S0-03: the answer-token supervision mask, for the tally only. It does NOT
+    # enter the objective -- `loss` is the same next-token loss as before; the
+    # answer tokens are simply now among its targets.
+    all_tmask, _ = answer_targets(
+        docs, vocab_map, max_tokens=max_tokens, steps=steps_per_stream
+    )
+    all_tmask = all_tmask.to(device)
+    cur: dict[str, torch.Tensor] = {}
     hb = Heartbeat(
         out / "heartbeat.jsonl",
         run_id=run_id,
@@ -350,6 +408,12 @@ def train(
             tally["n_pad_targets"] = tally.get("n_pad_targets", 0.0) + float(
                 (~valid).sum()
             )
+            # S0-03: answer-token NLL, read off the supervision mask.
+            ans = cur["tmask"][:, t, 1:].reshape(-1)
+            per = lm_token_losses(o.logits, ids_t)
+            tally["ans_sum"] = tally.get("ans_sum", 0.0) + float(per[ans].sum())
+            tally["n_ans"] = tally.get("n_ans", 0.0) + float(ans.sum())
+            tally["n_real"] = tally.get("n_real", 0.0) + float(valid.sum())
         return loss
 
     last: dict[str, float] = {}
@@ -361,6 +425,7 @@ def train(
                 0, all_ids.shape[0], (batch,), generator=gen, device=device
             )
             ids, mask = all_ids[sel], all_mask[sel]
+            cur["tmask"] = all_tmask[sel]
             lengths = torch.full((batch,), steps_per_stream, device=device)
             loss = run_policy_loop(model, ids, mask, lengths, policy, step_fn=step_fn)
             opt.zero_grad(set_to_none=True)
@@ -388,6 +453,11 @@ def train(
                 "pad_target_fraction": tally["n_pad_targets"] / tally["n_targets"],
                 "n_targets_scored": tally["n_targets"],
                 "n_pad_targets_scored": tally["n_pad_targets"],
+                # S0-03. Mean NLL per answer target (not per sentence step), and
+                # what fraction of the real targets the answers are.
+                "loss_answer_tokens": tally["ans_sum"] / max(tally["n_ans"], 1.0),
+                "n_answer_targets": tally["n_ans"],
+                "answer_target_fraction": tally["n_ans"] / max(tally["n_real"], 1.0),
                 "step": it,
             }
             if it % beat_every == 0:
@@ -403,6 +473,9 @@ def train(
                     loss_all_targets=last["loss_all_targets"],
                     pad_target_fraction=last["pad_target_fraction"],
                     n_targets_scored=last["n_targets_scored"],
+                    loss_answer_tokens=last["loss_answer_tokens"],
+                    n_answer_targets=last["n_answer_targets"],
+                    answer_target_fraction=last["answer_target_fraction"],
                     masked_loss=masked_loss,
                     # 🔴 `exp(loss / steps)` was a perplexity only while `loss` WAS
                     # the LM loss. With (c)'s hinge in the objective it no longer
@@ -476,7 +549,8 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=None,
         help="vocabulary size; omit to derive it from the corpus (4 specials + "
-        "unique words). The synthetic corpus at seed 0 derives V=160.",
+        "unique words). The synthetic corpus at seed 0 derives V=172 (156 words + "
+        "16 answer symbols, S0-03).",
     )
     # S0-01 defect (b): the policy was unreachable from the CLI while its NAME was
     # stamped into the run_id. `choices` refuses an unknown name rather than
