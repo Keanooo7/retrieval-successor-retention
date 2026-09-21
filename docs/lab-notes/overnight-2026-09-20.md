@@ -295,3 +295,89 @@ window rather than undoing a landing; nothing had to be reverted.
 row-to-publish is still the owner's call. And **the `ledger.write()` / `mutation_battery.py`
 exclusion stands** — B1 got through on timing, not because the hazard went away. *A hazard survived
 by scheduling is not a hazard fixed.*
+
+---
+
+# S0-01 — the training-loop defects. Manager's review.
+
+**Verdict: ACCEPTED.** All three defects real, all three fixed, six mutations with zero off-gate.
+One consequence needs the owner's decision before any further training run.
+
+## What I re-executed rather than believed
+
+| Claim | Result |
+|---|---|
+| `passed=358 failed=0 skipped=0 errors=0`, exit `0` | ✅ reproduced, exit `0`. Floor `343 → 358` |
+| `grep -c srep_norm src/rsr/train/loop.py` → 9 | ✅ **`9`** (was `0`). Count read, not `$?` |
+| `loop.py` 401 → 510 lines | ✅ `510` |
+| 🔑 the hinge mutation reddens **3 of 3** | ✅ applied `loss = (lm + w_srep*hinge) if w_srep else lm` → `loss = lm` by hand, **full** suite: exactly **3 distinct** node ids, all in `test_train_loop.py`, **0 off-gate**. Tree restored, `git diff --stat` empty |
+| the μP item is a **strict** xfail | ✅ `@pytest.mark.xfail(strict=True, …)` at `:300-306` |
+| 5-seed spread, non-zero sd | ✅ from JSON: `loss_lm_final` n=5, five distinct samples, mean `4.926143896579743`, sd `0.026703463598901526`, `sd_exactly_zero: false`. Same shape for `loss_final` and `loss_srep_hinge_final` |
+| corpus 156 unique words → `V = 160` | ✅ ledger rows `corpus_unique_words: 156`, `derived_V: 160`, over-allocation `314.1×` |
+
+⚠️ **Not re-executed: the other 44 mutations.** `--check` at 45/45 is the battery's verdict, not
+mine. I re-ran the one whose test had been vacuous, because that is the one whose repair is the
+claim.
+
+## 🔴 A FOURTH wrong line number — and my own revalidation did not catch it
+
+The defect table gives (e)'s derived path as `loop.py:144`. Measured at **both** shas:
+
+```
+058e712:  V = vocab if vocab else 4 + len(build_vocab(probe))   at :193   (:144 is blank)
+c39b498:  V = vocab if vocab else 4 + len(build_vocab(probe))   at :193   (:144 is blank)
+```
+
+**It is `:193`.** This survived a re-baselining pass whose entire stated purpose was catching stale
+line numbers, and then survived my revalidation of that pass. 🔑 **My "nine of ten rows are exact"
+was true of the amendment's table and I did not extend it to the defect table below it** — a scope
+I stated but did not flag as a gap, which in a check about line numbers is the same failure one
+level up. Four briefs in a row now.
+
+📌 *The pattern is the finding, not the line.* A citation is re-measured when a command re-derives
+it, and prose asserting that a pass happened is not that command.
+
+## The vacuity finding — twice in two cycles, and both times self-reported
+
+`test_the_hinge_is_on_by_default` asserted `loss > loss_lm` and **survived** the hinge mutation:
+with `loss = lm` the two still differ by ~`2.1e-7`, because `loss` is a float32 tensor accumulated
+over 48 sentence steps while `loss_lm` is a Python-float sum of the same 48 terms. **A strict `>`
+against accumulation noise asserts nothing.** Repaired with a *measured* margin — the hinge
+contributes `6.236e-4` at the default weight, **3000×** the `2.086e-7` noise floor, so `1e-4` sits
+between them with room on both sides.
+
+🔑 **That is the rule paying out twice in two cycles** — S0-02's Bar 3, now this — and both times
+the researcher reported it rather than quietly repairing it. **A margin derived from a measurement
+is a threshold; a `>` is a hope.**
+
+**A defect the fix would otherwise have introduced:** `ppl` was `exp(loss.detach()/steps)` — a
+perplexity only while `loss` *is* the LM loss. The moment a regulariser enters the objective the
+field keeps its name and stops being the thing the name says. Now reads `loss_lm`, identical at
+weight 0, with its own mutation. `loss_real_tokens` is untouched.
+
+## 🔴 OWNER'S DECISION — pre-`3b02ee2` `loss` and `ppl` are not comparable with post
+
+(c) changes the **training objective**. Runs before `3b02ee2` and after it do not share one, so
+their `loss` and `ppl` must not be joined. `srep_norm_reg_weight` is now in `frozen`, so every
+config hash and `run_id` changes — **loudly, which is correct**: two objectives must not share a
+hash. `experiments/cycle-01-masked-loss/` was produced under the old objective.
+
+**`loss_real_tokens` is unaffected and remains the cross-arm yardstick.** That is the only quantity
+that survives the change, and cycle 1 already made it the common one — which is now load-bearing
+rather than incidental.
+
+⚠️ **Also the owner's: whether the hinge should default ON.** The researcher read
+`docs/spec-corrections.md` correction 15 item 4 against §3.1's *"the base model be unmodified"* and
+defaulted it on, with a test either way and a one-line flip. If the objective was meant to stay
+frozen against cycle 1, that is a decision, not a default.
+
+## Not done, and correctly not reported as done
+
+**"Done when … a PR is merged to `main`."** Not done. The lane cannot merge, the branch carries a
+second researcher's commits, and the merge is the owner's. Reported as NOT DONE rather than
+quietly dropped.
+
+**The brief contradicts itself** and should be fixed in the file: *"Done when"* requires 0 failures
+and 0 new skips; *"Less certain"* instructs leaving a failing test. Both cannot hold. Resolved with
+`xfail(strict=True)` — counted as neither passed nor skipped, and `strict` means it cannot go green
+unnoticed. **That is a good resolution of a contradiction the brief should not have contained.**
