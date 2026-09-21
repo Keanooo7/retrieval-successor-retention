@@ -125,7 +125,7 @@ def test_the_policy_is_selectable_from_the_command_line(monkeypatch, tmp_path):
 # --------------------------------------------------------------------------- #
 
 
-def test_the_srep_norm_hinge_reaches_the_objective(tmp_path):
+def test_the_hinge_reaches_the_objective(tmp_path):
     """With the hinge on, the optimised loss is strictly above the LM loss.
 
     `loss_srep_hinge` is reported unweighted so the term is auditable independently
@@ -188,11 +188,28 @@ def test_perplexity_is_a_perplexity_and_not_a_penalised_loss(tmp_path):
 
 
 def test_the_hinge_is_on_by_default(tmp_path):
-    """Correction 15 item 4: the hinge is part of TG's loss.
+    """Correction 15 item 4: the hinge is part of TG's loss. Off is the arm, not the norm.
 
-    Off is the arm, not the norm."""
+    🔴 **This test was vacuous when first written and the mutation battery caught it.**
+    It asserted `loss > loss_lm`, which survives the "hinge back out of the objective"
+    mutation: with `loss = lm` the two still differ by ~2.1e-7, because `loss` is a
+    float32 tensor accumulated across 48 steps by `run_policy_loop` while `loss_lm` is
+    a Python-float sum of the same terms. A strict `>` against float noise is not an
+    assertion about the hinge; it is an assertion that two accumulation orders
+    disagree, which they always do.
+
+    The margin below is **measured, not chosen**. At the default weight the hinge
+    contributes `0.01 * 0.0623 = 6.236e-4`; the noise it must be separated from is
+    2.1e-7, three thousand times smaller. `1e-4` sits between them with room on both
+    sides, and the exact-decomposition assertion is what actually pins the term.
+    """
     r = train(out_dir=tmp_path / "dflt", seed=0, **TINY)
-    assert r["final"]["loss"] > r["final"]["loss_lm"]
+    f = r["final"]
+    assert f["srep_norm_reg_weight"] == 0.01  # TGConfig's value, not this loop's
+    assert f["loss"] - f["loss_lm"] > 1e-4
+    assert f["loss"] == pytest.approx(
+        f["loss_lm"] + f["srep_norm_reg_weight"] * f["loss_srep_hinge"], rel=1e-5
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -271,7 +288,7 @@ def test_from_registry_honours_an_override_without_reading_the_registry():
     )
 
 
-def test_a_field_left_unoverridden_still_raises():
+def test_from_registry_still_raises_for_a_field_left_unoverridden():
     """The registry's refusal is the mechanism (D-1). Overriding four fields of five
     must still raise on the fifth, naming its experiment."""
     with pytest.raises(C.UnmeasuredConstant, match="beta"):

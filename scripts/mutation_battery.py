@@ -618,6 +618,89 @@ MUTATIONS: tuple[Mutation, ...] = (
         "path from a forward pass to any of it. A call site with no test that "
         "notices its removal is the same condition with an extra line of code.",
     ),
+    # ----------------------------------------------------------------------- #
+    # S0-01 -- the training-loop defects. One mutation per fix, each reverting
+    # exactly that fix and nothing else, per the brief's Bar.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "policy built unconditionally again",
+        "test_train_does_not_stamp_a_policy_it_did_not_build",
+        "src/rsr/train/loop.py",
+        "    policy = build_policy(\n"
+        "        policy_name, d_model=d, steps_per_epoch=float(iters), generator=gen\n"
+        "    )",
+        "    policy = FIFOPolicy()",
+        "S0-01 defect (b), the original line. `policy_name` still flows into the "
+        "frozen config and the `run_id`, so `train(policy_name='rsr')` completes "
+        "and returns `run_id='rsr-d32-...'` for a stream FIFO evicted. Nothing "
+        "in the run contradicts anything else in it, which is what made the "
+        "defect silent and what makes the test necessary: no assertion about the "
+        "loss curve could ever have caught this, because the loss curve is "
+        "genuine.",
+    ),
+    Mutation(
+        "--policy stops reaching train()",
+        "test_the_policy_is_selectable_from_the_command_line",
+        "src/rsr/train/loop.py",
+        "        policy_name=a.policy,\n",
+        "        # policy_name=a.policy,  # MUTATED\n",
+        "S0-01 defect (b), CLI half. The flag still parses and still appears in "
+        "`--help`; it simply does not arrive. A flag that is accepted and "
+        "discarded is worse than an absent one -- the absent one is an error at "
+        "the shell.",
+    ),
+    Mutation(
+        "srep-norm hinge back out of the objective",
+        "test_the_hinge",
+        "src/rsr/train/loop.py",
+        "        loss = (lm + w_srep * hinge) if w_srep else lm",
+        "        loss = lm",
+        "S0-01 defect (c). `o.srep_norm_penalty` goes back to being computed at "
+        "`model.py:424` and discarded, which is the state in which "
+        "`grep -c srep_norm src/rsr/train/loop.py` returned 0. The hinge is "
+        "still *reported*, so this mutation also checks that reporting a term is "
+        "not mistaken for optimising it.",
+    ),
+    Mutation(
+        "ppl computed from the penalised loss",
+        "test_perplexity_is_a_perplexity",
+        "src/rsr/train/loop.py",
+        '                    ppl=float(torch.exp(torch.tensor(last["loss_lm"]))),',
+        "                    ppl=float(torch.exp(loss.detach() / steps_per_stream)),",
+        "Not one of the brief's defects -- it is the defect the FIX for (c) would "
+        "have introduced. `exp(loss / steps)` is a perplexity only while `loss` "
+        "is the LM loss; with a regulariser in it the field keeps its name and "
+        "stops being the thing the name says. Pinned so the next person to add a "
+        "term to the objective is told.",
+    ),
+    Mutation(
+        "--vocab default back to 50257",
+        "test_the_cli_vocab_default_reaches_the_derived_path",
+        "src/rsr/train/loop.py",
+        '        "--vocab",\n        type=int,\n        default=None,',
+        '        "--vocab",\n        type=int,\n        default=50257,',
+        "S0-01 defect (e). 50257 is truthy, so `V = vocab if vocab else 4 + "
+        "len(build_vocab(probe))` never derives from the CLI at the default and "
+        "every run allocates a 50257-row embedding for a 156-word corpus. Note "
+        "the claim this proves is the SMALLER one the manager corrected the "
+        "brief to: unreachable *at the default*, not from the CLI -- "
+        "`--vocab 0` always reached it.",
+    ),
+    Mutation(
+        "from_registry reads every field eagerly again",
+        "test_from_registry",
+        "src/rsr/retention/rsr.py",
+        "        kw: dict[str, Any] = {\n"
+        "            k: read() for k, read in sources.items() if k not in overrides\n"
+        "        }",
+        "        kw: dict[str, Any] = {k: read() for k, read in sources.items()}",
+        "S0-01's second 'less certain' item, which measured as real. Every "
+        "registry read fires before `kw.update(overrides)` discards it, so a "
+        "caller who supplied `nu` is refused for not having measured `nu`. The "
+        "two arms the docstring names as the whole reason `overrides` exists -- "
+        "the `gamma = 0` control and A2's `A_max = M` -- are unbuildable until "
+        "E1 logs constants neither of them uses.",
+    ),
 )
 
 

@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**39/39 gates proven.**
+**45/45 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -51,6 +51,12 @@
 | the training loss scores padding again | `test_lm_loss` | **PROVEN** | 0 | 0 |
 | W_O dropped from the capture path | `test_capture_bridge` | **PROVEN** | 0 | 0 |
 | observe() is never reached | `test_observe` | **PROVEN** | 0 | 0 |
+| policy built unconditionally again | `test_train_does_not_stamp_a_policy_it_did_not_build` | **PROVEN** | 0 | 0 |
+| --policy stops reaching train() | `test_the_policy_is_selectable_from_the_command_line` | **PROVEN** | 0 | 0 |
+| srep-norm hinge back out of the objective | `test_the_hinge` | **PROVEN** | 0 | 0 |
+| ppl computed from the penalised loss | `test_perplexity_is_a_perplexity` | **PROVEN** | 0 | 0 |
+| --vocab default back to 50257 | `test_the_cli_vocab_default_reaches_the_derived_path` | **PROVEN** | 0 | 0 |
+| from_registry reads every field eagerly again | `test_from_registry` | **PROVEN** | 0 | 0 |
 
 ## What each mutation breaks, and what else went red
 
@@ -414,6 +420,54 @@ Reddened nothing else.
 **Gate:** `test_observe` — **PROVEN**
 
 S0-02 bar item 4. `git grep '\.observe(' -- src/` returned **zero hits** before this cycle: `reward.py` had 160 lines and 11 passing tests and no path from a forward pass to any of it. A call site with no test that notices its removal is the same condition with an extra line of code.
+
+Reddened nothing else.
+
+### policy built unconditionally again
+
+**Gate:** `test_train_does_not_stamp_a_policy_it_did_not_build` — **PROVEN**
+
+S0-01 defect (b), the original line. `policy_name` still flows into the frozen config and the `run_id`, so `train(policy_name='rsr')` completes and returns `run_id='rsr-d32-...'` for a stream FIFO evicted. Nothing in the run contradicts anything else in it, which is what made the defect silent and what makes the test necessary: no assertion about the loss curve could ever have caught this, because the loss curve is genuine.
+
+Reddened nothing else.
+
+### --policy stops reaching train()
+
+**Gate:** `test_the_policy_is_selectable_from_the_command_line` — **PROVEN**
+
+S0-01 defect (b), CLI half. The flag still parses and still appears in `--help`; it simply does not arrive. A flag that is accepted and discarded is worse than an absent one -- the absent one is an error at the shell.
+
+Reddened nothing else.
+
+### srep-norm hinge back out of the objective
+
+**Gate:** `test_the_hinge` — **PROVEN**
+
+S0-01 defect (c). `o.srep_norm_penalty` goes back to being computed at `model.py:424` and discarded, which is the state in which `grep -c srep_norm src/rsr/train/loop.py` returned 0. The hinge is still *reported*, so this mutation also checks that reporting a term is not mistaken for optimising it.
+
+Reddened nothing else.
+
+### ppl computed from the penalised loss
+
+**Gate:** `test_perplexity_is_a_perplexity` — **PROVEN**
+
+Not one of the brief's defects -- it is the defect the FIX for (c) would have introduced. `exp(loss / steps)` is a perplexity only while `loss` is the LM loss; with a regulariser in it the field keeps its name and stops being the thing the name says. Pinned so the next person to add a term to the objective is told.
+
+Reddened nothing else.
+
+### --vocab default back to 50257
+
+**Gate:** `test_the_cli_vocab_default_reaches_the_derived_path` — **PROVEN**
+
+S0-01 defect (e). 50257 is truthy, so `V = vocab if vocab else 4 + len(build_vocab(probe))` never derives from the CLI at the default and every run allocates a 50257-row embedding for a 156-word corpus. Note the claim this proves is the SMALLER one the manager corrected the brief to: unreachable *at the default*, not from the CLI -- `--vocab 0` always reached it.
+
+Reddened nothing else.
+
+### from_registry reads every field eagerly again
+
+**Gate:** `test_from_registry` — **PROVEN**
+
+S0-01's second 'less certain' item, which measured as real. Every registry read fires before `kw.update(overrides)` discards it, so a caller who supplied `nu` is refused for not having measured `nu`. The two arms the docstring names as the whole reason `overrides` exists -- the `gamma = 0` control and A2's `A_max = M` -- are unbuildable until E1 logs constants neither of them uses.
 
 Reddened nothing else.
 
