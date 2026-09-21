@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**45/45 gates proven.**
+**51/51 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -57,6 +57,12 @@
 | ppl computed from the penalised loss | `test_perplexity_is_a_perplexity` | **PROVEN** | 0 | 0 |
 | --vocab default back to 50257 | `test_the_cli_vocab_default_reaches_the_derived_path` | **PROVEN** | 0 | 0 |
 | from_registry reads every field eagerly again | `test_from_registry` | **PROVEN** | 0 | 0 |
+| the shuffle control hands each row its own memory | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
+| the shuffle control never applies its permutation | `test_live_memory_moves_the_loss` | **PROVEN** | 0 | 0 |
+| the shuffle replay perturbs the memory it replays | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
+| the shuffle replay hands over the bos gestalt too | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
+| the oracle evicts the sentence most needed | `test_oracle.py::` | **PROVEN** | 0 | 0 |
+| checkpoints written straight to the final path | `test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint` | **PROVEN** | 0 | 0 |
 
 ## What each mutation breaks, and what else went red
 
@@ -468,6 +474,54 @@ Reddened nothing else.
 **Gate:** `test_from_registry` — **PROVEN**
 
 S0-01's second 'less certain' item, which measured as real. Every registry read fires before `kw.update(overrides)` discards it, so a caller who supplied `nu` is refused for not having measured `nu`. The two arms the docstring names as the whole reason `overrides` exists -- the `gamma = 0` control and A2's `A_max = M` -- are unbuildable until E1 logs constants neither of them uses.
+
+Reddened nothing else.
+
+### the shuffle control hands each row its own memory
+
+**Gate:** `test_shuffle_control.py::` — **PROVEN**
+
+S0-04 Bar 1: an instrument that cannot read non-zero. With the identity permutation the control reads exactly 0.0 on ANY model, live or dead -- the reading §10.3's null was, and the one cycle 1 was rejected for not having ruled out. Only the live-memory decoy can see it.
+
+Reddened nothing else.
+
+### the shuffle control never applies its permutation
+
+**Gate:** `test_live_memory_moves_the_loss` — **PROVEN**
+
+the same no-op with a correct `derangement()`: the replay reaches the forward un-permuted. The derangement test stays green, so only the live-memory reading catches it.
+
+Reddened nothing else.
+
+### the shuffle replay perturbs the memory it replays
+
+**Gate:** `test_shuffle_control.py::` — **PROVEN**
+
+the replay hands over memory that is not the memory the reference pass read: a 1e-3 offset on every slot. The derangement is still correct and the live-memory decoy still moves, so neither of the other two entries sees it -- only a replay of each row's OWN memory, which must read exactly 0.0, can tell a faithful replay from a perturbed one.
+
+Reddened nothing else.
+
+### the shuffle replay hands over the bos gestalt too
+
+**Gate:** `test_shuffle_control.py::` — **PROVEN**
+
+the control permutes the bos-copy path along with the memory, so its delta measures memory PLUS the bos gestalt rather than memory alone. With memory disabled the kv swap is a no-op but the bos swap is not, so the disabled-memory reading stops being exactly 0.0.
+
+Reddened nothing else.
+
+### the oracle evicts the sentence most needed
+
+**Gate:** `test_oracle.py::` — **PROVEN**
+
+E-feas reads oracle - FIFO as an upper bound on what retention can buy. An oracle that is not optimal makes that bound a lower number than the truth, and 'oracle ~= FIFO' would then be a finding about the oracle.
+
+Reddened nothing else.
+
+### checkpoints written straight to the final path
+
+**Gate:** `test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint` — **PROVEN**
+
+gauntlet 3.6: the non-atomic write the SIGKILL test exists to catch. Until 2026-09-21 the test's four kill delays all missed the ~6 ms window where this tears a file, so it had never been seen red on it. TIMING-DEPENDENT: it reddens the 5-6 ms cases on an M1 Pro; a faster or slower machine moves the window, which is why the sweep is dense.
 
 Reddened nothing else.
 
