@@ -381,3 +381,44 @@ quietly dropped.
 and 0 new skips; *"Less certain"* instructs leaving a failing test. Both cannot hold. Resolved with
 `xfail(strict=True)` — counted as neither passed nor skipped, and `strict` means it cannot go green
 unnoticed. **That is a good resolution of a contradiction the brief should not have contained.**
+
+---
+
+## Cycle 2026-09-20f — `shuffle-control` · verdict **`survived`** · ACCEPTED
+
+Brief `docs/lab-notes/dispatch-2026-09-20f-shuffle-control.md` (`a221e28`, ahead of the run).
+Run on branch `studio-2026-09-20f` at `8e60df1`, CPU, seeds `[0,1,2]`, `300/300` steps.
+Researcher commits `3cb452f` (ledger/manifest/raw) · `1f639c0` (`RESULTS.md`).
+
+| run_id | falsifier | expected | observed | verdict | verified by re-execution |
+|---|---|---|---|---|---|
+| `shuffle-control` | PREREG Amendment 1: any seed `ratio_to_live_decoy ≥ 0.1` | inert (`survived`) | `ratio_to_live_decoy` `7.794603145151641e-04 ± 2.7365166049842687e-04`; all 3 controls pass on all 3 seeds | `survived` | (1) seed 2 re-trained by me via `run.py --single --seed 2`, re-measured with the committed `measure()`: **19/19 `seed2.*` ledger rows bit-identical**, ratio `0.0004705000245672635`. (2) `uv run pytest -q -rs` → `passed=364 failed=0 skipped=0 errors=0`, `rc=0` read directly |
+
+**Checks run.** Ledger backing: every number in `RESULTS.md` carries its row key; spot-checked the
+ratio, both `A` columns and all nine control rows against `ledger.json`. Spread: non-zero on every
+multi-seed row. Seeds/steps: `seeds_actually_run [0,1,2]`, `steps_done 300` match the prose.
+Manifest: `manifest_written_utc` = `started_utc` (`04:10:03Z`), before any seed. Frozen things:
+`git diff --stat 8e60df1..1f639c0` touches only the four new files — `PREREG.md`, `run.py`,
+`decide()` and thresholds untouched. Reproducibility: `commands[]` all point at committed
+`experiments/shuffle-control/run.py`, all `reproducible: true`. `BRIEF ERRORS` present (five).
+
+**`provenance.dirty: true`** — the untracked `uv.lock` only (for-brendan-2026-09-20 item 5).
+Source paths clean per `Ledger.write()`'s guard, and my bit-identical re-execution confirms the
+committed code produces the committed numbers. Not a rejection; the lock debt is the owner's.
+
+**"Memory is live" row of the role file.** This run's *finding* is that the memory is inert — it
+is the measurement the row depends on, not a training run that forgot to report it. Filed, not
+refused. But it means **every training-run number from this configuration (FIFO, d=128, M=16,
+synthetic, 300 iters, unmasked, hinge off) is about a model whose memory does nothing**, and the
+row will refuse them from now on.
+
+**Brief errors I accept (mine, as brief author's reviewer).** The controls `jq` in the
+predictions table also matches `control_live_decoy.delta_exactly_zero`, whose passing value is
+`false` — read literally it reports three failures that are passes. The `n_sentences_with_eos`
+`jq` names no file. "~20 min per seed" measured ~15 min.
+
+**What this does not establish.** The positive control is a random-init decoy, not a trained live
+memory (PREREG says so). The cause of inertness (unmasked loss / hinge off / corpus) is not
+separated. §10.3's headline "exactly 0.0" did **not** reproduce: the signed mean is non-zero on
+every seed and 1100–1254 of ~1580 real tokens move; what survives is the per-token magnitude
+against a live decoy.
