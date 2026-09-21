@@ -227,9 +227,9 @@ The conversion queue, highest value first:
 
 | Class | Convert to |
 |---|---|
-| Exit 3 collapsing to 0 | One shared `Exit` enum and a result helper every checker uses; a test that no checker returns a bare boolean |
+| Exit 3 collapsing to 0 | One shared `Exit` enum and a result helper every checker uses; a test that no checker returns a bare boolean — **briefed as S0-05** (`docs/lab-notes/dispatch-S0-05-exit-code-enum.md`), which found the cycle-0 canary fix collapsed `2` into `3` and seven experiment stubs collapsing `3` into `1` |
 | A derived number typed into prose | Generate it, or stamp it with a sha and re-measure at read time |
-| A guard present but unreachable | A test that the guard is **reached**, not only that it works — `mutation_battery.py`'s `off_gate` is computed, printed, and never filtered, so "the mutation must redden only it" is enforced by nothing while the doc reports 17/17 PROVEN |
+| A guard present but unreachable | A test that the guard is **reached**, not only that it works. ✅ **LANDED in cycle 0 — this row was stale and described the pre-cycle-0 tree.** `off_gate` now enters the verdict: `mutation_battery.py:61` gives every `Mutation` an `off_gate_allowed` of `(node, reason)` pairs, `:722` computes `leaked` as the undeclared remainder, and `unproven()` at `:624` fails on it. Two tests hold the two directions — `test_an_off_gate_failure_makes_a_mutation_unproven` and `test_a_declared_coupling_does_not_make_a_mutation_unproven` (`tests/test_evidence_machinery.py:271,:287`), each with its own battery entry at `:496` and `:505`. **A coupling is now declared with a reason or the mutation is unproven; shrugging is no longer an option.** |
 | A label that is not the mechanism | Count the thing you assume is happening. `experiments/e0c/measure.py` already asserts writes and evictions — copy that shape |
 
 KEY: **`src/rsr/constants.py` is the project's one example of doing this right.** §4.5's "never

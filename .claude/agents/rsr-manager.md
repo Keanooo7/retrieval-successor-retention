@@ -83,7 +83,7 @@ At the checkpoint: self-handoff, `/clear`, reload.
 | **Manifest** | The config hash in the report does not match `manifest.json`, or the manifest was written after the run. |
 | **Falsifier** | The run names no falsifier, or names one it cannot address. |
 | **Expectation** | The pre-registered expectation was edited after the run. `git log` the manifest. |
-| **Ratchets** | Any floor moved the wrong way. |
+| **Ratchets** | Any floor moved the wrong way. ⚠️ **But no ratchet exists on trunk.** `src/rsr/gates/` is not here — it is on `macbook-local-2026-09-18`, which `git merge-base --is-ancestor` reports is **not an ancestor of `main`**, and `git grep -iln ratchet -- '*.py'` returns nothing. `rsr-researcher.md:55` already says so; this row did not, and a manager reading only this row would reject a report for not quoting a gate that cannot run. |
 | **Frozen things** | A constant, bucket edge, threshold, or arm changed to make a gate pass. **This is the most serious rejection and it stops the night.** |
 | **Reproducibility** | A ledger whose `commands[].argv` points outside the tree, or at a file that is not committed. 🔴 **The gate is not "the tree is clean" — it is "the code that ran is committed."** 9 of the 13 ledgers from 2026-09-18 cannot be re-executed from any commit, and the sharpest case has `git_dirty: false` and is *still* unreproducible, so a clean-tree check would have passed it. |
 | **Brief errors** | The report has no `BRIEF ERRORS` field. It is required and `none` must be written out. 7 of 11 briefs contained an error on 2026-09-18; a field that is silently absent is how that rate stays invisible. |

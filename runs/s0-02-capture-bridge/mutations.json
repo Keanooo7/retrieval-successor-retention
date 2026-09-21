@@ -1,0 +1,647 @@
+[
+  {
+    "mutation": "t_warm back to inf",
+    "gate": "test_reduction",
+    "why": "gauntlet 0.1: the reduction stops reaching the score path",
+    "reddened_gate": true,
+    "n_on_gate": 8,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "reduction uses the learned head",
+    "gate": "test_reduction",
+    "why": "the \u00a73.7 reduction is no longer argmin(-a_i)",
+    "reddened_gate": true,
+    "n_on_gate": 8,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "drop nu from the off-switch table",
+    "gate": "test_every_config_field_has_an_off_switch",
+    "why": "a term with no documented off-switch; the brief records this exact hole",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_device_placement.py::test_rsr_policy_exposes_a_to_method",
+      "tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+      "tests/test_reduction.py::test_a_learned_head_changes_the_loss",
+      "tests/test_reduction.py::test_a_max_tracks_capacity",
+      "tests/test_reduction.py::test_is_reduction_detects_a_single_flipped_switch",
+      "tests/test_reduction.py::test_loss_curve_is_bit_exact_against_stock_tg",
+      "tests/test_reduction.py::test_phi_construction_does_not_perturb_the_global_rng",
+      "tests/test_reduction.py::test_reduction_agrees_with_fifo_on_every_eviction",
+      "tests/test_reduction.py::test_reduction_config_disables_every_added_term",
+      "tests/test_reduction.py::test_reduction_runs_through_the_score_path",
+      "tests/test_reduction.py::test_switching_psi_source_to_the_learned_head_reddens_the_reduction",
+      "tests/test_reduction.py::test_t_warm_is_zero_not_infinity",
+      "tests/test_reduction.py::test_the_learned_head_does_evict_middle_slots",
+      "tests/test_reduction.py::test_the_learned_head_does_shift_ranks",
+      "tests/test_reduction.py::test_the_reduction_displaces_no_ranks_on_the_real_model",
+      "tests/test_reduction.py::test_the_reduction_pins_the_context_source",
+      "tests/test_reduction.py::test_the_reduction_pins_the_positional_index_to_rank",
+      "tests/test_reduction.py::test_the_reduction_ran_through_the_score_path",
+      "tests/test_reduction.py::test_the_reduction_shifts_no_ranks"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_reduction.py::test_a_max_tracks_capacity",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_is_reduction_detects_a_single_flipped_switch",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_reduction_agrees_with_fifo_on_every_eviction",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_reduction_config_disables_every_added_term",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_reduction_runs_through_the_score_path",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_switching_psi_source_to_the_learned_head_reddens_the_reduction",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_t_warm_is_zero_not_infinity",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_the_learned_head_does_shift_ranks",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_the_reduction_pins_the_context_source",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_the_reduction_pins_the_positional_index_to_rank",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_the_reduction_shifts_no_ranks",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_a_learned_head_changes_the_loss",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_loss_curve_is_bit_exact_against_stock_tg",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_phi_construction_does_not_perturb_the_global_rng",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_the_learned_head_does_evict_middle_slots",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_the_reduction_displaces_no_ranks_on_the_real_model",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_reduction.py::test_the_reduction_ran_through_the_score_path",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_device_placement.py::test_rsr_policy_exposes_a_to_method",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ],
+      [
+        "tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+        "`reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "RSRConfig.nu gets a default",
+    "gate": "test_no_registry_owned_field_has_a_default",
+    "why": "gauntlet 0.3: a frozen unmeasured constant, D-1's exact shape. Defaulting `nu` instead makes the dataclass itself invalid (a default before a non-default), so the module fails to import and the gate never runs -- a stronger guarantee, but not one this test can demonstrate.",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "LRU state back in MemoryState.accum",
+    "gate": "test_lru_and_fifo_choose_different_slots_in_a_real_eviction_loop",
+    "why": "gauntlet 0.4: LRU silently becomes FIFO",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_checkpoint.py::test_lru_policy_state_round_trips",
+      "tests/test_policies.py::test_lru_remembers_an_attention_event_older_than_one_step"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_policies.py::test_lru_remembers_an_attention_event_older_than_one_step",
+        "the same defect: moving LRU's recency into MemoryState.accum is what both tests assert it does not do"
+      ],
+      [
+        "tests/test_checkpoint.py::test_lru_policy_state_round_trips",
+        "the round-trip asserts LRU's recency lives in the policy's own state; moving it into MemoryState.accum is exactly what that test is checking cannot happen"
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "an accumulating policy skips the admission hook",
+    "gate": "test_an_accumulating_policy_is_corrupted_without_the_admission_hook",
+    "why": "gauntlet 0.4 root cause, on the policy shape that needs it. NOTE: neutering LRU's own on_write reddens NOTHING -- its select_eviction takes max(written_at, last_used) and a stale record is always older than the new occupant's write step, so the hook is defensive for LRU and load-bearing for H2O. Recorded in the table rather than papered over.",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "scope-free MEASURED read leaks again",
+    "gate": "test_scope_free_measured_read_does_not_leak_across_scopes",
+    "why": "gauntlet 0.7(1): \u00a713's cross-corpus prohibition stops being enforced",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "record() accepts DERIVED again",
+    "gate": "test_derived_constants_cannot_be_recorded",
+    "why": "gauntlet 0.7(2): a ledger row nothing reads",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_constants.py::test_K_cannot_be_recorded_against_an_arbitrary_experiment"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_constants.py::test_K_cannot_be_recorded_against_an_arbitrary_experiment",
+        "K is DERIVED, so the same refusal is what stops an arbitrary experiment recording it; one guard, two assertions"
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "A_max trusts the caller's S",
+    "gate": "test_A_max_does_not_trust_a_caller_supplied_S",
+    "why": "gauntlet 0.7(3): a CONDITIONAL guard that validates nothing",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "bilinear multiplier dropped",
+    "gate": "test_the_bilinear_multiplier_is_one_over_d_in_the_output",
+    "why": "gauntlet 1.6: \u00a74.3's 1/d stored but not applied",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_value_head.py::test_multipliers_follow_the_muP_table",
+      "tests/test_value_head_arithmetic.py::test_W_is_not_silently_transposed"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_value_head.py::test_multipliers_follow_the_muP_table",
+        "the muP multipliers are checked both on the attribute and on the output, deliberately -- an attribute set correctly and never applied is precisely the silent failure \u00a74.3 warns about, so one edit must redden both."
+      ],
+      [
+        "tests/test_value_head_arithmetic.py::test_W_is_not_silently_transposed",
+        "the muP multipliers are checked both on the attribute and on the output, deliberately -- an attribute set correctly and never applied is precisely the silent failure \u00a74.3 warns about, so one edit must redden both."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "W transposed",
+    "gate": "test_W_is_not_silently_transposed",
+    "why": "gauntlet 1.4: every shape test stays green",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_value_head_arithmetic.py::test_forward_matches_the_formula_computed_by_hand"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_value_head_arithmetic.py::test_forward_matches_the_formula_computed_by_hand",
+        "the hand-computed forward is the same arithmetic the transpose gate checks; one edit cannot break one and not the other"
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "linear term dropped",
+    "gate": "test_both_terms_are_present",
+    "why": "gauntlet 1.4: \u03c8\u0302 silently becomes purely bilinear",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_value_head_arithmetic.py::test_forward_matches_the_formula_computed_by_hand",
+      "tests/test_value_head_arithmetic.py::test_the_linear_multiplier_is_one_over_fan_in_in_the_output"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_value_head_arithmetic.py::test_forward_matches_the_formula_computed_by_hand",
+        "the muP multipliers are checked both on the attribute and on the output, deliberately -- an attribute set correctly and never applied is precisely the silent failure \u00a74.3 warns about, so one edit must redden both."
+      ],
+      [
+        "tests/test_value_head_arithmetic.py::test_the_linear_multiplier_is_one_over_fan_in_in_the_output",
+        "the muP multipliers are checked both on the attribute and on the output, deliberately -- an attribute set correctly and never applied is precisely the silent failure \u00a74.3 warns about, so one edit must redden both."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "value head shares the transformer group",
+    "gate": "test_the_value_head_has_its_own_group",
+    "why": "gauntlet 1.6: mis-grouping surfaces in week 9 with no error message",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_param_groups.py::test_phi_is_not_also_in_a_transformer_group",
+      "tests/test_param_groups.py::test_the_value_head_lr_follows_its_own_one_over_d_rule"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_param_groups.py::test_phi_is_not_also_in_a_transformer_group",
+        "the muP multipliers are checked both on the attribute and on the output, deliberately -- an attribute set correctly and never applied is precisely the silent failure \u00a74.3 warns about, so one edit must redden both."
+      ],
+      [
+        "tests/test_param_groups.py::test_the_value_head_lr_follows_its_own_one_over_d_rule",
+        "the muP multipliers are checked both on the attribute and on the output, deliberately -- an attribute set correctly and never applied is precisely the silent failure \u00a74.3 warns about, so one edit must redden both."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "r_i drops the memory gate",
+    "gate": "test_the_memory_gate_changes_the_answer",
+    "why": "D-E: layer-specific rescaling silently omitted",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_capture_bridge.py::test_the_captured_gate_is_the_models_memory_gate"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_capture_bridge.py::test_the_captured_gate_is_the_models_memory_gate",
+        "`r_i` is asserted twice on purpose, and S0-02 is the reason: tests/test_reward.py checks the property on a hand-built `AttentionTrace`, tests/test_capture_bridge.py checks the same property end to end on a real `TGModel` forward pass. Those were two disconnected claims until the capture bridge existed -- `reward.py` had 11 passing tests and zero callers in `src/` precisely because nothing joined them -- so one edit to `reward.py` reddening both is the join working. A `reward.py` mutation that reddened ONLY the fixture test would mean the bridge does not actually reach the reward, which is the failure this file was written to detect."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "r_i accepts a train-mode trace",
+    "gate": "test_a_train_mode_trace_is_refused",
+    "why": "D-F: the policy learns from dropout masks",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_capture_bridge.py::test_a_train_mode_capture_is_refused_downstream"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_capture_bridge.py::test_a_train_mode_capture_is_refused_downstream",
+        "`r_i` is asserted twice on purpose, and S0-02 is the reason: tests/test_reward.py checks the property on a hand-built `AttentionTrace`, tests/test_capture_bridge.py checks the same property end to end on a real `TGModel` forward pass. Those were two disconnected claims until the capture bridge existed -- `reward.py` had 11 passing tests and zero callers in `src/` precisely because nothing joined them -- so one edit to `reward.py` reddening both is the join working. A `reward.py` mutation that reddened ONLY the fixture test would mean the bridge does not actually reach the reward, which is the failure this file was written to detect."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "rank shift counts the sliding window",
+    "gate": "test_evicting_the_oldest_displaces_nothing",
+    "why": "ADR-0006: the metric measures the window, not the policy",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_instrumentation.py::test_evicting_a_middle_slot_displaces_the_slots_older_than_it",
+      "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_most",
+      "tests/test_reduction.py::test_the_reduction_displaces_no_ranks_on_the_real_model",
+      "tests/test_reduction.py::test_the_reduction_shifts_no_ranks"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_instrumentation.py::test_evicting_a_middle_slot_displaces_the_slots_older_than_it",
+        "the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006)."
+      ],
+      [
+        "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_most",
+        "the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006)."
+      ],
+      [
+        "tests/test_reduction.py::test_the_reduction_shifts_no_ranks",
+        "the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006)."
+      ],
+      [
+        "tests/test_reduction.py::test_the_reduction_displaces_no_ranks_on_the_real_model",
+        "the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006). Added 2026-09-18: the on-the-real-model variant post-dates docs/mutation-battery.md's table."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "underfull steps are not rescaled",
+    "gate": "test_underfull_steps_are_rescaled_not_masked",
+    "why": "\u00a73.2.1: the estimator learns 'stream-initial content is valuable'",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_capture_bridge.py::test_retrieval_demand_runs_on_a_real_forward_pass"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_capture_bridge.py::test_retrieval_demand_runs_on_a_real_forward_pass",
+        "`r_i` is asserted twice on purpose, and S0-02 is the reason: tests/test_reward.py checks the property on a hand-built `AttentionTrace`, tests/test_capture_bridge.py checks the same property end to end on a real `TGModel` forward pass. Those were two disconnected claims until the capture bridge existed -- `reward.py` had 11 passing tests and zero callers in `src/` precisely because nothing joined them -- so one edit to `reward.py` reddening both is the join working. A `reward.py` mutation that reddened ONLY the fixture test would mean the bridge does not actually reach the reward, which is the failure this file was written to detect."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "ledger accepts an unreproducible entry point",
+    "gate": "test_command_refuses",
+    "why": "5.1: the scratch-dir argv goes back in, and 9 of 13 ledgers become un-re-executable again with nothing saying so",
+    "reddened_gate": true,
+    "n_on_gate": 4,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "any console script counts as a committed entry point",
+    "gate": "test_command_refuses_an_undeclared_tool_entry_point",
+    "why": "5.1: the declared-tool allowlist stops being an allowlist and every bare command name passes",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "an unreproducible command stops capping the verdict",
+    "gate": "test_the_escape_hatch_caps_the_verdict_at_inconclusive",
+    "why": "5.1: a number nobody can re-run gets to report `survived`",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "a git failure reads as a clean tree again",
+    "gate": "test_a_git_failure_is_not_recorded_as_a_clean_tree",
+    "why": "5.1: `bool(\"\")` is `False` -- the exact shape that produced two false clean bills of health on this project",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "write() tolerates uncommitted source",
+    "gate": "test_write_refuses_a_dirty_source_tree",
+    "why": "5.1: a measurement against an uncommitted tree is not reproducible from its sha",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "runs/ starts gating the ledger write",
+    "gate": "test_a_dirty_runs_directory_is_fine",
+    "why": "5.1: runs/ churns by design; gating on it makes the gate unusable and it gets switched off",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_evidence_machinery.py::test_a_dirty_source_path_is_detected_through_porcelain"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_evidence_machinery.py::test_a_dirty_source_path_is_detected_through_porcelain",
+        "SOURCE_ROOTS is one enumeration: what gates and what does not are the same list, so widening it necessarily moves both assertions"
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "status becomes optional again",
+    "gate": "test_write_refuses_without_a_status",
+    "why": "5.1: a run that never recorded whether it finished",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "exit_code gets a default",
+    "gate": "test_exit_code_is_required",
+    "why": "5.1: seven of 13 ledgers carried `exit_code: null` by omission",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "the scoreboard resolves a cycle number",
+    "gate": "test_the_scoreboard_refuses_the_prose_verdict_for_cycle_4",
+    "why": "5.2: cycle 4 is two ledgers that disagree; collapsing them is how \"3 canaries, all held\" was written over 2 survived and 1 inconclusive",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "a scoreboard count is typed rather than counted",
+    "gate": "test_every_scoreboard_count_is_a_len_not_a_typed_number",
+    "why": "5.2: the whole prose/ledger gap in one line -- every count must be len() of something",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "the prose audit reads timestamps as measurements",
+    "gate": "test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement",
+    "why": "5.2: an audit that flags the wall clock is an audit nobody runs on a document that obeys \u00a79",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "the prose audit backs every number",
+    "gate": "test_the_audit_flags_a_number_that_is_in_no_ledger",
+    "why": "5.2: `1.5476` goes back to passing an audit it should fail",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [
+      "tests/test_evidence_machinery.py::test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_evidence_machinery.py::test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement",
+        "the timestamp test asserts both halves of the same behaviour -- a clock is skipped AND a real number beside it is still flagged -- so an audit that flags nothing necessarily reddens it too"
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "a mutated run writes the real census file",
+    "gate": "test_a_mutated_suite_run_does_not_clobber_the_census",
+    "why": "5.3: every mutation overwrites the file CI asserts on, and the last mutated run is what survives on disk",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "the board's own counts stop backing the prose",
+    "gate": "test_the_rendered_artefact_passes_its_own_audit",
+    "why": "5.2: the generated artefact fails its own audit on the per-run row counts -- exactly the numbers the script exists to stop anyone typing",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "off-gate failures stop counting",
+    "gate": "test_an_off_gate_failure_makes_a_mutation_unproven",
+    "why": "5.3: clause 2 of the stated discipline goes back to being enforced by nothing",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "the coupling allowlist is ignored",
+    "gate": "test_a_declared_coupling_does_not_make_a_mutation_unproven",
+    "why": "5.3: a declared coupling has to be distinguishable from a leak, or the check is unusable and gets switched off",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "the mutation table is field-shifted again",
+    "gate": "test_the_mutation_table_is_well_formed_without_a_runtime_repair",
+    "why": "5.3: the table stops describing what runs, and a runtime repair hides it",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "a first canary reading exits 0 again",
+    "gate": "test_a_first_canary_reading_exits_3_not_0",
+    "why": "5.4: `3` collapsing to `0` -- DID NOT RUN reported as FOUND NOTHING",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "a truncated canary run is compared over the overlap",
+    "gate": "test_a_length_mismatch_is_a_move",
+    "why": "5.4: a run that produced 2 of 6 beats reports \"held\"",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "the training loss scores padding again",
+    "gate": "test_lm_loss",
+    "why": "cycle 1 defect 1: the objective goes back to averaging over every target, 93.4% of which are PAD on the committed synthetic corpus -- so the number minimised, reported and exponentiated into a perplexity is mostly the model's skill at predicting zeros",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "W_O dropped from the capture path",
+    "gate": "test_capture_bridge",
+    "why": "S0-02 bar item 3, and defect D-6. \u00a73.2.1: *\"`W_O` is not optional... dropping it reintroduces the confound the norm-weighting was adopted to remove.\"* The reason this needs a mutation rather than a code review is that dropping `W_O` is **shape-compatible**: `reward.contribution` norms over the last axis, and `[L, H, M, Dh]` norms just as happily as `[L, H, M, D]`. Nothing downstream raises, no shape assertion fires, and `r_i` becomes norm-weighted raw attention -- which is v0.1's rejected definition wearing the new one's name.",
+    "reddened_gate": true,
+    "n_on_gate": 4,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "observe() is never reached",
+    "gate": "test_observe",
+    "why": "S0-02 bar item 4. `git grep '\\.observe(' -- src/` returned **zero hits** before this cycle: `reward.py` had 160 lines and 11 passing tests and no path from a forward pass to any of it. A call site with no test that notices its removal is the same condition with an extra line of code.",
+    "reddened_gate": true,
+    "n_on_gate": 2,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  }
+]

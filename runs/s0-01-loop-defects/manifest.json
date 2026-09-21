@@ -1,0 +1,55 @@
+{
+  "config": {
+    "baseline_suite": {
+      "errors": 0,
+      "exit": 0,
+      "failed": 0,
+      "passed": 343,
+      "skipped": 0
+    },
+    "brief": "docs/lab-notes/dispatch-S0-01-loop-defects.md (amended x2, revalidated at 75c0f62/c39b498)",
+    "corpus": {
+      "derived_V": 160,
+      "documents": 64,
+      "generator": "rsr.data.synthetic",
+      "max_tokens": 64,
+      "seed": 0,
+      "sentences_per_document": 48,
+      "unique_words": 156
+    },
+    "defects_in_scope": [
+      "b: policy_name stamped but FIFOPolicy unconditional",
+      "c: srep_norm hinge absent from the objective",
+      "e: --vocab default 50257 makes the derived path unreachable at the default",
+      "less-certain-1: value_head=None into build_param_groups",
+      "less-certain-2: from_registry builds kw eagerly"
+    ],
+    "files_in_scope": [
+      "src/rsr/train/loop.py",
+      "src/rsr/retention/rsr.py:236-243",
+      "tests/test_train_loop.py"
+    ],
+    "kind": "static-defect-audit-plus-fix",
+    "out_of_scope": [
+      "a (cycle 1)",
+      "d (cycle 4)",
+      "experiments/s0-02",
+      "runs/s0-02-capture-bridge",
+      "ADR-0008"
+    ]
+  },
+  "config_hash": "d98be1a20b8905a3595c7cc89cdd638fbcff0108aa5f6e7f434be6cc423864c8",
+  "dataset_hash": "849f94007cc533f14b3ece035fe0941167231bcf65f906e00445a9a04b8dab27",
+  "device": "cpu",
+  "expectation": "PRE-REGISTERED, before any edit. I expect all three predicted defects (b), (c), (e) to re-measure as real at c39b498, and I expect each to admit a test that is red before its fix and green after, with a mutation that reddens only that test. I expect the corpus to hold 156 unique words (derived V=160), which makes the 50257 default a 314x over-allocation. I expect RSRConfig.from_registry to raise UnmeasuredConstant even when every field is overridden, because kw is built eagerly at rsr.py:236-243. I expect nothing in loop.py to construct a value head, so the muP item stays a recorded xfail rather than a fix.",
+  "falsifier": "For each defect: the mutation test. If reverting a fix reddens NOTHING, the test is vacuous and the defect was not demonstrated -- the brief's own Bar says report that rather than keep the test. If reverting a fix reddens tests OTHER than its own, the fix is entangled and the defect was not independent as claimed. Either outcome falsifies the claim that these are three separable, testable defects. Secondary falsifier for (c): if the hinge weight is already 0 in TGConfig, 'absent from the objective' would be inert rather than a defect.",
+  "frozen_utc": "2026-09-20T23:41:58.295216+00:00",
+  "git_sha": "3973d1a5e64727a57553fda2a0039bd96c3e9524",
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.13",
+  "run_id": "s0-01-loop-defects",
+  "seeds": [
+    0
+  ],
+  "torch": "2.14.0"
+}

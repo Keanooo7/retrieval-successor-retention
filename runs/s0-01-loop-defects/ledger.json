@@ -1,0 +1,319 @@
+{
+  "run_id": "s0-01-loop-defects",
+  "cycle": null,
+  "question": "Are loop.py defects (b), (c) and (e) real at this sha, and does each admit a test that is red before its fix, green after, and reddened by a mutation that reddens only it?",
+  "started_utc": "2026-09-21T00:10:13Z",
+  "provenance": {
+    "git_sha": "88257b11abff42a744edfbb2f84de737ea65573a",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "steps_requested": 3,
+  "steps_done": 3,
+  "status": "ok",
+  "config_hash": "cfacc035d54946c4891b1b5d445ddf315d6e01213ba3dba7951869cdbe4f9775",
+  "manifest_written_utc": "2026-09-21T00:10:13Z",
+  "commands": [
+    {
+      "argv": "pytest -rs",
+      "entry_point": "pytest",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "baseline BEFORE any edit, at c39b498: 343 passed",
+      "at_utc": "2026-09-21T00:10:13Z"
+    },
+    {
+      "argv": "pytest -rs",
+      "entry_point": "pytest",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "after the fixes, at 7a47a90: 358 passed, 1 xfailed",
+      "at_utc": "2026-09-21T00:10:13Z"
+    },
+    {
+      "argv": "python scripts/mutation_battery.py --check --markdown docs/mutation-battery.md",
+      "entry_point": "scripts/mutation_battery.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "45/45 PROVEN, 0 undeclared off-gate",
+      "at_utc": "2026-09-21T00:10:13Z"
+    },
+    {
+      "argv": "ruff check src/ tests/ scripts/",
+      "entry_point": "ruff",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "All checks passed",
+      "at_utc": "2026-09-21T00:10:13Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "loop_py_lines",
+      "kind": "observation",
+      "value": 401,
+      "how": "wc -l src/rsr/train/loop.py at c39b498 (pre-fix)"
+    },
+    {
+      "key": "grep_c_srep_norm_prefix",
+      "kind": "observation",
+      "value": 0,
+      "how": "grep -c srep_norm src/rsr/train/loop.py, pre-fix; COUNT read, not $? (which is 1)"
+    },
+    {
+      "key": "tests_importing_loop_prefix",
+      "kind": "observation",
+      "value": [
+        "tests/test_train_loss.py:31"
+      ],
+      "how": "grep -rn 'rsr\\.train\\.loop' tests/ -- the brief's 'no test imports it' is FALSE"
+    },
+    {
+      "key": "corpus_unique_words",
+      "kind": "observation",
+      "value": 156,
+      "how": "len(build_vocab(generate(SyntheticConfig(48, seed=0))))"
+    },
+    {
+      "key": "derived_V",
+      "kind": "observation",
+      "value": 160,
+      "how": "4 specials + 156 words; train() return config.tg.V"
+    },
+    {
+      "key": "cli_vocab_default_prefix",
+      "kind": "observation",
+      "value": 50257,
+      "how": "loop.py:369 ('--vocab', int, 50257), pre-fix"
+    },
+    {
+      "key": "vocab_over_allocation_factor",
+      "kind": "observation",
+      "value": 314.1,
+      "how": "50257 / 160, both measured above"
+    },
+    {
+      "key": "from_registry_raises_through_an_override_prefix",
+      "kind": "observation",
+      "value": true,
+      "how": "RSRConfig.from_registry('synthetic', steps_per_epoch=100.0, nu=0.0, gamma=0.0) -> UnmeasuredConstant naming 'nu', the value just supplied"
+    },
+    {
+      "key": "value_head_constructed_in_loop",
+      "kind": "observation",
+      "value": false,
+      "how": "loop.py:210 build_param_groups(model, None, ...); nothing builds a head -- recorded as a strict xfail, not fixed"
+    },
+    {
+      "key": "tests_passed_before",
+      "kind": "observation",
+      "value": 343,
+      "how": "pytest -rs census at c39b498, before any edit"
+    },
+    {
+      "key": "tests_passed_after",
+      "kind": "observation",
+      "value": 358,
+      "how": "pytest -rs census at 7a47a90"
+    },
+    {
+      "key": "tests_xfailed_after",
+      "kind": "observation",
+      "value": 1,
+      "how": "same census; the value-head muP item"
+    },
+    {
+      "key": "tests_skipped_after",
+      "kind": "observation",
+      "value": 0,
+      "how": "same census -- 0 new skips, and 0 total"
+    },
+    {
+      "key": "mutation.policy built unconditionally again",
+      "kind": "observation",
+      "value": {
+        "gate": "test_train_does_not_stamp_a_policy_it_did_not_build",
+        "reddened": [
+          "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_not_build"
+        ],
+        "off_gate": []
+      },
+      "how": "scripts/mutation_battery.py entry applied to the tree, full suite run, FAILED node ids collected, tree restored"
+    },
+    {
+      "key": "mutation.--policy stops reaching train()",
+      "kind": "observation",
+      "value": {
+        "gate": "test_the_policy_is_selectable_from_the_command_line",
+        "reddened": [
+          "tests/test_train_loop.py::test_the_policy_is_selectable_from_the_command_line"
+        ],
+        "off_gate": []
+      },
+      "how": "scripts/mutation_battery.py entry applied to the tree, full suite run, FAILED node ids collected, tree restored"
+    },
+    {
+      "key": "mutation.srep-norm hinge back out of the objective",
+      "kind": "observation",
+      "value": {
+        "gate": "test_the_hinge",
+        "reddened": [
+          "tests/test_train_loop.py::test_the_hinge_has_a_documented_off_switch",
+          "tests/test_train_loop.py::test_the_hinge_is_on_by_default",
+          "tests/test_train_loop.py::test_the_hinge_reaches_the_objective"
+        ],
+        "off_gate": []
+      },
+      "how": "scripts/mutation_battery.py entry applied to the tree, full suite run, FAILED node ids collected, tree restored"
+    },
+    {
+      "key": "mutation.ppl computed from the penalised loss",
+      "kind": "observation",
+      "value": {
+        "gate": "test_perplexity_is_a_perplexity",
+        "reddened": [
+          "tests/test_train_loop.py::test_perplexity_is_a_perplexity_and_not_a_penalised_loss"
+        ],
+        "off_gate": []
+      },
+      "how": "scripts/mutation_battery.py entry applied to the tree, full suite run, FAILED node ids collected, tree restored"
+    },
+    {
+      "key": "mutation.--vocab default back to 50257",
+      "kind": "observation",
+      "value": {
+        "gate": "test_the_cli_vocab_default_reaches_the_derived_path",
+        "reddened": [
+          "tests/test_train_loop.py::test_the_cli_vocab_default_reaches_the_derived_path"
+        ],
+        "off_gate": []
+      },
+      "how": "scripts/mutation_battery.py entry applied to the tree, full suite run, FAILED node ids collected, tree restored"
+    },
+    {
+      "key": "mutation.from_registry reads every field eagerly again",
+      "kind": "observation",
+      "value": {
+        "gate": "test_from_registry",
+        "reddened": [
+          "tests/test_train_loop.py::test_from_registry_honours_an_override_without_reading_the_registry",
+          "tests/test_train_loop.py::test_from_registry_still_raises_for_a_field_left_unoverridden"
+        ],
+        "off_gate": []
+      },
+      "how": "scripts/mutation_battery.py entry applied to the tree, full suite run, FAILED node ids collected, tree restored"
+    },
+    {
+      "key": "mutations_proven_total",
+      "kind": "observation",
+      "value": "45/45",
+      "how": "scripts/mutation_battery.py --check, exit 0"
+    },
+    {
+      "key": "hinge_contribution_at_default_weight",
+      "kind": "observation",
+      "value": 0.0006235937277478953,
+      "how": "train() final: loss - loss_lm, d=32 iters=1 seed=0, w=0.01"
+    },
+    {
+      "key": "float32_accumulation_noise",
+      "kind": "observation",
+      "value": 2.08616257e-07,
+      "how": "train(srep_norm_reg_weight=0.0): loss - loss_lm, where loss IS lm by construction"
+    },
+    {
+      "key": "vacuous_test_caught_by_mutation",
+      "kind": "observation",
+      "value": "test_the_hinge_is_on_by_default",
+      "how": "hinge mutation applied by hand: the test PASSED because 'loss > loss_lm' is satisfied by the 2.1e-7 accumulation gap. Rewritten with a 1e-4 margin; the mutation now reddens 3 of 3."
+    },
+    {
+      "key": "loss_lm_final",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        4.913445462783177,
+        4.943785071372986,
+        4.956399510304133,
+        4.929099212090175,
+        4.887990226348241
+      ],
+      "mean": 4.926143896579743,
+      "sd": 0.026703463598901526,
+      "how": "train(d=32, steps_per_stream=48, batch=2, iters=3, cpu).final.loss_lm, seeds 0-4",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "loss_final",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        4.91346549987793,
+        4.943836530049642,
+        4.956407864888509,
+        4.929135322570801,
+        4.888010342915853
+      ],
+      "mean": 4.926171112060547,
+      "sd": 0.026705765486630038,
+      "how": "same runs, .final.loss (LM + 0.01 * hinge)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "loss_srep_hinge_final",
+      "kind": "statistic",
+      "n": 5,
+      "samples": [
+        0.002037525287718722,
+        0.005094238496440084,
+        0.0008675711230807792,
+        0.0036081787571523214,
+        0.0019868014482350795
+      ],
+      "mean": 0.0027188630225253975,
+      "sd": 0.0016477794203338945,
+      "how": "same runs, .final.loss_srep_hinge, UNWEIGHTED",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "run_ids_five_seeds",
+      "kind": "observation",
+      "value": [
+        "fifo-d32-s48-b2-7a106de4087587aa",
+        "fifo-d32-s48-b2-b9845fdabd61f37c",
+        "fifo-d32-s48-b2-afbda141f09875e0",
+        "fifo-d32-s48-b2-6a7dd44cc1274527",
+        "fifo-d32-s48-b2-235793d208d489c5"
+      ],
+      "how": "train() return .run_id -- five distinct config hashes, seed is in frozen"
+    },
+    {
+      "key": "policy_actually_constructed",
+      "kind": "observation",
+      "value": "FIFOPolicy",
+      "how": "train() return .policy, new field: the class, not the requested name"
+    }
+  ],
+  "verdict": {
+    "falsifier": "For each defect: the mutation test. If reverting a fix reddens NOTHING, the test is vacuous and the defect was not demonstrated -- the brief's own Bar says report that rather than keep the test. If reverting a fix reddens tests OTHER than its own, the fix is entangled and the defect was not independent as claimed. Either outcome falsifies the claim that these are three separable, testable defects. Secondary falsifier for (c): if the hinge weight is already 0 in TGConfig, 'absent from the objective' would be inert rather than a defect.",
+    "outcome": "survived",
+    "detail": "All three predicted defects (b), (c), (e) re-measured as REAL at c39b498 and each now has a test red before its fix and green after. Six mutations, each reverting one fix: every one reddened its own tests and ZERO off-gate tests, so the defects were separable as the brief claimed. The falsifier's first clause fired once and on my own work: test_the_hinge_is_on_by_default survived its mutation and was vacuous; it was rewritten with a measured margin rather than kept. Spread over five seeds is non-zero on every statistic, so the seeds reach the RNG.",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-21T00:10:13Z"
+}

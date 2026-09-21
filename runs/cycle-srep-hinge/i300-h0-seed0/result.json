@@ -1,0 +1,2116 @@
+{
+  "hinge": false,
+  "seed": 0,
+  "iters": 300,
+  "V": 160,
+  "srep_norm_reg_weight_used": 0.0,
+  "wall_s": 1141.5,
+  "ce_step0": 4.960074623425801,
+  "ce_final": 0.10207477724179626,
+  "total_step0": 4.960075378417969,
+  "total_final": 0.10207478205362956,
+  "penalty_step0": 3.114088609814644,
+  "penalty_final": 367.6143989562988,
+  "trajectory": [
+    {
+      "it": 0,
+      "total_loss_per_step": 4.960075378417969,
+      "ce_per_step": 4.960074623425801,
+      "penalty_per_step": 3.114088609814644,
+      "grad_norm": 550.7570190429688
+    },
+    {
+      "it": 1,
+      "total_loss_per_step": 4.177109400431315,
+      "ce_per_step": 4.177109827597936,
+      "penalty_per_step": 3.2209208458662033,
+      "grad_norm": 1405.324462890625
+    },
+    {
+      "it": 2,
+      "total_loss_per_step": 3.184492746988932,
+      "ce_per_step": 3.184493194023768,
+      "penalty_per_step": 3.994823008775711,
+      "grad_norm": 487.5359191894531
+    },
+    {
+      "it": 3,
+      "total_loss_per_step": 2.781863530476888,
+      "ce_per_step": 2.781863808631897,
+      "penalty_per_step": 4.654443542162578,
+      "grad_norm": 462.3506774902344
+    },
+    {
+      "it": 4,
+      "total_loss_per_step": 2.541574160257975,
+      "ce_per_step": 2.5415745029846826,
+      "penalty_per_step": 4.836979498465856,
+      "grad_norm": 451.8444519042969
+    },
+    {
+      "it": 5,
+      "total_loss_per_step": 2.382878303527832,
+      "ce_per_step": 2.382878358165423,
+      "penalty_per_step": 5.158651391665141,
+      "grad_norm": 443.92767333984375
+    },
+    {
+      "it": 6,
+      "total_loss_per_step": 2.232405185699463,
+      "ce_per_step": 2.232405478755633,
+      "penalty_per_step": 5.5588715970516205,
+      "grad_norm": 435.8734436035156
+    },
+    {
+      "it": 7,
+      "total_loss_per_step": 2.076475143432617,
+      "ce_per_step": 2.076474909981092,
+      "penalty_per_step": 6.21226101120313,
+      "grad_norm": 424.9101867675781
+    },
+    {
+      "it": 8,
+      "total_loss_per_step": 1.9158304532368977,
+      "ce_per_step": 1.9158304383357365,
+      "penalty_per_step": 7.269670257965724,
+      "grad_norm": 410.7152099609375
+    },
+    {
+      "it": 9,
+      "total_loss_per_step": 1.7586161295572917,
+      "ce_per_step": 1.7586164648334186,
+      "penalty_per_step": 8.311440686384836,
+      "grad_norm": 392.9344482421875
+    },
+    {
+      "it": 10,
+      "total_loss_per_step": 1.6023915608723958,
+      "ce_per_step": 1.6023914689819019,
+      "penalty_per_step": 9.52553395430247,
+      "grad_norm": 372.8639221191406
+    },
+    {
+      "it": 11,
+      "total_loss_per_step": 1.4572758674621582,
+      "ce_per_step": 1.4572760115067165,
+      "penalty_per_step": 10.792783876260122,
+      "grad_norm": 349.6934814453125
+    },
+    {
+      "it": 12,
+      "total_loss_per_step": 1.319599707921346,
+      "ce_per_step": 1.3195996607343357,
+      "penalty_per_step": 12.080492397149404,
+      "grad_norm": 324.44189453125
+    },
+    {
+      "it": 13,
+      "total_loss_per_step": 1.1921792030334473,
+      "ce_per_step": 1.192179004351298,
+      "penalty_per_step": 13.166970292727152,
+      "grad_norm": 297.1318359375
+    },
+    {
+      "it": 14,
+      "total_loss_per_step": 1.0838910738627117,
+      "ce_per_step": 1.0838911607861519,
+      "penalty_per_step": 14.083355863889059,
+      "grad_norm": 267.064453125
+    },
+    {
+      "it": 15,
+      "total_loss_per_step": 0.9755024115244547,
+      "ce_per_step": 0.9755023643374443,
+      "penalty_per_step": 14.903997699419657,
+      "grad_norm": 237.10589599609375
+    },
+    {
+      "it": 16,
+      "total_loss_per_step": 0.8834544022878011,
+      "ce_per_step": 0.8834543985625108,
+      "penalty_per_step": 15.565605481465658,
+      "grad_norm": 205.8512725830078
+    },
+    {
+      "it": 17,
+      "total_loss_per_step": 0.8009692033131918,
+      "ce_per_step": 0.8009692865113417,
+      "penalty_per_step": 15.967038909594217,
+      "grad_norm": 175.09027099609375
+    },
+    {
+      "it": 18,
+      "total_loss_per_step": 0.7308149337768555,
+      "ce_per_step": 0.730815052986145,
+      "penalty_per_step": 16.400879820187885,
+      "grad_norm": 145.4474639892578
+    },
+    {
+      "it": 19,
+      "total_loss_per_step": 0.6777230898539225,
+      "ce_per_step": 0.6777230662604173,
+      "penalty_per_step": 16.722845156987507,
+      "grad_norm": 117.28587341308594
+    },
+    {
+      "it": 20,
+      "total_loss_per_step": 0.6274418036142985,
+      "ce_per_step": 0.6274416955808798,
+      "penalty_per_step": 16.99625511964162,
+      "grad_norm": 92.58797454833984
+    },
+    {
+      "it": 21,
+      "total_loss_per_step": 0.5833514531453451,
+      "ce_per_step": 0.5833513091007868,
+      "penalty_per_step": 17.34772515296936,
+      "grad_norm": 71.18563079833984
+    },
+    {
+      "it": 22,
+      "total_loss_per_step": 0.5609889030456543,
+      "ce_per_step": 0.5609888018419346,
+      "penalty_per_step": 17.743137280146282,
+      "grad_norm": 51.75070571899414
+    },
+    {
+      "it": 23,
+      "total_loss_per_step": 0.5407476425170898,
+      "ce_per_step": 0.5407476884623369,
+      "penalty_per_step": 18.34624481201172,
+      "grad_norm": 35.91817092895508
+    },
+    {
+      "it": 24,
+      "total_loss_per_step": 0.5244244337081909,
+      "ce_per_step": 0.5244244510928789,
+      "penalty_per_step": 18.93988295396169,
+      "grad_norm": 23.262733459472656
+    },
+    {
+      "it": 25,
+      "total_loss_per_step": 0.5168185631434122,
+      "ce_per_step": 0.5168186003963152,
+      "penalty_per_step": 19.64976974328359,
+      "grad_norm": 13.276926040649414
+    },
+    {
+      "it": 26,
+      "total_loss_per_step": 0.5023161967595419,
+      "ce_per_step": 0.5023161862045527,
+      "penalty_per_step": 20.959412177403767,
+      "grad_norm": 7.528983116149902
+    },
+    {
+      "it": 27,
+      "total_loss_per_step": 0.491602102915446,
+      "ce_per_step": 0.4916020942231019,
+      "penalty_per_step": 22.338548103968304,
+      "grad_norm": 6.416860580444336
+    },
+    {
+      "it": 28,
+      "total_loss_per_step": 0.4718373616536458,
+      "ce_per_step": 0.4718373703459899,
+      "penalty_per_step": 23.86167307694753,
+      "grad_norm": 8.56421947479248
+    },
+    {
+      "it": 29,
+      "total_loss_per_step": 0.44517095883687335,
+      "ce_per_step": 0.4451709122707446,
+      "penalty_per_step": 24.67602761586507,
+      "grad_norm": 12.377171516418457
+    },
+    {
+      "it": 30,
+      "total_loss_per_step": 0.402694304784139,
+      "ce_per_step": 0.40269435197114944,
+      "penalty_per_step": 23.748843153317768,
+      "grad_norm": 19.013057708740234
+    },
+    {
+      "it": 31,
+      "total_loss_per_step": 0.3625468413035075,
+      "ce_per_step": 0.362546827023228,
+      "penalty_per_step": 21.507573286692303,
+      "grad_norm": 25.623889923095703
+    },
+    {
+      "it": 32,
+      "total_loss_per_step": 0.3441733121871948,
+      "ce_per_step": 0.3441733879347642,
+      "penalty_per_step": 18.335217873255413,
+      "grad_norm": 21.910083770751953
+    },
+    {
+      "it": 33,
+      "total_loss_per_step": 0.33433520793914795,
+      "ce_per_step": 0.33433523836235207,
+      "penalty_per_step": 17.40308799346288,
+      "grad_norm": 20.140043258666992
+    },
+    {
+      "it": 34,
+      "total_loss_per_step": 0.32542534669240314,
+      "ce_per_step": 0.32542535724739236,
+      "penalty_per_step": 19.461529811223347,
+      "grad_norm": 20.36534309387207
+    },
+    {
+      "it": 35,
+      "total_loss_per_step": 0.30082613229751587,
+      "ce_per_step": 0.3008261223634084,
+      "penalty_per_step": 21.326528708140057,
+      "grad_norm": 19.91677474975586
+    },
+    {
+      "it": 36,
+      "total_loss_per_step": 0.29512643814086914,
+      "ce_per_step": 0.2951264443496863,
+      "penalty_per_step": 17.842515230178833,
+      "grad_norm": 10.93835163116455
+    },
+    {
+      "it": 37,
+      "total_loss_per_step": 0.28776748975118,
+      "ce_per_step": 0.2877674785753091,
+      "penalty_per_step": 19.054102063179016,
+      "grad_norm": 8.953643798828125
+    },
+    {
+      "it": 38,
+      "total_loss_per_step": 0.28626835346221924,
+      "ce_per_step": 0.2862684273471435,
+      "penalty_per_step": 22.248367428779602,
+      "grad_norm": 7.283316612243652
+    },
+    {
+      "it": 39,
+      "total_loss_per_step": 0.2818317612012227,
+      "ce_per_step": 0.28183178914089996,
+      "penalty_per_step": 26.31358281771342,
+      "grad_norm": 6.311751842498779
+    },
+    {
+      "it": 40,
+      "total_loss_per_step": 0.2739274899164836,
+      "ce_per_step": 0.2739274948835373,
+      "penalty_per_step": 30.17076567808787,
+      "grad_norm": 5.673754692077637
+    },
+    {
+      "it": 41,
+      "total_loss_per_step": 0.2710735996564229,
+      "ce_per_step": 0.27107364560166997,
+      "penalty_per_step": 33.15225748221079,
+      "grad_norm": 5.084481239318848
+    },
+    {
+      "it": 42,
+      "total_loss_per_step": 0.272627055644989,
+      "ce_per_step": 0.2726270106310646,
+      "penalty_per_step": 35.16730546951294,
+      "grad_norm": 5.224642276763916
+    },
+    {
+      "it": 43,
+      "total_loss_per_step": 0.2674734393755595,
+      "ce_per_step": 0.26747344589481753,
+      "penalty_per_step": 36.57000287373861,
+      "grad_norm": 7.3923563957214355
+    },
+    {
+      "it": 44,
+      "total_loss_per_step": 0.2668364445368449,
+      "ce_per_step": 0.2668363864844044,
+      "penalty_per_step": 37.781726598739624,
+      "grad_norm": 3.3240253925323486
+    },
+    {
+      "it": 45,
+      "total_loss_per_step": 0.26683231194814044,
+      "ce_per_step": 0.26683236317088205,
+      "penalty_per_step": 38.464236895243324,
+      "grad_norm": 2.5577266216278076
+    },
+    {
+      "it": 46,
+      "total_loss_per_step": 0.2624606490135193,
+      "ce_per_step": 0.2624606400107344,
+      "penalty_per_step": 39.25985566775004,
+      "grad_norm": 2.257962226867676
+    },
+    {
+      "it": 47,
+      "total_loss_per_step": 0.2599959373474121,
+      "ce_per_step": 0.25999599446853,
+      "penalty_per_step": 39.618685801823936,
+      "grad_norm": 3.5720784664154053
+    },
+    {
+      "it": 48,
+      "total_loss_per_step": 0.25596799453099567,
+      "ce_per_step": 0.25596798366556567,
+      "penalty_per_step": 41.040416320165,
+      "grad_norm": 2.364635467529297
+    },
+    {
+      "it": 49,
+      "total_loss_per_step": 0.25351353486378986,
+      "ce_per_step": 0.2535135382786393,
+      "penalty_per_step": 42.38365459442139,
+      "grad_norm": 3.708876848220825
+    },
+    {
+      "it": 50,
+      "total_loss_per_step": 0.25027942657470703,
+      "ce_per_step": 0.2502794334044059,
+      "penalty_per_step": 44.107003609339394,
+      "grad_norm": 3.0381274223327637
+    },
+    {
+      "it": 51,
+      "total_loss_per_step": 0.24635648727416992,
+      "ce_per_step": 0.24635649068901935,
+      "penalty_per_step": 45.957623640696205,
+      "grad_norm": 3.377004861831665
+    },
+    {
+      "it": 52,
+      "total_loss_per_step": 0.24335885047912598,
+      "ce_per_step": 0.24335885855058828,
+      "penalty_per_step": 48.822497288386025,
+      "grad_norm": 3.3335554599761963
+    },
+    {
+      "it": 53,
+      "total_loss_per_step": 0.24015035231908163,
+      "ce_per_step": 0.24015037063509226,
+      "penalty_per_step": 51.8401292959849,
+      "grad_norm": 3.201927900314331
+    },
+    {
+      "it": 54,
+      "total_loss_per_step": 0.24142356713612875,
+      "ce_per_step": 0.2414235215013226,
+      "penalty_per_step": 55.711119651794434,
+      "grad_norm": 2.9284539222717285
+    },
+    {
+      "it": 55,
+      "total_loss_per_step": 0.23371481895446777,
+      "ce_per_step": 0.2337148285781344,
+      "penalty_per_step": 61.629647970199585,
+      "grad_norm": 2.693723440170288
+    },
+    {
+      "it": 56,
+      "total_loss_per_step": 0.232164998849233,
+      "ce_per_step": 0.2321649876733621,
+      "penalty_per_step": 68.899551709493,
+      "grad_norm": 2.916710615158081
+    },
+    {
+      "it": 57,
+      "total_loss_per_step": 0.2332370082537333,
+      "ce_per_step": 0.2332370411604643,
+      "penalty_per_step": 74.00032583872478,
+      "grad_norm": 2.6146187782287598
+    },
+    {
+      "it": 58,
+      "total_loss_per_step": 0.2340752681096395,
+      "ce_per_step": 0.23407531374444565,
+      "penalty_per_step": 79.2398730913798,
+      "grad_norm": 2.7099320888519287
+    },
+    {
+      "it": 59,
+      "total_loss_per_step": 0.22857290506362915,
+      "ce_per_step": 0.22857291220376888,
+      "penalty_per_step": 83.54811588923137,
+      "grad_norm": 2.442633867263794
+    },
+    {
+      "it": 60,
+      "total_loss_per_step": 0.2264604369799296,
+      "ce_per_step": 0.2264604695762197,
+      "penalty_per_step": 87.16210794448853,
+      "grad_norm": 1.9302879571914673
+    },
+    {
+      "it": 61,
+      "total_loss_per_step": 0.223111093044281,
+      "ce_per_step": 0.22311112408836684,
+      "penalty_per_step": 90.55414088567098,
+      "grad_norm": 2.4508635997772217
+    },
+    {
+      "it": 62,
+      "total_loss_per_step": 0.2216013471285502,
+      "ce_per_step": 0.22160131918887296,
+      "penalty_per_step": 92.57513475418091,
+      "grad_norm": 2.3595540523529053
+    },
+    {
+      "it": 63,
+      "total_loss_per_step": 0.22114825248718262,
+      "ce_per_step": 0.2211482897400856,
+      "penalty_per_step": 94.83738772074382,
+      "grad_norm": 2.3669989109039307
+    },
+    {
+      "it": 64,
+      "total_loss_per_step": 0.2169081767400106,
+      "ce_per_step": 0.21690817891309658,
+      "penalty_per_step": 94.93847354253133,
+      "grad_norm": 3.159470319747925
+    },
+    {
+      "it": 65,
+      "total_loss_per_step": 0.21708840131759644,
+      "ce_per_step": 0.21708839138348898,
+      "penalty_per_step": 96.86303154627483,
+      "grad_norm": 2.42590069770813
+    },
+    {
+      "it": 66,
+      "total_loss_per_step": 0.21433778603871664,
+      "ce_per_step": 0.2143377916266521,
+      "penalty_per_step": 100.41795285542806,
+      "grad_norm": 4.543244361877441
+    },
+    {
+      "it": 67,
+      "total_loss_per_step": 0.21082735061645508,
+      "ce_per_step": 0.21082734068234762,
+      "penalty_per_step": 102.3214503924052,
+      "grad_norm": 2.428626537322998
+    },
+    {
+      "it": 68,
+      "total_loss_per_step": 0.2122096618016561,
+      "ce_per_step": 0.21220967111488184,
+      "penalty_per_step": 102.29741891225179,
+      "grad_norm": 2.04644513130188
+    },
+    {
+      "it": 69,
+      "total_loss_per_step": 0.20753741264343262,
+      "ce_per_step": 0.2075374231984218,
+      "penalty_per_step": 102.30023988087972,
+      "grad_norm": 1.945121169090271
+    },
+    {
+      "it": 70,
+      "total_loss_per_step": 0.20798949400583902,
+      "ce_per_step": 0.2079895120114088,
+      "penalty_per_step": 103.92648649215698,
+      "grad_norm": 1.8888972997665405
+    },
+    {
+      "it": 71,
+      "total_loss_per_step": 0.20638245344161987,
+      "ce_per_step": 0.20638246492793164,
+      "penalty_per_step": 106.82656383514404,
+      "grad_norm": 1.7984094619750977
+    },
+    {
+      "it": 72,
+      "total_loss_per_step": 0.19999384880065918,
+      "ce_per_step": 0.19999383483082056,
+      "penalty_per_step": 108.6823320388794,
+      "grad_norm": 1.8231056928634644
+    },
+    {
+      "it": 73,
+      "total_loss_per_step": 0.20321901639302573,
+      "ce_per_step": 0.20321902881066004,
+      "penalty_per_step": 111.50462834040324,
+      "grad_norm": 2.5051679611206055
+    },
+    {
+      "it": 74,
+      "total_loss_per_step": 0.20023669799168906,
+      "ce_per_step": 0.20023669643948475,
+      "penalty_per_step": 113.57496039072673,
+      "grad_norm": 2.0099375247955322
+    },
+    {
+      "it": 75,
+      "total_loss_per_step": 0.19730730851491293,
+      "ce_per_step": 0.19730731844902039,
+      "penalty_per_step": 117.65088160832723,
+      "grad_norm": 2.360285997390747
+    },
+    {
+      "it": 76,
+      "total_loss_per_step": 0.19546099503835043,
+      "ce_per_step": 0.19546096275250116,
+      "penalty_per_step": 119.95286305745442,
+      "grad_norm": 1.8278124332427979
+    },
+    {
+      "it": 77,
+      "total_loss_per_step": 0.19715909163157144,
+      "ce_per_step": 0.1971591031178832,
+      "penalty_per_step": 120.46743313471477,
+      "grad_norm": 2.3914475440979004
+    },
+    {
+      "it": 78,
+      "total_loss_per_step": 0.19460433721542358,
+      "ce_per_step": 0.1946043443555633,
+      "penalty_per_step": 121.50385888417561,
+      "grad_norm": 2.3528316020965576
+    },
+    {
+      "it": 79,
+      "total_loss_per_step": 0.1947035789489746,
+      "ce_per_step": 0.19470363265524307,
+      "penalty_per_step": 122.64155419667561,
+      "grad_norm": 1.7114711999893188
+    },
+    {
+      "it": 80,
+      "total_loss_per_step": 0.1908565362294515,
+      "ce_per_step": 0.19085651201506457,
+      "penalty_per_step": 122.81148465474446,
+      "grad_norm": 3.977116584777832
+    },
+    {
+      "it": 81,
+      "total_loss_per_step": 0.1929273804028829,
+      "ce_per_step": 0.19292740368594727,
+      "penalty_per_step": 124.30723428726196,
+      "grad_norm": 2.129833221435547
+    },
+    {
+      "it": 82,
+      "total_loss_per_step": 0.19209657112757364,
+      "ce_per_step": 0.1920965639874339,
+      "penalty_per_step": 127.3763165473938,
+      "grad_norm": 5.4455132484436035
+    },
+    {
+      "it": 83,
+      "total_loss_per_step": 0.18853306770324707,
+      "ce_per_step": 0.18853306708236536,
+      "penalty_per_step": 127.53873109817505,
+      "grad_norm": 5.344227313995361
+    },
+    {
+      "it": 84,
+      "total_loss_per_step": 0.18611043691635132,
+      "ce_per_step": 0.1861104198421041,
+      "penalty_per_step": 126.19263029098511,
+      "grad_norm": 1.8314640522003174
+    },
+    {
+      "it": 85,
+      "total_loss_per_step": 0.18838894367218018,
+      "ce_per_step": 0.18838897751023373,
+      "penalty_per_step": 128.94648424784342,
+      "grad_norm": 2.7135696411132812
+    },
+    {
+      "it": 86,
+      "total_loss_per_step": 0.18628992636998495,
+      "ce_per_step": 0.18628990929573774,
+      "penalty_per_step": 129.81215556462607,
+      "grad_norm": 1.9435853958129883
+    },
+    {
+      "it": 87,
+      "total_loss_per_step": 0.18401757876078287,
+      "ce_per_step": 0.1840176054586967,
+      "penalty_per_step": 131.6459789276123,
+      "grad_norm": 1.6974472999572754
+    },
+    {
+      "it": 88,
+      "total_loss_per_step": 0.18725242217381796,
+      "ce_per_step": 0.18725243024528027,
+      "penalty_per_step": 132.96022160847983,
+      "grad_norm": 1.6864992380142212
+    },
+    {
+      "it": 89,
+      "total_loss_per_step": 0.18261869748433432,
+      "ce_per_step": 0.18261867730567852,
+      "penalty_per_step": 136.13025093078613,
+      "grad_norm": 2.462149143218994
+    },
+    {
+      "it": 90,
+      "total_loss_per_step": 0.18212972084681192,
+      "ce_per_step": 0.182129740404586,
+      "penalty_per_step": 137.76678276062012,
+      "grad_norm": 2.0740163326263428
+    },
+    {
+      "it": 91,
+      "total_loss_per_step": 0.1814186175664266,
+      "ce_per_step": 0.1814186346406738,
+      "penalty_per_step": 139.59089279174805,
+      "grad_norm": 1.4508308172225952
+    },
+    {
+      "it": 92,
+      "total_loss_per_step": 0.17920281489690146,
+      "ce_per_step": 0.17920282917718092,
+      "penalty_per_step": 140.76896985371908,
+      "grad_norm": 2.6763699054718018
+    },
+    {
+      "it": 93,
+      "total_loss_per_step": 0.18265652656555176,
+      "ce_per_step": 0.18265654829641184,
+      "penalty_per_step": 142.0827662150065,
+      "grad_norm": 1.6100022792816162
+    },
+    {
+      "it": 94,
+      "total_loss_per_step": 0.17749492327372232,
+      "ce_per_step": 0.17749491396049658,
+      "penalty_per_step": 142.91810194651285,
+      "grad_norm": 2.3530378341674805
+    },
+    {
+      "it": 95,
+      "total_loss_per_step": 0.17586320638656616,
+      "ce_per_step": 0.17586321818331876,
+      "penalty_per_step": 142.2128864924113,
+      "grad_norm": 1.843195915222168
+    },
+    {
+      "it": 96,
+      "total_loss_per_step": 0.1783607006072998,
+      "ce_per_step": 0.17836069067319235,
+      "penalty_per_step": 142.61143239339194,
+      "grad_norm": 1.7899376153945923
+    },
+    {
+      "it": 97,
+      "total_loss_per_step": 0.1732421318689982,
+      "ce_per_step": 0.1732421386986971,
+      "penalty_per_step": 144.69703769683838,
+      "grad_norm": 1.7223575115203857
+    },
+    {
+      "it": 98,
+      "total_loss_per_step": 0.17562711238861084,
+      "ce_per_step": 0.1756271105259657,
+      "penalty_per_step": 144.86734994252524,
+      "grad_norm": 2.8551254272460938
+    },
+    {
+      "it": 99,
+      "total_loss_per_step": 0.17430504163106283,
+      "ce_per_step": 0.1743050254881382,
+      "penalty_per_step": 147.04901854197183,
+      "grad_norm": 2.361670970916748
+    },
+    {
+      "it": 100,
+      "total_loss_per_step": 0.17076112826665243,
+      "ce_per_step": 0.1707611090193192,
+      "penalty_per_step": 146.37656784057617,
+      "grad_norm": 3.7719357013702393
+    },
+    {
+      "it": 101,
+      "total_loss_per_step": 0.17293880383173624,
+      "ce_per_step": 0.1729388479143381,
+      "penalty_per_step": 146.14783795674643,
+      "grad_norm": 3.014129877090454
+    },
+    {
+      "it": 102,
+      "total_loss_per_step": 0.16871430476506552,
+      "ce_per_step": 0.16871431873490414,
+      "penalty_per_step": 148.3954054514567,
+      "grad_norm": 3.963956117630005
+    },
+    {
+      "it": 103,
+      "total_loss_per_step": 0.17271206776301065,
+      "ce_per_step": 0.17271206558992466,
+      "penalty_per_step": 149.8549944559733,
+      "grad_norm": 4.08257532119751
+    },
+    {
+      "it": 104,
+      "total_loss_per_step": 0.17283684015274048,
+      "ce_per_step": 0.1728368429467082,
+      "penalty_per_step": 148.10823694864908,
+      "grad_norm": 2.4875943660736084
+    },
+    {
+      "it": 105,
+      "total_loss_per_step": 0.17360772689183554,
+      "ce_per_step": 0.17360773806770644,
+      "penalty_per_step": 150.82627805074057,
+      "grad_norm": 2.7426493167877197
+    },
+    {
+      "it": 106,
+      "total_loss_per_step": 0.17082579930623373,
+      "ce_per_step": 0.1708258002375563,
+      "penalty_per_step": 152.54272111256918,
+      "grad_norm": 2.7710046768188477
+    },
+    {
+      "it": 107,
+      "total_loss_per_step": 0.16660611828168234,
+      "ce_per_step": 0.16660610834757486,
+      "penalty_per_step": 155.97794977823892,
+      "grad_norm": 3.7342352867126465
+    },
+    {
+      "it": 108,
+      "total_loss_per_step": 0.16801085074742636,
+      "ce_per_step": 0.16801085912932953,
+      "penalty_per_step": 159.30041885375977,
+      "grad_norm": 4.815258979797363
+    },
+    {
+      "it": 109,
+      "total_loss_per_step": 0.16671492656071982,
+      "ce_per_step": 0.16671493525306383,
+      "penalty_per_step": 160.04433377583823,
+      "grad_norm": 4.665955543518066
+    },
+    {
+      "it": 110,
+      "total_loss_per_step": 0.16491321722666422,
+      "ce_per_step": 0.16491324392457804,
+      "penalty_per_step": 163.32432715098062,
+      "grad_norm": 3.8045589923858643
+    },
+    {
+      "it": 111,
+      "total_loss_per_step": 0.16748527685801187,
+      "ce_per_step": 0.1674852715805173,
+      "penalty_per_step": 165.7288703918457,
+      "grad_norm": 6.936332702636719
+    },
+    {
+      "it": 112,
+      "total_loss_per_step": 0.16435839732487997,
+      "ce_per_step": 0.16435836721211672,
+      "penalty_per_step": 167.30216217041016,
+      "grad_norm": 6.401041507720947
+    },
+    {
+      "it": 113,
+      "total_loss_per_step": 0.16062167286872864,
+      "ce_per_step": 0.1606216598302126,
+      "penalty_per_step": 166.47410233815512,
+      "grad_norm": 4.106021881103516
+    },
+    {
+      "it": 114,
+      "total_loss_per_step": 0.1623421013355255,
+      "ce_per_step": 0.16234209015965462,
+      "penalty_per_step": 164.703976949056,
+      "grad_norm": 3.2146363258361816
+    },
+    {
+      "it": 115,
+      "total_loss_per_step": 0.1615968644618988,
+      "ce_per_step": 0.16159686632454395,
+      "penalty_per_step": 166.50217374165854,
+      "grad_norm": 5.021602153778076
+    },
+    {
+      "it": 116,
+      "total_loss_per_step": 0.15647324919700623,
+      "ce_per_step": 0.1564732251378397,
+      "penalty_per_step": 166.45789082845053,
+      "grad_norm": 1.9449578523635864
+    },
+    {
+      "it": 117,
+      "total_loss_per_step": 0.15581857164700827,
+      "ce_per_step": 0.15581856792171797,
+      "penalty_per_step": 164.01569588979086,
+      "grad_norm": 2.885486602783203
+    },
+    {
+      "it": 118,
+      "total_loss_per_step": 0.15677454074223837,
+      "ce_per_step": 0.1567745542464157,
+      "penalty_per_step": 166.77757040659586,
+      "grad_norm": 2.975005865097046
+    },
+    {
+      "it": 119,
+      "total_loss_per_step": 0.15762105584144592,
+      "ce_per_step": 0.1576210536683599,
+      "penalty_per_step": 166.62492338816324,
+      "grad_norm": 2.95984148979187
+    },
+    {
+      "it": 120,
+      "total_loss_per_step": 0.15238148967425028,
+      "ce_per_step": 0.1523814977457126,
+      "penalty_per_step": 168.07095877329508,
+      "grad_norm": 2.2290232181549072
+    },
+    {
+      "it": 121,
+      "total_loss_per_step": 0.15563362836837769,
+      "ce_per_step": 0.15563363643984,
+      "penalty_per_step": 170.54680411020914,
+      "grad_norm": 5.196084976196289
+    },
+    {
+      "it": 122,
+      "total_loss_per_step": 0.15293977657953897,
+      "ce_per_step": 0.15293976664543152,
+      "penalty_per_step": 171.1780907313029,
+      "grad_norm": 2.8564159870147705
+    },
+    {
+      "it": 123,
+      "total_loss_per_step": 0.15289556980133057,
+      "ce_per_step": 0.15289557166397572,
+      "penalty_per_step": 173.10660775502524,
+      "grad_norm": 5.199043273925781
+    },
+    {
+      "it": 124,
+      "total_loss_per_step": 0.1531380315621694,
+      "ce_per_step": 0.1531380337352554,
+      "penalty_per_step": 172.8129342397054,
+      "grad_norm": 5.169595718383789
+    },
+    {
+      "it": 125,
+      "total_loss_per_step": 0.1494812568028768,
+      "ce_per_step": 0.14948126099382839,
+      "penalty_per_step": 176.97316106160483,
+      "grad_norm": 3.001156806945801
+    },
+    {
+      "it": 126,
+      "total_loss_per_step": 0.1494350532690684,
+      "ce_per_step": 0.14943503510827819,
+      "penalty_per_step": 179.08241526285806,
+      "grad_norm": 5.1850905418396
+    },
+    {
+      "it": 127,
+      "total_loss_per_step": 0.14910852909088135,
+      "ce_per_step": 0.14910854833821455,
+      "penalty_per_step": 181.82366307576498,
+      "grad_norm": 4.5970234870910645
+    },
+    {
+      "it": 128,
+      "total_loss_per_step": 0.15020578106244406,
+      "ce_per_step": 0.1502057882025838,
+      "penalty_per_step": 188.0010560353597,
+      "grad_norm": 4.715074062347412
+    },
+    {
+      "it": 129,
+      "total_loss_per_step": 0.14813404281934103,
+      "ce_per_step": 0.14813404732073346,
+      "penalty_per_step": 191.7106523513794,
+      "grad_norm": 3.0186116695404053
+    },
+    {
+      "it": 130,
+      "total_loss_per_step": 0.1475073496500651,
+      "ce_per_step": 0.14750732512523732,
+      "penalty_per_step": 194.32940991719565,
+      "grad_norm": 3.5521955490112305
+    },
+    {
+      "it": 131,
+      "total_loss_per_step": 0.14782246947288513,
+      "ce_per_step": 0.14782244308541218,
+      "penalty_per_step": 195.96192487080893,
+      "grad_norm": 2.91790771484375
+    },
+    {
+      "it": 132,
+      "total_loss_per_step": 0.14675798018773398,
+      "ce_per_step": 0.14675798499956727,
+      "penalty_per_step": 196.36083539326987,
+      "grad_norm": 2.651870012283325
+    },
+    {
+      "it": 133,
+      "total_loss_per_step": 0.14800881346066794,
+      "ce_per_step": 0.14800879079848528,
+      "penalty_per_step": 194.3072083791097,
+      "grad_norm": 2.3638734817504883
+    },
+    {
+      "it": 134,
+      "total_loss_per_step": 0.14292902747790018,
+      "ce_per_step": 0.14292903058230877,
+      "penalty_per_step": 191.8778533935547,
+      "grad_norm": 1.8848538398742676
+    },
+    {
+      "it": 135,
+      "total_loss_per_step": 0.14399421215057373,
+      "ce_per_step": 0.14399419895683727,
+      "penalty_per_step": 186.9839989344279,
+      "grad_norm": 4.066205978393555
+    },
+    {
+      "it": 136,
+      "total_loss_per_step": 0.14624515175819397,
+      "ce_per_step": 0.14624513126909733,
+      "penalty_per_step": 186.19289048512778,
+      "grad_norm": 5.582547664642334
+    },
+    {
+      "it": 137,
+      "total_loss_per_step": 0.14213064312934875,
+      "ce_per_step": 0.14213065492610136,
+      "penalty_per_step": 185.54110050201416,
+      "grad_norm": 2.3562369346618652
+    },
+    {
+      "it": 138,
+      "total_loss_per_step": 0.14348533749580383,
+      "ce_per_step": 0.14348533765102425,
+      "penalty_per_step": 186.8017978668213,
+      "grad_norm": 6.871653079986572
+    },
+    {
+      "it": 139,
+      "total_loss_per_step": 0.14463805158933005,
+      "ce_per_step": 0.1446380545385182,
+      "penalty_per_step": 188.77391974131265,
+      "grad_norm": 3.622910499572754
+    },
+    {
+      "it": 140,
+      "total_loss_per_step": 0.14501259724299112,
+      "ce_per_step": 0.14501259832953414,
+      "penalty_per_step": 192.29530970255533,
+      "grad_norm": 5.637099266052246
+    },
+    {
+      "it": 141,
+      "total_loss_per_step": 0.14451544483502707,
+      "ce_per_step": 0.14451542341460785,
+      "penalty_per_step": 194.682004292806,
+      "grad_norm": 3.125073194503784
+    },
+    {
+      "it": 142,
+      "total_loss_per_step": 0.14119773109753928,
+      "ce_per_step": 0.1411977231812974,
+      "penalty_per_step": 197.5741138458252,
+      "grad_norm": 4.453517913818359
+    },
+    {
+      "it": 143,
+      "total_loss_per_step": 0.14086908102035522,
+      "ce_per_step": 0.1408690825725595,
+      "penalty_per_step": 202.14212067921957,
+      "grad_norm": 4.15754508972168
+    },
+    {
+      "it": 144,
+      "total_loss_per_step": 0.1408367653687795,
+      "ce_per_step": 0.1408367802699407,
+      "penalty_per_step": 204.19481945037842,
+      "grad_norm": 4.407544136047363
+    },
+    {
+      "it": 145,
+      "total_loss_per_step": 0.1439941624800364,
+      "ce_per_step": 0.14399418653920293,
+      "penalty_per_step": 208.64344533284506,
+      "grad_norm": 3.9226315021514893
+    },
+    {
+      "it": 146,
+      "total_loss_per_step": 0.13948145508766174,
+      "ce_per_step": 0.13948146238302192,
+      "penalty_per_step": 211.87358792622885,
+      "grad_norm": 2.389559030532837
+    },
+    {
+      "it": 147,
+      "total_loss_per_step": 0.13964439431826273,
+      "ce_per_step": 0.1396444064254562,
+      "penalty_per_step": 216.112286567688,
+      "grad_norm": 4.216432094573975
+    },
+    {
+      "it": 148,
+      "total_loss_per_step": 0.13991908232371011,
+      "ce_per_step": 0.13991908558333913,
+      "penalty_per_step": 217.9271920522054,
+      "grad_norm": 5.463468551635742
+    },
+    {
+      "it": 149,
+      "total_loss_per_step": 0.13800665736198425,
+      "ce_per_step": 0.13800665937984982,
+      "penalty_per_step": 222.09672514597574,
+      "grad_norm": 4.071113586425781
+    },
+    {
+      "it": 150,
+      "total_loss_per_step": 0.13974815607070923,
+      "ce_per_step": 0.13974814489483833,
+      "penalty_per_step": 225.0308157602946,
+      "grad_norm": 5.724146842956543
+    },
+    {
+      "it": 151,
+      "total_loss_per_step": 0.13954495390256247,
+      "ce_per_step": 0.139544947228084,
+      "penalty_per_step": 226.60589726765951,
+      "grad_norm": 4.95388650894165
+    },
+    {
+      "it": 152,
+      "total_loss_per_step": 0.13646788398424783,
+      "ce_per_step": 0.1364678773097694,
+      "penalty_per_step": 229.05608812967935,
+      "grad_norm": 4.9759016036987305
+    },
+    {
+      "it": 153,
+      "total_loss_per_step": 0.13881717125574747,
+      "ce_per_step": 0.13881716753045717,
+      "penalty_per_step": 232.72035280863443,
+      "grad_norm": 5.988008499145508
+    },
+    {
+      "it": 154,
+      "total_loss_per_step": 0.13808518648147583,
+      "ce_per_step": 0.13808519641558328,
+      "penalty_per_step": 233.4407730102539,
+      "grad_norm": 2.6012372970581055
+    },
+    {
+      "it": 155,
+      "total_loss_per_step": 0.13610919316609701,
+      "ce_per_step": 0.13610919704660773,
+      "penalty_per_step": 235.35416062672934,
+      "grad_norm": 3.8662259578704834
+    },
+    {
+      "it": 156,
+      "total_loss_per_step": 0.13719671964645386,
+      "ce_per_step": 0.1371967357893785,
+      "penalty_per_step": 235.30314032236734,
+      "grad_norm": 2.9219796657562256
+    },
+    {
+      "it": 157,
+      "total_loss_per_step": 0.13619649410247803,
+      "ce_per_step": 0.1361965051231285,
+      "penalty_per_step": 233.25695037841797,
+      "grad_norm": 2.8498549461364746
+    },
+    {
+      "it": 158,
+      "total_loss_per_step": 0.13656319181124368,
+      "ce_per_step": 0.13656321493908763,
+      "penalty_per_step": 234.29901949564615,
+      "grad_norm": 2.292088508605957
+    },
+    {
+      "it": 159,
+      "total_loss_per_step": 0.13299802939097086,
+      "ce_per_step": 0.13299802162994942,
+      "penalty_per_step": 233.0282704035441,
+      "grad_norm": 5.986577987670898
+    },
+    {
+      "it": 160,
+      "total_loss_per_step": 0.1359422206878662,
+      "ce_per_step": 0.13594223263983926,
+      "penalty_per_step": 234.13597106933594,
+      "grad_norm": 2.586632251739502
+    },
+    {
+      "it": 161,
+      "total_loss_per_step": 0.13567800323168436,
+      "ce_per_step": 0.1356779970228672,
+      "penalty_per_step": 233.6948906580607,
+      "grad_norm": 3.13417911529541
+    },
+    {
+      "it": 162,
+      "total_loss_per_step": 0.1342918872833252,
+      "ce_per_step": 0.13429188076406717,
+      "penalty_per_step": 233.76932048797607,
+      "grad_norm": 4.137444019317627
+    },
+    {
+      "it": 163,
+      "total_loss_per_step": 0.13278974095980325,
+      "ce_per_step": 0.13278970525910458,
+      "penalty_per_step": 233.2454522450765,
+      "grad_norm": 2.740032434463501
+    },
+    {
+      "it": 164,
+      "total_loss_per_step": 0.13344899813334146,
+      "ce_per_step": 0.13344901520758867,
+      "penalty_per_step": 236.57132530212402,
+      "grad_norm": 6.163185119628906
+    },
+    {
+      "it": 165,
+      "total_loss_per_step": 0.13338355223337808,
+      "ce_per_step": 0.1333835513020555,
+      "penalty_per_step": 235.18814690907797,
+      "grad_norm": 7.615262508392334
+    },
+    {
+      "it": 166,
+      "total_loss_per_step": 0.13372706373532614,
+      "ce_per_step": 0.13372704479843378,
+      "penalty_per_step": 230.61637783050537,
+      "grad_norm": 2.5565476417541504
+    },
+    {
+      "it": 167,
+      "total_loss_per_step": 0.13115846117337546,
+      "ce_per_step": 0.13115846024205288,
+      "penalty_per_step": 231.61376476287842,
+      "grad_norm": 5.554750919342041
+    },
+    {
+      "it": 168,
+      "total_loss_per_step": 0.13171682755152384,
+      "ce_per_step": 0.1317168309663733,
+      "penalty_per_step": 234.01777362823486,
+      "grad_norm": 7.470585823059082
+    },
+    {
+      "it": 169,
+      "total_loss_per_step": 0.13000592589378357,
+      "ce_per_step": 0.13000590866431594,
+      "penalty_per_step": 233.21563148498535,
+      "grad_norm": 4.527835369110107
+    },
+    {
+      "it": 170,
+      "total_loss_per_step": 0.1298723816871643,
+      "ce_per_step": 0.12987237858275572,
+      "penalty_per_step": 234.69411436716715,
+      "grad_norm": 1.6141928434371948
+    },
+    {
+      "it": 171,
+      "total_loss_per_step": 0.13170438011487326,
+      "ce_per_step": 0.1317043909803033,
+      "penalty_per_step": 237.52349090576172,
+      "grad_norm": 1.8827414512634277
+    },
+    {
+      "it": 172,
+      "total_loss_per_step": 0.13235333561897278,
+      "ce_per_step": 0.1323533485022684,
+      "penalty_per_step": 239.1954755783081,
+      "grad_norm": 8.376972198486328
+    },
+    {
+      "it": 173,
+      "total_loss_per_step": 0.13042465845743814,
+      "ce_per_step": 0.1304246447980404,
+      "penalty_per_step": 241.86944262186685,
+      "grad_norm": 5.182703495025635
+    },
+    {
+      "it": 174,
+      "total_loss_per_step": 0.1309314767519633,
+      "ce_per_step": 0.1309314758206407,
+      "penalty_per_step": 244.82625929514566,
+      "grad_norm": 6.876217365264893
+    },
+    {
+      "it": 175,
+      "total_loss_per_step": 0.13079693913459778,
+      "ce_per_step": 0.13079694363599023,
+      "penalty_per_step": 246.06128438313803,
+      "grad_norm": 4.443939208984375
+    },
+    {
+      "it": 176,
+      "total_loss_per_step": 0.12783971428871155,
+      "ce_per_step": 0.12783974362537265,
+      "penalty_per_step": 246.9762363433838,
+      "grad_norm": 3.15346360206604
+    },
+    {
+      "it": 177,
+      "total_loss_per_step": 0.1274035374323527,
+      "ce_per_step": 0.12740352004766464,
+      "penalty_per_step": 246.15055084228516,
+      "grad_norm": 2.7153406143188477
+    },
+    {
+      "it": 178,
+      "total_loss_per_step": 0.1280925671259562,
+      "ce_per_step": 0.1280925419802467,
+      "penalty_per_step": 246.40651893615723,
+      "grad_norm": 3.5770180225372314
+    },
+    {
+      "it": 179,
+      "total_loss_per_step": 0.12928213675816855,
+      "ce_per_step": 0.12928214157000184,
+      "penalty_per_step": 245.39978154500326,
+      "grad_norm": 2.867098569869995
+    },
+    {
+      "it": 180,
+      "total_loss_per_step": 0.1282258927822113,
+      "ce_per_step": 0.1282258820720017,
+      "penalty_per_step": 245.16596825917563,
+      "grad_norm": 3.863678455352783
+    },
+    {
+      "it": 181,
+      "total_loss_per_step": 0.12974849343299866,
+      "ce_per_step": 0.12974849188079438,
+      "penalty_per_step": 246.24352423350015,
+      "grad_norm": 3.456132173538208
+    },
+    {
+      "it": 182,
+      "total_loss_per_step": 0.12631818652153015,
+      "ce_per_step": 0.12631820250923434,
+      "penalty_per_step": 247.698366800944,
+      "grad_norm": 2.5668742656707764
+    },
+    {
+      "it": 183,
+      "total_loss_per_step": 0.12641330560048422,
+      "ce_per_step": 0.12641330901533365,
+      "penalty_per_step": 253.3276456197103,
+      "grad_norm": 1.7533873319625854
+    },
+    {
+      "it": 184,
+      "total_loss_per_step": 0.12477756539980571,
+      "ce_per_step": 0.1247775717638433,
+      "penalty_per_step": 255.08339182535806,
+      "grad_norm": 2.5961108207702637
+    },
+    {
+      "it": 185,
+      "total_loss_per_step": 0.12486471732457478,
+      "ce_per_step": 0.12486471810067694,
+      "penalty_per_step": 254.3898661931356,
+      "grad_norm": 3.2234389781951904
+    },
+    {
+      "it": 186,
+      "total_loss_per_step": 0.1253428558508555,
+      "ce_per_step": 0.12534286454319954,
+      "penalty_per_step": 256.49216334025067,
+      "grad_norm": 3.6900453567504883
+    },
+    {
+      "it": 187,
+      "total_loss_per_step": 0.12525986631711325,
+      "ce_per_step": 0.12525985653822622,
+      "penalty_per_step": 256.3868869145711,
+      "grad_norm": 1.9966778755187988
+    },
+    {
+      "it": 188,
+      "total_loss_per_step": 0.12349152565002441,
+      "ce_per_step": 0.12349152316649754,
+      "penalty_per_step": 255.50541814168295,
+      "grad_norm": 1.8788082599639893
+    },
+    {
+      "it": 189,
+      "total_loss_per_step": 0.12519683440526327,
+      "ce_per_step": 0.1251968483751019,
+      "penalty_per_step": 257.2459135055542,
+      "grad_norm": 2.991314172744751
+    },
+    {
+      "it": 190,
+      "total_loss_per_step": 0.12504258751869202,
+      "ce_per_step": 0.12504258115465441,
+      "penalty_per_step": 259.55116240183514,
+      "grad_norm": 1.8616129159927368
+    },
+    {
+      "it": 191,
+      "total_loss_per_step": 0.1234013835589091,
+      "ce_per_step": 0.12340139737352729,
+      "penalty_per_step": 259.8316151301066,
+      "grad_norm": 3.1163604259490967
+    },
+    {
+      "it": 192,
+      "total_loss_per_step": 0.121542622645696,
+      "ce_per_step": 0.12154261410857241,
+      "penalty_per_step": 261.9542592366536,
+      "grad_norm": 1.8357248306274414
+    },
+    {
+      "it": 193,
+      "total_loss_per_step": 0.12239706516265869,
+      "ce_per_step": 0.12239705895384152,
+      "penalty_per_step": 260.1167850494385,
+      "grad_norm": 5.345039367675781
+    },
+    {
+      "it": 194,
+      "total_loss_per_step": 0.1244061291217804,
+      "ce_per_step": 0.1244061275695761,
+      "penalty_per_step": 260.0340280532837,
+      "grad_norm": 5.313745498657227
+    },
+    {
+      "it": 195,
+      "total_loss_per_step": 0.1246097485224406,
+      "ce_per_step": 0.12460976047441363,
+      "penalty_per_step": 262.44852860768634,
+      "grad_norm": 2.432187080383301
+    },
+    {
+      "it": 196,
+      "total_loss_per_step": 0.12078830599784851,
+      "ce_per_step": 0.12078830910225709,
+      "penalty_per_step": 261.44596576690674,
+      "grad_norm": 4.900295257568359
+    },
+    {
+      "it": 197,
+      "total_loss_per_step": 0.12337396542231242,
+      "ce_per_step": 0.12337396945804358,
+      "penalty_per_step": 263.1040728886922,
+      "grad_norm": 4.023490905761719
+    },
+    {
+      "it": 198,
+      "total_loss_per_step": 0.1216726303100586,
+      "ce_per_step": 0.12167264272769292,
+      "penalty_per_step": 264.2148262659709,
+      "grad_norm": 2.24149227142334
+    },
+    {
+      "it": 199,
+      "total_loss_per_step": 0.12256375948588054,
+      "ce_per_step": 0.12256375777845581,
+      "penalty_per_step": 266.42947991689044,
+      "grad_norm": 2.437429904937744
+    },
+    {
+      "it": 200,
+      "total_loss_per_step": 0.12231070796648662,
+      "ce_per_step": 0.12231070315465331,
+      "penalty_per_step": 266.56653054555255,
+      "grad_norm": 1.4540833234786987
+    },
+    {
+      "it": 201,
+      "total_loss_per_step": 0.11936343709627788,
+      "ce_per_step": 0.11936345417052507,
+      "penalty_per_step": 268.45718320210773,
+      "grad_norm": 2.086542844772339
+    },
+    {
+      "it": 202,
+      "total_loss_per_step": 0.11849260330200195,
+      "ce_per_step": 0.1184926248776416,
+      "penalty_per_step": 269.0948855082194,
+      "grad_norm": 2.096290349960327
+    },
+    {
+      "it": 203,
+      "total_loss_per_step": 0.11922558148701985,
+      "ce_per_step": 0.11922557077681024,
+      "penalty_per_step": 268.91358375549316,
+      "grad_norm": 2.813934087753296
+    },
+    {
+      "it": 204,
+      "total_loss_per_step": 0.11987704038619995,
+      "ce_per_step": 0.11987702905510862,
+      "penalty_per_step": 271.6840998331706,
+      "grad_norm": 1.7792695760726929
+    },
+    {
+      "it": 205,
+      "total_loss_per_step": 0.12011432647705078,
+      "ce_per_step": 0.12011431281765302,
+      "penalty_per_step": 273.1893793741862,
+      "grad_norm": 4.276998996734619
+    },
+    {
+      "it": 206,
+      "total_loss_per_step": 0.11919535199801128,
+      "ce_per_step": 0.1191953532397747,
+      "penalty_per_step": 274.0441780090332,
+      "grad_norm": 2.0299251079559326
+    },
+    {
+      "it": 207,
+      "total_loss_per_step": 0.11643762389818828,
+      "ce_per_step": 0.11643763383229573,
+      "penalty_per_step": 274.57599449157715,
+      "grad_norm": 3.559065580368042
+    },
+    {
+      "it": 208,
+      "total_loss_per_step": 0.11750325560569763,
+      "ce_per_step": 0.11750327935442328,
+      "penalty_per_step": 274.5056858062744,
+      "grad_norm": 3.041828155517578
+    },
+    {
+      "it": 209,
+      "total_loss_per_step": 0.11684667070706685,
+      "ce_per_step": 0.11684668359036247,
+      "penalty_per_step": 275.2199357350667,
+      "grad_norm": 2.5525338649749756
+    },
+    {
+      "it": 210,
+      "total_loss_per_step": 0.11779812971750896,
+      "ce_per_step": 0.11779813390846054,
+      "penalty_per_step": 276.1688429514567,
+      "grad_norm": 2.5777459144592285
+    },
+    {
+      "it": 211,
+      "total_loss_per_step": 0.11763464411099751,
+      "ce_per_step": 0.11763466335833073,
+      "penalty_per_step": 275.92301750183105,
+      "grad_norm": 3.0530712604522705
+    },
+    {
+      "it": 212,
+      "total_loss_per_step": 0.11535279949506123,
+      "ce_per_step": 0.11535280492777626,
+      "penalty_per_step": 277.31186803181964,
+      "grad_norm": 2.1815061569213867
+    },
+    {
+      "it": 213,
+      "total_loss_per_step": 0.11481630802154541,
+      "ce_per_step": 0.11481632618233562,
+      "penalty_per_step": 280.85125668843585,
+      "grad_norm": 3.167642831802368
+    },
+    {
+      "it": 214,
+      "total_loss_per_step": 0.11604303121566772,
+      "ce_per_step": 0.11604302919780214,
+      "penalty_per_step": 283.98974927266437,
+      "grad_norm": 3.731043815612793
+    },
+    {
+      "it": 215,
+      "total_loss_per_step": 0.11391940712928772,
+      "ce_per_step": 0.11391941597685218,
+      "penalty_per_step": 288.01940727233887,
+      "grad_norm": 2.210308790206909
+    },
+    {
+      "it": 216,
+      "total_loss_per_step": 0.11423531174659729,
+      "ce_per_step": 0.11423532307768862,
+      "penalty_per_step": 288.9174575805664,
+      "grad_norm": 3.3669939041137695
+    },
+    {
+      "it": 217,
+      "total_loss_per_step": 0.11147842804590861,
+      "ce_per_step": 0.11147844760368268,
+      "penalty_per_step": 290.6030279795329,
+      "grad_norm": 2.0690054893493652
+    },
+    {
+      "it": 218,
+      "total_loss_per_step": 0.11212225755055745,
+      "ce_per_step": 0.1121222513417403,
+      "penalty_per_step": 288.9869810740153,
+      "grad_norm": 3.3981151580810547
+    },
+    {
+      "it": 219,
+      "total_loss_per_step": 0.11180084943771362,
+      "ce_per_step": 0.11180084586764376,
+      "penalty_per_step": 292.90428098042804,
+      "grad_norm": 4.0783586502075195
+    },
+    {
+      "it": 220,
+      "total_loss_per_step": 0.11207423607508342,
+      "ce_per_step": 0.11207422909016411,
+      "penalty_per_step": 293.7681776682536,
+      "grad_norm": 1.4097398519515991
+    },
+    {
+      "it": 221,
+      "total_loss_per_step": 0.11322083075841267,
+      "ce_per_step": 0.11322081756467621,
+      "penalty_per_step": 292.2062822977702,
+      "grad_norm": 2.58988356590271
+    },
+    {
+      "it": 222,
+      "total_loss_per_step": 0.10900935530662537,
+      "ce_per_step": 0.10900934863214691,
+      "penalty_per_step": 294.50487009684247,
+      "grad_norm": 2.071058750152588
+    },
+    {
+      "it": 223,
+      "total_loss_per_step": 0.11109083890914917,
+      "ce_per_step": 0.11109084558362763,
+      "penalty_per_step": 292.0100555419922,
+      "grad_norm": 2.087721586227417
+    },
+    {
+      "it": 224,
+      "total_loss_per_step": 0.10973752538363139,
+      "ce_per_step": 0.10973752926414211,
+      "penalty_per_step": 290.33043479919434,
+      "grad_norm": 2.174649715423584
+    },
+    {
+      "it": 225,
+      "total_loss_per_step": 0.11072258154551189,
+      "ce_per_step": 0.11072259147961934,
+      "penalty_per_step": 289.2019399007161,
+      "grad_norm": 2.577932596206665
+    },
+    {
+      "it": 226,
+      "total_loss_per_step": 0.11046701669692993,
+      "ce_per_step": 0.11046701669692993,
+      "penalty_per_step": 289.6122506459554,
+      "grad_norm": 2.0608932971954346
+    },
+    {
+      "it": 227,
+      "total_loss_per_step": 0.11004256208737691,
+      "ce_per_step": 0.1100425599142909,
+      "penalty_per_step": 291.1844933827718,
+      "grad_norm": 1.685564637184143
+    },
+    {
+      "it": 228,
+      "total_loss_per_step": 0.10852802793184917,
+      "ce_per_step": 0.10852801846340299,
+      "penalty_per_step": 292.1773211161296,
+      "grad_norm": 1.7531644105911255
+    },
+    {
+      "it": 229,
+      "total_loss_per_step": 0.10871998469034831,
+      "ce_per_step": 0.10871999307225148,
+      "penalty_per_step": 295.59474182128906,
+      "grad_norm": 1.8021522760391235
+    },
+    {
+      "it": 230,
+      "total_loss_per_step": 0.10815662145614624,
+      "ce_per_step": 0.10815661990394194,
+      "penalty_per_step": 299.7748381296794,
+      "grad_norm": 1.6223355531692505
+    },
+    {
+      "it": 231,
+      "total_loss_per_step": 0.10853503147761027,
+      "ce_per_step": 0.10853501921519637,
+      "penalty_per_step": 302.56253751118976,
+      "grad_norm": 2.7872116565704346
+    },
+    {
+      "it": 232,
+      "total_loss_per_step": 0.10737244288126628,
+      "ce_per_step": 0.10737243915597598,
+      "penalty_per_step": 306.21046384175617,
+      "grad_norm": 1.8108627796173096
+    },
+    {
+      "it": 233,
+      "total_loss_per_step": 0.1073171595732371,
+      "ce_per_step": 0.10731716298808654,
+      "penalty_per_step": 309.45336723327637,
+      "grad_norm": 1.7963043451309204
+    },
+    {
+      "it": 234,
+      "total_loss_per_step": 0.10906430085500081,
+      "ce_per_step": 0.10906431156521042,
+      "penalty_per_step": 311.06084060668945,
+      "grad_norm": 1.8333126306533813
+    },
+    {
+      "it": 235,
+      "total_loss_per_step": 0.10603516300519307,
+      "ce_per_step": 0.10603517759591341,
+      "penalty_per_step": 312.9970620473226,
+      "grad_norm": 1.1009193658828735
+    },
+    {
+      "it": 236,
+      "total_loss_per_step": 0.10812480250994365,
+      "ce_per_step": 0.10812478403871258,
+      "penalty_per_step": 311.7584641774495,
+      "grad_norm": 2.5656888484954834
+    },
+    {
+      "it": 237,
+      "total_loss_per_step": 0.10643181204795837,
+      "ce_per_step": 0.10643182275816798,
+      "penalty_per_step": 313.1589291890462,
+      "grad_norm": 1.741058111190796
+    },
+    {
+      "it": 238,
+      "total_loss_per_step": 0.10735751191775005,
+      "ce_per_step": 0.10735750834768017,
+      "penalty_per_step": 313.6992410024007,
+      "grad_norm": 2.7201268672943115
+    },
+    {
+      "it": 239,
+      "total_loss_per_step": 0.1055280069510142,
+      "ce_per_step": 0.10552800462270777,
+      "penalty_per_step": 312.17949803670246,
+      "grad_norm": 2.9280855655670166
+    },
+    {
+      "it": 240,
+      "total_loss_per_step": 0.10773061712582906,
+      "ce_per_step": 0.10773062364508708,
+      "penalty_per_step": 314.2774187723796,
+      "grad_norm": 4.074095249176025
+    },
+    {
+      "it": 241,
+      "total_loss_per_step": 0.10667845606803894,
+      "ce_per_step": 0.10667846010377009,
+      "penalty_per_step": 316.12403233846027,
+      "grad_norm": 2.082127094268799
+    },
+    {
+      "it": 242,
+      "total_loss_per_step": 0.1057906448841095,
+      "ce_per_step": 0.10579063789919019,
+      "penalty_per_step": 315.7383035024007,
+      "grad_norm": 1.2135125398635864
+    },
+    {
+      "it": 243,
+      "total_loss_per_step": 0.10464197397232056,
+      "ce_per_step": 0.10464197661106785,
+      "penalty_per_step": 313.8929901123047,
+      "grad_norm": 1.9440191984176636
+    },
+    {
+      "it": 244,
+      "total_loss_per_step": 0.10515490174293518,
+      "ce_per_step": 0.10515489646544059,
+      "penalty_per_step": 314.0561218261719,
+      "grad_norm": 1.8044037818908691
+    },
+    {
+      "it": 245,
+      "total_loss_per_step": 0.10582244396209717,
+      "ce_per_step": 0.10582242005815108,
+      "penalty_per_step": 316.2575766245524,
+      "grad_norm": 1.8871127367019653
+    },
+    {
+      "it": 246,
+      "total_loss_per_step": 0.10501568516095479,
+      "ce_per_step": 0.10501567848647635,
+      "penalty_per_step": 317.047124226888,
+      "grad_norm": 1.8954386711120605
+    },
+    {
+      "it": 247,
+      "total_loss_per_step": 0.10664079586664836,
+      "ce_per_step": 0.1066407950905462,
+      "penalty_per_step": 318.58528963724774,
+      "grad_norm": 1.980612874031067
+    },
+    {
+      "it": 248,
+      "total_loss_per_step": 0.10516028602917989,
+      "ce_per_step": 0.10516030248254538,
+      "penalty_per_step": 318.3403600056966,
+      "grad_norm": 1.647281527519226
+    },
+    {
+      "it": 249,
+      "total_loss_per_step": 0.10562845071156819,
+      "ce_per_step": 0.10562846638883154,
+      "penalty_per_step": 320.1215076446533,
+      "grad_norm": 1.7094594240188599
+    },
+    {
+      "it": 250,
+      "total_loss_per_step": 0.10481887062390645,
+      "ce_per_step": 0.10481886348376672,
+      "penalty_per_step": 321.4741897583008,
+      "grad_norm": 2.2829744815826416
+    },
+    {
+      "it": 251,
+      "total_loss_per_step": 0.10393732786178589,
+      "ce_per_step": 0.10393731047709782,
+      "penalty_per_step": 322.34109687805176,
+      "grad_norm": 1.9602043628692627
+    },
+    {
+      "it": 252,
+      "total_loss_per_step": 0.10433682799339294,
+      "ce_per_step": 0.10433683140824239,
+      "penalty_per_step": 322.39686330159503,
+      "grad_norm": 2.125823497772217
+    },
+    {
+      "it": 253,
+      "total_loss_per_step": 0.10269630948702495,
+      "ce_per_step": 0.10269631057356794,
+      "penalty_per_step": 322.45419692993164,
+      "grad_norm": 1.3150737285614014
+    },
+    {
+      "it": 254,
+      "total_loss_per_step": 0.1042364239692688,
+      "ce_per_step": 0.10423643188551068,
+      "penalty_per_step": 322.75754801432294,
+      "grad_norm": 1.4104546308517456
+    },
+    {
+      "it": 255,
+      "total_loss_per_step": 0.10483344395955403,
+      "ce_per_step": 0.10483344302823146,
+      "penalty_per_step": 322.0803902943929,
+      "grad_norm": 1.7367771863937378
+    },
+    {
+      "it": 256,
+      "total_loss_per_step": 0.10545929272969563,
+      "ce_per_step": 0.10545929195359349,
+      "penalty_per_step": 319.2049312591553,
+      "grad_norm": 2.406700372695923
+    },
+    {
+      "it": 257,
+      "total_loss_per_step": 0.10430582364400227,
+      "ce_per_step": 0.10430581013982494,
+      "penalty_per_step": 320.2711944580078,
+      "grad_norm": 2.061645746231079
+    },
+    {
+      "it": 258,
+      "total_loss_per_step": 0.10444132486979167,
+      "ce_per_step": 0.1044413479976356,
+      "penalty_per_step": 322.9644362131755,
+      "grad_norm": 2.2364583015441895
+    },
+    {
+      "it": 259,
+      "total_loss_per_step": 0.10552122195561726,
+      "ce_per_step": 0.10552123080318172,
+      "penalty_per_step": 323.0741952260335,
+      "grad_norm": 3.404743194580078
+    },
+    {
+      "it": 260,
+      "total_loss_per_step": 0.10428414742151897,
+      "ce_per_step": 0.10428414649019639,
+      "penalty_per_step": 327.2797546386719,
+      "grad_norm": 1.6704250574111938
+    },
+    {
+      "it": 261,
+      "total_loss_per_step": 0.10508009791374207,
+      "ce_per_step": 0.1050800858065486,
+      "penalty_per_step": 331.41102345784503,
+      "grad_norm": 1.543924331665039
+    },
+    {
+      "it": 262,
+      "total_loss_per_step": 0.1039269467194875,
+      "ce_per_step": 0.10392693849280477,
+      "penalty_per_step": 334.02850850423175,
+      "grad_norm": 1.1338104009628296
+    },
+    {
+      "it": 263,
+      "total_loss_per_step": 0.10370504856109619,
+      "ce_per_step": 0.10370506051306923,
+      "penalty_per_step": 339.4629185994466,
+      "grad_norm": 1.4917254447937012
+    },
+    {
+      "it": 264,
+      "total_loss_per_step": 0.10318350791931152,
+      "ce_per_step": 0.10318347765132785,
+      "penalty_per_step": 340.116179784139,
+      "grad_norm": 1.6297788619995117
+    },
+    {
+      "it": 265,
+      "total_loss_per_step": 0.10370461146036784,
+      "ce_per_step": 0.10370461254691084,
+      "penalty_per_step": 339.08239873250324,
+      "grad_norm": 1.2244290113449097
+    },
+    {
+      "it": 266,
+      "total_loss_per_step": 0.10347519318262736,
+      "ce_per_step": 0.10347518961255749,
+      "penalty_per_step": 344.0434710184733,
+      "grad_norm": 1.4855048656463623
+    },
+    {
+      "it": 267,
+      "total_loss_per_step": 0.1026623547077179,
+      "ce_per_step": 0.10266236262395978,
+      "penalty_per_step": 342.5077152252197,
+      "grad_norm": 2.3758020401000977
+    },
+    {
+      "it": 268,
+      "total_loss_per_step": 0.1026106874148051,
+      "ce_per_step": 0.10261066940923531,
+      "penalty_per_step": 343.3046073913574,
+      "grad_norm": 1.632962942123413
+    },
+    {
+      "it": 269,
+      "total_loss_per_step": 0.1048163374265035,
+      "ce_per_step": 0.10481633416687448,
+      "penalty_per_step": 342.97354316711426,
+      "grad_norm": 1.9690760374069214
+    },
+    {
+      "it": 270,
+      "total_loss_per_step": 0.10320253173510234,
+      "ce_per_step": 0.10320252428452174,
+      "penalty_per_step": 343.6577949523926,
+      "grad_norm": 1.521893858909607
+    },
+    {
+      "it": 271,
+      "total_loss_per_step": 0.10172518094380696,
+      "ce_per_step": 0.10172515781596303,
+      "penalty_per_step": 347.05345726013184,
+      "grad_norm": 1.483261227607727
+    },
+    {
+      "it": 272,
+      "total_loss_per_step": 0.10268725951512654,
+      "ce_per_step": 0.10268726789702971,
+      "penalty_per_step": 340.46824137369794,
+      "grad_norm": 1.1258938312530518
+    },
+    {
+      "it": 273,
+      "total_loss_per_step": 0.10319967071215312,
+      "ce_per_step": 0.10319966978083055,
+      "penalty_per_step": 343.7440528869629,
+      "grad_norm": 1.5115623474121094
+    },
+    {
+      "it": 274,
+      "total_loss_per_step": 0.10177554686864217,
+      "ce_per_step": 0.10177555494010448,
+      "penalty_per_step": 339.4958890279134,
+      "grad_norm": 1.6756776571273804
+    },
+    {
+      "it": 275,
+      "total_loss_per_step": 0.10291210810343425,
+      "ce_per_step": 0.10291208668301503,
+      "penalty_per_step": 341.6903953552246,
+      "grad_norm": 3.2276651859283447
+    },
+    {
+      "it": 276,
+      "total_loss_per_step": 0.10368733604749043,
+      "ce_per_step": 0.103687333719184,
+      "penalty_per_step": 341.7987887064616,
+      "grad_norm": 2.0433950424194336
+    },
+    {
+      "it": 277,
+      "total_loss_per_step": 0.10239586234092712,
+      "ce_per_step": 0.10239585038895409,
+      "penalty_per_step": 343.18878746032715,
+      "grad_norm": 1.7676291465759277
+    },
+    {
+      "it": 278,
+      "total_loss_per_step": 0.10209887226422627,
+      "ce_per_step": 0.10209888080134988,
+      "penalty_per_step": 347.7394911448161,
+      "grad_norm": 1.2737054824829102
+    },
+    {
+      "it": 279,
+      "total_loss_per_step": 0.10227577884991963,
+      "ce_per_step": 0.10227578474829595,
+      "penalty_per_step": 349.3788426717122,
+      "grad_norm": 1.0639595985412598
+    },
+    {
+      "it": 280,
+      "total_loss_per_step": 0.10254090030988057,
+      "ce_per_step": 0.1025409131931762,
+      "penalty_per_step": 353.04702123006183,
+      "grad_norm": 1.331750512123108
+    },
+    {
+      "it": 281,
+      "total_loss_per_step": 0.10322635372479756,
+      "ce_per_step": 0.10322635543222229,
+      "penalty_per_step": 354.1195545196533,
+      "grad_norm": 1.2466914653778076
+    },
+    {
+      "it": 282,
+      "total_loss_per_step": 0.1034423013528188,
+      "ce_per_step": 0.10344230833773811,
+      "penalty_per_step": 361.5647773742676,
+      "grad_norm": 1.1616898775100708
+    },
+    {
+      "it": 283,
+      "total_loss_per_step": 0.10267634193102519,
+      "ce_per_step": 0.10267634984726708,
+      "penalty_per_step": 362.7192192077637,
+      "grad_norm": 0.8875299692153931
+    },
+    {
+      "it": 284,
+      "total_loss_per_step": 0.10232798258463542,
+      "ce_per_step": 0.10232798662036657,
+      "penalty_per_step": 364.35520998636883,
+      "grad_norm": 1.2757635116577148
+    },
+    {
+      "it": 285,
+      "total_loss_per_step": 0.10188059012095134,
+      "ce_per_step": 0.10188058329125245,
+      "penalty_per_step": 369.63625081380206,
+      "grad_norm": 1.4313746690750122
+    },
+    {
+      "it": 286,
+      "total_loss_per_step": 0.1014144519964854,
+      "ce_per_step": 0.10141442933430274,
+      "penalty_per_step": 371.03893597920734,
+      "grad_norm": 1.2383620738983154
+    },
+    {
+      "it": 287,
+      "total_loss_per_step": 0.10019813974698384,
+      "ce_per_step": 0.10019812950243552,
+      "penalty_per_step": 374.6719169616699,
+      "grad_norm": 0.8093602657318115
+    },
+    {
+      "it": 288,
+      "total_loss_per_step": 0.10182445247968037,
+      "ce_per_step": 0.10182444859916966,
+      "penalty_per_step": 376.7497361501058,
+      "grad_norm": 1.8084187507629395
+    },
+    {
+      "it": 289,
+      "total_loss_per_step": 0.10198528567949931,
+      "ce_per_step": 0.10198529747625192,
+      "penalty_per_step": 375.59594027201337,
+      "grad_norm": 3.6256659030914307
+    },
+    {
+      "it": 290,
+      "total_loss_per_step": 0.10139585534731548,
+      "ce_per_step": 0.10139585767562191,
+      "penalty_per_step": 372.7928981781006,
+      "grad_norm": 1.6510038375854492
+    },
+    {
+      "it": 291,
+      "total_loss_per_step": 0.10223408540089925,
+      "ce_per_step": 0.10223407888164122,
+      "penalty_per_step": 375.30831209818524,
+      "grad_norm": 1.0450167655944824
+    },
+    {
+      "it": 292,
+      "total_loss_per_step": 0.10196231802304585,
+      "ce_per_step": 0.1019623139873147,
+      "penalty_per_step": 374.9881223042806,
+      "grad_norm": 1.1853693723678589
+    },
+    {
+      "it": 293,
+      "total_loss_per_step": 0.10170057415962219,
+      "ce_per_step": 0.10170056919256847,
+      "penalty_per_step": 375.2128658294678,
+      "grad_norm": 1.257562279701233
+    },
+    {
+      "it": 294,
+      "total_loss_per_step": 0.1023327906926473,
+      "ce_per_step": 0.10233279348661502,
+      "penalty_per_step": 369.8093852996826,
+      "grad_norm": 0.886960506439209
+    },
+    {
+      "it": 295,
+      "total_loss_per_step": 0.10043951869010925,
+      "ce_per_step": 0.10043951294695337,
+      "penalty_per_step": 373.1947733561198,
+      "grad_norm": 0.6912298202514648
+    },
+    {
+      "it": 296,
+      "total_loss_per_step": 0.10227557023366292,
+      "ce_per_step": 0.10227557737380266,
+      "penalty_per_step": 371.6319440205892,
+      "grad_norm": 0.8970262408256531
+    },
+    {
+      "it": 297,
+      "total_loss_per_step": 0.10125773151715596,
+      "ce_per_step": 0.10125772918884952,
+      "penalty_per_step": 370.4525597890218,
+      "grad_norm": 1.161889910697937
+    },
+    {
+      "it": 298,
+      "total_loss_per_step": 0.10101467370986938,
+      "ce_per_step": 0.10101466781149308,
+      "penalty_per_step": 370.5613333384196,
+      "grad_norm": 0.9619365334510803
+    },
+    {
+      "it": 299,
+      "total_loss_per_step": 0.10207478205362956,
+      "ce_per_step": 0.10207477724179626,
+      "penalty_per_step": 367.6143989562988,
+      "grad_norm": 1.018207311630249
+    }
+  ]
+}

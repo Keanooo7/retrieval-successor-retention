@@ -80,7 +80,10 @@ Each metric has a **direction**. A floor that can move both ways is not a floor.
 The last row is the mechanical form of §4.5's *"Never freeze an unmeasured constant."* It is a count
 that can only improve, and it currently stands at **10**.
 
-### Exit codes — the same five everywhere
+### Exit codes — the protocol, which trunk does not yet implement
+
+⚠️ **This heading read "the same five everywhere" until 2026-09-20, and that was false of this tree.** The only implementation is `src/rsr/gates/floors.py` on `macbook-local-2026-09-18` — `class Exit(IntEnum)` with all five codes, emitting `4` at `:118` and `:129`. That branch is **not an ancestor of `main`**, so on trunk **no site returns `4` at all**, and `decision-review.md:82`'s *"the ratchet correctly reported `UNBANKED_RISE`"* describes a run no code here could produce. The protocol below is still the protocol; porting `src/rsr/gates/` is an open reconciliation.
+
 
 ```
 0  at or above the floor

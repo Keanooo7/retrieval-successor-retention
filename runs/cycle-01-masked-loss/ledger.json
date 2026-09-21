@@ -1,0 +1,429 @@
+{
+  "run_id": "cycle-01-masked-loss",
+  "cycle": 1,
+  "question": "Does masking the training loss to real tokens move the final training loss by more than the run-to-run floor, and is the PAD fraction of scored targets above 0.50?",
+  "started_utc": "2026-09-20T21:01:28Z",
+  "provenance": {
+    "git_sha": "e76c42e18bff102c268fada5c7e2411b404016dd",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "mps",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 50,
+  "steps_done": 50,
+  "status": "ok",
+  "config_hash": "557e9cb0ea200a4d2c8e8b90264c5683aff7caa4735f3a65da42c51ed03decbf",
+  "manifest_written_utc": "2026-09-20T21:01:28Z",
+  "commands": [
+    {
+      "argv": "uv run pytest -rs",
+      "entry_point": "pytest",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "suite gate; counts read from the census line, skips reported separately",
+      "at_utc": "2026-09-20T21:01:28Z"
+    },
+    {
+      "argv": "uv run python scripts/mutation_battery.py --check",
+      "entry_point": "scripts/mutation_battery.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "mutation gate; 37/37 proven, incl. 'the training loss scores padding again'",
+      "at_utc": "2026-09-20T21:01:28Z"
+    },
+    {
+      "argv": "uv run python experiments/cycle-01-masked-loss/run.py --single --arm masked --seed 0 --replicate a --device mps --out-dir runs/cycle-01-masked-loss/masked-seed0-a",
+      "entry_point": "experiments/cycle-01-masked-loss/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "50 beats, config_hash 7c7d7f18514af684",
+      "at_utc": "2026-09-20T21:07:58Z"
+    },
+    {
+      "argv": "uv run python experiments/cycle-01-masked-loss/run.py --single --arm masked --seed 0 --replicate b --device mps --out-dir runs/cycle-01-masked-loss/masked-seed0-b",
+      "entry_point": "experiments/cycle-01-masked-loss/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "50 beats, config_hash 7c7d7f18514af684",
+      "at_utc": "2026-09-20T21:07:58Z"
+    },
+    {
+      "argv": "uv run python experiments/cycle-01-masked-loss/run.py --single --arm masked --seed 1 --replicate a --device mps --out-dir runs/cycle-01-masked-loss/masked-seed1-a",
+      "entry_point": "experiments/cycle-01-masked-loss/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "50 beats, config_hash 5d9a80b381bfddb7",
+      "at_utc": "2026-09-20T21:07:58Z"
+    },
+    {
+      "argv": "uv run python experiments/cycle-01-masked-loss/run.py --single --arm masked --seed 2 --replicate a --device mps --out-dir runs/cycle-01-masked-loss/masked-seed2-a",
+      "entry_point": "experiments/cycle-01-masked-loss/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "50 beats, config_hash 614e429f6a433feb",
+      "at_utc": "2026-09-20T21:07:58Z"
+    },
+    {
+      "argv": "uv run python experiments/cycle-01-masked-loss/run.py --single --arm unmasked --seed 0 --replicate a --device mps --out-dir runs/cycle-01-masked-loss/unmasked-seed0-a",
+      "entry_point": "experiments/cycle-01-masked-loss/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "50 beats, config_hash 123de01b6024205d",
+      "at_utc": "2026-09-20T21:07:58Z"
+    },
+    {
+      "argv": "uv run python experiments/cycle-01-masked-loss/run.py --single --arm unmasked --seed 0 --replicate b --device mps --out-dir runs/cycle-01-masked-loss/unmasked-seed0-b",
+      "entry_point": "experiments/cycle-01-masked-loss/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "50 beats, config_hash 123de01b6024205d",
+      "at_utc": "2026-09-20T21:07:58Z"
+    },
+    {
+      "argv": "uv run python experiments/cycle-01-masked-loss/run.py --single --arm unmasked --seed 1 --replicate a --device mps --out-dir runs/cycle-01-masked-loss/unmasked-seed1-a",
+      "entry_point": "experiments/cycle-01-masked-loss/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "50 beats, config_hash da40fcada11271be",
+      "at_utc": "2026-09-20T21:07:58Z"
+    },
+    {
+      "argv": "uv run python experiments/cycle-01-masked-loss/run.py --single --arm unmasked --seed 2 --replicate a --device mps --out-dir runs/cycle-01-masked-loss/unmasked-seed2-a",
+      "entry_point": "experiments/cycle-01-masked-loss/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "50 beats, config_hash abef44e2a7be51eb",
+      "at_utc": "2026-09-20T21:07:58Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "steps_done_per_run",
+      "kind": "observation",
+      "value": {
+        "masked-seed0-a": 50,
+        "masked-seed0-b": 50,
+        "masked-seed1-a": 50,
+        "masked-seed2-a": 50,
+        "unmasked-seed0-a": 50,
+        "unmasked-seed0-b": 50,
+        "unmasked-seed1-a": 50,
+        "unmasked-seed2-a": 50
+      },
+      "how": "train() return value, counted by the loop, not the request"
+    },
+    {
+      "key": "runs_actually_executed",
+      "kind": "observation",
+      "value": [
+        "masked-seed0-a",
+        "masked-seed0-b",
+        "masked-seed1-a",
+        "masked-seed2-a",
+        "unmasked-seed0-a",
+        "unmasked-seed0-b",
+        "unmasked-seed1-a",
+        "unmasked-seed2-a"
+      ],
+      "how": "one subprocess each; every exit code read from the process, not asserted"
+    },
+    {
+      "key": "run_exit_codes",
+      "kind": "observation",
+      "value": {
+        "masked-seed0-a": 0,
+        "masked-seed0-b": 0,
+        "masked-seed1-a": 0,
+        "masked-seed2-a": 0,
+        "unmasked-seed0-a": 0,
+        "unmasked-seed0-b": 0,
+        "unmasked-seed1-a": 0,
+        "unmasked-seed2-a": 0
+      },
+      "how": "subprocess.CompletedProcess.returncode"
+    },
+    {
+      "key": "pad_fraction_corpus_shaped",
+      "kind": "observation",
+      "value": 0.9342551256613757,
+      "how": "experiments/cycle-01-masked-loss/run.py::pad_census -- (ids[:,:,1:] == 0).sum() / numel over 64 x 48 x (64 - 1) = 180812/193536"
+    },
+    {
+      "key": "corpus.n_targets",
+      "kind": "observation",
+      "value": 193536,
+      "how": "run.py::pad_census, corpus-shaped"
+    },
+    {
+      "key": "corpus.n_pad_targets",
+      "kind": "observation",
+      "value": 180812,
+      "how": "run.py::pad_census, corpus-shaped"
+    },
+    {
+      "key": "corpus.pad_source_A_trailing_in_a_real_sentence",
+      "kind": "observation",
+      "value": 180812,
+      "how": "run.py::pad_census, corpus-shaped"
+    },
+    {
+      "key": "corpus.pad_source_B_entirely_empty_sentence_slot",
+      "kind": "observation",
+      "value": 0,
+      "how": "run.py::pad_census, corpus-shaped"
+    },
+    {
+      "key": "corpus.empty_sentence_slots",
+      "kind": "observation",
+      "value": 0,
+      "how": "run.py::pad_census, corpus-shaped"
+    },
+    {
+      "key": "pad_fraction_run_shaped",
+      "kind": "observation",
+      "value": 0.9347304894179894,
+      "how": "heartbeat final beat of masked-seed0-a, field pad_target_fraction; denominator 8 x 48 x (64 - 1) = 24192.0 per iter"
+    },
+    {
+      "key": "floor.masked.loss.final_beat_abs_diff",
+      "kind": "observation",
+      "value": 1.748402913559488e-06,
+      "how": "two runs at seed 0, identical config and code, separate processes; |final-beat difference| -- the statistic claimed"
+    },
+    {
+      "key": "floor.masked.loss.trajectory_sup_norm",
+      "kind": "observation",
+      "value": 1.748402913559488e-06,
+      "how": "same pair, max_t |x[t]-y[t]| over 50 beats -- reported for continuity with runs/cycle-arm-identity, NOT the bar this cycle claims against"
+    },
+    {
+      "key": "floor.masked.loss.bit_identical",
+      "kind": "observation",
+      "value": false,
+      "how": "whole beat trajectories compared element-wise"
+    },
+    {
+      "key": "floor.masked.loss_real_tokens.final_beat_abs_diff",
+      "kind": "observation",
+      "value": 1.9073486328125e-06,
+      "how": "two runs at seed 0, identical config and code, separate processes; |final-beat difference| -- the statistic claimed"
+    },
+    {
+      "key": "floor.masked.loss_real_tokens.trajectory_sup_norm",
+      "kind": "observation",
+      "value": 1.9073486328125e-06,
+      "how": "same pair, max_t |x[t]-y[t]| over 50 beats -- reported for continuity with runs/cycle-arm-identity, NOT the bar this cycle claims against"
+    },
+    {
+      "key": "floor.masked.loss_real_tokens.bit_identical",
+      "kind": "observation",
+      "value": false,
+      "how": "whole beat trajectories compared element-wise"
+    },
+    {
+      "key": "floor.unmasked.loss.final_beat_abs_diff",
+      "kind": "observation",
+      "value": 2.5033950805664062e-06,
+      "how": "two runs at seed 0, identical config and code, separate processes; |final-beat difference| -- the statistic claimed"
+    },
+    {
+      "key": "floor.unmasked.loss.trajectory_sup_norm",
+      "kind": "observation",
+      "value": 6.079673767089844e-06,
+      "how": "same pair, max_t |x[t]-y[t]| over 50 beats -- reported for continuity with runs/cycle-arm-identity, NOT the bar this cycle claims against"
+    },
+    {
+      "key": "floor.unmasked.loss.bit_identical",
+      "kind": "observation",
+      "value": false,
+      "how": "whole beat trajectories compared element-wise"
+    },
+    {
+      "key": "floor.unmasked.loss_real_tokens.final_beat_abs_diff",
+      "kind": "observation",
+      "value": 2.9558936755158527e-05,
+      "how": "two runs at seed 0, identical config and code, separate processes; |final-beat difference| -- the statistic claimed"
+    },
+    {
+      "key": "floor.unmasked.loss_real_tokens.trajectory_sup_norm",
+      "kind": "observation",
+      "value": 8.997321128845215e-05,
+      "how": "same pair, max_t |x[t]-y[t]| over 50 beats -- reported for continuity with runs/cycle-arm-identity, NOT the bar this cycle claims against"
+    },
+    {
+      "key": "floor.unmasked.loss_real_tokens.bit_identical",
+      "kind": "observation",
+      "value": false,
+      "how": "whole beat trajectories compared element-wise"
+    },
+    {
+      "key": "masked.loss_final",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.9153397878011067,
+        2.1623427073160806,
+        1.954635461171468
+      ],
+      "mean": 2.0107726520962186,
+      "sd": 0.132725840422736,
+      "how": "heartbeat final beat, field loss, seeds [0, 1, 2], replicate a",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "masked.loss_real_tokens_final",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.9153395891189575,
+        2.1623425831397376,
+        1.9546351631482441
+      ],
+      "mean": 2.0107724451356463,
+      "sd": 0.1327259039732155,
+      "how": "heartbeat final beat, field loss_real_tokens, seeds [0, 1, 2], replicate a",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "masked.loss_first_beat",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        5.044870058695476,
+        5.128381093343099,
+        5.048973401387532
+      ],
+      "mean": 5.0740748511420355,
+      "sd": 0.047075315312937786,
+      "how": "heartbeat beat 0 -- before any learning, the reduction change alone",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "unmasked.loss_final",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2607017755508423,
+        0.26574252049128216,
+        0.25935635964075726
+      ],
+      "mean": 0.2619335518942939,
+      "sd": 0.003366558676513676,
+      "how": "heartbeat final beat, field loss, seeds [0, 1, 2], replicate a",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "unmasked.loss_real_tokens_final",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.9553323288758597,
+        3.9846646984418235,
+        3.9613525172074637
+      ],
+      "mean": 3.9671165148417153,
+      "sd": 0.015492408709891282,
+      "how": "heartbeat final beat, field loss_real_tokens, seeds [0, 1, 2], replicate a",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "unmasked.loss_first_beat",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        4.965003649393718,
+        4.967708587646484,
+        5.014150937398274
+      ],
+      "mean": 4.982287724812825,
+      "sd": 0.027627475634537314,
+      "how": "heartbeat beat 0 -- before any learning, the reduction change alone",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "shuffle_control.masked.delta_nats_per_token",
+      "kind": "observation",
+      "value": 3.499289353614543e-06,
+      "how": "run.py::shuffle_control -- every row handed another document's entire 16-slot memory (roll-by-1 derangement), memory contents replayed from the honest pass so only ownership changes; real-token NLL, model.eval()"
+    },
+    {
+      "key": "shuffle_control.masked.max_per_step_abs_delta",
+      "kind": "observation",
+      "value": 8.857250213623047e-05,
+      "how": "same, max over the 48 sentence steps"
+    },
+    {
+      "key": "shuffle_control.masked.loss_real_tokens_honest",
+      "kind": "observation",
+      "value": 1.8492362573742867,
+      "how": "same, honest pass"
+    },
+    {
+      "key": "shuffle_control.unmasked.delta_nats_per_token",
+      "kind": "observation",
+      "value": -6.457169852147615e-07,
+      "how": "run.py::shuffle_control -- every row handed another document's entire 16-slot memory (roll-by-1 derangement), memory contents replayed from the honest pass so only ownership changes; real-token NLL, model.eval()"
+    },
+    {
+      "key": "shuffle_control.unmasked.max_per_step_abs_delta",
+      "kind": "observation",
+      "value": 7.3909759521484375e-06,
+      "how": "same, max over the 48 sentence steps"
+    },
+    {
+      "key": "shuffle_control.unmasked.loss_real_tokens_honest",
+      "kind": "observation",
+      "value": 3.9210285544395447,
+      "how": "same, honest pass"
+    },
+    {
+      "key": "delta.reported_loss_masked_vs_unmasked",
+      "kind": "observation",
+      "value": 1.7488391002019248,
+      "how": "|mean(masked.loss_final) - mean(unmasked.loss_final)| over 3 seeds"
+    },
+    {
+      "key": "delta.real_token_nll_masked_vs_unmasked",
+      "kind": "observation",
+      "value": 1.956344069706069,
+      "how": "|mean(masked.loss_real_tokens_final) - mean(unmasked.loss_real_tokens_final)| -- the COMMON yardstick; the row above compares two different objectives and is tautologically nonzero"
+    },
+    {
+      "key": "floor.used_for_the_verdict",
+      "kind": "observation",
+      "value": 2.5033950805664062e-06,
+      "how": "max of the two arms' floors"
+    },
+    {
+      "key": "floor.used_for_the_yardstick",
+      "kind": "observation",
+      "value": 2.9558936755158527e-05,
+      "how": "max of the two arms' floors"
+    }
+  ],
+  "verdict": {
+    "falsifier": "cycle 1: PAD fraction < 0.50, OR masking moves the final training loss by no more than the run-to-run floor",
+    "outcome": "survived",
+    "detail": "PAD fraction 0.9343 > 0.50 and masking moves the loss by 1.749e+00, 698586.9x the run-to-run floor 2.503e-06",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-20T21:07:58Z"
+}

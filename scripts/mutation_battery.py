@@ -77,6 +77,18 @@ _MUP_COUPLING = (
     "deliberately -- an attribute set correctly and never applied is precisely the "
     "silent failure §4.3 warns about, so one edit must redden both."
 )
+_CAPTURE_BRIDGE_COUPLING = (
+    "`r_i` is asserted twice on purpose, and S0-02 is the reason: "
+    "tests/test_reward.py checks the property on a hand-built `AttentionTrace`, "
+    "tests/test_capture_bridge.py checks the same property end to end on a real "
+    "`TGModel` forward pass. Those were two disconnected claims until the capture "
+    "bridge existed -- `reward.py` had 11 passing tests and zero callers in "
+    "`src/` precisely because nothing joined them -- so one edit to `reward.py` "
+    "reddening both is the join working. A `reward.py` mutation that reddened "
+    "ONLY the fixture test would mean the bridge does not actually reach the "
+    "reward, which is the failure this file was written to detect."
+)
+
 _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
@@ -302,6 +314,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        scaled = scaled * attn.gate.reshape(-1, 1, 1, 1)",
         "        pass",
         "D-E: layer-specific rescaling silently omitted",
+        off_gate_allowed=(
+            (
+                "tests/test_capture_bridge.py::"
+                "test_the_captured_gate_is_the_models_memory_gate",
+                _CAPTURE_BRIDGE_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "r_i accepts a train-mode trace",
@@ -310,6 +329,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if not attn.eval_mode:",
         "    if False:",
         "D-F: the policy learns from dropout masks",
+        off_gate_allowed=(
+            (
+                "tests/test_capture_bridge.py::"
+                "test_a_train_mode_capture_is_refused_downstream",
+                _CAPTURE_BRIDGE_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "rank shift counts the sliding window",
@@ -347,6 +373,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    return raw / total * (n_live / capacity)",
         "    return raw / total",
         "§3.2.1: the estimator learns 'stream-initial content is valuable'",
+        off_gate_allowed=(
+            (
+                "tests/test_capture_bridge.py::"
+                "test_retrieval_demand_runs_on_a_real_forward_pass",
+                _CAPTURE_BRIDGE_COUPLING,
+            ),
+        ),
     ),
     # -- cycle 0 of the 2026-09-19 run: the evidence machinery itself ---------- #
     # Each of the four repairs in the dispatch's section 5 gets a mutation. A
@@ -425,8 +458,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "exit_code gets a default",
         "test_exit_code_is_required",
         "scripts/ledger.py",
-        "    def command(self, argv: list[str] | str, *, exit_code: int | None,",
-        "    def command(self, argv: list[str] | str, *, exit_code: int | None = None,",
+        # 📌 Re-anchored 2026-09-20 (cycle 1). The old one-line form of this
+        # signature was reflowed by the Studio/trunk merge (4ece429), and because
+        # `apply()` raises on a stale anchor the battery **aborted at this entry**
+        # -- so every mutation after it, including the 13 that follow, had not
+        # been running since that merge. The brief's revalidation checked that
+        # `off_gate_allowed` existed and declared bar item 2 "executable as
+        # written"; it did not run the battery.
+        '        *,\n        exit_code: int | None,\n        note: str = "",',
+        '        *,\n        exit_code: int | None = None,\n        note: str = "",',
         "5.1: seven of 13 ledgers carried `exit_code: null` by omission",
     ),
     Mutation(
@@ -537,6 +577,129 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if len(baseline) != len(losses):",
         "    if False:",
         '5.4: a run that produced 2 of 6 beats reports "held"',
+    ),
+    Mutation(
+        "the training loss scores padding again",
+        "test_lm_loss",
+        "src/rsr/train/loop.py",
+        "    per = lm_token_losses(logits, ids_t)\n"
+        "    valid = mask_t[:, 1:].reshape(-1)\n"
+        "    n = valid.sum()\n"
+        "    return (per * valid.to(per.dtype)).sum() / n.clamp(min=1)",
+        "    per = lm_token_losses(logits, ids_t)\n    return per.mean()",
+        "cycle 1 defect 1: the objective goes back to averaging over every target, "
+        "93.4% of which are PAD on the committed synthetic corpus -- so the number "
+        "minimised, reported and exponentiated into a perplexity is mostly the "
+        "model's skill at predicting zeros",
+    ),
+    Mutation(
+        "W_O dropped from the capture path",
+        "test_capture_bridge",
+        "src/rsr/model/tg/policy_loop.py",
+        '            wo_vs.append(torch.einsum("bmhk,hkd->bhmd", v, wo))',
+        "            wo_vs.append(v.permute(0, 2, 1, 3))",
+        'S0-02 bar item 3, and defect D-6. §3.2.1: *"`W_O` is not optional... '
+        "dropping it reintroduces the confound the norm-weighting was adopted to "
+        'remove."* The reason this needs a mutation rather than a code review is '
+        "that dropping `W_O` is **shape-compatible**: `reward.contribution` norms "
+        "over the last axis, and `[L, H, M, Dh]` norms just as happily as "
+        "`[L, H, M, D]`. Nothing downstream raises, no shape assertion fires, and "
+        "`r_i` becomes norm-weighted raw attention -- which is v0.1's rejected "
+        "definition wearing the new one's name.",
+    ),
+    Mutation(
+        "observe() is never reached",
+        "test_observe",
+        "src/rsr/model/tg/policy_loop.py",
+        "        if observe:\n            # Pre-write memory, deliberately:",
+        "        if False:\n            # Pre-write memory, deliberately:",
+        "S0-02 bar item 4. `git grep '\\.observe(' -- src/` returned **zero hits** "
+        "before this cycle: `reward.py` had 160 lines and 11 passing tests and no "
+        "path from a forward pass to any of it. A call site with no test that "
+        "notices its removal is the same condition with an extra line of code.",
+    ),
+    # ----------------------------------------------------------------------- #
+    # S0-01 -- the training-loop defects. One mutation per fix, each reverting
+    # exactly that fix and nothing else, per the brief's Bar.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "policy built unconditionally again",
+        "test_train_does_not_stamp_a_policy_it_did_not_build",
+        "src/rsr/train/loop.py",
+        "    policy = build_policy(\n"
+        "        policy_name, d_model=d, steps_per_epoch=float(iters), generator=gen\n"
+        "    )",
+        "    policy = FIFOPolicy()",
+        "S0-01 defect (b), the original line. `policy_name` still flows into the "
+        "frozen config and the `run_id`, so `train(policy_name='rsr')` completes "
+        "and returns `run_id='rsr-d32-...'` for a stream FIFO evicted. Nothing "
+        "in the run contradicts anything else in it, which is what made the "
+        "defect silent and what makes the test necessary: no assertion about the "
+        "loss curve could ever have caught this, because the loss curve is "
+        "genuine.",
+    ),
+    Mutation(
+        "--policy stops reaching train()",
+        "test_the_policy_is_selectable_from_the_command_line",
+        "src/rsr/train/loop.py",
+        "        policy_name=a.policy,\n",
+        "        # policy_name=a.policy,  # MUTATED\n",
+        "S0-01 defect (b), CLI half. The flag still parses and still appears in "
+        "`--help`; it simply does not arrive. A flag that is accepted and "
+        "discarded is worse than an absent one -- the absent one is an error at "
+        "the shell.",
+    ),
+    Mutation(
+        "srep-norm hinge back out of the objective",
+        "test_the_hinge",
+        "src/rsr/train/loop.py",
+        "        loss = (lm + w_srep * hinge) if w_srep else lm",
+        "        loss = lm",
+        "S0-01 defect (c). `o.srep_norm_penalty` goes back to being computed at "
+        "`model.py:424` and discarded, which is the state in which "
+        "`grep -c srep_norm src/rsr/train/loop.py` returned 0. The hinge is "
+        "still *reported*, so this mutation also checks that reporting a term is "
+        "not mistaken for optimising it.",
+    ),
+    Mutation(
+        "ppl computed from the penalised loss",
+        "test_perplexity_is_a_perplexity",
+        "src/rsr/train/loop.py",
+        '                    ppl=float(torch.exp(torch.tensor(last["loss_lm"]))),',
+        "                    ppl=float(torch.exp(loss.detach() / steps_per_stream)),",
+        "Not one of the brief's defects -- it is the defect the FIX for (c) would "
+        "have introduced. `exp(loss / steps)` is a perplexity only while `loss` "
+        "is the LM loss; with a regulariser in it the field keeps its name and "
+        "stops being the thing the name says. Pinned so the next person to add a "
+        "term to the objective is told.",
+    ),
+    Mutation(
+        "--vocab default back to 50257",
+        "test_the_cli_vocab_default_reaches_the_derived_path",
+        "src/rsr/train/loop.py",
+        '        "--vocab",\n        type=int,\n        default=None,',
+        '        "--vocab",\n        type=int,\n        default=50257,',
+        "S0-01 defect (e). 50257 is truthy, so `V = vocab if vocab else 4 + "
+        "len(build_vocab(probe))` never derives from the CLI at the default and "
+        "every run allocates a 50257-row embedding for a 156-word corpus. Note "
+        "the claim this proves is the SMALLER one the manager corrected the "
+        "brief to: unreachable *at the default*, not from the CLI -- "
+        "`--vocab 0` always reached it.",
+    ),
+    Mutation(
+        "from_registry reads every field eagerly again",
+        "test_from_registry",
+        "src/rsr/retention/rsr.py",
+        "        kw: dict[str, Any] = {\n"
+        "            k: read() for k, read in sources.items() if k not in overrides\n"
+        "        }",
+        "        kw: dict[str, Any] = {k: read() for k, read in sources.items()}",
+        "S0-01's second 'less certain' item, which measured as real. Every "
+        "registry read fires before `kw.update(overrides)` discards it, so a "
+        "caller who supplied `nu` is refused for not having measured `nu`. The "
+        "two arms the docstring names as the whole reason `overrides` exists -- "
+        "the `gamma = 0` control and A2's `A_max = M` -- are unbuildable until "
+        "E1 logs constants neither of them uses.",
     ),
 )
 

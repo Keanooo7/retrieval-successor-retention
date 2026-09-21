@@ -1,0 +1,578 @@
+{
+  "run_id": "s0-02-capture-bridge",
+  "cycle": null,
+  "question": "What does the \u00a73.2.1 capture bridge cost when on, is it free when off, and does a mutation that drops W_O from the capture path redden only the new tests?",
+  "started_utc": "2026-09-21T00:09:39Z",
+  "provenance": {
+    "git_sha": "7a47a90cec12a5165efeb0a3fae736b5a7679575",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "mps",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 80,
+  "steps_done": 80,
+  "status": "ok",
+  "config_hash": "56baf95a8a4048585733f6496c771e4d2e489fecac6532afbfb36323e8ae8e80",
+  "manifest_written_utc": "pre-run; see runs/s0-02-capture-bridge/manifest.json",
+  "commands": [
+    {
+      "argv": ".venv/bin/python experiments/s0-02/measure_capture_cost.py --device mps --repeats 3 --out runs/s0-02-capture-bridge/capture_cost.json",
+      "entry_point": "experiments/s0-02/measure_capture_cost.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "bar item 2: three arms, interleaved, one sitting, mps, eval mode",
+      "at_utc": "2026-09-21T00:09:39Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/e0c/measure.py --device mps --policies fifo --configs 128:80:16 --repeats 3 --out runs/s0-02-capture-bridge/e0c_fifo_with_bridge.json",
+      "entry_point": "experiments/e0c/measure.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "falsifier F-capture-free, WITH the bridge present",
+      "at_utc": "2026-09-21T00:09:39Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/e0c/measure.py --device mps --policies fifo --configs 128:80:16 --repeats 3",
+      "entry_point": "experiments/e0c/measure.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "the same command in a git worktree at a1c9e857 (pre-bridge). Recorded against THIS sha because e0c/measure.py is byte-identical at both and the worktree is gone; the number is 369 +/- 11 and is the control.",
+      "at_utc": "2026-09-21T00:09:39Z"
+    },
+    {
+      "argv": "pytest -q --no-header",
+      "entry_point": "pytest",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "literally invoked as `.venv/bin/pytest -q --no-header` from the repo root. 343 passed, 0 failed, 0 skipped, 0 errors (test-count.json); pytest exit 0, read from $? directly, not through a pipe.",
+      "at_utc": "2026-09-21T00:09:39Z"
+    },
+    {
+      "argv": "ruff check .",
+      "entry_point": "ruff",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "literally `.venv/bin/ruff check .` -- All checks passed!",
+      "at_utc": "2026-09-21T00:09:39Z"
+    },
+    {
+      "argv": "ruff format --check .",
+      "entry_point": "ruff",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "literally `.venv/bin/ruff format --check .` -- 148 files already formatted",
+      "at_utc": "2026-09-21T00:09:39Z"
+    },
+    {
+      "argv": ".venv/bin/python scripts/mutation_battery.py --json runs/s0-02-capture-bridge/mutations.json --markdown docs/mutation-battery.md",
+      "entry_point": "scripts/mutation_battery.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "gauntlet 1.7, all mutations",
+      "at_utc": "2026-09-21T00:09:39Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/s0-02/measure_qtok_collapse.py --out runs/s0-02-capture-bridge/qtok_collapse.json",
+      "entry_point": "experiments/s0-02/measure_qtok_collapse.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "B1 (dispatch 2026-09-20d): ADR-0008's three numbers, produced rather than typed. \ud83d\udd34 CPU, not mps -- these are float32 identity checks at the 1e-7 level and the accumulation order is the measurement. The ledger's `device` field says `mps`, which is true of the throughput arms and NOT of these rows; every qtok_collapse.* row says `device=cpu` in its `how`.",
+      "at_utc": "2026-09-21T00:09:39Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "sent_per_s.capture_off",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        390.08,
+        387.95,
+        388.36
+      ],
+      "mean": 388.7966666666666,
+      "sd": 1.1301474830009208,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_off].sent_per_s_samples; 3 interleaved repeats, mps, d=128 S=80 batch=16, eval mode, fwd+bwd, no optimizer step",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "observe_calls.capture_off",
+      "kind": "observation",
+      "value": 0,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_off].observe_calls (harness asserts == batch*S = 1280 on capture arms, == 0 on the control)"
+    },
+    {
+      "key": "sent_per_s.capture_on",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        360.89,
+        360.11,
+        360.38
+      ],
+      "mean": 360.46000000000004,
+      "sd": 0.39610604640675423,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].sent_per_s_samples; 3 interleaved repeats, mps, d=128 S=80 batch=16, eval mode, fwd+bwd, no optimizer step",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "observe_calls.capture_on",
+      "kind": "observation",
+      "value": 1280,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].observe_calls (harness asserts == batch*S = 1280 on capture arms, == 0 on the control)"
+    },
+    {
+      "key": "sent_per_s.capture_on_ri",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        330.75,
+        330.21,
+        328.93
+      ],
+      "mean": 329.9633333333333,
+      "sd": 0.9347370396712229,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].sent_per_s_samples; 3 interleaved repeats, mps, d=128 S=80 batch=16, eval mode, fwd+bwd, no optimizer step",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "observe_calls.capture_on_ri",
+      "kind": "observation",
+      "value": 1280,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].observe_calls (harness asserts == batch*S = 1280 on capture arms, == 0 on the control)"
+    },
+    {
+      "key": "delta_sent_per_s.capture_on_minus_off",
+      "kind": "observation",
+      "value": -28.34,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].delta_vs_off_sent_per_s = mean(capture_on) - mean(capture_off) = 360.46 - 388.8"
+    },
+    {
+      "key": "delta_pct.capture_on_minus_off",
+      "kind": "observation",
+      "value": -7.29,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].delta_vs_off_pct"
+    },
+    {
+      "key": "delta_sent_per_s.capture_on_ri_minus_off",
+      "kind": "observation",
+      "value": -58.83,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].delta_vs_off_sent_per_s = mean(capture_on_ri) - mean(capture_off) = 329.96 - 388.8"
+    },
+    {
+      "key": "delta_pct.capture_on_ri_minus_off",
+      "kind": "observation",
+      "value": -15.13,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].delta_vs_off_pct"
+    },
+    {
+      "key": "r_i_computed.capture_on_ri",
+      "kind": "observation",
+      "value": 1264,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json; 1264 = 1280 - 16, one empty-memory first step per row, where n_live == 0 and there is no demand to apportion"
+    },
+    {
+      "key": "peak_gb.capture_off",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        28.75,
+        28.75,
+        28.74
+      ],
+      "mean": 28.746666666666666,
+      "sd": 0.00577350269189716,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_off].peak_gb_samples",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "peak_gb.capture_on",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        28.79,
+        28.79,
+        28.79
+      ],
+      "mean": 28.790000000000003,
+      "sd": 4.351167857633658e-15,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on].peak_gb_samples",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "peak_gb.capture_on_ri",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        28.8,
+        28.8,
+        28.8
+      ],
+      "mean": 28.8,
+      "sd": 0.0,
+      "how": "runs/s0-02-capture-bridge/capture_cost.json arms[arm=capture_on_ri].peak_gb_samples",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "e0c_fifo_sent_per_s.with_bridge",
+      "kind": "observation",
+      "value": {
+        "mean": 370.2,
+        "sd": 8.7,
+        "repeats": 3
+      },
+      "how": "runs/s0-02-capture-bridge/e0c_fifo_with_bridge.json results[0]; experiments/e0c/measure.py unmodified, sha c81ac35"
+    },
+    {
+      "key": "e0c_fifo_sent_per_s.pre_bridge",
+      "kind": "observation",
+      "value": {
+        "mean": 369.0,
+        "sd": 11.0,
+        "repeats": 3
+      },
+      "how": "stdout of the SAME unmodified experiments/e0c/measure.py run in a git worktree at a1c9e857 (the sha this brief re-baselined to, plus the two briefs), printed as '369+-11'. \ud83d\udd34 Transcribed from a terminal, not from a JSON file: the worktree was removed and --out was not passed. This is the ONE number in this ledger that is not machine-read, and it is the control half of the falsifier. Re-derivable in ~40 s: `git worktree add <dir> a1c9e857` and rerun."
+    },
+    {
+      "key": "mutation.W_O_dropped_from_the_capture_path",
+      "kind": "observation",
+      "value": {
+        "gate": "test_capture_bridge",
+        "verdict": "PROVEN",
+        "n_on_gate": 4,
+        "off_gate": [],
+        "off_gate_undeclared": []
+      },
+      "how": "runs/s0-02-capture-bridge/mutations.json"
+    },
+    {
+      "key": "mutation.observe()_is_never_reached",
+      "kind": "observation",
+      "value": {
+        "gate": "test_observe",
+        "verdict": "PROVEN",
+        "n_on_gate": 2,
+        "off_gate": [],
+        "off_gate_undeclared": []
+      },
+      "how": "runs/s0-02-capture-bridge/mutations.json"
+    },
+    {
+      "key": "mutations.total_proven",
+      "kind": "observation",
+      "value": {
+        "proven": 39,
+        "total": 39,
+        "verified_by_harness": 39,
+        "reexecuted_by_a_second_party": 2,
+        "manager_reexecuted": [
+          {
+            "mutation": "W_O dropped from the capture path",
+            "by": "rsr-manager",
+            "when": "2026-09-20",
+            "how": "applied the battery's exact old->new substitution to src/rsr/model/tg/policy_loop.py by hand, ran the FULL suite, restored the file and confirmed `git diff --stat` empty",
+            "result": "4 distinct node ids red, all in tests/test_capture_bridge.py, 0 off-gate -- agrees with mutations.json"
+          },
+          {
+            "mutation": "observe() is never reached",
+            "by": "brendan",
+            "when": "2026-09-20",
+            "how": "ran run_policy_loop(..., observe=True) with a real RSRPolicy on the MacBook at 18557e7, rather than reading that the method exists",
+            "result": "NotImplementedError from rsr.py:433 -- the consumer is a stub"
+          }
+        ],
+        "caveat": "PROVEN counts are the battery's own verdicts. 2 of 39 were independently re-executed by a second party; the other 37 rest on the harness. `--check` is 39 full-suite runs and was not repeated by hand."
+      },
+      "how": "runs/s0-02-capture-bridge/mutations.json, verdict field, for proven/total; the manager_reexecuted entries are hand re-executions recorded by the reviewer, NOT produced by scripts/mutation_battery.py"
+    },
+    {
+      "key": "qtok_collapse.device",
+      "kind": "observation",
+      "value": {
+        "device": "cpu",
+        "ledger_device_field_applies_to": "the throughput arms only"
+      },
+      "how": "experiments/s0-02/measure_qtok_collapse.py hardcodes CPU. `1.49e-7` is a statement about float32 epsilon under a specific accumulation order and MPS has a different one, so running it on the ledger's nominal device would measure a different thing."
+    },
+    {
+      "key": "qtok_collapse.fixture",
+      "kind": "observation",
+      "value": {
+        "D": 32,
+        "H": 2,
+        "Q_tok": 10,
+        "pad_tail": 5,
+        "q_real": 5,
+        "M": 5,
+        "row": 0,
+        "n_live": 4,
+        "n_cross_layers": 6,
+        "source": "tests/test_capture_bridge.py (imported, not re-typed)",
+        "model_seed": 0,
+        "sentence_seed": 1,
+        "memory_seed": 2,
+        "trained": false,
+        "n_seeds": 1,
+        "spread": "NONE. One fixture, one row, one seed -- these are deterministic float32 identity checks, not a sampled quantity, so there is no sd to report and this artefact must not be read as if there were."
+      },
+      "how": "the fixture is IMPORTED from tests/test_capture_bridge.py, not re-typed, so ADR-0008's 'every number comes from that file's fixture' is checkable rather than claimed; the producer re-derives every parameter and raises if it has drifted. \ud83d\udd34 It raised on first run: ADR-0008 said `Q_tok=8` with a 3-token PAD tail; TGConfig.L is 1+8+1=10 and the tail is 5. `Q_real=5` is right either way, which is why it went unnoticed. The ADR is corrected; no measured number changes."
+    },
+    {
+      "key": "qtok_collapse.increment_identity",
+      "kind": "observation",
+      "value": {
+        "max_abs_diff_over_layers": 1.4901161193847656e-07,
+        "max_abs_value_over_layers": 0.8234491348266602,
+        "n_layers": 6,
+        "per_layer_max_abs_diff": [
+          1.1920928955078125e-07,
+          1.4901161193847656e-07,
+          5.960464477539063e-08,
+          8.940696716308594e-08,
+          8.940696716308594e-08,
+          1.1920928955078125e-07
+        ],
+        "dtype": "torch.float32"
+      },
+      "how": "runs/s0-02-capture-bridge/qtok_collapse.json, written by experiments/s0-02/measure_qtok_collapse.py. \ud83d\udd34 device=cpu, NOT the `mps` in this ledger's device field. Deterministic: one fixture, one row, one seed, no sampling -- there is no spread to report and an absent sd here is not a suppressed one. ADR-0008's `1.49e-7 on values up to 8.23e-1`: the whole-sentence cross increment vs (sum_q alpha).W_O v, less Q_real*bias, per cross layer. This is the row the ADR's 'sum is algebra, not a choice' argument rests on -- if it moves off float32 epsilon, the decision loses its justification."
+    },
+    {
+      "key": "qtok_collapse.mean_vs_sum",
+      "kind": "observation",
+      "value": {
+        "max_abs_diff_r_i": 2.9802322387695312e-08,
+        "r_i_sum_collapse": [
+          0.2781796455383301,
+          0.1707310974597931,
+          0.19087176024913788,
+          0.1602175384759903,
+          0.0
+        ],
+        "r_i_mean_collapse": [
+          0.2781796455383301,
+          0.17073111236095428,
+          0.19087176024913788,
+          0.1602175086736679,
+          0.0
+        ],
+        "contribution_sum_collapse": [
+          8.566178321838379,
+          5.257440567016602,
+          5.877645492553711,
+          4.933689117431641,
+          0.0
+        ],
+        "contribution_mean_collapse": [
+          1.71323561668396,
+          1.0514881610870361,
+          1.1755291223526,
+          0.9867377281188965,
+          0.0
+        ],
+        "contribution_ratio": [
+          5.0,
+          5.0,
+          5.0,
+          5.000000476837158
+        ],
+        "q_real": 5
+      },
+      "how": "runs/s0-02-capture-bridge/qtok_collapse.json, written by experiments/s0-02/measure_qtok_collapse.py. \ud83d\udd34 device=cpu, NOT the `mps` in this ledger's device field. Deterministic: one fixture, one row, one seed, no sampling -- there is no spread to report and an absent sd here is not a suppressed one. ADR-0008's `2.98e-8`. mean = sum/Q_real is one scalar for every (l,h,i), so it cancels in share_i = raw_i/sum_j raw_j: r_i is invariant to float32 epsilon and only the UNNORMALISED contribution() moves, by exactly Q_real=5. This is what discharges mean-vs-sum as an axis that could change E0d."
+    },
+    {
+      "key": "qtok_collapse.eos_only",
+      "kind": "observation",
+      "value": {
+        "row": 0,
+        "n_live": 4,
+        "q_real": 5,
+        "eos_query_position": 9,
+        "eos_is_a_real_query_token": false,
+        "max_abs_diff_r_i": 0.03832480311393738,
+        "max_abs_diff_as_frac_of_largest_entry": 0.13776997608783223,
+        "r_i_sum_collapse": [
+          0.2781796455383301,
+          0.1707310974597931,
+          0.19087176024913788,
+          0.1602175384759903,
+          0.0
+        ],
+        "r_i_eos_only": [
+          0.2398548424243927,
+          0.19605617225170135,
+          0.22685979306697845,
+          0.13722917437553406,
+          0.0
+        ],
+        "ranks_agree_on_this_row": true,
+        "spearman_rho_live_slots": 1.0,
+        "n_rows_compared": 1,
+        "model_trained": false,
+        "caveat": "\ud83d\udd34 [EOS] is at a PAD position on this row, so the sum-collapse excludes the single position the EOS-collapse reads. The two share no query position and the divergence is guaranteed by the fixture, not measured from the attention. See the supplementary row."
+      },
+      "how": "runs/s0-02-capture-bridge/qtok_collapse.json, written by experiments/s0-02/measure_qtok_collapse.py. \ud83d\udd34 device=cpu, NOT the `mps` in this ledger's device field. Deterministic: one fixture, one row, one seed, no sampling -- there is no spread to report and an absent sd here is not a suppressed one. ADR-0008's `0.0383`, the divergence that does NOT cancel. \ud83d\udd34 Two caveats that must travel with this number. (1) Untrained model, ONE row: rho=1.0 over four points is not evidence the two collapses rank alike, and ADR-0008 says so -- E0d over a held-out subsample is the discriminator. (2) NEW, and the ADR did not know it: on row 0 the [EOS] token sits at query position 9, which row 0's mask marks PAD, so the sum-collapse excludes the one position the EOS-collapse reads. The two share no query position and 0.0383 is a divergence guaranteed by the fixture rather than found in the attention. See qtok_collapse.eos_only_supplementary_row."
+    },
+    {
+      "key": "qtok_collapse.eos_only_supplementary_row",
+      "kind": "observation",
+      "value": {
+        "row": 1,
+        "n_live": 2,
+        "q_real": 10,
+        "eos_query_position": 9,
+        "eos_is_a_real_query_token": true,
+        "max_abs_diff_r_i": 0.0028609484434127808,
+        "max_abs_diff_as_frac_of_largest_entry": 0.013831607891368333,
+        "r_i_sum_collapse": [
+          0.19315864145755768,
+          0.2068413496017456,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r_i_eos_only": [
+          0.19601958990097046,
+          0.2039804309606552,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ranks_agree_on_this_row": true,
+        "spearman_rho_live_slots": null,
+        "why": "NOT an ADR-0008 published figure. Measured because row 0's [EOS] is a PAD position, so the ADR's 0.0383 compares two collapses that share no query position. Row 1 has a full mask, so its [EOS] is one of the positions the sum collapses over and the comparison is the one the ADR means to make."
+      },
+      "how": "runs/s0-02-capture-bridge/qtok_collapse.json, written by experiments/s0-02/measure_qtok_collapse.py. \ud83d\udd34 device=cpu, NOT the `mps` in this ledger's device field. Deterministic: one fixture, one row, one seed, no sampling -- there is no spread to report and an absent sd here is not a suppressed one. \u26a0\ufe0f **NOT an ADR-0008 published figure** -- do not quote it as one. Row 1 has a full mask, so its [EOS] IS one of the positions the sum collapses over and the comparison is the one the ADR means to make. EOS-only still differs from the sum there, so the ADR's conclusion survives; the margin is 1.4% of the largest entry rather than 13.8%, and 2 live slots make the rank statistic meaningless (rho over two points is +-1 by arithmetic, so it is recorded as null). Which row ADR-0008 should publish is the owner's call."
+    },
+    {
+      "key": "qtok_collapse.adr_published_vs_measured",
+      "kind": "observation",
+      "value": {
+        "adr_prose": {
+          "increment_identity.max_abs_diff": "1.49e-07",
+          "increment_identity.max_abs_value": "0.823",
+          "mean_vs_sum.max_abs_diff_r_i": "2.98e-08",
+          "eos_only.max_abs_diff_r_i": 0.0383,
+          "mean_vs_sum.r_i_sum": [
+            0.27818,
+            0.17073,
+            0.19087,
+            0.16022
+          ],
+          "mean_vs_sum.r_i_mean": [
+            0.27818,
+            0.17073,
+            0.19087,
+            0.16022
+          ],
+          "mean_vs_sum.contribution_sum": [
+            8.5662,
+            5.2574,
+            5.8777,
+            4.9337
+          ],
+          "mean_vs_sum.contribution_mean": [
+            1.7132,
+            1.0515,
+            1.1755,
+            0.9867
+          ],
+          "eos_only.r_i_eos": [
+            0.2399,
+            0.1961,
+            0.2269,
+            0.1372
+          ]
+        },
+        "measured": {
+          "increment_identity.max_abs_diff": "1.49e-07",
+          "increment_identity.max_abs_value": "0.823",
+          "mean_vs_sum.max_abs_diff_r_i": "2.98e-08",
+          "eos_only.max_abs_diff_r_i": 0.0383,
+          "mean_vs_sum.r_i_sum": [
+            0.27818,
+            0.17073,
+            0.19087,
+            0.16022
+          ],
+          "mean_vs_sum.r_i_mean": [
+            0.27818,
+            0.17073,
+            0.19087,
+            0.16022
+          ],
+          "mean_vs_sum.contribution_sum": [
+            8.5662,
+            5.2574,
+            5.8776,
+            4.9337
+          ],
+          "mean_vs_sum.contribution_mean": [
+            1.7132,
+            1.0515,
+            1.1755,
+            0.9867
+          ],
+          "eos_only.r_i_eos": [
+            0.2399,
+            0.1961,
+            0.2269,
+            0.1372
+          ]
+        },
+        "agree": [
+          "increment_identity.max_abs_diff",
+          "increment_identity.max_abs_value",
+          "mean_vs_sum.max_abs_diff_r_i",
+          "eos_only.max_abs_diff_r_i",
+          "mean_vs_sum.r_i_sum",
+          "mean_vs_sum.r_i_mean",
+          "mean_vs_sum.contribution_mean",
+          "eos_only.r_i_eos"
+        ],
+        "disagree": [
+          "mean_vs_sum.contribution_sum"
+        ],
+        "n_agree": 8,
+        "n_checked": 9,
+        "headline_three_reproduce": true,
+        "note": "`mean_vs_sum.contribution_sum` is the one disagreement and it is a 4th-decimal transcription slip in the ADR: slot 2 is 5.877645..., which rounds to 5.8776, and the ADR printed 5.8777. Corrected in the ADR. No threshold, test or conclusion depends on it -- it is recorded because an uncorrected small error in a cited table is how a reader learns the table was never re-derived."
+      },
+      "how": "LEFT column transcribed by hand from docs/decisions/ADR-0008-qtok-collapse.md prose -- it is the CLAIM, not a measurement, and is the only typed number in this file. RIGHT column from runs/s0-02-capture-bridge/qtok_collapse.json, rounded to the precision the ADR prints. This row exists so 'the ADR's numbers are real' stops being something a reader has to take on trust."
+    },
+    {
+      "key": "provenance.dirty_because",
+      "kind": "observation",
+      "value": {
+        "untracked": [
+          "uv.lock"
+        ],
+        "source_roots_clean": true,
+        "created_by_this_run": false
+      },
+      "how": "git status --porcelain at write time. `uv.lock` was already untracked at session start (it is in the launch snapshot) and is outside ledger.SOURCE_ROOTS, so write() did not refuse. Left alone deliberately: committing another session's lockfile is not this brief's decision."
+    }
+  ],
+  "verdict": {
+    "falsifier": "F-capture-free / bar item 3 (W_O is in the capture path)",
+    "outcome": "survived",
+    "detail": "capture_off 388.80 +/- 1.13 sent/s; capture_on 360.46 +/- 0.40 (-28.34, -7.29%); +r_i 329.96 +/- 0.94 (-58.83, -15.13%). Free-when-off survives: 369+-11 pre-bridge vs 370+-9 with the bridge, same unmodified e0c harness, same sitting. Bar item 3 survives: dropping W_O from the capture path reddens the new tests and only them. \ud83d\udd34 Pre-registered expectation 4 ('r_i costs less than the bridge') was FALSIFIED: r_i costs 30.5 sent/s against the bridge's 28.3, because it is 1264 Python-level calls launching small MPS kernels, not a FLOP bill.",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-21T00:09:39Z"
+}

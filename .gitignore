@@ -45,6 +45,23 @@ __pycache__/
 !/runs/**/RESULTS.md
 !/runs/**/walls.json
 !/runs/**/baseline.json
+# 🔴 ...and the RAW measurement JSON a ledger row was read out of.
+#
+# A ledger row's `how` field names the artefact it came from -- that is the whole
+# point of the field: "go and look at that artefact instead of trusting the row."
+# `/runs/**` ignored every one of them. Committing S0-02's ledger left all five
+# `how` fields pointing at `capture_cost.json`, `e0c_fifo_with_bridge.json` and
+# `mutations.json`, none of which a fresh clone has -- and `git add -A` skipped
+# them in silence, which is the exact failure mode the `/data/` note above
+# describes. `runs/cycle-01-masked-loss/{gates,raw}.json` were already lost the
+# same way.
+#
+# `.jsonl` heartbeats stay ignored (per-step, chatty) and so do `.pt` and `.log`.
+!/runs/**/*.json
+# Scratch counters written by the test harness are not evidence: `RSR_TEST_COUNT`
+# and `mutation_battery.SCRATCH_COUNT` both land under `runs/` as dotfiles.
+/runs/.*.json
+/runs/**/.*.json
 
 # Belt and braces: the source packages are never ignorable, whatever pattern
 # comes back. Scoped to sources so `__pycache__/` above still applies.

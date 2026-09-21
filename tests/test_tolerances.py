@@ -87,10 +87,27 @@ def test_the_tolerance_commit_precedes_the_fixture_commit():
         lines = [ln for ln in out.stdout.splitlines() if ln]
         return lines[0] if lines else None
 
+    # 🔴 A shallow clone does not make `first_commit` return None -- it makes BOTH
+    # answers the single checked-out commit, which reads as "they landed together"
+    # and FAILS. The guard below named shallow clones and tested a symptom a
+    # shallow clone never produces, so CI was red on `main` all of 2026-09-20 with
+    # a finding about history it could not see. Ask git whether it is shallow.
+    shallow = subprocess.run(
+        [git, "-C", str(root), "rev-parse", "--is-shallow-repository"],
+        capture_output=True,
+        text=True,
+    )
+    if shallow.stdout.strip() == "true":
+        pytest.skip(
+            "shallow clone: `git log --reverse -- <path>` cannot see which commit "
+            "introduced a path. CI sets `fetch-depth: 0` so this does not skip there "
+            "-- a gate that always skips proves nothing."
+        )
+
     tol = first_commit("src/rsr/model/tg/tolerances.py")
     fix = first_commit("tests/fixtures")
     if tol is None or fix is None:
-        pytest.skip("shallow clone or unborn history; ordering lives in ADR-0002")
+        pytest.skip("unborn history; the ordering claim lives in ADR-0002")
     if tol == fix:
         pytest.fail(
             "tolerance and fixtures landed in one commit; the order is unprovable"

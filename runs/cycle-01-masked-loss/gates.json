@@ -1,0 +1,12 @@
+[
+  {
+    "argv": "uv run pytest -rs",
+    "exit_code": 0,
+    "note": "suite gate; counts read from the census line, skips reported separately"
+  },
+  {
+    "argv": "uv run python scripts/mutation_battery.py --check",
+    "exit_code": 0,
+    "note": "mutation gate; 37/37 proven, incl. 'the training loss scores padding again'"
+  }
+]

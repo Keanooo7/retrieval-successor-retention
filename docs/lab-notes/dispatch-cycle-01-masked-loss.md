@@ -127,3 +127,216 @@ only to predict the next sentence rediscover Kintsch & van Dijk's 1978 leading-e
 strategy? The engineering delta is secondary and the spec says so. This cycle is instrument
 repair — fix the instrument, then measure. Drifting toward the engineering framing is drift,
 even when every number is honest.*
+
+---
+
+# ⚠️ REVALIDATED 2026-09-20 at `dab4f0848d96ebab6466a8646c1426387e3a3140`
+
+This brief was written against `46c208e`, on a branch, **before** the Studio/trunk reconciliation
+(PR #11, `4ece429`). *Rebasing a brief does not revalidate it.* The manager re-executed its
+premises against the merged tree. **Everything below supersedes the body above where they
+disagree.** Read this block first.
+
+**Baseline sha for this run:** `dab4f0848d96ebab6466a8646c1426387e3a3140` — read from
+`git rev-parse HEAD` at the moment of writing, not recalled.
+
+## Premises that held
+
+| Premise | Re-executed how | Result |
+|---|---|---|
+| Suite floor `passed=318 failed=0 skipped=0 errors=0` | `uv run pytest -q -rs --tb=no`, output to a file, `$?` read on the next line with **no pipe** | ✅ **318 / 0 / 0 / 0, exit 0** at `5440290`. The merge did not move it. It may rise; it may not fall; a skip is not a pass. |
+| `step_fn` has no `ignore_index` and no mask | `sed -n '210,216p' src/rsr/train/loop.py` | ✅ `:210-216`. The quoted source is semantically exact; the real code wraps the arguments onto separate lines. |
+| `mask_t` and `row_valid` are already passed and already unused | `grep -n step_fn src/rsr/model/tg/policy_loop.py` | ✅ `:140` is `contrib = step_fn(t, out, ids_t, mask_t, row_valid)`. **The fix needs no new argument.** |
+| The run is fresh | `ls runs/cycle-01-masked-loss` | ✅ does not exist. |
+| `off_gate_allowed` exists for bar item 2 | `grep -n off_gate_allowed scripts/mutation_battery.py` | ✅ `:61`, with `unproven()` at `:624` and `leaked` at `:722`. Bar item 2 is executable as written. |
+
+## 🔴 Premises that did NOT hold — three corrections
+
+### 1. `TGConfig` does **not** set `pad_id=0`. `loop.py` does.
+
+The brief says, under a heading that reads *"The premise, verified at source"*:
+
+> `TGConfig` sets `pad_id=0`.
+
+`src/rsr/model/tg/config.py:96` reads **`pad_id: int = 50257`**. The `0` comes from
+`src/rsr/train/loop.py:144`, which passes `pad_id=0` explicitly into the `TGConfig(...)` it
+builds, overriding the default.
+
+**The conclusion survives and the provenance does not.** A researcher who does what the brief
+says — check `TGConfig` — finds `50257`, and may reasonably conclude the premise is falsified and
+stop. Check `loop.py:144`.
+
+**Two things the brief does not say and you will need:**
+
+- `encode()` at `loop.py:108` allocates `ids = torch.zeros(n, steps, L, dtype=torch.long)`. Pad
+  positions are literally id `0` in the data, independent of any config field.
+- Therefore there are **two** sources of PAD, not one: trailing positions inside a real sentence,
+  **and every position of every sentence slot for a document with fewer than `steps` sentences**,
+  which is an entire row of zeros. Count them separately in your ledger. A single PAD fraction
+  hides which one dominates, and the masked-vs-unmasked delta depends on it.
+
+### 2. The falsifier's config is under-specified — `iters` is missing — ~~and the 93.4% implies `iters=8`~~ **[RETRACTED, see below]**
+
+The falsifier names `seed=0, steps_per_stream=48, batch=8` and **does not name `iters`**. The run
+is not reproducible without it, and the two-run floor is a comparison of two runs at "identical
+config".
+
+The handoff's denominator is checkable and it pins the answer:
+
+```
+batch × steps_per_stream × (max_tokens − 1) × iters
+  8   ×        48        ×      (64 − 1)    ×   8    = 193,536   ← exactly the handoff's figure
+  8   ×        48        ×      (64 − 1)             =  24,192   per iteration
+```
+
+So the handoff measured at **`iters=8`**, a value this brief never states. *(For contrast,
+`scripts/canary.py`'s frozen `CONFIG` uses `iters=6`.)* 🔴 **Pin `iters` explicitly in your
+manifest and say which value you used.** If you use anything but 8, the 93.4% is not the number
+you are checking and you must say so. The `(max_tokens − 1)` factor is the `[:, :-1]` / `[:, 1:]`
+shift in `step_fn` — targets, not tokens.
+
+The reconstruction above is the manager's arithmetic, not a ledger row. **It is a prediction.**
+Measure the denominator; do not adopt it.
+
+### 3. "365 lines of that package have zero tests" does not reconcile
+
+`wc -l src/rsr/train/*.py` at this sha:
+
+```
+ 25 __init__.py   361 checkpoint.py   159 heartbeat.py   307 loop.py   852 total
+```
+
+`checkpoint.py` is tested. No subset gives 365: `852 − 361 = 491`, `loop + heartbeat = 466`,
+`loop + __init__ = 332`. The number is either stale or was derived some other way. **Demoted to a
+prediction; re-derive it or drop it.** It is not load-bearing for the falsifier — it is the
+motivation — so do not spend the cycle on it.
+
+## The discriminator — this is the whole point of the cycle
+
+> **The run-to-run floor at identical seed and config.**
+
+Two runs differing in **nothing at all** — same seed, same config, same code — bound how much of
+any masked-vs-unmasked delta is signal. Measure the floor **first**, and measure it from two
+actual runs, not from a recalled number.
+
+⚠️ On MPS a floor of **`3.1789143850602386e-07`** was previously measured. 🔴 **That is a number
+to reproduce, not to assume.** If yours differs, yours is the measurement and the old one is
+prose. Say so plainly.
+
+**Report spread.** An sd of exactly `0.0000` across seeds is a **broken result, not a clean one** —
+it means the seed never reached the randomness. That has already happened in this project, and a
+reported `0.0000` is what exposed it. A run with no sd, or an sd of exactly zero, is rejected.
+
+## Also required, and not in the body above
+
+- **The shuffle control.** A training run that does not report it, or reports it at ≈0, is refused
+  rather than filed: a memory that contributes nothing makes every number in the run about a
+  different model than the one under study.
+- **`seeds_actually_run` and `steps_done`** as ledger rows, matching the prose. A multi-seed mean
+  from a one-seed run is what those fields exist to catch.
+- **Every command's `exit_code` read, never asserted.** This is zsh: `$?` after a pipe is the last
+  command's status and `PIPESTATUS` is undefined — it is `$pipestatus[1]`. Redirect to a file and
+  read `$?` on the next line. `grep -c` exits `1` when the count is `0`, which is a count, not a
+  failure. 📌 See `docs/lab-notes/dispatch-S0-05-exit-code-enum.md` — **`scripts/canary.py:151`
+  hardcodes `exit_code=0` into a ledger row.** Do not copy that shape.
+
+## BRIEF ERRORS — still required, and this block has its own
+
+The body's `## BRIEF ERRORS` section stands. **This revalidation block is also fair game**: its
+`iters=8` reconstruction is arithmetic on a number that is itself unverified, and its claim that
+`318` still holds was measured at `5440290`, one commit before this brief's baseline — the
+difference is documentation only, which is itself a claim you may check with `git diff --stat`.
+
+---
+
+## 🔴 CORRECTION to the revalidation block, same day, before the run reported
+
+**Revalidation item 2's `iters=8` inference is retracted. It was the manager's, it was wrong,
+and it was wrong in the way this brief warns about.**
+
+I wrote that `8 × 48 × 63 × 8 = 193,536` "pins" the handoff at `iters=8`. There is a simpler
+reading that fits the same number, and I found it by measuring instead of arithmetic:
+
+```
+n_docs × steps × (L−1)  =  64 × 48 × 63  =  193,536
+```
+
+**The denominator is corpus-shaped, not run-shaped** — the whole committed synthetic corpus
+encoded once, not a batched training stream. Both expressions equal 193,536 only because
+`n_docs = 64 = 8 × 8`; my version needed an unstated `iters=8` to work, and this one needs
+nothing. A coincidence of factorisation is not a measurement, and I presented it as one.
+
+**What stands, and what does not:**
+
+- ✅ **The falsifier still does not specify `iters`, and it still must.** "Two runs at identical
+  config" is not a specification until every field is named. Pin it in your manifest.
+- ❌ **Do not pin `iters=8` on my arithmetic.** Pick a value, state it, justify it.
+- ⚠️ **The PAD denominator you report is not necessarily the handoff's denominator.** If you count
+  over a batched stream you will get a run-shaped number; the handoff's appears to be
+  corpus-shaped. **Say which one you counted.** Two different correct numbers that disagree
+  because they count different populations is a worse failure than one wrong number, because it
+  looks like a contradiction.
+- 📌 The "two sources of PAD" split in revalidation item 1 is still worth counting, but **do not
+  assume both are non-empty.** Report each source's count even when one is zero.
+
+🔒 **I have measured the PAD fraction myself, by a path that does not touch `step_fn`, and I am
+deliberately not putting the number here.** You measure it blind; I compare afterwards. A brief
+that hands you the answer cannot verify you found it. If our numbers disagree, that disagreement
+is the finding and we will both show our paths.
+
+*This correction is itself a `BRIEF ERRORS` entry — mine, against my own revalidation block, found
+by re-executing rather than re-reading. Record it as one.*
+
+---
+
+## 🔴 SECOND CORRECTION — the floor is a different statistic than the one you need, and the device is unpinned
+
+This one is load-bearing. I traced `3.1789143850602386e-07` to its ledger rather than accepting it.
+
+**It is ledger-backed** — `runs/cycle-arm-identity/ledger.json`, key
+`loss_max_abs_diff.fifo_mps_a__vs__fifo_mps_b`, the same-arm replicate, which is the right
+provenance for a floor. So far so good. But its `how` field says what it actually is:
+
+> `"max_t |loss_x[t] - loss_y[t]| over the 10 beats"`
+
+**That is a sup-norm over a whole 10-beat trajectory. Your falsifier is about the *final* training
+loss.** Those are different statistics, and the trajectory max is ≥ the final-beat difference by
+construction. It was also measured at a beat count this brief does not use.
+
+🔴 **Do not compare your final-loss delta against that number.** Measure *your* floor, as *your*
+statistic, at *your* config: two runs identical in everything, and the spread of the quantity you
+are actually going to claim moved. Report both if you like — but the bar is the one you measured.
+If you report a sup-norm floor and a final-loss delta and compare them, the comparison is
+meaningless in a way that will look rigorous.
+
+### And the device decides whether the discriminator exists at all
+
+From the same experiment's `RESULTS.md`:
+
+| pair | `loss` bit-identical | max\|Δloss\| |
+|---|---|---|
+| `fifo_cpu` vs `rsr_cpu` | **True** | **0.0** |
+| `fifo_mps_a` vs `fifo_mps_b` *(replicate — the floor)* | False | `3.1789143850602386e-07` |
+
+**On CPU the run-to-run floor is exactly `0.0`.** The brief does not pin a device, and this
+decides the cycle:
+
+- **On CPU**, the floor is `0.0` and the falsifier's second half becomes *"masking moves the loss
+  by more than zero"* — satisfied by any nonzero delta, including one float ulp. 🔴 **The
+  discriminator is vacuous, and a vacuous discriminator that returns `survived` is the exact
+  failure this cycle exists to prevent.**
+- **On MPS**, the floor is real and non-zero, and the comparison has content.
+
+**Pin the device explicitly in your manifest and say which you used.** If you run on CPU and get a
+floor of `0.0`, that is **not** a clean floor — it is the same shape as the `sd = 0.0000` this
+brief already rejects, and you must say so rather than reporting a comfortable pass. Report the
+floor with its statistic and its device, or it is not a floor.
+
+**Do not let this choose your answer for you.** If you run on CPU because determinism is right for
+this measurement, that is defensible — but then say plainly that the second half of the falsifier
+could not be tested on that device, and the cycle is `inconclusive` on it. `inconclusive` is a
+writable verdict. A vacuous `survived` is not.
+
+*BRIEF ERRORS entry against the brief and against the dispatch that commissioned it: both told you
+to reproduce `3.1789143850602386e-07` without stating that it is a trajectory sup-norm at 10 beats
+on MPS, and neither pinned a device. Found by opening the ledger instead of quoting the prose.*

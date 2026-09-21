@@ -48,6 +48,18 @@ Capacity questions are answered by **measuring this machine** — the `(S, d, ba
 ceiling at the widths actually run — not by sizing a card. §4.2's rule stands and now
 applies to hardware in hand: **if `S = 80` does not fit, `S` wins and `d` is cut.**
 
+## Reading an exit code — the worked example
+
+🔴 **Read `$?` directly, and capture it before any other command runs.** A status read after a pipe is the *pipe's*, not the command's.
+
+```zsh
+cmd > out.log 2>&1; rc=$?          # correct
+cmd | tail -3; rc=$?               # WRONG -- this is tail's status, always 0
+cmd | tail -3; rc=$pipestatus[1]   # zsh. NOT ${PIPESTATUS[0]}, which is bash
+```
+
+⚠️ **`${PIPESTATUS[0]}` expands to the EMPTY STRING in zsh** — not to an error. On 2026-09-20 that was caught only because blank compared unequal to `0`; in the same session a `PUSH_EXIT` was then read after a pipe and was `tail`'s. **Two instances, one session, opposite directions.** A status that is empty or borrowed is not a measurement, and "literal output or it did not happen" is defeated at the point the status is captured.
+
 ## Prohibitions — honor these literally
 
 - **Do not fill §15.** It reads: *"This section is a placeholder and must not be
@@ -144,6 +156,11 @@ CUDA without modification.
   the data is not a threshold.
 - **Measure, don't extrapolate** (§12.4). Documented configuration is not evidence
   of what was actually run.
-- **Never report a skipped or unrun test as passing.** `test_reduction.py` and
-  `test_fidelity.py` are currently skipped pending the transcription; GATE-1 must
-  say so.
+- **Never report a skipped or unrun test as passing.** ⚠️ **This rule used to name
+  `test_reduction.py` and `test_fidelity.py` as "currently skipped pending the
+  transcription", and instructed GATE-1 to say so. Measured 2026-09-20 at `8ad64a2`:
+  `passed=44 failed=0 skipped=0 errors=0`, exit `0`. They are not skipped and have
+  not been for some time, so the rule was instructing an agent to file a false
+  report** — the precise failure the rule exists to prevent, committed by the rule.
+  The rule stands; the example is withdrawn. If a test IS skipped, GATE-1 names it
+  and never counts it as a pass.
