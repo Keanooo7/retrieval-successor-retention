@@ -11,7 +11,7 @@ Pre-registration: `experiments/efeas/PREREG.md` (`663d829`), committed ahead of 
 | git sha | `1fc8199` · `dirty: false` (measured by `scripts/ledger.py`, not typed) |
 | machine | MacBook Pro, M1 Pro, CPU. **No model is trained**, so ADR-0007's all-training-on-the-Studio rule does not apply |
 | manifest | `runs/efeas-synthetic/manifest.json`, config hash `2e591c0b6795f7a9`, frozen `2026-09-21T06:34:48Z` at the start of the run |
-| seeds | corpus seeds `[0, 1, 2]`, 64 documents each, **1180 / 1192 / 1198** queries |
+| seeds | corpus seeds `[0, 1, 2]` (documents per seed as set in `experiments/efeas/run.py`; no ledger key carries the count), **1180 / 1192 / 1198** queries |
 | command | `uv run python experiments/efeas/run.py > log 2>&1; rc=$?` → **`rc=0`**, read directly. The ledger's own `exit_code: 0` is self-reported and says so |
 
 ## Verdict: **`survived`**. The synthetic corpus has headroom at M = 16
@@ -80,3 +80,8 @@ cannot tell those two apart, so **E1 should report hits by gap bucket, not only 
 - **That `ψ̂` can learn the oracle's ordering.** That is E1.
 - **Anything about PG-19.** `OraclePolicy` refuses to run without ground-truth demand,
   and PG-19 has none until the shadow buffer exists (Sprint 2).
+
+
+---
+
+*2026-09-21 (manager, wave 0.2): prose-only edit so this file passes `render_scoreboard.py --audit`; the one unbacked literal (documents per seed) was deleted. The ledger is untouched.*

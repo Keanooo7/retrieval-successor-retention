@@ -1,0 +1,12 @@
+{
+  "batch": 8,
+  "beat_every": 1,
+  "ckpt_every": 0,
+  "d": 128,
+  "device": "mps",
+  "iters": 6,
+  "lr": 0.001,
+  "memory_slots": 16,
+  "seed": 0,
+  "steps_per_stream": 48
+}

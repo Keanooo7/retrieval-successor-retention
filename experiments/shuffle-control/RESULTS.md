@@ -24,7 +24,7 @@ unless it is marked as prose from §10.3.
 | per-seed runs | 3 `commands[]`, each `exit_code: 0`, each `reproducible: true`; per-seed trainer config hashes `dd6a92f615ddb22b` · `211126cfe52fd4f9` · `50e3f6891cf289e0` |
 | wall clock | `started_utc 2026-09-21T04:10:03Z` → `finished_utc 2026-09-21T04:55:53Z`; seeds finished at `04:25:12Z`, `04:40:34Z`, `04:55:47Z` |
 | status | `ok` |
-| gates | `uv run pytest -rs` → **exit 0**, `passed=364 failed=0 skipped=0 errors=0`; pytest's own line `364 passed, 1 xfailed, 1 warning`. The xfail is `tests/test_train_loop.py`'s documented `xfail(strict=True)`; it is not a pass and the census line does not print it. **The mutation battery was not run this cycle.** |
+| gates | `uv run pytest -rs` → **exit 0**. *(The census counts that stood here were deleted on 2026-09-21: no ledger key carries them, and `render_scoreboard.py --audit` allows only "delete it or fetch the key".)* The xfail is `tests/test_train_loop.py`'s documented `xfail(strict=True)`; it is not a pass and the census line does not print it. **The mutation battery was not run this cycle.** |
 
 Command:
 
@@ -74,8 +74,8 @@ The spread is non-zero (`sd_exactly_zero: false`). The largest seed, seed 0, is 
 about 10× under the `0.01` inert threshold.
 
 📌 **Consistency check.** The decoy's `A` per seed matches the values Amendment 1
-quotes from the 2-iteration smoke run, to the digits that file gives (`5.8e-3`,
-`1.04e-2`, `7.8e-3`). That is expected. The decoy is the untrained model initialised
+quotes from the 2-iteration smoke run, to the digits that file gives (the ledger's
+`seedN.control_live_decoy.mean_abs_token_delta`, rounded: `0.0058`, `0.0104`, `0.0078`). That is expected. The decoy is the untrained model initialised
 at the seed, so it does not depend on `iters`. This is a determinism result, not a
 coincidence.
 
@@ -123,21 +123,21 @@ reading, NOT the bar."*
 
 | | §10.3 (prose, unreproducible) | this run (ledger) |
 |---|---|---|
-| signed mean Δ | "exactly 0.0" | **not exactly zero on any seed**: `-1.46e-08`, `+3.53e-07`, `-4.61e-08` nats/token |
-| max per-token Δ | `1.2e-4` | `1.17e-4` · `2.31e-4` · `6.01e-5` |
-| min per-token Δ | `-1.9e-4` | `-1.91e-4` · `-1.71e-4` · `-1.58e-4` |
+| signed mean Δ | "exactly 0.0" | **not exactly zero on any seed** — see §3's `reading.delta_nats_per_token` row for the values |
+| max per-token Δ | `1.2e-4` | `0.000117` · `0.000231` · `0.0000601` |
+| min per-token Δ | `-1.9e-4` | `-0.000191` · `-0.000171` · `-0.000158` |
 | sentences | 384 | 384 per seed, all with EOS |
 | `memory_gate` range | `0.949`–`0.989` | seed 0 `0.9486`–`0.9886` |
 
 🔴 **Amendment 1 weakens §10.3's own headline, and this run shows how.** The claim
 that the loss "moves by exactly 0.0" is about the **signed mean**. Amendment 1 showed,
-before this run, that a memory known to be live moves the signed mean by only ~5e-5
-relative, because tokens move both ways and cancel. The signed mean is therefore weak
+before this run, that a memory known to be live moves the signed mean by only a tiny
+relative amount (Amendment 1's smoke-run figure, which no ledger here carries), because tokens move both ways and cancel. The signed mean is therefore weak
 evidence that a memory is inert, whatever its value. In this run it is also **not
 exactly 0.0**: `delta_exactly_zero` is `false` on all three seeds, and 1100–1254 of
-~1580 real tokens move. The headline should not be repeated as "exactly 0.0". What
+the 1568–1596 real tokens per seed move. The headline should not be repeated as "exactly 0.0". What
 carries the claim is the **per-token** magnitude measured against a live decoy, and
-that is what survived: about `7.8e-4` of a live memory's rate on average.
+that is what survived: about `0.00078` of a live memory's rate on average.
 
 Seed 0's per-token extremes and gate range come close to the §10.3 digits. Bit-identity
 was not expected: PREREG lists the known differences from the audit's trainer.
@@ -158,3 +158,8 @@ was not expected: PREREG lists the known differences from the audit's trainer.
   here. This is a re-derivation of the claim, not of the digits.
 - **Checkpoints are not committed.** `runs/shuffle-control/seed*/ckpt-000300.pt` stay
   local, per the brief.
+
+
+---
+
+*2026-09-21 (manager, wave 0.2): prose-only edit so this file passes `render_scoreboard.py --over runs/ --audit`. Sixteen literals were rounded renderings or derived figures with no ledger key; each now quotes a key's value at the printed precision, or was deleted. The ledger is untouched.*

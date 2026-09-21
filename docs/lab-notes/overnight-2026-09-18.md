@@ -982,3 +982,7 @@ either arm, so whether the antipodal structure buys any *discrimination* is unkn
 established the baseline and produced a finding). **9 falsified, 1 survived, 3 canary/infrastructure.**
 **Every cycle has a non-empty "verified by re-execution" field.** No cycle was a failed cycle, and no
 researcher was given a second brief.
+
+---
+
+> **Correction, 2026-09-21 (manager, wave 0.2).** This note cites `rsr.py:433` for `RSRPolicy.observe`'s `NotImplementedError`. Re-derived with `grep -n` at `945b501`: `def observe` is at `src/rsr/retention/rsr.py:442` and the `raise` at `:448`. The text above is left as written.

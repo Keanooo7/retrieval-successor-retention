@@ -422,3 +422,7 @@ memory (PREREG says so). The cause of inertness (unmasked loss / hinge off / cor
 separated. §10.3's headline "exactly 0.0" did **not** reproduce: the signed mean is non-zero on
 every seed and 1100–1254 of ~1580 real tokens move; what survives is the per-token magnitude
 against a live decoy.
+
+---
+
+> **Correction, 2026-09-21 (manager, wave 0.2).** This note cites `rsr.py:433` for `RSRPolicy.observe`'s `NotImplementedError`. Re-derived with `grep -n` at `945b501`: `def observe` is at `src/rsr/retention/rsr.py:442` and the `raise` at `:448`. The text above is left as written.
