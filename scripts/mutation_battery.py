@@ -582,8 +582,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a first canary reading exits 0 again",
         "test_a_first_canary_reading_exits_2_nothing_to_compare",
         "scripts/canary.py",
-        '"baseline": Exit.UNKNOWN}',
-        '"baseline": Exit.OK}',
+        # 📌 Re-anchored 2026-09-22 (canary split): EXIT_CODES became a multi-line
+        # dict when `not_comparable` was added, so the old `...UNKNOWN}` anchor
+        # would have aborted the battery at this entry.
+        '    "baseline": Exit.UNKNOWN,\n',
+        '    "baseline": Exit.OK,\n',
         "5.4: the ORIGINAL defect -- a first reading, which compared nothing, "
         "reported as a pass",
     ),
@@ -591,8 +594,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a first canary reading exits 3 again",
         "test_a_first_canary_reading_exits_2_nothing_to_compare",
         "scripts/canary.py",
-        '"baseline": Exit.UNKNOWN}',
-        '"baseline": Exit.DID_NOT_RUN}',
+        '    "baseline": Exit.UNKNOWN,\n',
+        '    "baseline": Exit.DID_NOT_RUN,\n',
         "S0-05: the FIX's defect, on the right axis. Cycle 0 mapped a first reading "
         "to 3; it ran and had nothing to compare, which is 2. The 0-mutation above "
         "only proves the old defect stays dead -- it cannot see the value the fixer "
@@ -1044,6 +1047,46 @@ MUTATIONS: tuple[Mutation, ...] = (
                 _S003_REFUSAL_COUPLING,
             ),
         ),
+    ),
+    # --- orchestrator: canary ---
+    Mutation(
+        "a changed loss path is compared anyway",
+        "test_canary_not_comparable",
+        "scripts/canary.py",
+        "        if not ok:\n"
+        '            verdict, moved, detail = "not_comparable", [], why',
+        "        if False:\n"
+        '            verdict, moved, detail = "not_comparable", [], why',
+        "canary split 2026-09-22: at 945b501 a code change read MOVED on 6 of 6 "
+        "beats and exited 1 -- a code change reported as an environment move. "
+        "Skipping the comparability check restores exactly that.",
+    ),
+    Mutation(
+        "the CPU canary gets a tolerance",
+        "test_the_cpu_canary_is_bit_exact",
+        "scripts/canary.py",
+        "REL_TOL_CPU = 0.0",
+        "REL_TOL_CPU = 1e-4",
+        "canary split: the CPU variant exists to be bit-exact; a tolerance "
+        "silently makes it a second MPS canary.",
+    ),
+    Mutation(
+        "the CPU canary runs on every thread",
+        "test_the_cpu_canary_trains_on_one_thread",
+        "scripts/canary.py",
+        "        torch.set_num_threads(CPU_THREADS)\n",
+        "        pass\n",
+        "canary split: multi-threaded CPU reductions are the nondeterminism a "
+        "bit-exact canary cannot absorb.",
+    ),
+    Mutation(
+        "loss_path_hash ignores file contents",
+        "test_loss_path_hash_moves_with_the_code",
+        "scripts/canary.py",
+        "        h.update((repo / rel).read_bytes())\n",
+        "        pass\n",
+        "canary split: a hash over names only reads an edited loop.py as the same "
+        "code, and a code change goes back to reading as a MOVED environment.",
     ),
 )
 
