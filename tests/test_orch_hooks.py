@@ -275,6 +275,12 @@ def test_push_to_main_denied(root, profile, cmd):
     assert bash(root, cmd, **_profile_kw(profile)) is not None, cmd
 
 
+def test_push_to_main_is_also_refused_via_update_ref(root):
+    """Moving main without a push; shares `_is_main_ref` with the push rule."""
+    for profile in ("manager", "researcher"):
+        assert bash(root, "git update-ref refs/heads/main HEAD", profile) is not None
+
+
 @pytest.mark.parametrize(
     "cmd",
     [
@@ -292,7 +298,6 @@ def test_push_to_main_denied(root, profile, cmd):
         "git merge --no-verify feat",
         "gh pr merge 36 --squash",
         "git branch -f main HEAD",
-        "git update-ref refs/heads/main HEAD",
         "git -c alias.p=push p origin feat",
         "git config alias.p push",
         "git config core.hooksPath /dev/null",
@@ -590,7 +595,7 @@ def test_pretooluse_json_shape_on_deny_and_silence_on_allow(root, capsys):
 
 
 def test_the_cli_reads_stdin_and_exits_0_with_a_deny(root):
-    payload = _payload(root, "Bash", {"command": "git push origin main"})
+    payload = _payload(root, "Bash", {"command": "caffeinate -i sleep 1"})
     env = {**os.environ, **_env(root), "PYTHONPATH": str(_REPO / "scripts")}
     proc = subprocess.run(
         [sys.executable, "-m", "orchestrator.hooks", "pretooluse"],
