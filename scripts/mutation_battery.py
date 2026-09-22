@@ -1239,10 +1239,20 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a commit and a push are executed rather than rejected.",
     ),
     Mutation(
-        "lint_brief: a wrong baseline_sha passes",
+        "lint_brief: a baseline the base does not contain passes",
+        "test_a_baseline_the_base_does_not_contain_is_a_finding",
+        "scripts/orchestrator/lint_brief.py",
+        '    if _git(root, "merge-base", "--is-ancestor", sha, base).returncode != 0:\n',
+        "    if False:\n",
+        "A brief written against a tree this night's base does not contain lints "
+        "clean; its anchors were derived somewhere else.",
+    ),
+    Mutation(
+        "lint_brief: the brief's own commit passes as its baseline",
         "test_a_wrong_baseline_sha_is_a_finding",
         "scripts/orchestrator/lint_brief.py",
-        "    if sha != base:\n",
+        '    if rel is not None and _git(root, "cat-file", "-e", f"{sha}:{rel}")'
+        ".returncode == 0:\n",
         "    if False:\n",
         "The baseline off by the brief's own commit (Brief 0, S0-03, 2026-09-21) "
         "lints clean.",

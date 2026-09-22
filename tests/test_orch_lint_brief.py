@@ -253,14 +253,55 @@ def test_premises_run_in_a_throwaway_worktree_at_base(repo, tmp_path):
 
 
 def test_a_wrong_baseline_sha_is_a_finding(repo, tmp_path):
-    """Off by the brief's own commit: written at A, committed as B, checked at B."""
-    first = _git(repo, "rev-parse", "HEAD")
-    (repo / "notes.md").write_text("the brief's own commit\n")
+    """The brief's own commit as its baseline (S0-03 Brief 0, 2026-09-21)."""
+    brief = repo / "docs" / "dispatch-t.md"
+    brief.parent.mkdir()
+    brief.write_text("placeholder\n")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "brief")
-    f = _lint(repo, _write(tmp_path, _front(repo, baseline_sha=first)))
+    own = _git(repo, "rev-parse", "HEAD")
+    brief.write_text(
+        "---\n"
+        + yaml.safe_dump(_front(repo, baseline_sha=own), sort_keys=False)
+        + "---\n"
+        + BODY
+    )
+    f = _lint(repo, brief, own)
     assert _kinds(f) == ["baseline"], f
-    assert first[:12] in f[0].detail
+    assert "already exists" in f[0].detail
+
+
+def test_a_baseline_the_base_does_not_contain_is_a_finding(repo, tmp_path):
+    first = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "checkout", "-q", "-b", "side")
+    (repo / "side.md").write_text("elsewhere\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "side")
+    side = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "checkout", "-q", "main")
+    f = _lint(repo, _write(tmp_path, _front(repo, baseline_sha=side)), first)
+    assert _kinds(f) == ["baseline"], f
+    assert "not an ancestor" in f[0].detail
+
+
+def test_a_brief_committed_after_its_baseline_lints_clean_at_a_later_base(repo, tmp_path):
+    """Written at A, committed as B, dispatched at a later night's base C: clean.
+    The first build's `baseline == base` made this -- the normal case -- a finding."""
+    first = _git(repo, "rev-parse", "HEAD")
+    brief = repo / "docs" / "dispatch-t.md"
+    brief.parent.mkdir()
+    brief.write_text(
+        "---\n"
+        + yaml.safe_dump(_front(repo, baseline_sha=first), sort_keys=False)
+        + "---\n"
+        + BODY
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "brief")
+    (repo / "later.md").write_text("a later night\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "later")
+    assert _lint(repo, brief) == []
 
 
 def test_a_missing_heading_is_a_finding(repo, tmp_path):
