@@ -1045,6 +1045,112 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
         ),
     ),
+    # --- orchestrator: loop driver (reconcile, merge, tick, notify) --- #
+    # Agent D, 2026-09-22. Each gate is a test in tests/test_orch_*.py run
+    # against a throwaway repo with stubbed claude/gh (tests/_orch_loop_helpers.py).
+    Mutation(
+        "reconcile: a repeated cause no longer parks",
+        "test_two_failures_with_the_same_cause_park_the_item",
+        "scripts/orchestrator/reconcile.py",
+        "        repeat = cause in hist\n",
+        "        repeat = False\n",
+        "the stop rule 'two failures with the same cause' (dispatch-2026-09-21-"
+        "overnight) stops being a mechanism: the item goes back to ready and the "
+        "same failure is re-dispatched until RSR_MAX_ATTEMPTS.",
+    ),
+    Mutation(
+        "reconcile: a dead job pid is read as alive",
+        "test_a_running_job_whose_pid_is_dead_becomes_crashed_and_its_item_collecting",
+        "scripts/orchestrator/reconcile.py",
+        '                if lc.pid_alive(rec.get("pid")):\n'
+        "                    continue\n"
+        '                rec["status"] = "crashed"',
+        "                if True:\n"
+        "                    continue\n"
+        '                rec["status"] = "crashed"',
+        "a job whose process died stays `running` forever: no collector is ever "
+        "spawned and the night reads as busy until park_by.",
+    ),
+    Mutation(
+        "merge: preregistration/ dropped from the frozen globs",
+        "test_the_guard_trips_on_a_preregistration_edit",
+        "scripts/orchestrator/merge.py",
+        '    "preregistration/*",\n',
+        '    # "preregistration/*",\n',
+        "an unattended branch that edits a signed threshold merges into the night "
+        "branch -- 'a threshold registered after seeing the data is not a threshold'.",
+    ),
+    Mutation(
+        "merge: a changed FROZEN definition is not compared",
+        "test_the_guard_trips_on_a_frozen_constant_edit",
+        "scripts/orchestrator/merge.py",
+        "                elif before[name] != after[name]:",
+        "                elif False:",
+        "defect D-1's shape: a FROZEN constant's value edited on a run branch passes "
+        "the guard, because only additions and removals are checked.",
+    ),
+    Mutation(
+        "merge: no verification record is not a refusal",
+        "test_merge_is_refused_without_a_verification_record",
+        "scripts/orchestrator/merge.py",
+        "    if rec is None:\n        return Exit.DID_NOT_RUN,",
+        "    if rec is None and False:\n        return Exit.DID_NOT_RUN,",
+        "the verification gate stops being a gate: with no record the merge crashes "
+        "(1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.",
+    ),
+    Mutation(
+        "tick: HALT ignored",
+        "test_halt_is_respected_before_anything_else",
+        "scripts/orchestrator/tick.py",
+        "        h = lc.halted(self.root)\n        if h:",
+        "        h = lc.halted(self.root)\n        if False:",
+        "the owner's stop switch, and the loop's own (guard trip, spend cap), no "
+        "longer stop the python pass; only tick.zsh's first line still would.",
+    ),
+    Mutation(
+        "tick: the idle path falls through to launching",
+        "test_the_idle_path_launches_nothing_and_notifies_once",
+        "scripts/orchestrator/tick.py",
+        "            self.idle()\n            return Exit.OK",
+        "            self.idle()",
+        "an idle night starts a paid manager cycle every ten minutes with nothing "
+        "to review.",
+    ),
+    Mutation(
+        "tick: UNSET spend caps are not refused",
+        "test_caps_unset_refuse_3_and_notify_once",
+        "scripts/orchestrator/tick.py",
+        "        if cycle_cap is None or night_cap is None:",
+        "        if False:",
+        "the spend caps are an owner decision; without the refusal the loop runs "
+        "with no cap at all (here it crashes on the None cap, exit 1 not 3).",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_tick.py::"
+                "test_tick_zsh_reports_the_pass_status_unborrowed",
+                "the zsh wrapper's test drives the same UNSET refusal through "
+                "tick.zsh to prove the status is reported unborrowed; it cannot "
+                "hold when the refusal it reports is gone. Skipped where zsh is "
+                "absent (CI), so it may or may not redden there.",
+            ),
+        ),
+    ),
+    Mutation(
+        "notify: the content-hash dedupe removed",
+        "test_the_same_content_is_posted_once",
+        "scripts/orchestrator/notify.py",
+        "    if h in seen:",
+        "    if False:",
+        "the owner is posted the same notice on every tick "
+        "(R-2026-09-22-owner-out-of-loop).",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_tick.py::test_caps_unset_refuse_3_and_notify_once",
+                "the tick's refusal notice is posted once BECAUSE notify dedupes "
+                "it -- the tick deliberately has no second guard for a refusal.",
+            ),
+        ),
+    ),
 )
 
 
