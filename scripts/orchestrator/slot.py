@@ -50,6 +50,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import NoReturn
 
 _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO / "src"))
@@ -58,13 +59,9 @@ sys.path.insert(0, str(_REPO / "scripts"))
 from orchestrator import lanes  # noqa: E402
 from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
 
-__all__ = ["ChildRC", "check_pinned", "job_threads", "main"]
+__all__ = ["check_pinned", "exit_verbatim", "job_threads", "main", "run_job"]
 
 _FORWARDED = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
-
-
-class ChildRC(int):
-    """The child's exit status, to be passed through without interpretation."""
 
 
 def job_threads(lane: str, k: int, cfg: lanes.LanesConfig) -> int | None:
@@ -134,8 +131,9 @@ def _parse(argv: list[str]):
     return args, cmd
 
 
-def main(argv: list[str] | None = None) -> Exit | ChildRC:
-    args, cmd = _parse(sys.argv[1:] if argv is None else argv)
+def run_job(args, cmd: list[str]) -> int:
+    """Acquire, run, record, release. Returns the child's rc (signal N -> 128+N).
+    Every refusal exits 3 from here via `refuse`, before the child exists."""
     cwd = (args.cwd or Path.cwd()).resolve()
     try:
         root = lanes.orch_root()
@@ -222,17 +220,21 @@ def main(argv: list[str] | None = None) -> Exit | ChildRC:
         status="crashed" if (raw < 0 or received) else "done",
     )
     _write_record(record_path, record)
-    return ChildRC(rc)
+    return rc
 
 
-def entry() -> None:
-    result = main()
-    if isinstance(result, ChildRC):
-        # 🔴 Verbatim. Not `run_main`: `status()` refuses 5 and 137, and a child's
-        # code is not ours to reinterpret (module docstring).
-        sys.exit(int(result))
-    run_main(lambda: result)
+def exit_verbatim(rc: int) -> NoReturn:
+    """🔴 The child's rc, as the child gave it. Not `status()`: that refuses 5 and
+    137, and a child's code is not ours to reinterpret (module docstring)."""
+    raise SystemExit(rc)
+
+
+def main(argv: list[str] | None = None) -> Exit:
+    """Never returns: a refusal exits 3 via `refuse`, a job exits with its own rc.
+    `run_main` stays the entry point so the protocol checks see one."""
+    args, cmd = _parse(sys.argv[1:] if argv is None else argv)
+    exit_verbatim(run_job(args, cmd))
 
 
 if __name__ == "__main__":
-    entry()
+    run_main(main)
