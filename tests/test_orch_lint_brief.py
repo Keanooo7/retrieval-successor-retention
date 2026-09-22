@@ -310,14 +310,13 @@ def test_the_night_base_sha_is_the_default_base(repo, tmp_path):
 
 
 def test_the_cli_exits_through_the_protocol_with_json(repo, tmp_path):
-    front = _front(repo, anchors=[{"path": "src/a.py", "line": 5, "expect": "def h():"}])
-    brief = _write(tmp_path, front)
+    brief = _write(tmp_path, _front(repo, files_in_scope=["src/missing.py"]))
     env = {**os.environ, "PYTHONPATH": str(_REPO / "scripts"), "RSR_ORCH_ROOT": str(repo)}
     cmd = [sys.executable, "-m", "orchestrator.lint_brief", str(brief), "--json"]
     r = subprocess.run([*cmd, "--base", "HEAD"], capture_output=True, text=True, env=env)
     assert r.returncode == 1, r.stderr
     out = json.loads(r.stdout)
-    assert out["exit"] == 1 and [f["kind"] for f in out["findings"]] == ["anchor"]
+    assert out["exit"] == 1 and [f["kind"] for f in out["findings"]] == ["scope"]
     r = subprocess.run(cmd, capture_output=True, text=True, env=env)
     assert r.returncode == 3, r.stderr
     assert json.loads(r.stdout)["exit"] == 3

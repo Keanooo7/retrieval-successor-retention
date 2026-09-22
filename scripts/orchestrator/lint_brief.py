@@ -471,9 +471,11 @@ class ThrowawayWorktree:
     def __exit__(self, *exc: object) -> None:
         if self.path is None:
             return
-        _git(self.root, "worktree", "remove", "--force", str(self.path))
+        removed = _git(self.root, "worktree", "remove", "--force", str(self.path))
         shutil.rmtree(self.path, ignore_errors=True)
-        _git(self.root, "worktree", "prune")
+        if removed.returncode != 0:
+            # Only then: prune is repo-wide, and other agents' worktrees live here.
+            _git(self.root, "worktree", "prune")
 
 
 def check_premises(front: dict, root: Path, base: str) -> list[Finding]:
