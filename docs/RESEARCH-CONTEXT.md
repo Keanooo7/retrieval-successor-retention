@@ -505,11 +505,11 @@ measured on a single M4 Max**, and the paper must not imply anything about other
 | **E0c** | Memory/throughput ceiling on the Studio | Resizes everything | ✅ **RUN** |
 | **E0d** | `r_i` vs leave-one-out Δloss | **Yes** | ☐ not run. ⚠️ `metrics/loo.py` is a stub that raises — §3.2.1's truth rule has **no implemented arbiter** |
 | **E0e** | `ū` distribution on a FIFO run → `τ`, `E[lifetime]` → `γ_b` | No | ☐ not run. ⚠️ **E0e MEASURES; it does not freeze `γ_b`** — the scope question is §12.2 |
-| **E0f** | Verify [P5]–[P14] against primary sources | No | ◐ **pass 2 run 2026-09-20 — 13 of 14 done, [P9] outstanding.** Not clean: corrections 25–30, including three on [P11], the cognitive claim (§2) |
+| **E0f** | Verify [P5]–[P14] against primary sources | No | ◐ **pass 2 run 2026-09-20 — 13 of 14 done, [P9] outstanding.** Not clean: corrections 25–30, including three on [P11], the cognitive claim (§2). Record: `docs/citation-audit.md` (pass 1, 2026-09-17, ported to trunk in `dd78db7` / #1; pass 2 in `8f6f81d` / #6). *(2026-09-22: `experiments/e0f/RESULTS.md` said "NOT RUN". It was a scaffold stub whose content was last written in `83bdf57`, before either pass. It now points here.)* |
 | **E0g** | Name and obtain the E7 stimulus set | **Yes, for E7** | ✅ **PASS** |
 | **E0h** | Regress `ψ̂(γ=0)` on current cross-attention logits | **Yes** | ☐ not run |
 | **E0i** | Coref histogram over the PG-19 subset, CPU | **Yes — kill gate** | 🔴 **exit 3 — DID NOT RUN.** Pre-registration is **final and UNSIGNED** |
-| **E-feas** | Oracle vs FIFO per corpus | **Yes, per corpus** | ☐ not run |
+| **E-feas** | Oracle vs FIFO per corpus | **Yes, per corpus** | ✅ **synthetic: `survived`** (#19; `experiments/efeas/RESULTS.md`, `runs/efeas-synthetic/ledger.json`). Headroom `headroom_oracle_minus_fifo` **0.1807 ± 0.0123** at `M = 16`, 3 corpus seeds; `secondary.M32.headroom` 0.034, not judged. Re-run on the S0-03 corpus is **identical to the last bit** (#33; `experiments/efeas/RESULTS-s003.md`, `runs/efeas-synthetic-s003/ledger.json`), as designed: the simulation reads only gaps. Model-free. PG-19 not run *(updated 2026-09-22; was "not run")* |
 | **E1** | Synthetic, full baseline set + `ν` sweep | **Yes — kill gate only** | ☐ not run |
 | **E2** | Vacuity gate on the full eviction score | **Yes** | ☐ not run |
 | E3 | PG-19 at `S = 80`, reintroduction loss vs `k` | No | **unapproved** |
@@ -703,6 +703,12 @@ $ .venv/bin/pytest -rs --tb=no          # worktree at d1c221f, 2026-09-18
 passed=287 failed=0 skipped=0 errors=0
 287 passed, 1 warning in 28.55s         # exit 0
 ```
+
+> 📌 **Update 2026-09-22: the block above is the 2026-09-18 figure at `d1c221f`.** A session on
+> 2026-09-22 at `clean/2026-09-22` (`7871580`; Python 3.12.13, torch 2.14.0) reported
+> `passed=420 failed=0 skipped=0 errors=0`, **1 xfailed**, rc `0`. E0b plus fidelity: `44 passed`.
+> **This is a session measurement, not a ledger row,** and the reconciliation that wrote this note
+> did not re-run it. An xfail is not a pass. Count it separately.
 
 **Zero skips.** Both former blockers are closed: `test_fidelity.py` is green forward *and* gradients
 within ADR-0002's committed tolerance, and `test_reduction.py` (E0b) is green and **bit-exact** —
