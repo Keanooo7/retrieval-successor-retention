@@ -1381,6 +1381,87 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
         ),
     ),
+    # --- orchestrator: hooks --- #
+    Mutation(
+        "hooks: .claude/** is no longer owner-only",
+        "test_orch_hooks.py::test_owner_only_",
+        "scripts/orchestrator/hooks.py",
+        '            if s == ".claude" and nxt != "worktrees":',
+        "            if False:",
+        "A headless agent could rewrite its own role file or the settings that load "
+        "its hooks -- the one edit that switches every other guardrail off. Only the "
+        ".claude cases of the owner-only tests can see it.",
+    ),
+    Mutation(
+        "hooks: a push that names main is not recognised",
+        "test_orch_hooks.py::test_push_to_main_",
+        "scripts/orchestrator/hooks.py",
+        '    return dst in ("main", "refs/heads/main") or dst.endswith('
+        '"/refs/heads/main")',
+        "    return False",
+        "R-2026-09-22-night-branch: main never moves in a night. With the refspec "
+        "check gone every spelling of a push to main -- main, HEAD:main, x:refs/heads/"
+        "main, :main, via -C/-c/bash -c, or `git update-ref` -- goes through.",
+    ),
+    Mutation(
+        "hooks: a researcher may read every outbox file",
+        "test_orch_hooks.py::test_blinding_",
+        "scripts/orchestrator/hooks.py",
+        '    if ctx.profile == "researcher" and ctx.run_id and kind == '
+        'f"{ctx.run_id}.md":',
+        '    if ctx.profile == "researcher":',
+        "The blinding failure of 09-21: the decisive researcher read S0-03's numbers "
+        "through the shared outbox. The own-file exemption widened to 'any file' "
+        "un-blinds every researcher while its own report still works.",
+    ),
+    Mutation(
+        "hooks: bare pytest is no longer slot-wrapped",
+        "test_orch_hooks.py::test_unwrapped_compute_",
+        "scripts/orchestrator/hooks.py",
+        '    if prog in ("pytest", "py.test") and not in_slot:',
+        "    if False:",
+        "Compute outside lane slots: two sessions each running the full suite on the "
+        "Studio at once is the contention the slot lanes exist to prevent.",
+    ),
+    Mutation(
+        "hooks: an internal error lets the tool call through",
+        "test_orch_hooks.py::test_fail_closed_",
+        "scripts/orchestrator/hooks.py",
+        '            reason = f"orchestrator hook error, failing closed: '
+        '{type(e).__name__}: {e}"',
+        "            reason = None",
+        "Claude Code treats any hook exit other than 0/2 as a non-blocking error and "
+        "runs the tool call. A parser bug would then silently disable every rule.",
+    ),
+    # --- orchestrator: outbox --- #
+    Mutation(
+        "outbox: the template placeholder counts as an answer",
+        "test_orch_outbox.py::test_template_placeholder_is_not_an_answer",
+        "scripts/orchestrator/outbox.py",
+        '    return content.startswith("<")',
+        "    return False",
+        "`BELIEVED, NOT VERIFIED: <list>` would pass the Stop hook: a report can end "
+        "with the template's own text in a required field, which is an absent field "
+        "that looks present.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_outbox.py::test_new_writes_the_template_with_the_run_id",
+                "a freshly generated template must fail on every required field; the "
+                "placeholder rule is exactly what makes it fail.",
+            ),
+        ),
+    ),
+    # --- orchestrator: verify --- #
+    Mutation(
+        "verify: the claim draw ignores the run id",
+        "test_orch_verify.py::test_draw_is_seeded_by_run_id",
+        "scripts/orchestrator/verify.py",
+        "    rng = random.Random(int(seed_for(run_id), 16))",
+        "    rng = random.Random(0)",
+        "Every run would re-execute the same claim positions, so a researcher who "
+        "knew the draw could put the claims it trusts least where it is never drawn. "
+        "Consistent everywhere else, so only the seed test sees it.",
+    ),
 )
 
 
