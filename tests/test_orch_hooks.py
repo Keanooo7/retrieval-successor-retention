@@ -727,7 +727,9 @@ def test_stop_output_is_a_top_level_block(root, capsys):
 
 
 def test_sessionstart_injects_night_json(root, capsys):
-    (root / ".orchestrator/night.json").write_text('{"branch": "night/2026-09-22"}')
+    # The contract path (loopcore.night_path): .orchestrator/state/night.json.
+    (root / ".orchestrator/state").mkdir(parents=True, exist_ok=True)
+    (root / ".orchestrator/state/night.json").write_text('{"branch": "night/2026-09-22"}')
     rc, out = _run("sessionstart", json.dumps({"cwd": str(root)}), _env(root), capsys)
     assert rc == 0
     ctx = json.loads(out)["hookSpecificOutput"]

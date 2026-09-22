@@ -171,19 +171,19 @@ def _git() -> str:
 
 
 def orch_root(cwd: Path | None = None) -> Path:
-    """``$RSR_ORCH_ROOT`` if set, else the git toplevel of ``cwd``.
+    """``$RSR_ORCH_ROOT`` if set, else the MAIN checkout (parent of the common git dir).
 
-    ⚠️ Slots are only shared between processes that resolve the **same** root. A
-    process started inside a separate worktree resolves that worktree's toplevel;
-    anything that must share the Mac Studio's cores with the main checkout (the
-    battery in its own worktree) must be launched with ``RSR_ORCH_ROOT`` set, or
-    from the main checkout with ``slot.py --cwd <worktree>``.
+    ⚠️ Slots are only shared between processes that resolve the **same** root. The
+    git toplevel would be wrong here: inside ``.worktrees/<item>`` it is the worktree
+    itself, so each worktree would get its own locks and the lanes would silently
+    stop counting. The common git dir's parent is the main checkout from anywhere
+    (same rule as ``loopcore.root``).
     """
     env = os.environ.get("RSR_ORCH_ROOT")
     if env:
         return Path(env).resolve()
     r = subprocess.run(
-        [_git(), "rev-parse", "--show-toplevel"],
+        [_git(), "rev-parse", "--path-format=absolute", "--git-common-dir"],
         cwd=cwd or Path.cwd(),
         capture_output=True,
         text=True,
@@ -193,7 +193,7 @@ def orch_root(cwd: Path | None = None) -> Path:
             f"cannot resolve the orchestrator root: RSR_ORCH_ROOT is unset and git "
             f"rev-parse failed: {r.stderr.strip()}"
         )
-    return Path(r.stdout.strip()).resolve()
+    return Path(r.stdout.strip()).resolve().parent
 
 
 # ------------------------------------------------------------------------- config

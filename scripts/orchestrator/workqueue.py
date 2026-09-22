@@ -140,18 +140,22 @@ def _git_bin() -> str:
 
 
 def repo_root() -> Path:
-    """``RSR_ORCH_ROOT`` if set, else the git toplevel of the cwd (contract)."""
+    """``RSR_ORCH_ROOT`` if set, else the MAIN checkout (parent of the common git dir).
+
+    Not the toplevel: inside ``.worktrees/<item>`` that is the worktree, and the
+    queue and night.json would fork per worktree (same rule as ``loopcore.root``).
+    """
     env = os.environ.get("RSR_ORCH_ROOT")
     if env:
         return Path(env).resolve()
     proc = subprocess.run(
-        [_git_bin(), "rev-parse", "--show-toplevel"],
+        [_git_bin(), "rev-parse", "--path-format=absolute", "--git-common-dir"],
         capture_output=True,
         text=True,
     )
     if proc.returncode != 0:
         refuse(Exit.DID_NOT_RUN, "not in a git repository and RSR_ORCH_ROOT is unset")
-    return Path(proc.stdout.strip())
+    return Path(proc.stdout.strip()).resolve().parent
 
 
 class Git:

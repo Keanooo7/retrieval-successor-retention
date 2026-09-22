@@ -1085,7 +1085,12 @@ def sessionstart_context(payload: dict, env: dict[str, str]) -> str:
     profile = resolve_profile(env.get("RSR_PROFILE"), payload.get("agent_type"))
     root = _project_dir(payload, env)
     lines = [f"[orchestrator] profile={profile} run_id={env.get('RSR_RUN_ID') or '-'}"]
-    night = Path(env.get("RSR_NIGHT_JSON") or root / ".orchestrator" / "night.json")
+    # night.json lives in the MAIN checkout's state dir (loopcore.night_path);
+    # RSR_ORCH_ROOT is exported by tick/dispatch, the project dir is the fallback.
+    orch_root = Path(env.get("RSR_ORCH_ROOT") or root)
+    night = Path(
+        env.get("RSR_NIGHT_JSON") or orch_root / ".orchestrator" / "state" / "night.json"
+    )
     if night.is_file():
         lines.append(f"night.json ({night}):\n{night.read_text().strip()}")
     else:

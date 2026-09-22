@@ -146,11 +146,15 @@ def resolve_root() -> Path:
     if env:
         return Path(env).resolve()
     p = subprocess.run(
-        [git_exe(), "rev-parse", "--show-toplevel"], capture_output=True, text=True
+        [git_exe(), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        capture_output=True,
+        text=True,
     )
     if p.returncode != 0:
         raise CannotRun("not inside a git repository and RSR_ORCH_ROOT is unset")
-    return Path(p.stdout.strip())
+    # The MAIN checkout, not this worktree's toplevel: night.json lives there
+    # (same rule as loopcore.root).
+    return Path(p.stdout.strip()).resolve().parent
 
 
 def resolve_commit(root: Path, rev: str) -> str | None:
@@ -294,22 +298,53 @@ def check_structure(front: dict, body: str, brief: Path) -> list[Finding]:
     return out
 
 
-def check_baseline(front: dict, root: Path, base: str) -> list[Finding]:
+def check_baseline(
+    front: dict, root: Path, base: str, brief: Path | None = None
+) -> list[Finding]:
+    """`baseline_sha` is the tree the brief was written against: HEAD *before* the
+    brief's own commit. Two findings, both mechanical:
+
+    * the baseline is not an ancestor of (or equal to) the base -- the brief was
+      written against a tree this night does not contain;
+    * the brief already exists at the baseline -- the baseline is the brief's own
+      commit or later (the S0-03 Brief 0 error, 2026-09-21).
+
+    📌 Not `baseline == base`. That rule (the first build) made every committed
+    brief unlintable: committing it moves HEAD past its baseline, and each night
+    pins a new base. Drift since the baseline is caught where it matters -- every
+    anchor and premise is re-checked AT the base.
+    """
     claimed = front.get("baseline_sha")
     if not isinstance(claimed, str) or not claimed.strip():
         return [Finding("baseline", "`baseline_sha` is missing or empty")]
     sha = resolve_commit(root, claimed.strip())
     if sha is None:
         return [Finding("baseline", f"baseline_sha {claimed} does not resolve here")]
-    if sha != base:
+    if _git(root, "merge-base", "--is-ancestor", sha, base).returncode != 0:
         return [
             Finding(
                 "baseline",
-                f"baseline_sha {claimed} is {sha[:12]}, the base is {base[:12]}. "
-                f"A brief's baseline is HEAD when it was written, never its own commit.",
+                f"baseline_sha {claimed} ({sha[:12]}) is not an ancestor of the base "
+                f"{base[:12]}: the brief was written against a tree this base lacks.",
+            )
+        ]
+    rel = _rel_in_repo(brief, root) if brief is not None else None
+    if rel is not None and _git(root, "cat-file", "-e", f"{sha}:{rel}").returncode == 0:
+        return [
+            Finding(
+                "baseline",
+                f"{rel} already exists at baseline_sha {sha[:12]}. A brief's baseline "
+                f"is HEAD when it was written, never its own commit.",
             )
         ]
     return []
+
+
+def _rel_in_repo(brief: Path, root: Path) -> str | None:
+    try:
+        return brief.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return None
 
 
 def check_anchors(front: dict, body: str, root: Path, base: str) -> list[Finding]:
@@ -521,7 +556,7 @@ def lint(brief: Path, root: Path, base: str) -> list[Finding]:
     if front is None:
         return [Finding("front-matter", err or "no front matter")]
     out = check_structure(front, body, brief)
-    out += check_baseline(front, root, base)
+    out += check_baseline(front, root, base, brief)
     out += check_anchors(front, body, root, base)
     out += check_files_in_scope(front, root, base)
     out += check_premises(front, root, base)
