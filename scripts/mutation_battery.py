@@ -1216,6 +1216,65 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
         ),
     ),
+    # --- orchestrator: lint_brief ---
+    # Brief errors are the dominant failure (overnight-2026-09-21.md §6). Each
+    # mutation removes one of lint_brief's checks; the test that plants that class
+    # of brief error must redden, and nothing else.
+    Mutation(
+        "lint_brief: a drifted anchor passes",
+        "test_a_drifted_anchor_is_a_finding",
+        "scripts/orchestrator/lint_brief.py",
+        "        if actual is not None and expect in actual:\n",
+        "        if True:\n",
+        "The rsr.py:433-vs-:448 class. Accepting any line as the anchor means a "
+        "brief citing a line that no longer holds its text lints clean.",
+    ),
+    Mutation(
+        "lint_brief: a writer premise is run",
+        "test_a_writer_command_is_rejected_and_not_run",
+        "scripts/orchestrator/lint_brief.py",
+        "    for pat, label in WRITER_PATTERNS:\n",
+        "    for pat, label in ():\n",
+        "A premise is a READ of the base. With no writer filter, a redirect, `rm`, "
+        "a commit and a push are executed rather than rejected.",
+    ),
+    Mutation(
+        "lint_brief: a wrong baseline_sha passes",
+        "test_a_wrong_baseline_sha_is_a_finding",
+        "scripts/orchestrator/lint_brief.py",
+        "    if sha != base:\n",
+        "    if False:\n",
+        "The baseline off by the brief's own commit (Brief 0, S0-03, 2026-09-21) "
+        "lints clean.",
+    ),
+    Mutation(
+        "lint_brief: no base exits 0",
+        "test_no_base_exits_3",
+        "scripts/orchestrator/lint_brief.py",
+        "        return did_not_run(str(e))\n",
+        "        return Exit.OK\n",
+        "3 collapsing to 0: a lint that never ran -- no base to check against -- "
+        "reported as a clean brief.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_lint_brief.py::"
+                "test_the_cli_exits_through_the_protocol_with_json",
+                "the CLI test asserts the same refusal end to end through "
+                "`python -m`, so one edit to the refusal reddens both: the unit "
+                "and the process exit status.",
+            ),
+        ),
+    ),
+    Mutation(
+        "lint_brief: the throwaway worktree is kept",
+        "test_premises_run_in_a_throwaway_worktree_at_base",
+        "scripts/orchestrator/lint_brief.py",
+        '        removed = _git(self.root, "worktree", "remove", "--force", '
+        "str(self.path))\n",
+        "        removed = subprocess.CompletedProcess([], 0)\n",
+        "Premise checks run in a detached worktree at base; if it is not removed "
+        "every lint leaves a registered worktree behind in the shared repository.",
+    ),
 )
 
 
