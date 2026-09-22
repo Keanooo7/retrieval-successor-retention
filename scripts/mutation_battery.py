@@ -44,6 +44,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from orchestrator import lanes  # noqa: E402
 
 from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
 
@@ -109,6 +112,21 @@ _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
     "of the reduction (ADR-0006)."
+)
+
+_LANE_FLOCK_COUPLING = (
+    "orchestrator: the flock is the only thing that makes a slot exclusive, and "
+    "every one of these asserts that a held slot is held -- against a second "
+    "process, a killed holder, a reservation, the status probe, a full lane, or an "
+    "orphaned child. One mechanism, observed from six places."
+)
+_LANES_ABSENT_COUPLING = (
+    "orchestrator: every CLI path loads ops/lanes.json through load_config, so the "
+    "refusal naming C0 is observed through `lanes status` and `slot run` as well."
+)
+_SLOT_RC_COUPLING = (
+    "orchestrator: a signalled child's 128+N is passed through the same verbatim "
+    "exit as any other rc, so collapsing it reddens the signal tests too."
 )
 
 MUTATIONS: tuple[Mutation, ...] = (
@@ -1091,6 +1109,113 @@ MUTATIONS: tuple[Mutation, ...] = (
         "set-status is the only writer; without the check a caller claims an item "
         "the deterministic rule says is not ready, and the LLM decides readiness",
     ),
+    # --- orchestrator: lanes ---
+    Mutation(
+        "lane flock becomes a no-op",
+        "test_processes_cannot_hold_more_than_N_slots",
+        "scripts/orchestrator/lanes.py",
+        "        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)\n",
+        "        pass\n",
+        "the semaphore stops counting: every process is admitted, so nine 1-thread "
+        "CPU jobs become as many as ask, on 16 cores",
+        off_gate_allowed=tuple(
+            (node, _LANE_FLOCK_COUPLING)
+            for node in (
+                "tests/test_orch_lanes.py::test_a_killed_holder_releases_its_slots",
+                "tests/test_orch_lanes.py::test_a_multi_slot_admission_is_all_or_nothing",
+                "tests/test_orch_lanes.py::test_battery_reserves_cpu_det_slots",
+                "tests/test_orch_lanes.py::test_status_json_names_the_holder",
+                "tests/test_orch_slot.py::test_a_full_lane_refuses_3_after_the_wait",
+                "tests/test_orch_slot.py::"
+                "test_slots_stay_held_while_an_orphaned_child_lives",
+            )
+        ),
+    ),
+    Mutation(
+        "absent ops/lanes.json falls back to typed defaults",
+        "test_missing_lanes_file_is_refused_naming_C0",
+        "scripts/orchestrator/lanes.py",
+        "        raise Refused(_absent_message(path))",
+        "        return LanesConfig(9, 2, 2, 8.0, 1)",
+        "capacities stop being MEASURED by C0: a hand-typed default is D-1's shape "
+        "applied to the scheduler",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_lanes.py::test_status_cli_without_lanes_file_exits_3",
+                _LANES_ABSENT_COUPLING,
+            ),
+            (
+                "tests/test_orch_slot.py::"
+                "test_missing_lanes_file_refuses_3_and_does_not_run",
+                _LANES_ABSENT_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "mps admission skips the memory check",
+        "test_mps_admission_refuses_when_free_memory_is_insufficient",
+        "scripts/orchestrator/lanes.py",
+        "            if free_gb - peak_gb >= cfg.reserve_gb:",
+        "            if True:",
+        "an MPS job is admitted into unified memory it does not fit, and swaps the "
+        "CPU lanes it shares 64 GB with",
+    ),
+    # --- orchestrator: slot ---
+    Mutation(
+        "slot collapses the child's rc to a bool",
+        "test_the_childs_rc_passes_through_verbatim",
+        "scripts/orchestrator/slot.py",
+        "    raise SystemExit(rc)",
+        "    raise SystemExit(bool(rc))",
+        "2/3/5/137 all become 1: 'nothing to compare', 'did not run' and 'killed' "
+        "collapse into 'real failure'",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plus_n",
+                _SLOT_RC_COUPLING,
+            ),
+            (
+                "tests/test_orch_slot.py::test_sigterm_is_forwarded_and_recorded",
+                _SLOT_RC_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "slot does not force the thread env",
+        "test_cpu_det_forces_exactly_slots_threads",
+        "scripts/orchestrator/slot.py",
+        "        env.update(lanes.thread_env(threads))",
+        "        pass",
+        "a 1-slot cpu-det job spawns a BLAS/OpenMP pool per core; the slot count "
+        "stops meaning cores",
+    ),
+    Mutation(
+        "slot does not pass its lock fds to the child",
+        "test_slots_stay_held_while_an_orphaned_child_lives",
+        "scripts/orchestrator/slot.py",
+        "pass_fds=lease.fds()",
+        "pass_fds=()",
+        "a SIGKILLed wrapper frees the slots of a job that is still running",
+    ),
+    # --- orchestrator: battery threads ---
+    Mutation(
+        "battery suite threads not capped",
+        "test_the_env_override_caps_every_thread_pool",
+        "scripts/mutation_battery.py",
+        # Multi-line on purpose: the one-line form also occurs in THIS table (the
+        # slot entry above), and apply() replaces the first occurrence.
+        "    if threads is not None:\n        env.update(lanes.thread_env(threads))\n",
+        "    if threads is not None:\n        pass\n",
+        "the battery's pytest ignores RSR_BATTERY_THREADS and battery_cpu_slots and "
+        "takes every core from the cpu-det lane",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_battery.py::test_lanes_file_supplies_battery_cpu_slots",
+                "both sources of the cap reach the suite through the one "
+                "env.update; one edit, both sources lost",
+            ),
+        ),
+    ),
 )
 
 
@@ -1209,7 +1334,45 @@ def _suite_env() -> dict[str, str]:
     written from it before the mismatch was noticed. The census has to come from
     the run that claims it.
     """
-    return {**os.environ, "RSR_TEST_COUNT": SCRATCH_COUNT}
+    threads, _source = suite_threads()
+    env = {**os.environ, "RSR_TEST_COUNT": SCRATCH_COUNT}
+    if threads is not None:
+        env.update(lanes.thread_env(threads))
+    return env
+
+
+def suite_threads() -> tuple[int | None, str]:
+    """How many threads the mutated suite may use, and where that number came from.
+
+    The battery runs beside the lane scheduler's other jobs on one Mac Studio
+    (ADR-0007), and an uncapped pytest spawns a BLAS/OpenMP pool per core. So:
+
+    1. ``RSR_BATTERY_THREADS`` if set (a positive int, else DID NOT RUN);
+    2. else ``battery_cpu_slots`` from ``ops/lanes.json`` -- the cpu-det slots the
+       battery lane reserves (`scripts/orchestrator/lanes.py`) -- when that file
+       exists; a present but invalid file is DID NOT RUN, never ignored;
+    3. else ``None``: the environment is left as it was, which is the behaviour
+       before the scheduler existed. ``ops/lanes.json`` is absent until capacity
+       experiment C0 runs.
+
+    `main()` prints which, so a battery record says what it ran under.
+    """
+    raw = os.environ.get("RSR_BATTERY_THREADS")
+    if raw is not None:
+        try:
+            n = int(raw)
+        except ValueError:
+            n = 0
+        if n < 1:
+            refuse(Exit.DID_NOT_RUN, f"RSR_BATTERY_THREADS={raw!r} is not an int >= 1")
+        return n, "RSR_BATTERY_THREADS"
+    if not (ROOT / lanes.LANES_FILE).exists():
+        return None, f"unset ({lanes.LANES_FILE} absent; environment unchanged)"
+    try:
+        cfg = lanes.load_config(ROOT)
+    except lanes.Refused as e:
+        refuse(Exit.DID_NOT_RUN, str(e))
+    return max(cfg.battery_cpu_slots, 1), f"{lanes.LANES_FILE} battery_cpu_slots"
 
 
 def run_suite() -> set[str]:
@@ -1267,6 +1430,11 @@ def main() -> Exit:
         print("UNKNOWN: the battery has no mutations to run", file=sys.stderr)
         return Exit.UNKNOWN
 
+    threads, source = suite_threads()
+    print(
+        f"suite threads: {threads if threads is not None else 'uncapped'} "
+        f"(source: {source})"
+    )
     baseline = run_suite()
     if baseline:
         # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
