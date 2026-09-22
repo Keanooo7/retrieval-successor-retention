@@ -1045,6 +1045,52 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
         ),
     ),
+    # --- orchestrator: workqueue ---
+    Mutation(
+        "the work queue offers owner items",
+        "test_owner_item_",
+        "scripts/orchestrator/workqueue.py",
+        '            return Readiness(False, ["owner decision: never dispatched"])',
+        "            pass",
+        "an owner decision (RESEARCH-CONTEXT §12, sprint gates) becomes dispatchable "
+        "work: the queue would hand an agent a decision only Brendan may make",
+    ),
+    Mutation(
+        "a PREREG co-committed with code satisfies the queue",
+        "test_prereg_cocommitted_",
+        "scripts/orchestrator/workqueue.py",
+        "        if touched != {path}:",
+        "        if path not in touched:",
+        "CLAUDE.md: pre-registration commits land in their own commit, ahead of the "
+        "experiment; a threshold committed alongside its experiment's code is not "
+        "evidence it came first",
+    ),
+    Mutation(
+        "the work queue's §16 sprint cap moves to 5",
+        "test_sprint_cap_",
+        "scripts/orchestrator/workqueue.py",
+        "MAX_SPRINT = 4\n",
+        "MAX_SPRINT = 5\n",
+        "§16 approves weeks 1-4 only; a sprint-5 item would validate and be scheduled",
+    ),
+    Mutation(
+        "an unsigned ruling satisfies the queue",
+        "test_ruling_unsigned_",
+        "scripts/orchestrator/workqueue.py",
+        '        for k in ("date", "stated_in"):\n            if not meta.get(k):',
+        "        for k in ():\n            if not meta.get(k):",
+        "a ruling file with no date or stated_in (docs/owner/rulings/README.md) "
+        "unblocks work as if Brendan had stated it",
+    ),
+    Mutation(
+        "a blocked item can be claimed",
+        "test_claim_of_",
+        "scripts/orchestrator/workqueue.py",
+        '    if args.status == "claimed":',
+        "    if False:",
+        "set-status is the only writer; without the check a caller claims an item "
+        "the deterministic rule says is not ready, and the LLM decides readiness",
+    ),
 )
 
 
