@@ -75,3 +75,19 @@ __pycache__/
 
 # The per-run test census written by tests/conftest.py (gauntlet 1.3).
 test-count.json
+
+# The orchestrator's runtime state (scripts/orchestrator/). Machine-local and
+# rewritten every tick: locks, logs, state (night.json, pipeline.json, spend.jsonl,
+# notified.json), claude session records and their output, slot job records, the
+# HALT switch and the queue file. `.orchestrator/outbox/` and
+# `.orchestrator/cycle-protocol.md` stay TRACKED -- the outbox is the researcher's
+# report channel and the protocol is what every manager cycle reads.
+/.orchestrator/locks/
+/.orchestrator/logs/
+/.orchestrator/state/
+/.orchestrator/cycles/
+/.orchestrator/jobs/
+/.orchestrator/HALT
+/.orchestrator/queue.json
+# Per-item worktrees and the manager's (`.worktrees/<item>`, `.worktrees/_mgr`).
+/.worktrees/
