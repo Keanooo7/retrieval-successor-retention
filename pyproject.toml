@@ -7,7 +7,7 @@ name = "rsr"
 version = "0.1.0"
 description = "Retrieval-Successor Retention: a prospective retention policy for Thought Gestalt"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12,<3.13"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Brendan Keane" }]
 
