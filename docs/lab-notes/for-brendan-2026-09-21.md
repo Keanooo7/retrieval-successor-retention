@@ -14,3 +14,23 @@ One line each. The manager did not act on any of these; work that does not depen
   - `experiments/s0-02/write_ledger.py` has typed `exit_code=0` rows.
   - `tests/test_evidence_machinery.py::test_a_later_canary_reading_does_not_redden_the_09_18_tally` hard-codes `cycle-99`, and it errors if a real `runs/canary/cycle-99/` ever exists.
   - `src/rsr/gates/` (the only emitter of exit `4`) is still off trunk.
+
+## Resolved 2026-09-22
+
+Appended, not edited. The items above stay as written on 2026-09-21.
+
+- **Python is not pinned. Resolved.** `5563b62` (`build: pin Python 3.12 (.python-version,
+  requires-python ==3.12)`), owner ruling R2 of 2026-09-22 per that commit's message. The three
+  3.14.6 ledgers (S0-03, E-feas-s003, decisive) are **not re-run**. Each RESULTS now carries a
+  dated provenance note saying so (`experiments/s0-03-rewardable-corpus/RESULTS.md`,
+  `experiments/efeas/RESULTS-s003.md`, `experiments/decisive-shuffle/RESULTS.md`).
+- **`uv.lock` is untracked. Resolved.** `9a763df` (`build: commit uv.lock (resolved on 3.12)`),
+  owner ruling R1 of 2026-09-22 per that commit's message. It affects ledgers written from now on.
+  Ledgers already written still record `dirty: true`.
+- **Also resolved, not listed above: local `main` reset.** Local `main` now equals `origin/main`
+  (`a1304c9` when this note was written). The original local-main SHAs are kept in the annotated
+  local tag `archive/local-main-2026-09-18` (→ `39302cb`). The tag is local, so check it exists
+  before relying on it from another clone.
+
+Not resolved by the above, and still open: the E0i signed/unsigned mismatch, the stale canary
+baseline, the dispatch line on the canary exit protocol, and the follow-up list.
