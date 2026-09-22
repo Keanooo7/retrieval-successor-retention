@@ -200,6 +200,8 @@ resolved in favour of whichever source reads better.
 PPL, +54%** — the largest ablation in the paper. In this repo's trained model, deleting all 16 slots
 costs **≈ 0%**. Those two numbers are not directly comparable (different corpora, scales and
 objectives) and **the gap is the thing the project currently has to explain.**
+*(Update 2026-09-22: the "≈ 0%" is the old unmasked-objective model. Under the masked objective the
+decisive run (#34) reads the memory as live but does not show retrieval. See §10.3.)*
 
 ### The divergences that matter (`docs/code-vs-paper.md`, all marked **source**)
 
@@ -846,7 +848,49 @@ Hal-6 measures?"* **with no object.**
 **Until a target token requires retrieval, "the memory is inert" is a finding about the corpus, not
 about TG.** This is upstream of all three causes the overnight loop proposed.
 
-### 10.3 The model this repo trains has no usable memory
+> 📌 **Update 2026-09-22.** S0-03 puts the answer in the token stream (`SyntheticConfig.answer_in_stream`,
+> default `True`), per `experiments/s0-03-rewardable-corpus/RESULTS.md` and
+> `experiments/efeas/RESULTS-s003.md`. The S0-03 ledger verdict is `inconclusive`, "retrieval not
+> shown (not both at chance)" (`runs/s0-03-rewardable-corpus/ledger.json`). The paragraph above
+> describes the pre-S0-03 corpus.
+
+### 10.3 The model this repo trains has no usable memory — *superseded 2026-09-22; kept as history*
+
+> 📌 **Update 2026-09-22: the decisive experiment below has run. The heading above describes the
+> old unmasked-objective model and no longer describes the repo's trained model.** The decisive run
+> is #34: `experiments/decisive-shuffle/RESULTS.md`, `runs/decisive-shuffle/ledger.json`,
+> `provenance.git_sha` `90438f3`, three seeds per arm, CPU. It re-ran the shuffle control on
+> S0-03's rewardable corpus under three objectives. Every figure here was read from that ledger:
+>
+> | arm | objective | `arm{X}.ratio` (train batch, mean ± sd) | verdict |
+> |---|---|---|---|
+> | A | unmasked, hinge off (#17's config, new corpus) | **0.0030 ± 0.0023** | inert |
+> | B | masked, hinge off | **9.33 ± 4.68** | live |
+> | C | masked, hinge at `TGConfig` default | **7.74 ± 6.06** | live |
+>
+> - **The memory path is not broken** (ledger `verdict.outcome` `falsified` for the inert
+>   hypothesis). The cause of #17's null was the objective, not the wiring. Arm A shows that the
+>   corpus change alone was not enough.
+> - 🔴 **Live is not retrieval.** Held-out answer-token NLL, with the model's own memory intact,
+>   is **2.904 ± 0.057** (B) and **2.852 ± 0.088** (C) (`arm{B,C}.heldout.answer.answer_all.honest_nll`).
+>   That is at or above chance `ln 16 ≈ 2.773`. ⚠️ Per bucket, `gap_1` is below chance
+>   (B 2.725, C 2.609), and gap = 1 is readable through context seeding outside the memory (RESULTS
+>   caveats). `gap_2_to_M` and `gap_gt_M` are 2.88–2.94, above chance. The memory is used, and it
+>   is not shown to retrieve the right answer.
+> - **Arm A's memory is row-agnostic, not ignored.** Its trained memories are almost exactly
+>   collinear across rows: `armA.train.cosine_trained` **0.9995 ± 0.0005**, against a decoy's
+>   0.565. Matched-norm random replacement moves tokens at `armA.train.random_ratio`
+>   **2.10 ± 1.11**. So the readout uses memory, but the contents carry nothing row-specific. This
+>   is the PREREG's own descriptive reading ("random ≥ 0.1 while the shuffle ≤ 0.01").
+> - **What follows for the text below.** The S0-04 / #17 finding (`runs/shuffle-control/ledger.json`)
+>   still stands **for the model it measured**: unmasked loss, pre-S0-03 corpus. The decisive
+>   experiment's "Still inert ⇒ … broken" branch **did not occur**. The "Live ⇒ the cause was the
+>   objective" branch did, **with the retrieval caveat above**, which that sentence did not
+>   anticipate.
+> - ⚠️ The ledger records `python: 3.14.6`, which predates the 3.12 pin (`5563b62`). See the
+>   provenance note in the RESULTS file.
+
+**The original 2026-09-20 text follows, unedited.**
 
 ✅ **Verified by a stronger test than the loop ran, and re-derived from committed code on
 2026-09-20** (`runs/shuffle-control/ledger.json`, verdict `survived`). Hand a document's row
