@@ -44,6 +44,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from orchestrator import lanes  # noqa: E402
 
 from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
 
@@ -1163,7 +1166,45 @@ def _suite_env() -> dict[str, str]:
     written from it before the mismatch was noticed. The census has to come from
     the run that claims it.
     """
-    return {**os.environ, "RSR_TEST_COUNT": SCRATCH_COUNT}
+    threads, _source = suite_threads()
+    env = {**os.environ, "RSR_TEST_COUNT": SCRATCH_COUNT}
+    if threads is not None:
+        env.update(lanes.thread_env(threads))
+    return env
+
+
+def suite_threads() -> tuple[int | None, str]:
+    """How many threads the mutated suite may use, and where that number came from.
+
+    The battery runs beside the lane scheduler's other jobs on one Mac Studio
+    (ADR-0007), and an uncapped pytest spawns a BLAS/OpenMP pool per core. So:
+
+    1. ``RSR_BATTERY_THREADS`` if set (a positive int, else DID NOT RUN);
+    2. else ``battery_cpu_slots`` from ``ops/lanes.json`` -- the cpu-det slots the
+       battery lane reserves (`scripts/orchestrator/lanes.py`) -- when that file
+       exists; a present but invalid file is DID NOT RUN, never ignored;
+    3. else ``None``: the environment is left as it was, which is the behaviour
+       before the scheduler existed. ``ops/lanes.json`` is absent until capacity
+       experiment C0 runs.
+
+    `main()` prints which, so a battery record says what it ran under.
+    """
+    raw = os.environ.get("RSR_BATTERY_THREADS")
+    if raw is not None:
+        try:
+            n = int(raw)
+        except ValueError:
+            n = 0
+        if n < 1:
+            refuse(Exit.DID_NOT_RUN, f"RSR_BATTERY_THREADS={raw!r} is not an int >= 1")
+        return n, "RSR_BATTERY_THREADS"
+    if not (ROOT / lanes.LANES_FILE).exists():
+        return None, f"unset ({lanes.LANES_FILE} absent; environment unchanged)"
+    try:
+        cfg = lanes.load_config(ROOT)
+    except lanes.Refused as e:
+        refuse(Exit.DID_NOT_RUN, str(e))
+    return max(cfg.battery_cpu_slots, 1), f"{lanes.LANES_FILE} battery_cpu_slots"
 
 
 def run_suite() -> set[str]:
@@ -1221,6 +1262,11 @@ def main() -> Exit:
         print("UNKNOWN: the battery has no mutations to run", file=sys.stderr)
         return Exit.UNKNOWN
 
+    threads, source = suite_threads()
+    print(
+        f"suite threads: {threads if threads is not None else 'uncapped'} "
+        f"(source: {source})"
+    )
     baseline = run_suite()
     if baseline:
         # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
