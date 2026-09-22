@@ -245,13 +245,21 @@ def _baseline_sha(base: dict, runs_root: Path) -> str | None:
 
 def old_sha_command(sha: str | None, cycle: int, device: str) -> str:
     """The environment check a code change leaves available: the baseline's own
-    sha, in a pinned worktree, against its own committed baseline. It must hold."""
+    sha, in a pinned worktree, against its own committed baseline. It must hold.
+
+    Runs with **this** checkout's interpreter, not a fresh `uv sync`: shas before
+    `9a763df` have no `uv.lock`, so a sync there would resolve a new environment
+    -- the one variable the check exists to hold still. That is how the
+    2026-09-21 old-sha reading was taken (same torch, same machine). `--device` is
+    passed only for the CPU variant; older scripts take the cycle alone and are
+    MPS-only.
+    """
     pin = sha or "<SHA-THAT-WROTE-THE-BASELINE>"
     wt = f"/tmp/rsr-canary-{pin[:12]}"
+    dev = f" --device {device}" if device != "mps" else ""
     return (
-        f"/opt/homebrew/bin/git -C {_REPO} worktree add --detach {wt} {pin} && "
-        f"cd {wt} && uv sync --frozen --extra dev && "
-        f".venv/bin/python scripts/canary.py {cycle} --device {device}"
+        f"/opt/homebrew/bin/git -C {_CODE} worktree add --detach {wt} {pin} && "
+        f"cd {wt} && {_CODE}/.venv/bin/python scripts/canary.py {cycle}{dev}"
     )
 
 
