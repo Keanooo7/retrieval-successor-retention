@@ -78,3 +78,5 @@ test-count.json
 
 # Per-brief git worktrees (one per researcher). Never versioned.
 /.worktrees/
+# Agent worktrees created by Claude Code subagents (isolation: worktree).
+/.claude/worktrees/
