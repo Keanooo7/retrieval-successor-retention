@@ -499,12 +499,8 @@
       "blocker": "[P9] (DNC) is the one source left, per docs/citation-audit.md.",
       "owner_decision": false,
       "numbers": [],
-      "conflict": {
-        "experiments/e0f/RESULTS.md": "Status: NOT RUN (file unchanged since the scaffold commit 83bdf57, 2026-09-17)",
-        "docs/citation-audit.md": "pass 2 ran 2026-09-20 (commit 8f6f81d): 13 of 14 checked, [P9] outstanding; [P11] wrong in the spec in three places",
-        "docs/RESEARCH-CONTEXT.md §6": "pass 2 run 2026-09-20, 13 of 14 done, [P9] outstanding",
-        "reading": "status shown as in_progress from the audit file; RESULTS.md was never updated. Not reconciled here."
-      }
+      "verdict": "PARTIAL: 13 of 14 sources checked, [P9] outstanding. Not 'logged' for deleting spec §1's verification note.",
+      "reconciled": "2026-09-22: experiments/e0f/RESULTS.md corrected from the scaffold's NOT RUN to PARTIAL (commit 965d025); git history settled it (the file was never updated after either pass)."
     },
     {
       "id": "E0g",

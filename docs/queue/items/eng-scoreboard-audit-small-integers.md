@@ -7,7 +7,7 @@ workstream: W0
 lane: agent-only
 slots: 1
 requires: []
-status: blocked
+status: done
 attempts: 0
 source: docs/lab-notes/overnight-2026-09-21.md:30; scripts/render_scoreboard.py:289
 ---
