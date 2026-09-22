@@ -128,6 +128,12 @@ _SLOT_RC_COUPLING = (
     "orchestrator: a signalled child's 128+N is passed through the same verbatim "
     "exit as any other rc, so collapsing it reddens the signal tests too."
 )
+_AUDIT_FLAGS_COUPLING = (
+    "the test asserts that `audit_prose` flags a specific literal; a mutation that "
+    "makes the audit flag nothing necessarily reddens every such assertion. The "
+    "small-integer rule's own mutations (under `# --- orchestrator: "
+    "render_scoreboard ---`) each redden only their gate."
+)
 
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
@@ -545,6 +551,21 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "clock is skipped AND a real number beside it is still flagged -- so "
                 "an audit that flags nothing necessarily reddens it too",
             ),
+            # 2026-09-22: every small-integer refusal test asserts that the audit
+            # flags something, so an audit that flags nothing reddens each of them.
+            *(
+                (f"tests/test_audit_small_ints.py::{t}", _AUDIT_FLAGS_COUPLING)
+                for t in (
+                    "test_the_audit_refuses_a_small_integer_matched_only_by_an_"
+                    "unrelated_ledger",
+                    "test_the_audit_refuses_a_small_integer_beside_its_key_with_the_"
+                    "wrong_value",
+                    "test_the_audit_refuses_a_small_integer_from_another_run",
+                    "test_the_audit_refuses_a_small_integer_in_a_table_cell_its_"
+                    "header_key_denies",
+                    "test_decimals_keep_the_value_rule",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -560,8 +581,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the board's own counts stop backing the prose",
         "test_the_rendered_artefact_passes_its_own_audit",
         "scripts/render_scoreboard.py",
-        "    for row in board.rows:\n        for v in row.values():",
-        "    for row in []:\n        for v in row.values():",
+        # 📌 Re-anchored 2026-09-22 (small-integer audit): the board's per-run
+        # fields now back a number only beside their own key, via `_index()`.
+        "    for row in board.rows:\n        for k, v in row.items():",
+        "    for row in []:\n        for k, v in row.items():",
         "5.2: the generated artefact fails its own audit on the per-run row "
         "counts -- exactly the numbers the script exists to stop anyone typing",
     ),
@@ -600,8 +623,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a first canary reading exits 0 again",
         "test_a_first_canary_reading_exits_2_nothing_to_compare",
         "scripts/canary.py",
-        '"baseline": Exit.UNKNOWN}',
-        '"baseline": Exit.OK}',
+        # 📌 Re-anchored 2026-09-22 (canary split): EXIT_CODES became a multi-line
+        # dict when `not_comparable` was added, so the old `...UNKNOWN}` anchor
+        # would have aborted the battery at this entry.
+        '    "baseline": Exit.UNKNOWN,\n',
+        '    "baseline": Exit.OK,\n',
         "5.4: the ORIGINAL defect -- a first reading, which compared nothing, "
         "reported as a pass",
     ),
@@ -609,8 +635,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a first canary reading exits 3 again",
         "test_a_first_canary_reading_exits_2_nothing_to_compare",
         "scripts/canary.py",
-        '"baseline": Exit.UNKNOWN}',
-        '"baseline": Exit.DID_NOT_RUN}',
+        '    "baseline": Exit.UNKNOWN,\n',
+        '    "baseline": Exit.DID_NOT_RUN,\n',
         "S0-05: the FIX's defect, on the right axis. Cycle 0 mapped a first reading "
         "to 3; it ran and had nothing to compare, which is 2. The 0-mutation above "
         "only proves the old defect stays dead -- it cannot see the value the fixer "
@@ -1471,6 +1497,105 @@ MUTATIONS: tuple[Mutation, ...] = (
         "Every run would re-execute the same claim positions, so a researcher who "
         "knew the draw could put the claims it trusts least where it is never drawn. "
         "Consistent everywhere else, so only the seed test sees it.",
+    ),
+    # --- orchestrator: canary ---
+    Mutation(
+        "a changed loss path is compared anyway",
+        "test_canary_not_comparable",
+        "scripts/canary.py",
+        "        if not ok:\n"
+        '            verdict, moved, detail = "not_comparable", [], why',
+        "        if False:\n"
+        '            verdict, moved, detail = "not_comparable", [], why',
+        "canary split 2026-09-22: at 945b501 a code change read MOVED on 6 of 6 "
+        "beats and exited 1 -- a code change reported as an environment move. "
+        "Skipping the comparability check restores exactly that.",
+    ),
+    Mutation(
+        "the CPU canary gets a tolerance",
+        "test_the_cpu_canary_is_bit_exact",
+        "scripts/canary.py",
+        "REL_TOL_CPU = 0.0",
+        "REL_TOL_CPU = 1e-4",
+        "canary split: the CPU variant exists to be bit-exact; a tolerance "
+        "silently makes it a second MPS canary.",
+    ),
+    Mutation(
+        "the CPU canary runs on every thread",
+        "test_the_cpu_canary_trains_on_one_thread",
+        "scripts/canary.py",
+        "        torch.set_num_threads(CPU_THREADS)\n",
+        "        pass\n",
+        "canary split: multi-threaded CPU reductions are the nondeterminism a "
+        "bit-exact canary cannot absorb.",
+    ),
+    Mutation(
+        "loss_path_hash ignores file contents",
+        "test_loss_path_hash_moves_with_the_code",
+        "scripts/canary.py",
+        "        h.update((repo / rel).read_bytes())\n",
+        "        pass\n",
+        "canary split: a hash over names only reads an edited loop.py as the same "
+        "code, and a code change goes back to reading as a MOVED environment.",
+    ),
+    # --- orchestrator: render_scoreboard ---
+    Mutation(
+        "small integers are backed by any ledger again",
+        "test_the_audit_refuses_a_small_integer",
+        "scripts/render_scoreboard.py",
+        "            if integer and abs(val) <= SMALL_INT:",
+        "            if False:",
+        "2026-09-22 audit fix: any literal equal to any number in any ledger "
+        "passed, so '3 seeds' was backed by whichever ledger held a 3. This is "
+        "the hole itself.",
+    ),
+    Mutation(
+        "a key from another run backs the sentence",
+        "test_the_audit_refuses_a_small_integer_from_another_run",
+        "scripts/render_scoreboard.py",
+        "                if named and rid not in named and rid != BOARD_ID:",
+        "                if False:",
+        "2026-09-22 audit fix: a sentence about canary/cycle-08 borrowing "
+        "decisive-shuffle's steps_done is a same-value match across unrelated "
+        "ledgers wearing a key's name.",
+    ),
+    Mutation(
+        "a plain English word names a key",
+        "test_the_audit_refuses_a_small_integer_matched_only_by_an_unrelated_ledger",
+        "scripts/render_scoreboard.py",
+        '        if any(c in w for c in "_./-"):',
+        "        if True:",
+        "2026-09-22 audit fix: `seeds` is a key in four ledgers, so the prose word "
+        "'seeds' backed '3 seeds' by one of them listing seed 3.",
+    ),
+    Mutation(
+        "a dangling token passes",
+        "test_a_token_that_resolves_to_no_key_is_flagged",
+        "scripts/render_scoreboard.py",
+        "            if dangling and m.group(0) not in unbacked:",
+        "            if False:",
+        "2026-09-22 audit fix: a {{run_id:key}} that resolves to nothing would "
+        "read as backed prose while naming no measurement.",
+    ),
+    # --- orchestrator: render_status ---
+    Mutation(
+        "status.json numbers are not compared to their ledgers",
+        "test_render_status_refuses_a_number",
+        "scripts/render_status.py",
+        '            if not _equal(flat[key], n.get("value")):',
+        "            if False:",
+        "2026-09-22 research map: a number typed into status.json that its ledger "
+        "does not hold would reach the page -- the transcription layer every "
+        "retracted number on this project came from (RESEARCH-CONTEXT §11).",
+    ),
+    Mutation(
+        "status.json evidence paths are not checked",
+        "test_render_status_flags_a_missing_evidence_path",
+        "scripts/render_status.py",
+        "        if not path or not (repo / path).exists():",
+        "        if False:",
+        "2026-09-22 research map: an item citing a RESULTS.md that does not exist "
+        "reads as evidenced.",
     ),
 )
 
