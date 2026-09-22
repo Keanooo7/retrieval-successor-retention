@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -52,10 +53,23 @@ def ready_items(root: Path, base: str) -> tuple[list[dict] | None, str]:
     if proc.returncode != 0:
         return None, f"workqueue ready rc={proc.returncode}: {proc.stderr.strip()}"
     try:
-        items = json.loads(proc.stdout or "[]")
+        doc = json.loads(proc.stdout or "")
     except json.JSONDecodeError as e:
         return None, f"workqueue ready printed non-JSON: {e}"
-    return [i for i in items if isinstance(i, dict)], ""
+    # workqueue's documented shape: {"base_sha": ..., "ready": [row, ...]}, each row
+    # carrying the computed `ready` flag. 🔴 The first integration parsed a bare list:
+    # iterating the dict yielded its keys, all dropped as non-dicts, so every item read
+    # "not in the ready set" and a full queue looked idle. An unexpected shape is now
+    # an unreadable queue (None), never an empty one.
+    if not isinstance(doc, dict) or not isinstance(doc.get("ready"), list):
+        return None, f"workqueue ready printed an unexpected shape: {type(doc).__name__}"
+    if doc.get("base_sha") not in (None, base) and base:
+        return (
+            None,
+            f"workqueue ready answered for base {doc.get('base_sha')}, not {base}",
+        )
+    rows = [i for i in doc["ready"] if isinstance(i, dict) and i.get("ready") is True]
+    return rows, ""
 
 
 def ensure_worktree(root: Path, item: str, base: str) -> tuple[Exit, Path, str]:
@@ -78,6 +92,27 @@ def ensure_worktree(root: Path, item: str, base: str) -> tuple[Exit, Path, str]:
     if proc.returncode != 0:
         return Exit.FAIL, wt, f"git worktree add failed: {proc.stderr.strip()}"
     return Exit.OK, wt, f"created {wt} on {branch} at {base[:12]}"
+
+
+def sync_venv(wt: Path) -> tuple[Exit, str]:
+    """`uv sync --frozen --extra dev` in the job worktree (`RSR_UV_BIN` overrides)."""
+    uv = os.environ.get("RSR_UV_BIN") or "uv"
+    try:
+        proc = subprocess.run(
+            [uv, "sync", "--frozen", "--extra", "dev"],
+            cwd=wt,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as e:
+        return Exit.DID_NOT_RUN, f"uv not runnable in {wt}: {e}"
+    if proc.returncode != 0:
+        return (
+            Exit.DID_NOT_RUN,
+            f"`uv sync --frozen` in {wt} -> rc={proc.returncode}\n{proc.stderr.strip()}",
+        )
+    return Exit.OK, ""
 
 
 def dispatch(
@@ -128,6 +163,11 @@ def dispatch(
         return code, msg
     if not (wt / SETTINGS).exists():
         return Exit.DID_NOT_RUN, f"{wt / SETTINGS} is missing"
+    # The hooks in SETTINGS run `$CLAUDE_PROJECT_DIR/.venv/bin/python` and fail
+    # closed: a worktree without its own venv blocks every tool call.
+    code, why = sync_venv(wt)
+    if code != Exit.OK:
+        return code, why
     n, _ = lc.new_cycle(
         root,
         {
@@ -140,7 +180,9 @@ def dispatch(
             "base_sha": base,
             "start": lc.now().isoformat(timespec="seconds"),
             "pid": None,
-            "env": {"RSR_ITEM_ID": item, "RSR_BASE_SHA": base},
+            # RSR_RUN_ID: hooks.py's stop/blinding checks key on it; the run id
+            # is the item id (merge.py reads runs/<item>/verification.json).
+            "env": {"RSR_ITEM_ID": item, "RSR_RUN_ID": item, "RSR_BASE_SHA": base},
         },
     )
     pid = session.launch_detached(root, n)

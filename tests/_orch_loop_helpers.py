@@ -68,7 +68,8 @@ _LOG = (
 STUBS = {
     "claude": _LOG
     + """
-log("claude", {"argv": sys.argv[1:], "cwd": os.getcwd()})
+log("claude", {"argv": sys.argv[1:], "cwd": os.getcwd(),
+               "run_id": os.environ.get("RSR_RUN_ID")})
 rc = int(os.environ.get("STUB_CLAUDE_RC", "0"))
 print(json.dumps({
     "type": "result",
@@ -99,7 +100,10 @@ q = pathlib.Path(os.environ["STUB_QUEUE"])
 data = json.loads(q.read_text()) if q.exists() else {"items": []}
 cmd = sys.argv[1]
 if cmd == "ready":
-    print(json.dumps([i for i in data["items"] if i["status"] == "ready"]))
+    # The real workqueue's shape (workqueue.cmd_ready): {"base_sha", "ready": [rows]}.
+    base = sys.argv[sys.argv.index("--base") + 1] if "--base" in sys.argv else None
+    rows = [dict(i, ready=True) for i in data["items"] if i["status"] == "ready"]
+    print(json.dumps({"base_sha": base, "ready": rows}))
 elif cmd == "set-status":
     for i in data["items"]:
         if i["id"] == sys.argv[2]:

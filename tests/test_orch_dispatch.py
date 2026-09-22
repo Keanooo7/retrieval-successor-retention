@@ -71,6 +71,41 @@ def test_dispatch_launches_the_researcher_in_its_own_worktree_at_the_base(orch):
     assert [(s["kind"], s["cost_usd"]) for s in spend] == [("researcher", 0.25)]
 
 
+def test_the_researcher_is_launched_with_its_run_id(orch):
+    """hooks.py's stop and blinding checks key on RSR_RUN_ID; without it every
+    researcher's Stop is blocked (no report path) -- integration fix 2026-09-22."""
+    assert orch.run("dispatch", "a").returncode == 0
+    assert orch.wait_result(1)["rc"] == 0
+    (call,) = orch.calls("claude")
+    assert call["run_id"] == "a"
+
+
+def test_a_worktree_whose_venv_will_not_sync_is_not_launched(orch):
+    """The hooks run the worktree's own .venv and fail closed; no venv, no launch."""
+    proc = orch.run("dispatch", "a", STUB_UV_RC="2")
+    assert proc.returncode == 3
+    assert "uv sync" in proc.stderr
+    assert orch.calls("claude") == []
+
+
+def test_ready_items_reads_the_real_workqueue_shape(orch):
+    """Integration 2026-09-22: a bare-list parser read the real {"base_sha","ready"}
+    document as empty -- a full queue looked idle."""
+    from orchestrator import dispatch
+
+    items, err = dispatch.ready_items(orch.root, orch.base)
+    assert err == "" and [i["id"] for i in items] == ["a"]
+
+
+def test_an_unexpected_ready_shape_is_unreadable_not_empty(orch, monkeypatch):
+    from orchestrator import dispatch
+
+    fake = type("P", (), {"returncode": 0, "stdout": "[]", "stderr": ""})()
+    monkeypatch.setattr(dispatch.lc, "run_orch", lambda *a, **k: fake)
+    items, err = dispatch.ready_items(orch.root, orch.base)
+    assert items is None and "unexpected shape" in err
+
+
 def _worktree(orch: Orch) -> Path:
     wt = orch.root / ".worktrees" / "a"
     lc.git(orch.root, "worktree", "add", "-b", "run/a", str(wt), orch.base, check=True)
