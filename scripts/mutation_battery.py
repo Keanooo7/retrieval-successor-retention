@@ -572,8 +572,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a mutated run writes the real census file",
         "test_a_mutated_suite_run_does_not_clobber_the_census",
         "scripts/mutation_battery.py",
-        '    return {**os.environ, "RSR_TEST_COUN' + 'T": SCRATCH_COUNT}',
-        "    return {**os.environ}",
+        # 📌 Re-anchored 2026-09-22: B's thread cap turned `_suite_env`'s one-line
+        # return into `env = ...`. The split literal keeps this table row from
+        # being the first occurrence apply() replaces.
+        '    env = {**os.environ, "RSR_TEST_COUN' + 'T": SCRATCH_COUNT}',
+        "    env = {**os.environ}",
         "5.3: every mutation overwrites the file CI asserts on, and the last "
         "mutated run is what survives on disk",
     ),
@@ -705,8 +708,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "an empty battery passes",
         "test_a_battery_with_no_mutations_exits_2",
         "scripts/mutation_battery.py",
-        "        return Exit.UNKNOWN\n\n    baseline = run_suite()",
-        "        return Exit.OK\n\n    baseline = run_suite()",
+        # 📌 Re-anchored 2026-09-22: the thread-cap report now sits between the
+        # empty-table check and the baseline run.
+        "        return Exit.UNKNOWN\n\n    threads, source = suite_threads()",
+        "        return Exit.OK\n\n    threads, source = suite_threads()",
         "S0-05: '0/0 proven' has no unproven gate in it and exited 0. Nothing to "
         "compare is 2.",
     ),
