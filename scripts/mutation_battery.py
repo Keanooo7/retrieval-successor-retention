@@ -1151,6 +1151,26 @@ MUTATIONS: tuple[Mutation, ...] = (
         "2026-09-22 audit fix: a {{run_id:key}} that resolves to nothing would "
         "read as backed prose while naming no measurement.",
     ),
+    # --- orchestrator: render_status ---
+    Mutation(
+        "status.json numbers are not compared to their ledgers",
+        "test_render_status_refuses_a_number",
+        "scripts/render_status.py",
+        '            if not _equal(flat[key], n.get("value")):',
+        "            if False:",
+        "2026-09-22 research map: a number typed into status.json that its ledger "
+        "does not hold would reach the page -- the transcription layer every "
+        "retracted number on this project came from (RESEARCH-CONTEXT §11).",
+    ),
+    Mutation(
+        "status.json evidence paths are not checked",
+        "test_render_status_flags_a_missing_evidence_path",
+        "scripts/render_status.py",
+        "        if not path or not (repo / path).exists():",
+        "        if False:",
+        "2026-09-22 research map: an item citing a RESULTS.md that does not exist "
+        "reads as evidenced.",
+    ),
 )
 
 
