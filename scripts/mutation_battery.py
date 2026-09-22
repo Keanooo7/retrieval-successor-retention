@@ -111,6 +111,13 @@ _DISPLACEMENT_COUPLING = (
     "of the reduction (ADR-0006)."
 )
 
+_AUDIT_FLAGS_COUPLING = (
+    "the test asserts that `audit_prose` flags a specific literal; a mutation that "
+    "makes the audit flag nothing necessarily reddens every such assertion. The "
+    "small-integer rule's own mutations (under `# --- orchestrator: "
+    "render_scoreboard ---`) each redden only their gate."
+)
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -527,6 +534,21 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "clock is skipped AND a real number beside it is still flagged -- so "
                 "an audit that flags nothing necessarily reddens it too",
             ),
+            # 2026-09-22: every small-integer refusal test asserts that the audit
+            # flags something, so an audit that flags nothing reddens each of them.
+            *(
+                (f"tests/test_audit_small_ints.py::{t}", _AUDIT_FLAGS_COUPLING)
+                for t in (
+                    "test_the_audit_refuses_a_small_integer_matched_only_by_an_"
+                    "unrelated_ledger",
+                    "test_the_audit_refuses_a_small_integer_beside_its_key_with_the_"
+                    "wrong_value",
+                    "test_the_audit_refuses_a_small_integer_from_another_run",
+                    "test_the_audit_refuses_a_small_integer_in_a_table_cell_its_"
+                    "header_key_denies",
+                    "test_decimals_keep_the_value_rule",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -542,8 +564,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the board's own counts stop backing the prose",
         "test_the_rendered_artefact_passes_its_own_audit",
         "scripts/render_scoreboard.py",
-        "    for row in board.rows:\n        for v in row.values():",
-        "    for row in []:\n        for v in row.values():",
+        # 📌 Re-anchored 2026-09-22 (small-integer audit): the board's per-run
+        # fields now back a number only beside their own key, via `_index()`.
+        "    for row in board.rows:\n        for k, v in row.items():",
+        "    for row in []:\n        for k, v in row.items():",
         "5.2: the generated artefact fails its own audit on the per-run row "
         "counts -- exactly the numbers the script exists to stop anyone typing",
     ),
@@ -1087,6 +1111,45 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass\n",
         "canary split: a hash over names only reads an edited loop.py as the same "
         "code, and a code change goes back to reading as a MOVED environment.",
+    ),
+    # --- orchestrator: render_scoreboard ---
+    Mutation(
+        "small integers are backed by any ledger again",
+        "test_the_audit_refuses_a_small_integer",
+        "scripts/render_scoreboard.py",
+        "            if integer and abs(val) <= SMALL_INT:",
+        "            if False:",
+        "2026-09-22 audit fix: any literal equal to any number in any ledger "
+        "passed, so '3 seeds' was backed by whichever ledger held a 3. This is "
+        "the hole itself.",
+    ),
+    Mutation(
+        "a key from another run backs the sentence",
+        "test_the_audit_refuses_a_small_integer_from_another_run",
+        "scripts/render_scoreboard.py",
+        "                if named and rid not in named and rid != BOARD_ID:",
+        "                if False:",
+        "2026-09-22 audit fix: a sentence about canary/cycle-08 borrowing "
+        "decisive-shuffle's steps_done is a same-value match across unrelated "
+        "ledgers wearing a key's name.",
+    ),
+    Mutation(
+        "a plain English word names a key",
+        "test_the_audit_refuses_a_small_integer_matched_only_by_an_unrelated_ledger",
+        "scripts/render_scoreboard.py",
+        '        if any(c in w for c in "_./-"):',
+        "        if True:",
+        "2026-09-22 audit fix: `seeds` is a key in four ledgers, so the prose word "
+        "'seeds' backed '3 seeds' by one of them listing seed 3.",
+    ),
+    Mutation(
+        "a dangling token passes",
+        "test_a_token_that_resolves_to_no_key_is_flagged",
+        "scripts/render_scoreboard.py",
+        "            if dangling and m.group(0) not in unbacked:",
+        "            if False:",
+        "2026-09-22 audit fix: a {{run_id:key}} that resolves to nothing would "
+        "read as backed prose while naming no measurement.",
     ),
 )
 
