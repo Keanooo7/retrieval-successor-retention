@@ -38,6 +38,10 @@ anchors:
   # the decision rule (read only; do not edit)
   - {path: experiments/decisive-shuffle/PREREG.md, line: 36, expect: "every seed `ratio ≤ 0.01` | **inert**"}
   - {path: experiments/decisive-shuffle/PREREG.md, line: 37, expect: "any seed `ratio ≥ 0.1` | **live**"}
+  - {path: experiments/decisive-shuffle/PREREG.md, line: 35, expect: "or** `ratio == 1.0` exactly on any seed"}
+  - {path: experiments/decisive-shuffle/PREREG.md, line: 38, expect: "| otherwise | `inconclusive` |"}
+  - {path: experiments/decisive-shuffle/PREREG.md, line: 45, expect: "is reported as such, **not** rounded to either outcome"}
+  - {path: experiments/decisive-shuffle/PREREG.md, line: 61, expect: "**Decoy aliasing:**"}
   - {path: experiments/shuffle-control/PREREG.md, line: 96, expect: "## Amendment 1"}
 
 premises:
@@ -78,12 +82,13 @@ files_in_scope:
   - tests/test_train_loop.py
   - path: tests/test_liveness_wiring.py
     new: true
-  - .orchestrator/outbox/researcher.md
+  - path: .orchestrator/outbox/liveness-wiring.md
+    new: true
 
 bar:
   - "Exit.INERT = 5 exists; status() accepts 0-5 and refuses 6; test_exit_codes pins the six codes; docs/gates.md's table has a row for 5."
   - "Every training run ends with a liveness measurement recorded in the heartbeat footer and the returned dict: ratio, A_trained, A_decoy, the three controls, cross-row cosine, matched-norm random-replacement ratio, and the Amendment 1 band label."
-  - "loop.main exits through run_main: 0 live (ratio >= 0.1), 5 INERT (ratio < 0.1), 3 if the measurement did not validly run (a control failed, A_decoy == 0, or the measurement raised)."
+  - "loop.main exits through run_main on the pre-registered bands (decisive PREREG.md:35-38): 0 live (ratio >= 0.1); 5 INERT (ratio <= 0.01); 1 FAIL for the inconclusive band (0.01 < ratio < 0.1), never rounded to 0 or 5; 3 if the measurement is not valid (a control failed, A_decoy == 0, ratio == 1.0 exactly, or the measurement raised)."
   - "An INERT run's checkpoints are under <out_dir>/quarantine/ with an INERT marker file; checkpoint.load refuses them unless explicitly overridden."
   - "Mutations, each reddening only its named test: liveness hook skipped; inert reported as 0; decoy pointed at the trained model; quarantine skipped; loader override defaulting to allow; status() refusing 5."
   - "Gates: uv run pytest -rs --tb=no census and rc; ruff check and ruff format --check over src/ tests/ scripts/ both rc 0; mutation_battery.py --check rc 0 with its N/N line."
@@ -94,7 +99,7 @@ do_not:
   - "Change the Amendment 1 thresholds (0.01, 0.1) or the decisive PREREG."
   - "Put a threshold on cross-row cosine. It is recorded only; a threshold needs its own PREREG committed first."
   - "Write a third liveness implementation. Reuse memory_liveness.py; add beside it only."
-  - "Treat an INERT run as 1, or a failed measurement as 0 or 5."
+  - "Round an inconclusive-band run to 0 or 5, treat an INERT run as 1, or a failed measurement as 0, 1 or 5."
   - "Rent or price a GPU, or run anything but CPU smoke runs."
 ---
 
@@ -143,16 +148,20 @@ and config.
 
 | condition | exit |
 |---|---|
-| any control fails, `A_decoy == 0`, or the measurement raises | `3` DID NOT RUN |
+| any control fails, `A_decoy == 0`, `ratio == 1.0` exactly (decoy aliasing, PREREG `:35`, `:61`), or the measurement raises | `3` DID NOT RUN |
 | `ratio ≥ 0.1` | `0` OK (live) |
-| `ratio < 0.1` | `5` INERT |
+| `ratio ≤ 0.01` | `5` INERT |
+| `0.01 < ratio < 0.1` (Amendment 1's `inconclusive`) | `1` FAIL — liveness not demonstrated |
 
-⚠️ **The owner's trigger is `ratio < 0.1` only.** It covers Amendment 1's `inert` band
-(`≤ 0.01`) *and* its `inconclusive` middle band (`0.01 < ratio < 0.1`). Record the
-Amendment 1 band label (`inert` / `inconclusive` / `live`) beside the exit code so the
-two stay distinguishable in the ledger. **Do not move either threshold.** The
-cross-row cosine and the matched-norm random-replacement ratio are recorded and have
-no threshold and no effect on the exit code.
+The mapping follows the pre-registered bands exactly
+(`experiments/decisive-shuffle/PREREG.md:35-38`). ⚠️ **The inconclusive band is
+"reported as such, not rounded to either outcome"** (`:45`): it is neither `0` nor `5`.
+It gets `1` because the run fails its premise — live memory was not demonstrated — and
+the ledger records the band label (`inert` / `inconclusive` / `live`) beside the exit
+code. (An earlier draft of this brief and of the ruling said `ratio < 0.1` → `5`; that
+folded `inconclusive` into `inert` and is corrected in the ruling's erratum.) **Do not
+move either threshold.** The cross-row cosine and the matched-norm random-replacement
+ratio are recorded and have no threshold and no effect on the exit code.
 
 ## Files in scope
 
@@ -173,7 +182,9 @@ no threshold and no effect on the exit code.
   the loop needs one; no new implementation.
 - `tests/test_train_loop.py`, `tests/test_liveness_wiring.py` (new): the gates.
 - `scripts/mutation_battery.py`: the new entries.
-- `.orchestrator/outbox/researcher.md`: the report.
+- `.orchestrator/outbox/liveness-wiring.md`: the report (one file per run;
+  `orchestrator.outbox new liveness-wiring` creates it, `outbox index` regenerates
+  `researcher.md`).
 
 ## Bar
 
@@ -184,15 +195,16 @@ no threshold and no effect on the exit code.
    in the returned dict: `ratio`, `A_trained`, `A_decoy`, the three controls
    (memory-disabled `== 0.0`, own-memory `== 0.0`, decoy `> 0`), the cross-row cosine,
    the matched-norm random-replacement ratio, and the Amendment 1 band label.
-3. `loop.main` exits `0` on live, `5` on INERT, `3` on a measurement that did not
-   validly run, through `run_main`.
+3. `loop.main` exits `0` on live, `5` on INERT, `1` on the inconclusive band, `3` on a
+   measurement that is not valid, through `run_main` — one test per row of the table.
 4. An INERT run writes its checkpoints under `<out_dir>/quarantine/` with an `INERT`
    marker, and `checkpoint.load` refuses them without the explicit override.
 5. Mutations, each reddening only its named test (quote the node ids):
    - the liveness hook skipped;
    - an inert result reported as `0`;
-   - the decoy pointed at the trained model (must read `ratio == 1.0`, which is live
-     by the rule, so the test must catch the decoy identity, not the band);
+   - the decoy pointed at the trained model (reads `ratio == 1.0` exactly, which the
+     PREREG makes not-valid, so the run must exit `3`, not `0`);
+   - an inconclusive-band ratio rounded to `0` or `5`;
    - the quarantine skipped for an INERT run;
    - the loader override defaulting to allow;
    - `status()` refusing `5`.
@@ -202,7 +214,7 @@ no threshold and no effect on the exit code.
 
 ## Done when
 
-The report in `.orchestrator/outbox/researcher.md` quotes: the census line and rc; the
+The report in `.orchestrator/outbox/liveness-wiring.md` quotes: the census line and rc; the
 battery N/N line and rc; each new mutation and the node id it reddened; and the
 footer of one CPU smoke run showing the liveness keys and the exit code it produced.
 It carries `BRIEF ERRORS`, `UNANSWERED BY THE BRIEF` and `BELIEVED, NOT VERIFIED`,
