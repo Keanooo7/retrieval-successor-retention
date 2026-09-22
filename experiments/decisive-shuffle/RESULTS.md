@@ -115,3 +115,28 @@ Memory gates (train batch, seed 0, per cross-attention block):
 - **Controls.** Memory-disabled and own-memory read exactly `0.0`, the decoy read `> 0`, and random-replacement-with-self read exactly `0.0` on every seed of every arm, on both batches. No `sd_exactly_zero` flag is set on any statistic row.
 - **Signed mean Δ is not the bar** (#17 Amendment 1). It is reported in the table above and carries no verdict.
 - Nothing here tests whether RSR discovers Kintsch & van Dijk's leading-edge strategy. It establishes that, under the masked objective on this corpus, TG has a memory that a retention policy could act on.
+
+## Interpreter provenance (note added 2026-09-22; no number changed)
+
+This run executed on **Python 3.14.6**, as recorded in `runs/decisive-shuffle/ledger.json`
+`provenance.python` and stated under *Hardware* above. It ran before the repo pinned the
+interpreter: `.python-version` and `requires-python ==3.12` landed in `5563b62`, under owner
+ruling R2 of 2026-09-22 (named in that commit's message). Before the pin, `uv` built worktree
+venvs on Homebrew 3.14.6 while the main `.venv`, CI and `CLAUDE.md` were on 3.12
+(`docs/lab-notes/for-brendan-2026-09-21.md`). That was drift, not a decision.
+
+**Cross-interpreter evidence.** E-feas reproduced bit for bit across the two interpreters.
+`runs/efeas-synthetic/ledger.json` (Python 3.12.13) and `runs/efeas-synthetic-s003/ledger.json`
+(Python 3.14.6) have identical values on all 15 rows (`experiments/efeas/RESULTS-s003.md`).
+⚠️ E-feas trains no model, so that identity is **not evidence about training numerics** under
+3.12 versus 3.14. This run has not been re-executed on 3.12.
+
+## Reading note (added 2026-09-22; the ledger wins, no number changed)
+
+The *Verdict* section says answer NLL is "about 2.9 nats per answer token in every gap bucket …
+at or above ln 16". The Secondary 1 table, rendered from the ledger, shows that holds for
+`answer_all`, `gap_2_to_M` and `gap_gt_M` in B and C. It does **not** hold for `gap_1`:
+`armB.heldout.answer.gap_1.honest_nll` = **2.725 ± 0.109** and
+`armC.heldout.answer.gap_1.honest_nll` = **2.609 ± 0.206**, both below `ln 16 ≈ 2.773`. Gap = 1 is
+readable through `bos_ctx`, outside the memory (see the caveat above), so the conclusion "the
+memory is not shown to retrieve" is unaffected.
