@@ -21,8 +21,10 @@ In order, and each step can end the pass:
 10. Before `last_dispatch`: dispatch ready items up to `RSR_MAX_SESSIONS` live
     researchers. Until `park_by`: spawn a collector for each finished job.
 11. One manager cycle, in the foreground, in `.worktrees/_mgr`, under
-    `caffeinate -i -s` when it exists -- if one is due (something changed, or an
-    item awaits verification, or `RSR_MANAGER_INTERVAL_MIN` has passed):
+    `caffeinate -i -s` when it exists -- if one is due (a
+    researcher or job changed state since the last one, or
+    `RSR_MANAGER_INTERVAL_MIN` has passed -- a manager cycle ending is not itself a
+    reason for another):
 
         $RSR_CLAUDE_BIN -p "Run one cycle per .orchestrator/cycle-protocol.md"
             --agent rsr-manager --settings .claude/settings.orchestrator.json
@@ -304,7 +306,7 @@ class Tick:
         p = lc.load_pipeline(self.root)
         if lc.live_sessions(self.root, "manager"):
             return False
-        if p["manager_due"] or p["awaiting"]:
+        if p["manager_due"]:  # reconcile sets it when a researcher/job changed
             return True
         last = p.get("last_manager_end")
         if not last:

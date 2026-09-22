@@ -135,14 +135,17 @@ class Reconciler:
             cause = res.get("cause")
             rc = res.get("rc")
             self.actions.append(f"cycle {n} ({kind}, {item}): rc={rc} -> {lc.route(rc)}")
+            self.p["reconciled"].append(n)
             if kind == "manager":
+                # A manager cycle ending is not news for the next manager cycle;
+                # marking it due would start a paid cycle on every tick.
                 self.manager(cause)
-            elif item:
+                continue
+            if item:
                 if cause is None:
                     self.success(kind, item, rec, res)
                 else:
                     self.failure(kind, item, rec, cause)
-            self.p["reconciled"].append(n)
             self.p["manager_due"] = True
 
     def manager(self, cause: str | None) -> None:

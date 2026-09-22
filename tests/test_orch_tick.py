@@ -85,6 +85,16 @@ def test_a_manager_cycle_cost_is_recorded_and_reaching_the_cap_halts(orch):
     assert "RSR_NIGHT_CAP" in (lc.halted(orch.root) or "")
 
 
+def test_a_manager_cycle_is_not_repeated_when_nothing_changed(orch):
+    """A manager cycle ending is not news: without a researcher or job changing
+    state, the next tick inside RSR_MANAGER_INTERVAL_MIN starts no paid cycle."""
+    p = lc.load_pipeline(orch.root)
+    p["awaiting"] = ["x"]
+    lc.save_pipeline(orch.root, p)
+    assert [orch.run("tick").returncode for _ in range(2)] == [0, 0]
+    assert len(orch.calls("claude")) == 1
+
+
 def test_dry_run_launches_nothing(orch):
     assert orch.run("night", "open").returncode == 0
     orch.set_queue([orch.item("a")])
