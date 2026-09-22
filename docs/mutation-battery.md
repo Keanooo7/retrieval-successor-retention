@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**63/63 gates proven.**
+**71/71 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -72,9 +72,17 @@
 | the shuffle control never applies its permutation | `test_live_memory_moves_the_loss` | **PROVEN** | 0 | 0 |
 | the shuffle replay perturbs the memory it replays | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
 | the shuffle replay hands over the bos gestalt too | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
+| decisive: two arms swapped in the script | `test_arms_are_the_preregistered_table` | **PROVEN** | 0 | 0 |
+| decisive: the manifest-hash arm check never refuses | `test_an_arm_swap_is_refused_by_the_manifest_check` | **PROVEN** | 1 | 1 |
+| decisive: the aliasing clause dropped from the decision rule | `test_decisive_shuffle.py::` | **PROVEN** | 0 | 0 |
+| decisive: measure() ignores the decoy checkpoint it is handed | `test_the_decoy_pointed_at_the_trained_checkpoint` | **PROVEN** | 0 | 0 |
+| random replacement with self perturbs the memory | `test_random_replacement_with_self_reads_exactly_zero` | **PROVEN** | 0 | 0 |
+| random replacement is not norm-matched | `test_random_replacement_preserves_each_slots_norm` | **PROVEN** | 0 | 0 |
+| the answer-token mask is ignored | `test_token_mask_on_padding_raises_and_default_adds_no_key` | **PROVEN** | 0 | 0 |
+| cross-row cosine reports a constant | `test_cross_row_cosine_is_one_for_identical_rows_and_bounded_otherwise` | **PROVEN** | 0 | 0 |
 | the oracle evicts the sentence most needed | `test_oracle.py::` | **PROVEN** | 0 | 0 |
 | checkpoints written straight to the final path | `test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint` | **PROVEN** | 0 | 0 |
-| the synthetic answer goes back out of band | `test_every_query_carries_its_answer_as_its_final_token` | **PROVEN** | 10 | 10 |
+| the synthetic answer goes back out of band | `test_every_query_carries_its_answer_as_its_final_token` | **PROVEN** | 11 | 11 |
 
 ## What each mutation breaks, and what else went red
 
@@ -609,6 +617,72 @@ the control permutes the bos-copy path along with the memory, so its delta measu
 
 Reddened nothing else.
 
+### decisive: two arms swapped in the script
+
+**Gate:** `test_arms_are_the_preregistered_table` — **PROVEN**
+
+PREREG Mutation bar, arm swap: arm A would train B's objective and be reported as 'the corpus alone'. The manifest is frozen from ARMS, so it would agree with the swap; only the hand-copied PREREG table sees it.
+
+Reddened nothing else.
+
+### decisive: the manifest-hash arm check never refuses
+
+**Gate:** `test_an_arm_swap_is_refused_by_the_manifest_check` — **PROVEN**
+
+PREREG Mutation bar, arm swap: a checkpoint trained under another arm's config would be measured and reported as this arm's.
+
+Also reddened (1):
+
+- `tests/test_decisive_shuffle.py::test_a_config_that_does_not_hash_to_its_own_stamp_is_refused` — ✔ declared
+
+### decisive: the aliasing clause dropped from the decision rule
+
+**Gate:** `test_decisive_shuffle.py::` — **PROVEN**
+
+PREREG Mutation bar, decoy aliasing: with the decoy pointed at the trained checkpoint ratio == 1.0 >= 0.1, and the rule would call the arm 'live' on a reading that compares the model with itself.
+
+Reddened nothing else.
+
+### decisive: measure() ignores the decoy checkpoint it is handed
+
+**Gate:** `test_the_decoy_pointed_at_the_trained_checkpoint` — **PROVEN**
+
+the aliasing test must exercise the decoy-loading path end to end; if measure() silently kept the untrained decoy, the aliasing mutation could never be run against the real code.
+
+Reddened nothing else.
+
+### random replacement with self perturbs the memory
+
+**Gate:** `test_random_replacement_with_self_reads_exactly_zero` — **PROVEN**
+
+PREREG Secondary 2: the replacement path's own control. A path that moves tokens by itself would read as 'memory is read' on any model.
+
+Reddened nothing else.
+
+### random replacement is not norm-matched
+
+**Gate:** `test_random_replacement_preserves_each_slots_norm` — **PROVEN**
+
+PREREG Secondary 2 requires the Gaussian rescaled to the replaced slot's L2 norm; an unscaled draw changes magnitude as well as content, and the live-memory reading still moves, so only the norm check sees it.
+
+Reddened nothing else.
+
+### the answer-token mask is ignored
+
+**Gate:** `test_token_mask_on_padding_raises_and_default_adds_no_key` — **PROVEN**
+
+PREREG Secondary 1: the answer-token split would silently score every real target. A full mask reads the same either way; only an empty mask tells them apart.
+
+Reddened nothing else.
+
+### cross-row cosine reports a constant
+
+**Gate:** `test_cross_row_cosine_is_one_for_identical_rows_and_bounded_otherwise` — **PROVEN**
+
+the descriptive cosine would read 'rows collinear' whatever the memory holds, which is exactly the rival hypothesis it exists to test.
+
+Reddened nothing else.
+
 ### the oracle evicts the sentence most needed
 
 **Gate:** `test_oracle.py::` — **PROVEN**
@@ -631,8 +705,9 @@ Reddened nothing else.
 
 S0-03's fixture mutation: the default corpus reverts to the pre-S0-03 generator, whose answer lived only in `Sentence.answer` and never entered the token stream -- so no next-token target required retrieval and 'the memory is inert' was a finding about the corpus. The named gate must redden; the rest are the declared consequences of the refusal.
 
-Also reddened (10):
+Also reddened (11):
 
+- `tests/test_decisive_shuffle.py::test_the_decoy_pointed_at_the_trained_checkpoint_reads_ratio_one_and_inconclusive` — ✔ declared
 - `tests/test_synthetic.py::test_the_answer_is_the_only_difference_between_the_two_corpora` — ✔ declared
 - `tests/test_synthetic.py::test_the_answer_targets_are_a_minority_that_a_pooled_loss_would_hide` — ✔ declared
 - `tests/test_synthetic.py::test_the_gap_tensor_is_the_pairs_gap_at_each_query` — ✔ declared
@@ -659,6 +734,7 @@ A coupling worth knowing about is one somebody wrote down. These are the reasons
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006). Added 2026-09-18: the on-the-real-model variant post-dates docs/mutation-battery.md's table.
 - SOURCE_ROOTS is one enumeration: what gates and what does not are the same list, so widening it necessarily moves both assertions
 - the timestamp test asserts both halves of the same behaviour -- a clock is skipped AND a real number beside it is still flagged -- so an audit that flags nothing necessarily reddens it too
+- the same refusal statement guards both the arm hash and the config's own stamp; disabling it must redden both, by design.
 - S0-03: the test reads a property of the in-stream answer token itself (its position, its id under the supervision mask, the vocabulary it adds), so it cannot hold on a corpus that has no such token.
 - S0-03: `rsr.train.loop.answer_targets` REFUSES a corpus whose answers are out of band rather than return an empty supervision mask, and `train()` calls it, so every test that trains reddens when the default corpus reverts to the pre-S0-03 one. The refusal is the design: an empty mask would make every answer-token loss a mean over nothing and pass silently.
 
