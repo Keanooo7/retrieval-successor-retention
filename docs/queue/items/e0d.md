@@ -11,6 +11,7 @@ requires:
 - ruling: R-*-sprint2-start
 - item_done: eng-loo
 - prereg: experiments/e0d/PREREG.md
+- ruling: R-*-retrieval-shown
 status: blocked
 attempts: 0
 source: docs/ROADMAP.md:134; experiments/e0d/run.py:16
