@@ -7,6 +7,7 @@ workstream: W3
 lane: agent-only
 slots: 1
 requires: []
+brief: docs/lab-notes/dispatch-leading-edge.md
 status: blocked
 attempts: 0
 source: src/rsr/baselines/leading_edge.py:27; docs/ROADMAP.md:150
