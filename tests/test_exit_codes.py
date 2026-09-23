@@ -179,7 +179,15 @@ def test_a_stale_battery_anchor_exits_3():
 
 
 def test_a_red_baseline_exits_3(monkeypatch):
-    """A suite red before mutating means no mutation ran."""
+    """A suite red before mutating means no mutation ran.
+
+    ⚠️ The anchor check is bypassed here on purpose. Under the battery, the mutation
+    that proves THIS test edits the baseline refusal's own text, so the real
+    table's anchor check exits 3 first and this test passed with the mutation
+    applied -- the gate went blind ('ADDS NOTHING' at 1406d1d, 2026-09-23). This
+    test is about the baseline path only; the anchor check has its own tests
+    (tests/test_battery_anchors.py)."""
+    monkeypatch.setattr(mutation_battery, "anchor_problems", lambda: [])
     monkeypatch.setattr(mutation_battery, "run_suite", lambda: {"tests/t.py::t"})
     monkeypatch.setattr(sys, "argv", ["mutation_battery.py", "--check"])
     with pytest.raises(SystemExit) as exc:

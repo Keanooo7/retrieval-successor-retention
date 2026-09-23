@@ -128,6 +128,11 @@ _SLOT_RC_COUPLING = (
     "orchestrator: a signalled child's 128+N is passed through the same verbatim "
     "exit as any other rc, so collapsing it reddens the signal tests too."
 )
+_USAGE_ERROR_COUPLING = (
+    "all three tests exercise the shared rsr.exit_codes.ArgumentParser usage-error "
+    "path; one edit to its refusal reddens each CLI that asserts it. Confirmed "
+    "2026-09-22 by applying the mutation at 5ecda88 (owner proxy, MacBook)."
+)
 _AUDIT_FLAGS_COUPLING = (
     "the test asserts that `audit_prose` flags a specific literal; a mutation that "
     "makes the audit flag nothing necessarily reddens every such assertion. The "
@@ -729,6 +734,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        raise SystemExit(2)",
         "S0-05: argparse's 2 gave render_scoreboard's `2` two meanings, bad "
         "arguments and an empty board.",
+        off_gate_allowed=tuple(
+            (node, _USAGE_ERROR_COUPLING)
+            for node in (
+                "tests/test_canary_split.py::test_an_unknown_canary_device_did_not_run",
+                "tests/test_orch_outbox.py::test_the_cli_usage_error_exits_3",
+            )
+        ),
     ),
     Mutation(
         "extract_golden_tensors exits 1 without JAX again",
@@ -1630,6 +1642,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "The one pre-commit check that would have caught the 09-22 YAML defect "
         "before a ruling reached any base.",
     ),
+    # --- battery: anchor check (2026-09-22) ---
+    Mutation(
+        "the anchor check counts nothing",
+        "test_check_anchors_",
+        "scripts/mutation_battery.py",
+        "        if n != 1:\n            out.append(",
+        "        if False:\n            out.append(",
+        "5ecda88's battery ran 87 minutes, then refused on one stale anchor a "
+        "string search finds at once; the check is what makes that a 0-second exit.",
+    ),
     # --- orchestrator: verifier write guard (PR #36, 2026-09-22) ---
     Mutation(
         "the verifier's blanket /tmp allowance restored",
@@ -1984,6 +2006,25 @@ def run_suite() -> set[str]:
     return failing
 
 
+def anchor_problems() -> list[str]:
+    """One line per mutation whose anchor does not occur EXACTLY once in its file.
+
+    Zero occurrences is a stale anchor (apply() would refuse mid-run). More than
+    one means apply() replaces the first, which may not be the code the gate is
+    about -- the table's own text, for a mutation that targets this file.
+    """
+    out = []
+    for m in MUTATIONS:
+        path = ROOT / m.path
+        if not path.is_file():
+            out.append(f"{m.name!r}: {m.path} does not exist")
+            continue
+        n = path.read_text().count(m.old)
+        if n != 1:
+            out.append(f"{m.name!r}: anchor occurs {n} times in {m.path} (must be 1)")
+    return out
+
+
 def apply(mutation: Mutation) -> str:
     path = ROOT / mutation.path
     original = path.read_text()
@@ -2007,6 +2048,12 @@ def main() -> Exit:
     )
     ap.add_argument("--json", type=Path, default=None)
     ap.add_argument(
+        "--check-anchors",
+        action="store_true",
+        help="only verify every anchor occurs exactly once in its file (seconds); "
+        "exit 3 if not",
+    )
+    ap.add_argument(
         "--markdown",
         type=Path,
         default=None,
@@ -2025,6 +2072,25 @@ def main() -> Exit:
         f"suite threads: {threads if threads is not None else 'uncapped'} "
         f"(source: {source})"
     )
+    # 🔴 Every anchor is checked BEFORE the first suite run. On 2026-09-22 the
+    # full battery ran 87 minutes at 5ecda88 and then refused 3 on one stale
+    # anchor that a string search finds in under a second.
+    problems = anchor_problems()
+    if args.check_anchors:
+        for p in problems:
+            print(f"STALE ANCHOR {p}", file=sys.stderr)
+        if problems:
+            return Exit.DID_NOT_RUN
+        print(f"{len(MUTATIONS)}/{len(MUTATIONS)} anchors occur exactly once")
+        return Exit.OK
+    if problems:
+        for p in problems:
+            print(f"STALE ANCHOR {p}", file=sys.stderr)
+        refuse(
+            Exit.DID_NOT_RUN,
+            f"{len(problems)} stale anchor(s); nothing was mutated. Fix the anchors "
+            f"(`--check-anchors`), do not drop the mutations.",
+        )
     baseline = run_suite()
     if baseline:
         # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
