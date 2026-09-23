@@ -16,7 +16,7 @@ before liveness wiring lands.
 ---
 id: R-2026-09-22-s0-green-criterion
 date: 2026-09-22
-stated_in: MacBook owner-proxy session 2026-09-22 — Brendan, verbatim: "go with your recommendations, make sure you look at the other agent defs and see what would be better and just go with it. go with your recomendations"
+stated_in: 'MacBook owner-proxy session 2026-09-22 — Brendan, verbatim: "go with your recommendations, make sure you look at the other agent defs and see what would be better and just go with it. go with your recomendations"'
 ---
 **B1 answered as a criterion, not as the gate itself.** The Sprint 0 gate
 (`docs/ROADMAP.md`, "the shuffle control, as a permanent instrument, green") is green
@@ -41,7 +41,7 @@ judgement is needed, because the criterion is already decided here.
 ---
 id: R-2026-09-22-sprint2-start
 date: 2026-09-22
-stated_in: MacBook owner-proxy session 2026-09-22 — Brendan, verbatim: "go with your recommendations, make sure you look at the other agent defs and see what would be better and just go with it. go with your recomendations"
+stated_in: 'MacBook owner-proxy session 2026-09-22 — Brendan, verbatim: "go with your recommendations, make sure you look at the other agent defs and see what would be better and just go with it. go with your recomendations"'
 ---
 **B2: Sprint 2 may start (once the Sprint 0 gate is green), limited to the instruments
 whose validity does not depend on retrieval.**
@@ -61,7 +61,7 @@ separately, not by this prose.
 ---
 id: R-2026-09-22-hinge
 date: 2026-09-22
-stated_in: MacBook owner-proxy session 2026-09-22 — Brendan, verbatim: "go with your recommendations, make sure you look at the other agent defs and see what would be better and just go with it. go with your recomendations"
+stated_in: 'MacBook owner-proxy session 2026-09-22 — Brendan, verbatim: "go with your recommendations, make sure you look at the other agent defs and see what would be better and just go with it. go with your recomendations"'
 ---
 **B3: the srep-norm hinge is OFF (`srep_norm_reg_weight = 0.0`, arm B's setting) for new
 experiments.**
