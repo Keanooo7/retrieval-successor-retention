@@ -8,6 +8,8 @@ lane: agent-only
 slots: 1
 requires:
 - prereg: experiments/capacity-c0/PREREG.md
+- ruling: R-*-mlx-servers
+brief: docs/lab-notes/dispatch-capacity-c0.md
 status: blocked
 attempts: 0
 source: CLAUDE.md:47; docs/decisions/ADR-0007-all-training-on-the-mac-studio.md
