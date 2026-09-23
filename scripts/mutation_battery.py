@@ -108,6 +108,12 @@ _S003_CORPUS_COUPLING = (
     "cannot hold on a corpus that has no such token."
 )
 
+_C0_S003_WORKLOAD_COUPLING = (
+    "capacity-c0: C0's workloads are S0-03's CONFIG and rewardable corpus, imported "
+    "(PREREG training_workload / core_workload), and this test really trains the "
+    "core workload twice; a corpus with no in-stream answer token cannot train."
+)
+
 _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
@@ -1079,6 +1085,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 _S003_REFUSAL_COUPLING,
             ),
             (
+                "tests/test_capacity_c0.py::"
+                "test_output_hash_identical_runs_equal_while_checkpoint_files_differ",
+                _C0_S003_WORKLOAD_COUPLING,
+            ),
+            (
                 "tests/test_train_loop.py::test_the_hinge_reaches_the_objective",
                 _S003_REFUSAL_COUPLING,
             ),
@@ -1574,6 +1585,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "2026-09-22 audit fix: any literal equal to any number in any ledger "
         "passed, so '3 seeds' was backed by whichever ledger held a 3. This is "
         "the hole itself.",
+        off_gate_allowed=(
+            (
+                "tests/test_capacity_c0.py::test_rendered_results_pass_the_prose_audit",
+                "C0's RESULTS renderer backs each small integer by naming its key in "
+                "the same sentence -- the rule this mutation removes. Under the old "
+                "value rule those integers have no equal value in C0's ledger, so the "
+                "rendered page fails the audit: the same rule, seen from C0.",
+            ),
+        ),
     ),
     Mutation(
         "a key from another run backs the sentence",
