@@ -15,7 +15,7 @@ anchors:
   - {path: scripts/orchestrator/lanes.py, line: 336, expect: "def free_memory_bytes("}
   - {path: scripts/orchestrator/lanes.py, line: 349, expect: "def thread_env(n: int) -> dict[str, str]:"}
   - {path: scripts/orchestrator/lanes.py, line: 450, expect: "if free_gb - peak_gb >= cfg.reserve_gb:"}
-  - {path: scripts/mutation_battery.py, line: 1934, expect: "def suite_threads() -> tuple[int | None, str]:"}
+  - {path: scripts/mutation_battery.py, line: 1956, expect: "def suite_threads() -> tuple[int | None, str]:"}
   - {path: experiments/s0-03-rewardable-corpus/run.py, line: 82, expect: "CONFIG = {"}
   - {path: experiments/s0-03-rewardable-corpus/run.py, line: 135, expect: "def single(seed: int, iters: int, device: str, out_dir: Path) -> dict:"}
 
@@ -103,7 +103,7 @@ a timing and will always produce *some* value.
 
   The child's thread env comes from `lanes.thread_env(n)` (`lanes.py:349`). The solo training job
   runs first; its RSS sets `k_mem`. CPU and RSS are sampled via `ps` at 1 Hz. The suite timing sets threads the
-  way `suite_threads()` does (`scripts/mutation_battery.py:1934`). The MPS job is the same workload
+  way `suite_threads()` does (`scripts/mutation_battery.py:1956`). The MPS job is the same workload
   on `mps`. Free memory comes from `lanes.free_memory_bytes()` (`:336`), the same measure MPS
   admission uses (`:450`). Exit through `rsr.exit_codes`.
 - `experiments/capacity-c0/RESULTS.md` (**new**), from the ledger.
