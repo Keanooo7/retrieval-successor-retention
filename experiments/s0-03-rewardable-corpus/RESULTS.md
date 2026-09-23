@@ -68,3 +68,18 @@ weights. Scored on the training documents, bar 1 would fail on seed 2.
 - Held-out answer targets per seed: 1203 / 1181 / 1194. The `gap = M` bucket holds
   only 20 / 6 / 9 of them, so its numbers carry no weight.
 - Real-token NLL, live: held-out `1.684 ± 0.012`, train `1.560 ± 0.011`.
+
+## Interpreter provenance (note added 2026-09-22; no number changed)
+
+This run executed on **Python 3.14.6**, as recorded in `runs/s0-03-rewardable-corpus/ledger.json`
+`provenance.python` and stated in the header above. It ran before the repo pinned the
+interpreter: `.python-version` and `requires-python ==3.12` landed in `5563b62`, under owner
+ruling R2 of 2026-09-22 (named in that commit's message). Before the pin, `uv` built worktree
+venvs on Homebrew 3.14.6 while the main `.venv`, CI and `CLAUDE.md` were on 3.12
+(`docs/lab-notes/for-brendan-2026-09-21.md`). That was drift, not a decision.
+
+**Cross-interpreter evidence.** E-feas reproduced bit for bit across the two interpreters.
+`runs/efeas-synthetic/ledger.json` (Python 3.12.13) and `runs/efeas-synthetic-s003/ledger.json`
+(Python 3.14.6) have identical values on all 15 rows (`experiments/efeas/RESULTS-s003.md`).
+⚠️ E-feas trains no model, so that identity is **not evidence about training numerics** under
+3.12 versus 3.14. This run has not been re-executed on 3.12.

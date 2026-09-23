@@ -35,10 +35,18 @@ you get their number, never generating a new result to report.
 cd ~/retrieval-successor-retention          # /opt/homebrew/bin/git, never bare git
 ```
 
-⚠️ **Nothing on the Mac Studio reads `ORCH_PROJECT`** — there is no orchestrator there and no
-`~/.claude/helpers`. `grep -rn ORCH_PROJECT` returns prose only, with not one consumer. **`.orchestrator/outbox/`
-does exist in this repo**: researchers append their reports to `.orchestrator/outbox/researcher.md`,
-and **you read it**. Nothing reads it mechanically; the cycle protocol is the whole mechanism.
+⚠️ **Nothing on the Mac Studio reads `ORCH_PROJECT`** — `grep -rn ORCH_PROJECT` returns prose only,
+with not one consumer. **The orchestrator is `scripts/orchestrator/`** (2026-09-22). Each researcher
+writes **its own** report, `.orchestrator/outbox/<run_id>.md`, and **you read it**;
+`.orchestrator/outbox/researcher.md` is an index you regenerate with `PYTHONPATH=scripts
+.venv/bin/python -m orchestrator.outbox index` (the pre-09-22 prepend-only reports are in
+`_legacy-researcher.md`). One file per run is **blinding**: the 09-21 decisive researcher saw S0-03's
+numbers through the shared outbox, and researcher hooks now refuse any report but their own.
+
+**Where work lands** (`docs/owner/rulings/R-2026-09-22-night-branch.md`, which **supersedes the
+per-brief "merge each brief into main"**): you merge accepted work only into `night/<date>`, based at
+the SHA pinned when the night opened. **`main` never moves in a night** — Brendan does one merge per
+morning from the digest. Your hooks refuse a push to `main`, a force push and `gh pr merge`.
 
 ## What you hold that the researcher does not
 
@@ -78,7 +86,7 @@ At the checkpoint: self-handoff, `/clear`, reload.
 | **Spread** | A multi-seed statistic reports no sd — or reports **sd exactly 0.0000**, which means the seed never reached the randomness. Both have happened here. |
 | **Seeds and steps** | `seeds_actually_run` or `steps_done` disagrees with the prose. A five-seed mean from a one-seed run is the failure this field exists for. |
 | **Skips** | A skipped test counted as passing, or a skip count that grew without explanation. |
-| **Exit codes** | Any `3` (did not run) or `2` (nothing to compare) reported as success. Ask whether `$?` was read after a pipe. |
+| **Exit codes** | Any `3` (did not run) or `2` (nothing to compare) reported as success. Ask whether `$?` was read after a pipe. A `5` **INERT** (`R-2026-09-22-inert-exit-5`) reported as a `1`, or as anything but inert: `5` routes to a model/training-config investigation, and **no retention experiment is dispatched on that checkpoint**. |
 | **Manifest** | The config hash in the report does not match `manifest.json`, or the manifest was written after the run. |
 | **Falsifier** | The run names no falsifier, or names one it cannot address. |
 | **Expectation** | The pre-registered expectation was edited after the run. `git log` the manifest. |
@@ -98,7 +106,9 @@ On 2026-09-18 no brief survived the night: they were in-session prompts to subag
 retired. **7 of the 11 contained an error a researcher caught, and not one of those errors can be
 audited now.** That is the single largest hole in the record of that run.
 
-- Write to `docs/lab-notes/dispatch-<id>.md`.
+- Write to `docs/lab-notes/dispatch-<id>.md`, **with the front matter in
+  `docs/lab-notes/BRIEF-TEMPLATE.md`**. It is not dispatched until `orchestrator.lint_brief` passes on
+  it (exit `0`); a brief that fails the lint is a brief with a defect, not a formality.
 - Read the baseline sha from `git rev-parse HEAD` **at the moment of writing**. Never recall it.
 - **Commit your own infrastructure before writing the brief, not after.** An untracked `canary.py`
   made the previous manager's "clean tree at dispatch" baseline stale the moment it was written.
@@ -111,12 +121,24 @@ Reading their artefact reproduces their work; it does not verify it. **Each cycl
 least one claim yourself** and record which:
 
 ```bash
-uv run pytest -rs --tb=no           # their test claim. NOT -q: addopts already has -q, and -qq prints no count (tests/conftest.py)
+PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane <L> --slots <k> -- \
+    uv run pytest -rs --tb=no           # their test claim. NOT -q: addopts already has -q, and -qq prints no count (tests/conftest.py)
 # uv run rsr floor --check          # ILLUSTRATIVE ONLY -- no `rsr floor` exists on trunk; read $? WITHOUT a pipe for whatever gate you do run
-uv run python experiments/<e>/run.py   # their headline number — does it reproduce?
+PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane <L> --slots <k> -- \
+    uv run python experiments/<e>/run.py   # their headline number — does it reproduce?
 ```
 
+Compute goes through lane slots: your hooks refuse a bare `pytest` or `experiments/*/run.py`.
+
 🔴 **An empty "what I verified by re-execution" field is a failed cycle**, not a quiet one.
+
+**The verifier comes before the merge.** For every run you would accept, spawn a fresh headless
+`rsr-verifier` (`--settings .claude/settings.researcher.json --agent rsr-verifier`, `RSR_RUN_ID` set).
+It sees the ledger, manifest and `runs/<id>/claims.json` — never the report prose — re-executes a
+draw seeded by `sha256(run_id)` in `.worktrees/verify-<id>` at the researcher's head, and writes
+`runs/<id>/verification.json`. **Merge into `night/<date>` only when `orchestrator.verify check <id>`
+exits `0` with `status: ok`.** `failed` is a rejection; `inconclusive` is not a pass — do not merge,
+say why in the scoreboard.
 
 ## Deciding the next run
 
@@ -158,6 +180,11 @@ that does not depend on the answer.**
 
 Retire and re-spawn; never argue. **Never give a second brief to a live researcher** — a fresh one
 is one spawn; a reused one carries the last run's assumptions and you cannot see which.
+
+**Long compute is split launch/collect.** A launch brief has its researcher submit the job through
+`orchestrator.submit` and return. When the job finishes, a **fresh collector researcher** gets its own
+collect brief. Handing the collect to the researcher that launched it is a second brief to a live
+researcher — the rule above, not an exception to it.
 
 Retire on: the run landed · two failures with the same cause · a question that changes the brief ·
 **a number with no ledger entry behind it** · it changed something frozen · **it has seen data it

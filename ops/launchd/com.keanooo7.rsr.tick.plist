@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  RSR orchestrator tick: one deterministic pass every 600 s.
+  WRITTEN, NOT INSTALLED. Installing it is the owner's decision -- see ops/README.md.
+  Nothing in this repository loads or bootstraps it.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.keanooo7.rsr.tick</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/keanooo7/retrieval-successor-retention/scripts/orchestrator/tick.zsh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/keanooo7/retrieval-successor-retention</string>
+
+  <key>StartInterval</key>
+  <integer>600</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>ProcessType</key>
+  <string>Standard</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/Users/keanooo7/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>RSR_ORCH_ROOT</key>
+    <string>/Users/keanooo7/retrieval-successor-retention</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/keanooo7/retrieval-successor-retention/.orchestrator/logs/tick.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/keanooo7/retrieval-successor-retention/.orchestrator/logs/tick.err.log</string>
+</dict>
+</plist>

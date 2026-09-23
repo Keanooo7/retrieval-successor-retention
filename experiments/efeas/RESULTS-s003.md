@@ -98,3 +98,17 @@ That check was run at the command line and is not in a ledger.
 
 Every row of the new ledger has the same key set and values as `runs/efeas-synthetic/ledger.json`,
 `by_gap` included.
+
+## Interpreter provenance (note added 2026-09-22; no number changed)
+
+This run executed on **Python 3.14.6** (`runs/efeas-synthetic-s003/ledger.json`
+`provenance.python`). It ran before the repo pinned the interpreter: `.python-version` and
+`requires-python ==3.12` landed in `5563b62`, under owner ruling R2 of 2026-09-22 (named in that
+commit's message). Before the pin, `uv` built worktree venvs on Homebrew 3.14.6 while the main
+`.venv`, CI and `CLAUDE.md` were on 3.12 (`docs/lab-notes/for-brendan-2026-09-21.md`).
+
+**This run is itself the cross-interpreter check.** The run it matches, `runs/efeas-synthetic/`,
+recorded Python **3.12.13** on a MacBook Pro (`experiments/efeas/RESULTS.md`). This one ran on
+**3.14.6** on the Mac Studio. All 15 ledger rows are identical; re-checked 2026-09-22 by diffing
+the two ledgers' rows, `how` excluded. ⚠️ E-feas trains no model, so this is **not evidence about
+training numerics** under 3.12 versus 3.14.

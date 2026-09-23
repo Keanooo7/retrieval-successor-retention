@@ -1,0 +1,1091 @@
+{
+  "generated_at_sha": "46fcb356e996cbdae8f2d46094c8b1da7f8f4f07",
+  "claim": "\"Kintsch & van Dijk (1978) specified retention by structural importance over a capacity-limited discourse buffer — the leading-edge strategy — and it reproduced the human recall gradient. Does a system trained only to predict the next sentence discover that policy? RSR is the test.\" (docs/RESEARCH-CONTEXT.md §1). Thought Gestalt compresses each sentence to one vector in a working memory of M slots and evicts the oldest when full; RSR replaces that one line with eviction of the slot with the lowest predicted future retrieval demand, conditioned on where the discourse is now. The primary claim is cognitive, not engineering (§1).",
+  "workstreams": [
+    {
+      "id": "W0",
+      "title": "Substrate integrity",
+      "question": "Does the loop compute what we think, and is memory live?"
+    },
+    {
+      "id": "W1",
+      "title": "Data validity",
+      "question": "Can the corpora exhibit and measure the effect?"
+    },
+    {
+      "id": "W2",
+      "title": "Measurement instruments",
+      "question": "Are the instruments that read the mechanism built and calibrated?"
+    },
+    {
+      "id": "W3",
+      "title": "Baselines & headroom",
+      "question": "Is there room above FIFO, and do the comparators exist?"
+    },
+    {
+      "id": "W4",
+      "title": "Decision gate",
+      "question": "E1/E2: red light or permission to continue."
+    },
+    {
+      "id": "OOS",
+      "title": "Out of scope (§16)",
+      "question": "A projection, not a plan."
+    }
+  ],
+  "items": [
+    {
+      "id": "cycle-01",
+      "title": "The training loss scores padding (masked loss)",
+      "workstream": "W0",
+      "sprint": 0,
+      "status": "done",
+      "verdict": "survived on MPS; the CPU re-run is inconclusive (its run-to-run floor measured exactly 0.0, so half 2 discriminates nothing on that device)",
+      "what_it_tests": "Whether masking the loss to real tokens moves the final loss beyond the run-to-run floor, and whether PAD is over half the scored targets.",
+      "evidence": [
+        {
+          "path": "runs/cycle-01-masked-loss/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "e76c42e18bff102c268fada5c7e2411b404016dd"
+        },
+        {
+          "path": "runs/cycle-01-masked-loss-cpu/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "e76c42e18bff102c268fada5c7e2411b404016dd"
+        },
+        {
+          "path": "experiments/cycle-01-masked-loss/RESULTS.md"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": [
+        {
+          "label": "PAD fraction of scored targets (corpus-shaped)",
+          "value": 0.9342551256613757,
+          "ledger": "runs/cycle-01-masked-loss/ledger.json",
+          "key": "pad_fraction_corpus_shaped"
+        }
+      ]
+    },
+    {
+      "id": "S0-01",
+      "title": "loop.py defects: policy arm, srep-norm hinge, vocab default",
+      "workstream": "W0",
+      "sprint": 0,
+      "status": "done",
+      "verdict": "survived",
+      "what_it_tests": "Whether defects (b), (c), (e) in src/rsr/train/loop.py are real at the sha, and each gets a test red before its fix and a mutation that reddens only it.",
+      "evidence": [
+        {
+          "path": "runs/s0-01-loop-defects/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "88257b11abff42a744edfbb2f84de737ea65573a"
+        },
+        {
+          "path": "docs/lab-notes/dispatch-S0-01-loop-defects.md"
+        },
+        {
+          "path": "tests/test_train_loop.py"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": [
+        {
+          "label": "derived vocabulary size V",
+          "value": 160,
+          "ledger": "runs/s0-01-loop-defects/ledger.json",
+          "key": "derived_V"
+        }
+      ]
+    },
+    {
+      "id": "S0-02",
+      "title": "The AttentionTrace capture bridge",
+      "workstream": "W0",
+      "sprint": 0,
+      "status": "done",
+      "verdict": "survived",
+      "what_it_tests": "What the §3.2.1 capture bridge costs when on, that it is free when off, and that dropping W_O from the capture path reddens only the new tests.",
+      "evidence": [
+        {
+          "path": "runs/s0-02-capture-bridge/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "7a47a90cec12a5165efeb0a3fae736b5a7679575"
+        },
+        {
+          "path": "experiments/s0-02/RESULTS.md"
+        },
+        {
+          "path": "docs/decisions/ADR-0008-qtok-collapse.md"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": [
+        {
+          "label": "sentences/s, capture off (MPS)",
+          "value": 388.7966666666666,
+          "ledger": "runs/s0-02-capture-bridge/ledger.json",
+          "key": "sent_per_s.capture_off"
+        },
+        {
+          "label": "sentences/s, capture on (MPS)",
+          "value": 360.46000000000004,
+          "ledger": "runs/s0-02-capture-bridge/ledger.json",
+          "key": "sent_per_s.capture_on"
+        }
+      ]
+    },
+    {
+      "id": "S0-04",
+      "title": "The shuffle control as a committed instrument",
+      "workstream": "W0",
+      "sprint": 0,
+      "status": "done",
+      "verdict": "survived (the old model's memory is inert)",
+      "what_it_tests": "Whether handing a row another document's entire memory moves the loss of the audit's model, with an instrument shown to read both ways. On the pre-S0-03 model it read inert.",
+      "evidence": [
+        {
+          "path": "runs/shuffle-control/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "8e60df1dad078044d9e03f2d4b67125da1c7dcd8"
+        },
+        {
+          "path": "experiments/shuffle-control/RESULTS.md"
+        },
+        {
+          "path": "experiments/shuffle-control/PREREG.md"
+        },
+        {
+          "path": "src/rsr/metrics/memory_liveness.py"
+        },
+        {
+          "path": "tests/test_shuffle_control.py"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": [
+        {
+          "label": "mean |token delta| as a fraction of a live decoy's (old model)",
+          "value": 0.0007794603145151641,
+          "ledger": "runs/shuffle-control/ledger.json",
+          "key": "ratio_to_live_decoy"
+        },
+        {
+          "label": "sd of that fraction over seeds",
+          "value": 0.00027365166049842687,
+          "ledger": "runs/shuffle-control/ledger.json",
+          "key": "ratio_to_live_decoy.sd"
+        }
+      ]
+    },
+    {
+      "id": "S0-05",
+      "title": "The exit-code protocol as a gate",
+      "workstream": "W0",
+      "sprint": 0,
+      "status": "done",
+      "verdict": "landed (code, no ledger)",
+      "what_it_tests": "That every checker exits through one enum: 0 ok, 1 real failure, 2 nothing to compare, 3 did not run, 4 unbanked rise; no bare booleans.",
+      "evidence": [
+        {
+          "path": "experiments/s0-05/RESULTS.md"
+        },
+        {
+          "path": "src/rsr/exit_codes.py"
+        },
+        {
+          "path": "tests/test_exit_codes.py"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "decisive-shuffle",
+      "title": "The §10.3 decisive run: is memory live on the rewardable corpus?",
+      "workstream": "W0",
+      "sprint": 0,
+      "status": "done",
+      "verdict": "falsified (the inert-memory claim): A inert, B live, C live. Memory is read; answers stay at or above chance, so retrieval is not shown.",
+      "what_it_tests": "Per arm (A corpus only, B masked loss, C masked + hinge), whether swapping in another document's memory moves the real-token loss, in units of a live decoy. Pre-registered rule: a seed ratio >= 0.1 is live.",
+      "evidence": [
+        {
+          "path": "runs/decisive-shuffle/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "90438f3d2a9c1998cca37069a7b4f7ded649a4b9"
+        },
+        {
+          "path": "experiments/decisive-shuffle/RESULTS.md"
+        },
+        {
+          "path": "experiments/decisive-shuffle/PREREG.md"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": [
+        {
+          "label": "arm A ratio (mean)",
+          "value": 0.0030113883562710602,
+          "ledger": "runs/decisive-shuffle/ledger.json",
+          "key": "armA.ratio"
+        },
+        {
+          "label": "arm A ratio (sd)",
+          "value": 0.0022948128851405223,
+          "ledger": "runs/decisive-shuffle/ledger.json",
+          "key": "armA.ratio.sd"
+        },
+        {
+          "label": "arm B ratio (mean)",
+          "value": 9.325116150194104,
+          "ledger": "runs/decisive-shuffle/ledger.json",
+          "key": "armB.ratio"
+        },
+        {
+          "label": "arm B ratio (sd)",
+          "value": 4.682868312791696,
+          "ledger": "runs/decisive-shuffle/ledger.json",
+          "key": "armB.ratio.sd"
+        },
+        {
+          "label": "arm C ratio (mean)",
+          "value": 7.740945638847722,
+          "ledger": "runs/decisive-shuffle/ledger.json",
+          "key": "armC.ratio"
+        },
+        {
+          "label": "arm C ratio (sd)",
+          "value": 6.057623344194264,
+          "ledger": "runs/decisive-shuffle/ledger.json",
+          "key": "armC.ratio.sd"
+        },
+        {
+          "label": "arm B held-out answer NLL, own memory (nats)",
+          "value": 2.904389261650008,
+          "ledger": "runs/decisive-shuffle/ledger.json",
+          "key": "armB.heldout.answer.answer_all.honest_nll"
+        },
+        {
+          "label": "arm C held-out answer NLL, own memory (nats)",
+          "value": 2.8524639644195147,
+          "ledger": "runs/decisive-shuffle/ledger.json",
+          "key": "armC.heldout.answer.answer_all.honest_nll"
+        },
+        {
+          "label": "chance over the 16 answer symbols, ln 16 (nats)",
+          "value": 2.772588722239781,
+          "ledger": "runs/s0-03-rewardable-corpus/ledger.json",
+          "key": "chance_ln16"
+        }
+      ]
+    },
+    {
+      "id": "liveness-wiring",
+      "title": "Wire memory liveness into every training run (Sprint 0 gate)",
+      "workstream": "W0",
+      "sprint": 0,
+      "status": "not_started",
+      "what_it_tests": "That a run whose memory is inert, or carries no row-specific content, is distinguishable at exit from one whose memory is live.",
+      "evidence": [
+        {
+          "path": "docs/lab-notes/dispatch-2026-09-21-liveness-wiring.md"
+        }
+      ],
+      "blocker": "Written, not started. Owner ruled go on 2026-09-22 (inert exits 5; an inert checkpoint is quarantined); not yet spawned.",
+      "owner_decision": true,
+      "numbers": []
+    },
+    {
+      "id": "E0b",
+      "title": "Reduction test vs TG, bit-exact",
+      "workstream": "W0",
+      "sprint": null,
+      "status": "done",
+      "verdict": "GREEN, bit-exact (a CI test, no ledger)",
+      "what_it_tests": "RSR under the §3.7 switches equals the PyTorch TG bit for bit on CPU, so FIFO and RSR arms differ only in the eviction rule.",
+      "evidence": [
+        {
+          "path": "tests/test_reduction.py"
+        },
+        {
+          "path": "experiments/e0b/RESULTS.md"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E0c",
+      "title": "Memory and throughput ceiling on the Mac Studio",
+      "workstream": "W0",
+      "sprint": null,
+      "status": "done",
+      "verdict": "RUN (no ledger; numbers live in RESULTS.md and are not repeated here)",
+      "what_it_tests": "The feasible (S, d, batch) on the machine that runs it.",
+      "evidence": [
+        {
+          "path": "experiments/e0c/RESULTS.md"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E0i",
+      "title": "Reintroduction-gap histogram over PG-19 (kill gate)",
+      "workstream": "W1",
+      "sprint": 1,
+      "status": "blocked",
+      "verdict": "exit 3, did not run",
+      "what_it_tests": "Whether (40,64] is populated against the pre-registered floor, with coref precision entering as a Wilson lower bound squared.",
+      "evidence": [
+        {
+          "path": "experiments/e0i/RESULTS.md"
+        },
+        {
+          "path": "preregistration/e0i_threshold.md"
+        },
+        {
+          "path": "docs/lab-notes/for-brendan-2026-09-21.md"
+        },
+        {
+          "path": "docs/lab-notes/dispatch-S1-01-e0i.md"
+        }
+      ],
+      "blocker": "T3 needs 100 human-annotated reintroductions. Also: the pre-registration's signature block is filled (commit fcd79d4) while its own header still says unsigned; the signing author email needs the owner's confirmation.",
+      "owner_decision": true,
+      "numbers": []
+    },
+    {
+      "id": "S0-03",
+      "title": "Make the synthetic corpus rewardable",
+      "workstream": "W1",
+      "sprint": 0,
+      "status": "done",
+      "verdict": "inconclusive: retrieval not shown (not both at chance)",
+      "what_it_tests": "Whether answer-token NLL is at chance with memory zeroed, whether live memory beats zeroed at 2 <= gap <= M, and whether gap > M is worse than gap < M under FIFO.",
+      "evidence": [
+        {
+          "path": "runs/s0-03-rewardable-corpus/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "851103efd3d1c676b6ae844a923813bd9b1c1da9"
+        },
+        {
+          "path": "experiments/s0-03-rewardable-corpus/RESULTS.md"
+        },
+        {
+          "path": "experiments/s0-03-rewardable-corpus/PREREG.md"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": [
+        {
+          "label": "held-out answer NLL, live memory (nats)",
+          "value": 2.8785285982805395,
+          "ledger": "runs/s0-03-rewardable-corpus/ledger.json",
+          "key": "heldout.live.all.answer_nll"
+        },
+        {
+          "label": "held-out answer NLL, slots zeroed (nats)",
+          "value": 2.9269801168682577,
+          "ledger": "runs/s0-03-rewardable-corpus/ledger.json",
+          "key": "heldout.slots_zeroed.all.answer_nll"
+        },
+        {
+          "label": "chance, ln 16 (nats)",
+          "value": 2.772588722239781,
+          "ledger": "runs/s0-03-rewardable-corpus/ledger.json",
+          "key": "chance_ln16"
+        }
+      ]
+    },
+    {
+      "id": "data-stubs",
+      "title": "PG-19 loader and coreference pipeline",
+      "workstream": "W1",
+      "sprint": 1,
+      "status": "not_started",
+      "what_it_tests": "The E0i input path: src/rsr/data/pg19.py and src/rsr/data/coref.py (fastcoref of record, ADR-0003).",
+      "evidence": [
+        {
+          "path": "src/rsr/data/pg19.py"
+        },
+        {
+          "path": "src/rsr/data/coref.py"
+        },
+        {
+          "path": "docs/decisions/ADR-0003-coref-tooling.md"
+        }
+      ],
+      "blocker": "Both files are stubs that raise.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E0d",
+      "title": "r_i vs leave-one-out delta-loss",
+      "workstream": "W2",
+      "sprint": 2,
+      "status": "not_started",
+      "what_it_tests": "Whether the retention target r_i tracks LOO delta-loss; if not, LOO is truth and r_i is a confound (§3.2.1).",
+      "evidence": [
+        {
+          "path": "experiments/e0d/RESULTS.md"
+        },
+        {
+          "path": "src/rsr/metrics/loo.py"
+        }
+      ],
+      "blocker": "src/rsr/metrics/loo.py is a stub that raises: the §3.2.1 arbiter has no implementation.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E0e",
+      "title": "u-bar distribution on a FIFO run",
+      "workstream": "W2",
+      "sprint": 2,
+      "status": "not_started",
+      "what_it_tests": "Measures tau, E[lifetime] and the EMA half-life, from which gamma_b is derived. It measures; it does not freeze gamma_b.",
+      "evidence": [
+        {
+          "path": "experiments/e0e/RESULTS.md"
+        },
+        {
+          "path": "src/rsr/constants.py"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E0a",
+      "title": "muP coordinate check, re-run with unit-norm gestalts",
+      "workstream": "W2",
+      "sprint": 2,
+      "status": "blocked",
+      "verdict": "PARTIAL / DEFERRED, not passed",
+      "what_it_tests": "Whether the value head's output is width-invariant in the trained regime (read at t >= 1), with unit-norm inputs as real TG produces.",
+      "evidence": [
+        {
+          "path": "experiments/e0a/RESULTS.md"
+        },
+        {
+          "path": "src/rsr/mup/coord_check.py"
+        }
+      ],
+      "blocker": "The value-head half ran on the MacBook with torch.randn inputs; its code is on branch macbook-local-2026-09-18 and is not ported. c_t must be pinned first (owner confirmation).",
+      "owner_decision": true,
+      "numbers": []
+    },
+    {
+      "id": "E0f",
+      "title": "Verify [P5]-[P14] against primary sources",
+      "workstream": "W2",
+      "sprint": 2,
+      "status": "in_progress",
+      "what_it_tests": "Whether the spec's citations hold against the primary sources.",
+      "evidence": [
+        {
+          "path": "experiments/e0f/RESULTS.md"
+        },
+        {
+          "path": "docs/citation-audit.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ],
+      "blocker": "[P9] (DNC) is the one source left, per docs/citation-audit.md.",
+      "owner_decision": false,
+      "numbers": [],
+      "verdict": "PARTIAL: 13 of 14 sources checked, [P9] outstanding. Not 'logged' for deleting spec §1's verification note.",
+      "reconciled": "2026-09-22: experiments/e0f/RESULTS.md corrected from the scaffold's NOT RUN to PARTIAL (commit 965d025); git history settled it (the file was never updated after either pass)."
+    },
+    {
+      "id": "E0g",
+      "title": "Name and obtain the E7 stimulus set",
+      "workstream": "W2",
+      "sprint": null,
+      "status": "done",
+      "verdict": "PASS (documentary; ADR-0005 still proposed, pending owner sign-off)",
+      "what_it_tests": "Whether a licensed naturalistic free-recall stimulus set exists in hand for E7.",
+      "evidence": [
+        {
+          "path": "experiments/e0g/RESULTS.md"
+        },
+        {
+          "path": "docs/decisions/ADR-0005-e7-stimulus-set.md"
+        }
+      ],
+      "owner_decision": true,
+      "numbers": []
+    },
+    {
+      "id": "E0h",
+      "title": "Regress psi-hat(gamma=0) on current cross-attention logits",
+      "workstream": "W2",
+      "sprint": 2,
+      "status": "not_started",
+      "what_it_tests": "Falsifier 3c: whether the estimator merely reproduces the forward pass (collinear with the current logit).",
+      "evidence": [
+        {
+          "path": "experiments/e0h/RESULTS.md"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E-feas",
+      "title": "Oracle vs FIFO headroom on the synthetic corpus",
+      "workstream": "W3",
+      "sprint": 3,
+      "status": "done",
+      "verdict": "survived (ran out of sprint order; re-run on the S0-03 corpus is bit-identical)",
+      "what_it_tests": "Whether an oracle with perfect knowledge of future demand keeps >= 5 points more of what queries need than FIFO at M = 16. Model-free.",
+      "evidence": [
+        {
+          "path": "runs/efeas-synthetic-s003/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "a2452196508e6732e034406736d96285c7e4677d"
+        },
+        {
+          "path": "runs/efeas-synthetic/ledger.json",
+          "ledger_key": "verdict.outcome",
+          "sha": "1fc8199bf342890a8b8dd98e222cbceccb3573c4"
+        },
+        {
+          "path": "experiments/efeas/RESULTS-s003.md"
+        },
+        {
+          "path": "experiments/efeas/PREREG-s003.md"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": [
+        {
+          "label": "headroom, oracle minus FIFO, M = 16 (mean)",
+          "value": 0.18073189228853534,
+          "ledger": "runs/efeas-synthetic-s003/ledger.json",
+          "key": "headroom_oracle_minus_fifo"
+        },
+        {
+          "label": "headroom, M = 16 (sd)",
+          "value": 0.012283164234645585,
+          "ledger": "runs/efeas-synthetic-s003/ledger.json",
+          "key": "headroom_oracle_minus_fifo.sd"
+        },
+        {
+          "label": "headroom at M = 32 (secondary, not judged)",
+          "value": 0.033655778247938715,
+          "ledger": "runs/efeas-synthetic-s003/ledger.json",
+          "key": "secondary.M32.headroom"
+        },
+        {
+          "label": "headroom, pre-S0-03 corpus (identical by design)",
+          "value": 0.18073189228853534,
+          "ledger": "runs/efeas-synthetic/ledger.json",
+          "key": "headroom_oracle_minus_fifo"
+        }
+      ]
+    },
+    {
+      "id": "baselines-missing",
+      "title": "H2O, Expire-Span, leading-edge baselines",
+      "workstream": "W3",
+      "sprint": 3,
+      "status": "not_started",
+      "what_it_tests": "H2O is the bar (both halves, 50/50); Expire-Span is the referendum with no demotion path; the leading-edge strategy is the named ancestor, on the microstructure coherence graph.",
+      "evidence": [
+        {
+          "path": "src/rsr/baselines/h2o.py"
+        },
+        {
+          "path": "src/rsr/baselines/expire_span.py"
+        },
+        {
+          "path": "src/rsr/baselines/leading_edge.py"
+        }
+      ],
+      "blocker": "All three are stubs that raise.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "baselines-present",
+      "title": "FIFO, LRU, random and oracle policies",
+      "workstream": "W3",
+      "sprint": 3,
+      "status": "done",
+      "verdict": "implemented, tested",
+      "what_it_tests": "The recency policy, the sanity floor and the upper bound exist behind the one RetentionPolicy protocol.",
+      "evidence": [
+        {
+          "path": "src/rsr/baselines/fifo.py"
+        },
+        {
+          "path": "src/rsr/baselines/lru.py"
+        },
+        {
+          "path": "src/rsr/baselines/random_policy.py"
+        },
+        {
+          "path": "src/rsr/baselines/oracle.py"
+        },
+        {
+          "path": "tests/test_oracle.py"
+        },
+        {
+          "path": "tests/test_policies.py"
+        }
+      ],
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E1",
+      "title": "Synthetic: full baseline set + nu sweep (kill gate)",
+      "workstream": "W4",
+      "sprint": 4,
+      "status": "not_started",
+      "what_it_tests": "A kill gate, not a result (D-9): red light or permission to continue, never a green light on the hypothesis.",
+      "evidence": [
+        {
+          "path": "docs/ROADMAP.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ],
+      "blocker": "Upstream: E0d, E0e, the missing baselines, and the Sprint 4 epoch-count measurement.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E2",
+      "title": "Vacuity gate on the full eviction score",
+      "workstream": "W4",
+      "sprint": 4,
+      "status": "not_started",
+      "what_it_tests": "Falsifier 1: whether the eviction score is a monotone function of slot age.",
+      "evidence": [
+        {
+          "path": "docs/ROADMAP.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ],
+      "blocker": "Upstream: E1.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E3",
+      "title": "PG-19 at S = 80: reintroduction loss vs k",
+      "workstream": "OOS",
+      "sprint": null,
+      "status": "out_of_scope",
+      "what_it_tests": "Whether RSR beats FIFO on reintroductions in the (40,64] window.",
+      "evidence": [
+        {
+          "path": "docs/release-conditions.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ],
+      "blocker": "Out of scope (§16): a projection, not a plan. Only weeks 1-4 are approved.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E4",
+      "title": "WikiText comparability",
+      "workstream": "OOS",
+      "sprint": null,
+      "status": "out_of_scope",
+      "what_it_tests": "Comparability with the base paper's corpus.",
+      "evidence": [
+        {
+          "path": "docs/release-conditions.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ],
+      "blocker": "Out of scope (§16): a projection, not a plan. Only weeks 1-4 are approved.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E5",
+      "title": "muP width sweep (hygiene)",
+      "workstream": "OOS",
+      "sprint": null,
+      "status": "out_of_scope",
+      "what_it_tests": "Hygiene only. No scaling claim is made.",
+      "evidence": [
+        {
+          "path": "docs/release-conditions.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ],
+      "blocker": "Out of scope (§16): a projection, not a plan. Only weeks 1-4 are approved.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E6",
+      "title": "Reversal probe",
+      "workstream": "OOS",
+      "sprint": null,
+      "status": "out_of_scope",
+      "what_it_tests": "Reversal probe.",
+      "evidence": [
+        {
+          "path": "docs/release-conditions.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ],
+      "blocker": "Out of scope (§16): a projection, not a plan. Only weeks 1-4 are approved.",
+      "owner_decision": false,
+      "numbers": []
+    },
+    {
+      "id": "E7",
+      "title": "Human narrative-recall gradient",
+      "workstream": "OOS",
+      "sprint": null,
+      "status": "out_of_scope",
+      "what_it_tests": "Whether RSR's retention tracks human narrative recall (falsifier 4).",
+      "evidence": [
+        {
+          "path": "docs/release-conditions.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ],
+      "blocker": "Out of scope (§16): a projection, not a plan. Only weeks 1-4 are approved.",
+      "owner_decision": false,
+      "numbers": []
+    }
+  ],
+  "retracted": [
+    {
+      "claim": "1.5476 ± 0.0171 as the hinge-off masked NLL",
+      "correction": "In no ledger on either machine. The real hinge-off arm is 1.5945 ± 0.0482 (n=2), key I300_HINGEOFF_eval_masked_real_token_nll.",
+      "source": "docs/RESEARCH-CONTEXT.md §11"
+    },
+    {
+      "claim": "cross-attention KL from uniform 0.0013 nats as evidence of an inert memory",
+      "correction": "Non-diagnostic and directionally backwards: the trained model is farther from uniform than the untrained one. Quote the shuffle control instead.",
+      "source": "docs/RESEARCH-CONTEXT.md §11"
+    },
+    {
+      "claim": "3 canaries, all held",
+      "correction": "2 survived, 1 inconclusive: runs/canary/cycle-04 wrote the baseline rather than comparing against one.",
+      "source": "docs/RESEARCH-CONTEXT.md §11"
+    },
+    {
+      "claim": "proven to learn, 10.82 → 1.11 from chance",
+      "correction": "That run used V = 50257 against a 156-word corpus; true chance is ln(160) = 5.075. The honest interval is 5.075 → 1.107.",
+      "source": "docs/RESEARCH-CONTEXT.md §11"
+    },
+    {
+      "claim": "12.8 pp as the order-statistic effect on b's authority",
+      "correction": "That arm also varied gamma_b and the EMA half-life; the isolated effect is ~17 pp.",
+      "source": "docs/RESEARCH-CONTEXT.md §11"
+    },
+    {
+      "claim": "50 escalations",
+      "correction": "It was 54.",
+      "source": "docs/RESEARCH-CONTEXT.md §11"
+    },
+    {
+      "claim": "the loss moves by exactly 0.0 / no single token moves (the shuffle control)",
+      "correction": "Signed mean delta is -1.46e-8 on seed 0, and 1,100-1,254 of ~1,580 real tokens move per seed. The claim holds as: mean |per-token delta| is 7.8e-4 ± 2.7e-4 of a live memory's (runs/shuffle-control/ledger.json, ratio_to_live_decoy).",
+      "source": "docs/RESEARCH-CONTEXT.md §11"
+    },
+    {
+      "claim": "every number traces to a ledger row",
+      "correction": "False; it fails first at the canary headline itself.",
+      "source": "docs/RESEARCH-CONTEXT.md §11"
+    }
+  ],
+  "owner_digest": [
+    {
+      "id": "sprint-0-gate",
+      "ask": "Does the decisive result (memory live on B and C, inert on A; answers at or above chance) answer the Sprint 0 gate?",
+      "evidence": [
+        {
+          "path": "docs/lab-notes/overnight-2026-09-21.md"
+        },
+        {
+          "path": "experiments/decisive-shuffle/RESULTS.md"
+        }
+      ]
+    },
+    {
+      "id": "sprint-2-start",
+      "ask": "May Sprint 2 (E0d, E0e, E0a re-run) start?",
+      "evidence": [
+        {
+          "path": "docs/lab-notes/overnight-2026-09-21.md"
+        },
+        {
+          "path": "docs/ROADMAP.md"
+        }
+      ]
+    },
+    {
+      "id": "hinge-b-vs-c",
+      "ask": "Hinge on or off (arm C vs arm B); 3 seeds do not separate them.",
+      "evidence": [
+        {
+          "path": "docs/lab-notes/overnight-2026-09-21.md"
+        }
+      ]
+    },
+    {
+      "id": "canary-rebaseline",
+      "ask": "Re-baseline the canary: the MPS baseline predates loss_path_hash, so every MPS reading now exits 2 (not comparable); the CPU baseline (runs/canary/baseline-cpu.json) is not yet written. Owner-only.",
+      "evidence": [
+        {
+          "path": "scripts/canary.py"
+        },
+        {
+          "path": "docs/lab-notes/for-brendan-2026-09-21.md"
+        }
+      ]
+    },
+    {
+      "id": "e0i-signature",
+      "ask": "E0i: the signature block is filled by fcd79d4 while the header still says unsigned; confirm the signing author email is yours. T3 needs 100 human annotations.",
+      "evidence": [
+        {
+          "path": "preregistration/e0i_threshold.md"
+        },
+        {
+          "path": "docs/lab-notes/for-brendan-2026-09-21.md"
+        }
+      ]
+    },
+    {
+      "id": "research-context-12",
+      "ask": "The six decisions in RESEARCH-CONTEXT §12 (b_max invariant, gamma_b scoping, ProtectionBias interface, nu clamp, normalizer, S-7 confirmation).",
+      "evidence": [
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ]
+    },
+    {
+      "id": "adr-0005-and-c_t",
+      "ask": "Sign off ADR-0005 (NFRD as the E7 stimulus set) and confirm the c_t pin before E0a runs.",
+      "evidence": [
+        {
+          "path": "docs/decisions/ADR-0005-e7-stimulus-set.md"
+        },
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ]
+    },
+    {
+      "id": "nightly-spend-cap",
+      "ask": "Set a nightly spend cap for unattended sessions.",
+      "evidence": []
+    },
+    {
+      "id": "mlx-lm-servers",
+      "ask": "Whether mlx_lm servers may run overnight (docs/decision-review.md notes one holding ~25 GB of the Studio's 64).",
+      "evidence": [
+        {
+          "path": "docs/decision-review.md"
+        }
+      ]
+    },
+    {
+      "id": "ups",
+      "ask": "A UPS: FileVault means a power flicker leaves the Studio at a password screen until someone types it in.",
+      "evidence": [
+        {
+          "path": "docs/RESEARCH-CONTEXT.md"
+        }
+      ]
+    },
+    {
+      "id": "branch-protection",
+      "ask": "Branch protection on main.",
+      "evidence": []
+    }
+  ],
+  "rulings": [
+    {
+      "ruling": "uv.lock is committed",
+      "date": "2026-09-22",
+      "evidence": [
+        {
+          "path": "uv.lock",
+          "sha": "9a763df"
+        }
+      ]
+    },
+    {
+      "ruling": "Python pinned to 3.12 (.python-version, requires-python ==3.12)",
+      "date": "2026-09-22",
+      "evidence": [
+        {
+          "path": ".python-version",
+          "sha": "5563b62"
+        }
+      ]
+    },
+    {
+      "ruling": "Liveness wiring: go",
+      "date": "2026-09-22",
+      "evidence": [
+        {
+          "path": "docs/lab-notes/dispatch-2026-09-21-liveness-wiring.md"
+        }
+      ]
+    },
+    {
+      "ruling": "A run that is ran-and-inert exits 5 (INERT)",
+      "date": "2026-09-22",
+      "evidence": []
+    },
+    {
+      "ruling": "An inert run's checkpoint is quarantined",
+      "date": "2026-09-22",
+      "evidence": []
+    },
+    {
+      "ruling": "Unattended work runs on a night branch",
+      "date": "2026-09-22",
+      "evidence": []
+    },
+    {
+      "ruling": "The owner is out of the loop overnight",
+      "date": "2026-09-22",
+      "evidence": []
+    }
+  ],
+  "timeline": [
+    {
+      "phase": "Sprint 0: make the substrate honest",
+      "items": [
+        "cycle-01",
+        "S0-01",
+        "S0-02",
+        "S0-03",
+        "S0-04",
+        "S0-05",
+        "decisive-shuffle",
+        "liveness-wiring"
+      ],
+      "depends_on": [],
+      "measured_duration": null,
+      "measured_duration_note": "not measured",
+      "item_durations": [
+        {
+          "item": "decisive-shuffle",
+          "what": "9 CPU trainings (3 arms x 3 seeds, 300 iters) as concurrent 1-thread subprocesses: wall clock from manifest to the first per-training command row",
+          "minutes": 75.1,
+          "derived_from": {
+            "started_utc": "2026-09-21T11:28:59Z",
+            "first_command_at_utc": "2026-09-21T12:44:04Z",
+            "finished_utc": "2026-09-21T12:46:08Z"
+          },
+          "source": "runs/decisive-shuffle/ledger.json (started_utc, commands[0].at_utc, finished_utc); thread count: row training_threads_per_process",
+          "caveat": "Derived from ledger timestamps, not a timer; no line in the repo states a per-training duration."
+        }
+      ]
+    },
+    {
+      "phase": "Sprint 1: the data kill gate (CPU, beside Sprint 0)",
+      "items": [
+        "E0i",
+        "data-stubs"
+      ],
+      "depends_on": [],
+      "measured_duration": null,
+      "measured_duration_note": "not measured"
+    },
+    {
+      "phase": "Sprint 2: the instruments",
+      "items": [
+        "E0d",
+        "E0e",
+        "E0a",
+        "E0f",
+        "E0h"
+      ],
+      "depends_on": [
+        "Sprint 0: make the substrate honest"
+      ],
+      "measured_duration": null,
+      "measured_duration_note": "not measured"
+    },
+    {
+      "phase": "Sprint 3: the baselines",
+      "items": [
+        "baselines-missing",
+        "baselines-present",
+        "E-feas"
+      ],
+      "depends_on": [
+        "Sprint 2: the instruments"
+      ],
+      "measured_duration": null,
+      "measured_duration_note": "not measured"
+    },
+    {
+      "phase": "Sprint 4: the epoch count, then E1/E2",
+      "items": [
+        "E1",
+        "E2"
+      ],
+      "depends_on": [
+        "Sprint 3: the baselines"
+      ],
+      "measured_duration": null,
+      "measured_duration_note": "not measured"
+    },
+    {
+      "phase": "Out of scope (§16): a projection, not a plan",
+      "items": [
+        "E3",
+        "E4",
+        "E5",
+        "E6",
+        "E7"
+      ],
+      "depends_on": [
+        "Sprint 4: the epoch count, then E1/E2"
+      ],
+      "measured_duration": null,
+      "measured_duration_note": "not measured"
+    }
+  ],
+  "environment": {
+    "machine": "Mac Studio, M4 Max, 64 GB. All training runs here (ADR-0007); no GPU is rented; compute spend for weeks 1-4 is zero.",
+    "python": "3.12 pinned (commit 5563b62). The decisive, S0-03 and E-feas-s003 ledgers record provenance.python 3.14.6 (worktree venvs built before the pin).",
+    "lockfile": "uv.lock committed (9a763df).",
+    "torch": "2.14.0 (experiments/decisive-shuffle/RESULTS.md).",
+    "devices": "CPU for determinism-sensitive gates (E0b, canary --device cpu); MPS best-effort.",
+    "canary": "MPS canary: rel_tol 1e-4, baseline predates loss_path_hash so readings exit 2. CPU canary: bit-exact, 1 thread, baseline not yet written (owner).",
+    "sources": [
+      "docs/decisions/ADR-0007-all-training-on-the-mac-studio.md",
+      "scripts/canary.py",
+      "experiments/decisive-shuffle/RESULTS.md"
+    ]
+  }
+}

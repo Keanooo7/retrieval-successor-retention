@@ -200,6 +200,8 @@ resolved in favour of whichever source reads better.
 PPL, +54%** — the largest ablation in the paper. In this repo's trained model, deleting all 16 slots
 costs **≈ 0%**. Those two numbers are not directly comparable (different corpora, scales and
 objectives) and **the gap is the thing the project currently has to explain.**
+*(Update 2026-09-22: the "≈ 0%" is the old unmasked-objective model. Under the masked objective the
+decisive run (#34) reads the memory as live but does not show retrieval. See §10.3.)*
 
 ### The divergences that matter (`docs/code-vs-paper.md`, all marked **source**)
 
@@ -503,11 +505,11 @@ measured on a single M4 Max**, and the paper must not imply anything about other
 | **E0c** | Memory/throughput ceiling on the Studio | Resizes everything | ✅ **RUN** |
 | **E0d** | `r_i` vs leave-one-out Δloss | **Yes** | ☐ not run. ⚠️ `metrics/loo.py` is a stub that raises — §3.2.1's truth rule has **no implemented arbiter** |
 | **E0e** | `ū` distribution on a FIFO run → `τ`, `E[lifetime]` → `γ_b` | No | ☐ not run. ⚠️ **E0e MEASURES; it does not freeze `γ_b`** — the scope question is §12.2 |
-| **E0f** | Verify [P5]–[P14] against primary sources | No | ◐ **pass 2 run 2026-09-20 — 13 of 14 done, [P9] outstanding.** Not clean: corrections 25–30, including three on [P11], the cognitive claim (§2) |
+| **E0f** | Verify [P5]–[P14] against primary sources | No | ◐ **pass 2 run 2026-09-20 — 13 of 14 done, [P9] outstanding.** Not clean: corrections 25–30, including three on [P11], the cognitive claim (§2). Record: `docs/citation-audit.md` (pass 1, 2026-09-17, ported to trunk in `dd78db7` / #1; pass 2 in `8f6f81d` / #6). *(2026-09-22: `experiments/e0f/RESULTS.md` said "NOT RUN". It was a scaffold stub whose content was last written in `83bdf57`, before either pass. It now points here.)* |
 | **E0g** | Name and obtain the E7 stimulus set | **Yes, for E7** | ✅ **PASS** |
 | **E0h** | Regress `ψ̂(γ=0)` on current cross-attention logits | **Yes** | ☐ not run |
 | **E0i** | Coref histogram over the PG-19 subset, CPU | **Yes — kill gate** | 🔴 **exit 3 — DID NOT RUN.** Pre-registration is **final and UNSIGNED** |
-| **E-feas** | Oracle vs FIFO per corpus | **Yes, per corpus** | ☐ not run |
+| **E-feas** | Oracle vs FIFO per corpus | **Yes, per corpus** | ✅ **synthetic: `survived`** (#19; `experiments/efeas/RESULTS.md`, `runs/efeas-synthetic/ledger.json`). Headroom `headroom_oracle_minus_fifo` **0.1807 ± 0.0123** at `M = 16`, 3 corpus seeds; `secondary.M32.headroom` 0.034, not judged. Re-run on the S0-03 corpus is **identical to the last bit** (#33; `experiments/efeas/RESULTS-s003.md`, `runs/efeas-synthetic-s003/ledger.json`), as designed: the simulation reads only gaps. Model-free. PG-19 not run *(updated 2026-09-22; was "not run")* |
 | **E1** | Synthetic, full baseline set + `ν` sweep | **Yes — kill gate only** | ☐ not run |
 | **E2** | Vacuity gate on the full eviction score | **Yes** | ☐ not run |
 | E3 | PG-19 at `S = 80`, reintroduction loss vs `k` | No | **unapproved** |
@@ -702,6 +704,12 @@ passed=287 failed=0 skipped=0 errors=0
 287 passed, 1 warning in 28.55s         # exit 0
 ```
 
+> 📌 **Update 2026-09-22: the block above is the 2026-09-18 figure at `d1c221f`.** A session on
+> 2026-09-22 at `clean/2026-09-22` (`7871580`; Python 3.12.13, torch 2.14.0) reported
+> `passed=420 failed=0 skipped=0 errors=0`, **1 xfailed**, rc `0`. E0b plus fidelity: `44 passed`.
+> **This is a session measurement, not a ledger row,** and the reconciliation that wrote this note
+> did not re-run it. An xfail is not a pass. Count it separately.
+
 **Zero skips.** Both former blockers are closed: `test_fidelity.py` is green forward *and* gradients
 within ADR-0002's committed tolerance, and `test_reduction.py` (E0b) is green and **bit-exact** —
 stock TG, the §3.7 reduction and the explicit FIFO policy all give `125.310546875`, and the learned
@@ -846,7 +854,49 @@ Hal-6 measures?"* **with no object.**
 **Until a target token requires retrieval, "the memory is inert" is a finding about the corpus, not
 about TG.** This is upstream of all three causes the overnight loop proposed.
 
-### 10.3 The model this repo trains has no usable memory
+> 📌 **Update 2026-09-22.** S0-03 puts the answer in the token stream (`SyntheticConfig.answer_in_stream`,
+> default `True`), per `experiments/s0-03-rewardable-corpus/RESULTS.md` and
+> `experiments/efeas/RESULTS-s003.md`. The S0-03 ledger verdict is `inconclusive`, "retrieval not
+> shown (not both at chance)" (`runs/s0-03-rewardable-corpus/ledger.json`). The paragraph above
+> describes the pre-S0-03 corpus.
+
+### 10.3 The model this repo trains has no usable memory — *superseded 2026-09-22; kept as history*
+
+> 📌 **Update 2026-09-22: the decisive experiment below has run. The heading above describes the
+> old unmasked-objective model and no longer describes the repo's trained model.** The decisive run
+> is #34: `experiments/decisive-shuffle/RESULTS.md`, `runs/decisive-shuffle/ledger.json`,
+> `provenance.git_sha` `90438f3`, three seeds per arm, CPU. It re-ran the shuffle control on
+> S0-03's rewardable corpus under three objectives. Every figure here was read from that ledger:
+>
+> | arm | objective | `arm{X}.ratio` (train batch, mean ± sd) | verdict |
+> |---|---|---|---|
+> | A | unmasked, hinge off (#17's config, new corpus) | **0.0030 ± 0.0023** | inert |
+> | B | masked, hinge off | **9.33 ± 4.68** | live |
+> | C | masked, hinge at `TGConfig` default | **7.74 ± 6.06** | live |
+>
+> - **The memory path is not broken** (ledger `verdict.outcome` `falsified` for the inert
+>   hypothesis). The cause of #17's null was the objective, not the wiring. Arm A shows that the
+>   corpus change alone was not enough.
+> - 🔴 **Live is not retrieval.** Held-out answer-token NLL, with the model's own memory intact,
+>   is **2.904 ± 0.057** (B) and **2.852 ± 0.088** (C) (`arm{B,C}.heldout.answer.answer_all.honest_nll`).
+>   That is at or above chance `ln 16 ≈ 2.773`. ⚠️ Per bucket, `gap_1` is below chance
+>   (B 2.725, C 2.609), and gap = 1 is readable through context seeding outside the memory (RESULTS
+>   caveats). `gap_2_to_M` and `gap_gt_M` are 2.88–2.94, above chance. The memory is used, and it
+>   is not shown to retrieve the right answer.
+> - **Arm A's memory is row-agnostic, not ignored.** Its trained memories are almost exactly
+>   collinear across rows: `armA.train.cosine_trained` **0.9995 ± 0.0005**, against a decoy's
+>   0.565. Matched-norm random replacement moves tokens at `armA.train.random_ratio`
+>   **2.10 ± 1.11**. So the readout uses memory, but the contents carry nothing row-specific. This
+>   is the PREREG's own descriptive reading ("random ≥ 0.1 while the shuffle ≤ 0.01").
+> - **What follows for the text below.** The S0-04 / #17 finding (`runs/shuffle-control/ledger.json`)
+>   still stands **for the model it measured**: unmasked loss, pre-S0-03 corpus. The decisive
+>   experiment's "Still inert ⇒ … broken" branch **did not occur**. The "Live ⇒ the cause was the
+>   objective" branch did, **with the retrieval caveat above**, which that sentence did not
+>   anticipate.
+> - ⚠️ The ledger records `python: 3.14.6`, which predates the 3.12 pin (`5563b62`). See the
+>   provenance note in the RESULTS file.
+
+**The original 2026-09-20 text follows, unedited.**
 
 ✅ **Verified by a stronger test than the loop ran, and re-derived from committed code on
 2026-09-20** (`runs/shuffle-control/ledger.json`, verdict `survived`). Hand a document's row

@@ -44,6 +44,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from orchestrator import lanes  # noqa: E402
 
 from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
 
@@ -109,6 +112,32 @@ _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
     "of the reduction (ADR-0006)."
+)
+
+_LANE_FLOCK_COUPLING = (
+    "orchestrator: the flock is the only thing that makes a slot exclusive, and "
+    "every one of these asserts that a held slot is held -- against a second "
+    "process, a killed holder, a reservation, the status probe, a full lane, or an "
+    "orphaned child. One mechanism, observed from six places."
+)
+_LANES_ABSENT_COUPLING = (
+    "orchestrator: every CLI path loads ops/lanes.json through load_config, so the "
+    "refusal naming C0 is observed through `lanes status` and `slot run` as well."
+)
+_SLOT_RC_COUPLING = (
+    "orchestrator: a signalled child's 128+N is passed through the same verbatim "
+    "exit as any other rc, so collapsing it reddens the signal tests too."
+)
+_USAGE_ERROR_COUPLING = (
+    "all three tests exercise the shared rsr.exit_codes.ArgumentParser usage-error "
+    "path; one edit to its refusal reddens each CLI that asserts it. Confirmed "
+    "2026-09-22 by applying the mutation at 5ecda88 (owner proxy, MacBook)."
+)
+_AUDIT_FLAGS_COUPLING = (
+    "the test asserts that `audit_prose` flags a specific literal; a mutation that "
+    "makes the audit flag nothing necessarily reddens every such assertion. The "
+    "small-integer rule's own mutations (under `# --- orchestrator: "
+    "render_scoreboard ---`) each redden only their gate."
 )
 
 MUTATIONS: tuple[Mutation, ...] = (
@@ -527,14 +556,32 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "clock is skipped AND a real number beside it is still flagged -- so "
                 "an audit that flags nothing necessarily reddens it too",
             ),
+            # 2026-09-22: every small-integer refusal test asserts that the audit
+            # flags something, so an audit that flags nothing reddens each of them.
+            *(
+                (f"tests/test_audit_small_ints.py::{t}", _AUDIT_FLAGS_COUPLING)
+                for t in (
+                    "test_the_audit_refuses_a_small_integer_matched_only_by_an_"
+                    "unrelated_ledger",
+                    "test_the_audit_refuses_a_small_integer_beside_its_key_with_the_"
+                    "wrong_value",
+                    "test_the_audit_refuses_a_small_integer_from_another_run",
+                    "test_the_audit_refuses_a_small_integer_in_a_table_cell_its_"
+                    "header_key_denies",
+                    "test_decimals_keep_the_value_rule",
+                )
+            ),
         ),
     ),
     Mutation(
         "a mutated run writes the real census file",
         "test_a_mutated_suite_run_does_not_clobber_the_census",
         "scripts/mutation_battery.py",
-        '    return {**os.environ, "RSR_TEST_COUN' + 'T": SCRATCH_COUNT}',
-        "    return {**os.environ}",
+        # 📌 Re-anchored 2026-09-22: B's thread cap turned `_suite_env`'s one-line
+        # return into `env = ...`. The split literal keeps this table row from
+        # being the first occurrence apply() replaces.
+        '    env = {**os.environ, "RSR_TEST_COUN' + 'T": SCRATCH_COUNT}',
+        "    env = {**os.environ}",
         "5.3: every mutation overwrites the file CI asserts on, and the last "
         "mutated run is what survives on disk",
     ),
@@ -542,8 +589,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the board's own counts stop backing the prose",
         "test_the_rendered_artefact_passes_its_own_audit",
         "scripts/render_scoreboard.py",
-        "    for row in board.rows:\n        for v in row.values():",
-        "    for row in []:\n        for v in row.values():",
+        # 📌 Re-anchored 2026-09-22 (small-integer audit): the board's per-run
+        # fields now back a number only beside their own key, via `_index()`.
+        "    for row in board.rows:\n        for k, v in row.items():",
+        "    for row in []:\n        for k, v in row.items():",
         "5.2: the generated artefact fails its own audit on the per-run row "
         "counts -- exactly the numbers the script exists to stop anyone typing",
     ),
@@ -582,8 +631,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a first canary reading exits 0 again",
         "test_a_first_canary_reading_exits_2_nothing_to_compare",
         "scripts/canary.py",
-        '"baseline": Exit.UNKNOWN}',
-        '"baseline": Exit.OK}',
+        # 📌 Re-anchored 2026-09-22 (canary split): EXIT_CODES became a multi-line
+        # dict when `not_comparable` was added, so the old `...UNKNOWN}` anchor
+        # would have aborted the battery at this entry.
+        '    "baseline": Exit.UNKNOWN,\n',
+        '    "baseline": Exit.OK,\n',
         "5.4: the ORIGINAL defect -- a first reading, which compared nothing, "
         "reported as a pass",
     ),
@@ -591,8 +643,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a first canary reading exits 3 again",
         "test_a_first_canary_reading_exits_2_nothing_to_compare",
         "scripts/canary.py",
-        '"baseline": Exit.UNKNOWN}',
-        '"baseline": Exit.DID_NOT_RUN}',
+        '    "baseline": Exit.UNKNOWN,\n',
+        '    "baseline": Exit.DID_NOT_RUN,\n',
         "S0-05: the FIX's defect, on the right axis. Cycle 0 mapped a first reading "
         "to 3; it ran and had nothing to compare, which is 2. The 0-mutation above "
         "only proves the old defect stays dead -- it cannot see the value the fixer "
@@ -661,8 +713,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "an empty battery passes",
         "test_a_battery_with_no_mutations_exits_2",
         "scripts/mutation_battery.py",
-        "        return Exit.UNKNOWN\n\n    baseline = run_suite()",
-        "        return Exit.OK\n\n    baseline = run_suite()",
+        # 📌 Re-anchored 2026-09-22: the thread-cap report now sits between the
+        # empty-table check and the baseline run.
+        "        return Exit.UNKNOWN\n\n    threads, source = suite_threads()",
+        "        return Exit.OK\n\n    threads, source = suite_threads()",
         "S0-05: '0/0 proven' has no unproven gate in it and exited 0. Nothing to "
         "compare is 2.",
     ),
@@ -674,6 +728,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        raise SystemExit(2)",
         "S0-05: argparse's 2 gave render_scoreboard's `2` two meanings, bad "
         "arguments and an empty board.",
+        off_gate_allowed=tuple(
+            (node, _USAGE_ERROR_COUPLING)
+            for node in (
+                "tests/test_canary_split.py::test_an_unknown_canary_device_did_not_run",
+                "tests/test_orch_outbox.py::test_the_cli_usage_error_exits_3",
+            )
+        ),
     ),
     Mutation(
         "extract_golden_tensors exits 1 without JAX again",
@@ -1045,6 +1106,565 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
         ),
     ),
+    # --- orchestrator: workqueue ---
+    Mutation(
+        "the work queue offers owner items",
+        "test_owner_item_",
+        "scripts/orchestrator/workqueue.py",
+        '            return Readiness(False, ["owner decision: never dispatched"])',
+        "            pass",
+        "an owner decision (RESEARCH-CONTEXT §12, sprint gates) becomes dispatchable "
+        "work: the queue would hand an agent a decision only Brendan may make",
+    ),
+    Mutation(
+        "a PREREG co-committed with code satisfies the queue",
+        "test_prereg_cocommitted_",
+        "scripts/orchestrator/workqueue.py",
+        "        if touched != {path}:",
+        "        if path not in touched:",
+        "CLAUDE.md: pre-registration commits land in their own commit, ahead of the "
+        "experiment; a threshold committed alongside its experiment's code is not "
+        "evidence it came first",
+    ),
+    Mutation(
+        "the work queue's §16 sprint cap moves to 5",
+        "test_sprint_cap_",
+        "scripts/orchestrator/workqueue.py",
+        "MAX_SPRINT = 4\n",
+        "MAX_SPRINT = 5\n",
+        "§16 approves weeks 1-4 only; a sprint-5 item would validate and be scheduled",
+    ),
+    Mutation(
+        "an unsigned ruling satisfies the queue",
+        "test_ruling_unsigned_",
+        "scripts/orchestrator/workqueue.py",
+        # 📌 Re-anchored 2026-09-22: the check moved into the module-level
+        # ruling_problem() (one indent shallower) when unparseable rulings were
+        # made loud (2e2063f). The battery at 5ecda88 refused 3 on this anchor.
+        '    for k in ("date", "stated_in"):\n        if not meta.get(k):',
+        "    for k in ():\n        if not meta.get(k):",
+        "a ruling file with no date or stated_in (docs/owner/rulings/README.md) "
+        "unblocks work as if Brendan had stated it",
+    ),
+    Mutation(
+        "a blocked item can be claimed",
+        "test_claim_of_",
+        "scripts/orchestrator/workqueue.py",
+        '    if args.status == "claimed":',
+        "    if False:",
+        "set-status is the only writer; without the check a caller claims an item "
+        "the deterministic rule says is not ready, and the LLM decides readiness",
+    ),
+    # --- orchestrator: lanes ---
+    Mutation(
+        "lane flock becomes a no-op",
+        "test_processes_cannot_hold_more_than_N_slots",
+        "scripts/orchestrator/lanes.py",
+        "        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)\n",
+        "        pass\n",
+        "the semaphore stops counting: every process is admitted, so nine 1-thread "
+        "CPU jobs become as many as ask, on 16 cores",
+        off_gate_allowed=tuple(
+            (node, _LANE_FLOCK_COUPLING)
+            for node in (
+                "tests/test_orch_lanes.py::test_a_killed_holder_releases_its_slots",
+                "tests/test_orch_lanes.py::test_a_multi_slot_admission_is_all_or_nothing",
+                "tests/test_orch_lanes.py::test_battery_reserves_cpu_det_slots",
+                "tests/test_orch_lanes.py::test_status_json_names_the_holder",
+                "tests/test_orch_slot.py::test_a_full_lane_refuses_3_after_the_wait",
+                "tests/test_orch_slot.py::"
+                "test_slots_stay_held_while_an_orphaned_child_lives",
+            )
+        ),
+    ),
+    Mutation(
+        "absent ops/lanes.json falls back to typed defaults",
+        "test_missing_lanes_file_is_refused_naming_C0",
+        "scripts/orchestrator/lanes.py",
+        "        raise Refused(_absent_message(path))",
+        "        return LanesConfig(9, 2, 2, 8.0, 1)",
+        "capacities stop being MEASURED by C0: a hand-typed default is D-1's shape "
+        "applied to the scheduler",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_lanes.py::test_status_cli_without_lanes_file_exits_3",
+                _LANES_ABSENT_COUPLING,
+            ),
+            (
+                "tests/test_orch_slot.py::"
+                "test_missing_lanes_file_refuses_3_and_does_not_run",
+                _LANES_ABSENT_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "mps admission skips the memory check",
+        "test_mps_admission_refuses_when_free_memory_is_insufficient",
+        "scripts/orchestrator/lanes.py",
+        "            if free_gb - peak_gb >= cfg.reserve_gb:",
+        "            if True:",
+        "an MPS job is admitted into unified memory it does not fit, and swaps the "
+        "CPU lanes it shares 64 GB with",
+    ),
+    # --- orchestrator: slot ---
+    Mutation(
+        "slot collapses the child's rc to a bool",
+        "test_the_childs_rc_passes_through_verbatim",
+        "scripts/orchestrator/slot.py",
+        "    raise SystemExit(rc)",
+        "    raise SystemExit(bool(rc))",
+        "2/3/5/137 all become 1: 'nothing to compare', 'did not run' and 'killed' "
+        "collapse into 'real failure'",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plus_n",
+                _SLOT_RC_COUPLING,
+            ),
+            (
+                "tests/test_orch_slot.py::test_sigterm_is_forwarded_and_recorded",
+                _SLOT_RC_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "slot does not force the thread env",
+        "test_cpu_det_forces_exactly_slots_threads",
+        "scripts/orchestrator/slot.py",
+        "        env.update(lanes.thread_env(threads))",
+        "        pass",
+        "a 1-slot cpu-det job spawns a BLAS/OpenMP pool per core; the slot count "
+        "stops meaning cores",
+    ),
+    Mutation(
+        "slot does not pass its lock fds to the child",
+        "test_slots_stay_held_while_an_orphaned_child_lives",
+        "scripts/orchestrator/slot.py",
+        "pass_fds=lease.fds()",
+        "pass_fds=()",
+        "a SIGKILLed wrapper frees the slots of a job that is still running",
+    ),
+    # --- orchestrator: battery threads ---
+    Mutation(
+        "battery suite threads not capped",
+        "test_the_env_override_caps_every_thread_pool",
+        "scripts/mutation_battery.py",
+        # Multi-line on purpose: the one-line form also occurs in THIS table (the
+        # slot entry above), and apply() replaces the first occurrence.
+        "    if threads is not None:\n        env.update(lanes.thread_env(threads))\n",
+        "    if threads is not None:\n        pass\n",
+        "the battery's pytest ignores RSR_BATTERY_THREADS and battery_cpu_slots and "
+        "takes every core from the cpu-det lane",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_battery.py::test_lanes_file_supplies_battery_cpu_slots",
+                "both sources of the cap reach the suite through the one "
+                "env.update; one edit, both sources lost",
+            ),
+        ),
+    ),
+    # --- orchestrator: lint_brief ---
+    # Brief errors are the dominant failure (overnight-2026-09-21.md §6). Each
+    # mutation removes one of lint_brief's checks; the test that plants that class
+    # of brief error must redden, and nothing else.
+    Mutation(
+        "lint_brief: a drifted anchor passes",
+        "test_a_drifted_anchor_is_a_finding",
+        "scripts/orchestrator/lint_brief.py",
+        "        if actual is not None and expect in actual:\n",
+        "        if True:\n",
+        "The rsr.py:433-vs-:448 class. Accepting any line as the anchor means a "
+        "brief citing a line that no longer holds its text lints clean.",
+    ),
+    Mutation(
+        "lint_brief: a writer premise is run",
+        "test_a_writer_command_is_rejected_and_not_run",
+        "scripts/orchestrator/lint_brief.py",
+        "    for pat, label in WRITER_PATTERNS:\n",
+        "    for pat, label in ():\n",
+        "A premise is a READ of the base. With no writer filter, a redirect, `rm`, "
+        "a commit and a push are executed rather than rejected.",
+    ),
+    Mutation(
+        "lint_brief: a baseline the base does not contain passes",
+        "test_a_baseline_the_base_does_not_contain_is_a_finding",
+        "scripts/orchestrator/lint_brief.py",
+        '    if _git(root, "merge-base", "--is-ancestor", sha, base).returncode != 0:\n',
+        "    if False:\n",
+        "A brief written against a tree this night's base does not contain lints "
+        "clean; its anchors were derived somewhere else.",
+    ),
+    Mutation(
+        "lint_brief: the brief's own commit passes as its baseline",
+        "test_a_wrong_baseline_sha_is_a_finding",
+        "scripts/orchestrator/lint_brief.py",
+        '    if rel is not None and _git(root, "cat-file", "-e", f"{sha}:{rel}")'
+        ".returncode == 0:\n",
+        "    if False:\n",
+        "The baseline off by the brief's own commit (Brief 0, S0-03, 2026-09-21) "
+        "lints clean.",
+    ),
+    Mutation(
+        "lint_brief: no base exits 0",
+        "test_no_base_exits_3",
+        "scripts/orchestrator/lint_brief.py",
+        "        return did_not_run(str(e))\n",
+        "        return Exit.OK\n",
+        "3 collapsing to 0: a lint that never ran -- no base to check against -- "
+        "reported as a clean brief.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_lint_brief.py::"
+                "test_the_cli_exits_through_the_protocol_with_json",
+                "the CLI test asserts the same refusal end to end through "
+                "`python -m`, so one edit to the refusal reddens both: the unit "
+                "and the process exit status.",
+            ),
+        ),
+    ),
+    Mutation(
+        "lint_brief: the throwaway worktree is kept",
+        "test_premises_run_in_a_throwaway_worktree_at_base",
+        "scripts/orchestrator/lint_brief.py",
+        '        removed = _git(self.root, "worktree", "remove", "--force", '
+        "str(self.path))\n",
+        "        removed = subprocess.CompletedProcess([], 0)\n",
+        "Premise checks run in a detached worktree at base; if it is not removed "
+        "every lint leaves a registered worktree behind in the shared repository.",
+    ),
+    # --- orchestrator: loop driver (reconcile, merge, tick, notify) --- #
+    # Agent D, 2026-09-22. Each gate is a test in tests/test_orch_*.py run
+    # against a throwaway repo with stubbed claude/gh (tests/_orch_loop_helpers.py).
+    Mutation(
+        "reconcile: a repeated cause no longer parks",
+        "test_two_failures_with_the_same_cause_park_the_item",
+        "scripts/orchestrator/reconcile.py",
+        "        repeat = cause in hist\n",
+        "        repeat = False\n",
+        "the stop rule 'two failures with the same cause' (dispatch-2026-09-21-"
+        "overnight) stops being a mechanism: the item goes back to ready and the "
+        "same failure is re-dispatched until RSR_MAX_ATTEMPTS.",
+    ),
+    Mutation(
+        "reconcile: a dead job pid is read as alive",
+        "test_a_running_job_whose_pid_is_dead_becomes_crashed_and_its_item_collecting",
+        "scripts/orchestrator/reconcile.py",
+        '                if lc.pid_alive(rec.get("pid")):\n'
+        "                    continue\n"
+        '                rec["status"] = "crashed"',
+        "                if True:\n"
+        "                    continue\n"
+        '                rec["status"] = "crashed"',
+        "a job whose process died stays `running` forever: no collector is ever "
+        "spawned and the night reads as busy until park_by.",
+    ),
+    Mutation(
+        "merge: preregistration/ dropped from the frozen globs",
+        "test_the_guard_trips_on_a_preregistration_edit",
+        "scripts/orchestrator/merge.py",
+        '    "preregistration/*",\n',
+        '    # "preregistration/*",\n',
+        "an unattended branch that edits a signed threshold merges into the night "
+        "branch -- 'a threshold registered after seeing the data is not a threshold'.",
+    ),
+    Mutation(
+        "merge: a changed FROZEN definition is not compared",
+        "test_the_guard_trips_on_a_frozen_constant_edit",
+        "scripts/orchestrator/merge.py",
+        "                elif before[name] != after[name]:",
+        "                elif False:",
+        "defect D-1's shape: a FROZEN constant's value edited on a run branch passes "
+        "the guard, because only additions and removals are checked.",
+    ),
+    Mutation(
+        "merge: no verification record is not a refusal",
+        "test_merge_is_refused_without_a_verification_record",
+        "scripts/orchestrator/merge.py",
+        "    if rec is None:\n        return Exit.DID_NOT_RUN,",
+        "    if rec is None and False:\n        return Exit.DID_NOT_RUN,",
+        "the verification gate stops being a gate: with no record the merge crashes "
+        "(1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.",
+    ),
+    Mutation(
+        "tick: HALT ignored",
+        "test_halt_is_respected_before_anything_else",
+        "scripts/orchestrator/tick.py",
+        "        h = lc.halted(self.root)\n        if h:",
+        "        h = lc.halted(self.root)\n        if False:",
+        "the owner's stop switch, and the loop's own (guard trip, spend cap), no "
+        "longer stop the python pass; only tick.zsh's first line still would.",
+    ),
+    Mutation(
+        "tick: the idle path falls through to launching",
+        "test_the_idle_path_launches_nothing_and_notifies_once",
+        "scripts/orchestrator/tick.py",
+        "            self.idle()\n            return Exit.OK",
+        "            self.idle()",
+        "an idle night starts a paid manager cycle every ten minutes with nothing "
+        "to review.",
+    ),
+    Mutation(
+        "tick: UNSET spend caps are not refused",
+        "test_caps_unset_refuse_3_and_notify_once",
+        "scripts/orchestrator/tick.py",
+        "        if cycle_cap is None or night_cap is None:",
+        "        if False:",
+        "the spend caps are an owner decision; without the refusal the loop runs "
+        "with no cap at all (here it crashes on the None cap, exit 1 not 3).",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_tick.py::"
+                "test_tick_zsh_reports_the_pass_status_unborrowed",
+                "the zsh wrapper's test drives the same UNSET refusal through "
+                "tick.zsh to prove the status is reported unborrowed; it cannot "
+                "hold when the refusal it reports is gone. Skipped where zsh is "
+                "absent (CI), so it may or may not redden there.",
+            ),
+        ),
+    ),
+    Mutation(
+        "notify: the content-hash dedupe removed",
+        "test_the_same_content_is_posted_once",
+        "scripts/orchestrator/notify.py",
+        "    if h in seen:",
+        "    if False:",
+        "the owner is posted the same notice on every tick "
+        "(R-2026-09-22-owner-out-of-loop).",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_tick.py::test_caps_unset_refuse_3_and_notify_once",
+                "the tick's refusal notice is posted once BECAUSE notify dedupes "
+                "it -- the tick deliberately has no second guard for a refusal.",
+            ),
+        ),
+    ),
+    # --- orchestrator: hooks --- #
+    Mutation(
+        "hooks: .claude/** is no longer owner-only",
+        "test_orch_hooks.py::test_owner_only_",
+        "scripts/orchestrator/hooks.py",
+        '            if s == ".claude" and nxt != "worktrees":',
+        "            if False:",
+        "A headless agent could rewrite its own role file or the settings that load "
+        "its hooks -- the one edit that switches every other guardrail off. Only the "
+        ".claude cases of the owner-only tests can see it.",
+    ),
+    Mutation(
+        "hooks: a push that names main is not recognised",
+        "test_orch_hooks.py::test_push_to_main_",
+        "scripts/orchestrator/hooks.py",
+        '    return dst in ("main", "refs/heads/main") or dst.endswith('
+        '"/refs/heads/main")',
+        "    return False",
+        "R-2026-09-22-night-branch: main never moves in a night. With the refspec "
+        "check gone every spelling of a push to main -- main, HEAD:main, x:refs/heads/"
+        "main, :main, via -C/-c/bash -c, or `git update-ref` -- goes through.",
+    ),
+    Mutation(
+        "hooks: a researcher may read every outbox file",
+        "test_orch_hooks.py::test_blinding_",
+        "scripts/orchestrator/hooks.py",
+        '    if ctx.profile == "researcher" and ctx.run_id and kind == '
+        'f"{ctx.run_id}.md":',
+        '    if ctx.profile == "researcher":',
+        "The blinding failure of 09-21: the decisive researcher read S0-03's numbers "
+        "through the shared outbox. The own-file exemption widened to 'any file' "
+        "un-blinds every researcher while its own report still works.",
+    ),
+    Mutation(
+        "hooks: bare pytest is no longer slot-wrapped",
+        "test_orch_hooks.py::test_unwrapped_compute_",
+        "scripts/orchestrator/hooks.py",
+        '    if prog in ("pytest", "py.test") and not in_slot:',
+        "    if False:",
+        "Compute outside lane slots: two sessions each running the full suite on the "
+        "Studio at once is the contention the slot lanes exist to prevent.",
+    ),
+    Mutation(
+        "hooks: an internal error lets the tool call through",
+        "test_orch_hooks.py::test_fail_closed_",
+        "scripts/orchestrator/hooks.py",
+        '            reason = f"orchestrator hook error, failing closed: '
+        '{type(e).__name__}: {e}"',
+        "            reason = None",
+        "Claude Code treats any hook exit other than 0/2 as a non-blocking error and "
+        "runs the tool call. A parser bug would then silently disable every rule.",
+    ),
+    # --- orchestrator: outbox --- #
+    Mutation(
+        "outbox: the template placeholder counts as an answer",
+        "test_orch_outbox.py::test_template_placeholder_is_not_an_answer",
+        "scripts/orchestrator/outbox.py",
+        '    return content.startswith("<")',
+        "    return False",
+        "`BELIEVED, NOT VERIFIED: <list>` would pass the Stop hook: a report can end "
+        "with the template's own text in a required field, which is an absent field "
+        "that looks present.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_outbox.py::test_new_writes_the_template_with_the_run_id",
+                "a freshly generated template must fail on every required field; the "
+                "placeholder rule is exactly what makes it fail.",
+            ),
+        ),
+    ),
+    # --- orchestrator: verify --- #
+    Mutation(
+        "verify: the claim draw ignores the run id",
+        "test_orch_verify.py::test_draw_is_seeded_by_run_id",
+        "scripts/orchestrator/verify.py",
+        "    rng = random.Random(int(seed_for(run_id), 16))",
+        "    rng = random.Random(0)",
+        "Every run would re-execute the same claim positions, so a researcher who "
+        "knew the draw could put the claims it trusts least where it is never drawn. "
+        "Consistent everywhere else, so only the seed test sees it.",
+    ),
+    # --- orchestrator: canary ---
+    Mutation(
+        "a changed loss path is compared anyway",
+        "test_canary_not_comparable",
+        "scripts/canary.py",
+        "        if not ok:\n"
+        '            verdict, moved, detail = "not_comparable", [], why',
+        "        if False:\n"
+        '            verdict, moved, detail = "not_comparable", [], why',
+        "canary split 2026-09-22: at 945b501 a code change read MOVED on 6 of 6 "
+        "beats and exited 1 -- a code change reported as an environment move. "
+        "Skipping the comparability check restores exactly that.",
+    ),
+    Mutation(
+        "the CPU canary gets a tolerance",
+        "test_the_cpu_canary_is_bit_exact",
+        "scripts/canary.py",
+        "REL_TOL_CPU = 0.0",
+        "REL_TOL_CPU = 1e-4",
+        "canary split: the CPU variant exists to be bit-exact; a tolerance "
+        "silently makes it a second MPS canary.",
+    ),
+    Mutation(
+        "the CPU canary runs on every thread",
+        "test_the_cpu_canary_trains_on_one_thread",
+        "scripts/canary.py",
+        "        torch.set_num_threads(CPU_THREADS)\n",
+        "        pass\n",
+        "canary split: multi-threaded CPU reductions are the nondeterminism a "
+        "bit-exact canary cannot absorb.",
+    ),
+    Mutation(
+        "loss_path_hash ignores file contents",
+        "test_loss_path_hash_moves_with_the_code",
+        "scripts/canary.py",
+        "        h.update((repo / rel).read_bytes())\n",
+        "        pass\n",
+        "canary split: a hash over names only reads an edited loop.py as the same "
+        "code, and a code change goes back to reading as a MOVED environment.",
+    ),
+    # --- orchestrator: render_scoreboard ---
+    Mutation(
+        "small integers are backed by any ledger again",
+        "test_the_audit_refuses_a_small_integer",
+        "scripts/render_scoreboard.py",
+        "            if integer and abs(val) <= SMALL_INT:",
+        "            if False:",
+        "2026-09-22 audit fix: any literal equal to any number in any ledger "
+        "passed, so '3 seeds' was backed by whichever ledger held a 3. This is "
+        "the hole itself.",
+    ),
+    Mutation(
+        "a key from another run backs the sentence",
+        "test_the_audit_refuses_a_small_integer_from_another_run",
+        "scripts/render_scoreboard.py",
+        "                if named and rid not in named and rid != BOARD_ID:",
+        "                if False:",
+        "2026-09-22 audit fix: a sentence about canary/cycle-08 borrowing "
+        "decisive-shuffle's steps_done is a same-value match across unrelated "
+        "ledgers wearing a key's name.",
+    ),
+    Mutation(
+        "a plain English word names a key",
+        "test_the_audit_refuses_a_small_integer_matched_only_by_an_unrelated_ledger",
+        "scripts/render_scoreboard.py",
+        '        if any(c in w for c in "_./-"):',
+        "        if True:",
+        "2026-09-22 audit fix: `seeds` is a key in four ledgers, so the prose word "
+        "'seeds' backed '3 seeds' by one of them listing seed 3.",
+    ),
+    Mutation(
+        "a dangling token passes",
+        "test_a_token_that_resolves_to_no_key_is_flagged",
+        "scripts/render_scoreboard.py",
+        "            if dangling and m.group(0) not in unbacked:",
+        "            if False:",
+        "2026-09-22 audit fix: a {{run_id:key}} that resolves to nothing would "
+        "read as backed prose while naming no measurement.",
+    ),
+    # --- orchestrator: render_status ---
+    Mutation(
+        "status.json numbers are not compared to their ledgers",
+        "test_render_status_refuses_a_number",
+        "scripts/render_status.py",
+        '            if not _equal(flat[key], n.get("value")):',
+        "            if False:",
+        "2026-09-22 research map: a number typed into status.json that its ledger "
+        "does not hold would reach the page -- the transcription layer every "
+        "retracted number on this project came from (RESEARCH-CONTEXT §11).",
+    ),
+    Mutation(
+        "status.json evidence paths are not checked",
+        "test_render_status_flags_a_missing_evidence_path",
+        "scripts/render_status.py",
+        "        if not path or not (repo / path).exists():",
+        "        if False:",
+        "2026-09-22 research map: an item citing a RESULTS.md that does not exist "
+        "reads as evidenced.",
+    ),
+    # --- orchestrator: workqueue rulings (2026-09-22) ---
+    Mutation(
+        "an unreadable ruling at base passes as absent again",
+        "test_unreadable_ruling_at_base_stops_ready",
+        "scripts/orchestrator/workqueue.py",
+        "    unreadable = q.unreadable_rulings(q.base())\n    if unreadable:\n",
+        "    unreadable = q.unreadable_rulings(q.base())\n    if False:\n",
+        "Three 09-22 rulings with an unquoted ': ' were invalid YAML and read as "
+        "'unsigned' with no error: a decision silently not in force.",
+    ),
+    Mutation(
+        "validate ignores ruling files that do not parse",
+        "test_unreadable_ruling_in_tree_fails_validate",
+        "scripts/orchestrator/workqueue.py",
+        "    return Exit.FAIL if (bad or rbad) else Exit.OK\n",
+        "    return Exit.FAIL if bad else Exit.OK\n",
+        "The one pre-commit check that would have caught the 09-22 YAML defect "
+        "before a ruling reached any base.",
+    ),
+    # --- battery: anchor check (2026-09-22) ---
+    Mutation(
+        "the anchor check counts nothing",
+        "test_check_anchors_",
+        "scripts/mutation_battery.py",
+        "        if n != 1:\n            out.append(",
+        "        if False:\n            out.append(",
+        "5ecda88's battery ran 87 minutes, then refused on one stale anchor a "
+        "string search finds at once; the check is what makes that a 0-second exit.",
+    ),
+    # --- orchestrator: verifier write guard (PR #36, 2026-09-22) ---
+    Mutation(
+        "the verifier's blanket /tmp allowance restored",
+        "test_verifier_confined_under_a_tmp_prefix",
+        "scripts/orchestrator/hooks.py",
+        '    allowed = [payload.get("scratchpad_dir")]\n',
+        '    allowed = [payload.get("scratchpad_dir"), "/tmp", "/private/tmp"]\n',
+        "PR #36 was red on Linux CI and green on the Mac: with /tmp allowed, a "
+        "repo checked out under /tmp let the verifier write src/.",
+    ),
+    Mutation(
+        "the verifier's work-tree check dropped",
+        "test_verifier_scratchpad_inside_a_work_tree_is_denied",
+        "scripts/orchestrator/hooks.py",
+        "    return not _inside_work_tree(p)\n",
+        "    return True\n",
+        "A scratchpad_dir pointing into a repo would become a way around "
+        "'the verifier never edits code'.",
+    ),
 )
 
 
@@ -1163,7 +1783,45 @@ def _suite_env() -> dict[str, str]:
     written from it before the mismatch was noticed. The census has to come from
     the run that claims it.
     """
-    return {**os.environ, "RSR_TEST_COUNT": SCRATCH_COUNT}
+    threads, _source = suite_threads()
+    env = {**os.environ, "RSR_TEST_COUNT": SCRATCH_COUNT}
+    if threads is not None:
+        env.update(lanes.thread_env(threads))
+    return env
+
+
+def suite_threads() -> tuple[int | None, str]:
+    """How many threads the mutated suite may use, and where that number came from.
+
+    The battery runs beside the lane scheduler's other jobs on one Mac Studio
+    (ADR-0007), and an uncapped pytest spawns a BLAS/OpenMP pool per core. So:
+
+    1. ``RSR_BATTERY_THREADS`` if set (a positive int, else DID NOT RUN);
+    2. else ``battery_cpu_slots`` from ``ops/lanes.json`` -- the cpu-det slots the
+       battery lane reserves (`scripts/orchestrator/lanes.py`) -- when that file
+       exists; a present but invalid file is DID NOT RUN, never ignored;
+    3. else ``None``: the environment is left as it was, which is the behaviour
+       before the scheduler existed. ``ops/lanes.json`` is absent until capacity
+       experiment C0 runs.
+
+    `main()` prints which, so a battery record says what it ran under.
+    """
+    raw = os.environ.get("RSR_BATTERY_THREADS")
+    if raw is not None:
+        try:
+            n = int(raw)
+        except ValueError:
+            n = 0
+        if n < 1:
+            refuse(Exit.DID_NOT_RUN, f"RSR_BATTERY_THREADS={raw!r} is not an int >= 1")
+        return n, "RSR_BATTERY_THREADS"
+    if not (ROOT / lanes.LANES_FILE).exists():
+        return None, f"unset ({lanes.LANES_FILE} absent; environment unchanged)"
+    try:
+        cfg = lanes.load_config(ROOT)
+    except lanes.Refused as e:
+        refuse(Exit.DID_NOT_RUN, str(e))
+    return max(cfg.battery_cpu_slots, 1), f"{lanes.LANES_FILE} battery_cpu_slots"
 
 
 def run_suite() -> set[str]:
@@ -1183,6 +1841,25 @@ def run_suite() -> set[str]:
     if not failing and proc.returncode not in (0, 5):
         failing.add(f"<collection/exit {proc.returncode}>")
     return failing
+
+
+def anchor_problems() -> list[str]:
+    """One line per mutation whose anchor does not occur EXACTLY once in its file.
+
+    Zero occurrences is a stale anchor (apply() would refuse mid-run). More than
+    one means apply() replaces the first, which may not be the code the gate is
+    about -- the table's own text, for a mutation that targets this file.
+    """
+    out = []
+    for m in MUTATIONS:
+        path = ROOT / m.path
+        if not path.is_file():
+            out.append(f"{m.name!r}: {m.path} does not exist")
+            continue
+        n = path.read_text().count(m.old)
+        if n != 1:
+            out.append(f"{m.name!r}: anchor occurs {n} times in {m.path} (must be 1)")
+    return out
 
 
 def apply(mutation: Mutation) -> str:
@@ -1208,6 +1885,12 @@ def main() -> Exit:
     )
     ap.add_argument("--json", type=Path, default=None)
     ap.add_argument(
+        "--check-anchors",
+        action="store_true",
+        help="only verify every anchor occurs exactly once in its file (seconds); "
+        "exit 3 if not",
+    )
+    ap.add_argument(
         "--markdown",
         type=Path,
         default=None,
@@ -1221,6 +1904,30 @@ def main() -> Exit:
         print("UNKNOWN: the battery has no mutations to run", file=sys.stderr)
         return Exit.UNKNOWN
 
+    threads, source = suite_threads()
+    print(
+        f"suite threads: {threads if threads is not None else 'uncapped'} "
+        f"(source: {source})"
+    )
+    # 🔴 Every anchor is checked BEFORE the first suite run. On 2026-09-22 the
+    # full battery ran 87 minutes at 5ecda88 and then refused 3 on one stale
+    # anchor that a string search finds in under a second.
+    problems = anchor_problems()
+    if args.check_anchors:
+        for p in problems:
+            print(f"STALE ANCHOR {p}", file=sys.stderr)
+        if problems:
+            return Exit.DID_NOT_RUN
+        print(f"{len(MUTATIONS)}/{len(MUTATIONS)} anchors occur exactly once")
+        return Exit.OK
+    if problems:
+        for p in problems:
+            print(f"STALE ANCHOR {p}", file=sys.stderr)
+        refuse(
+            Exit.DID_NOT_RUN,
+            f"{len(problems)} stale anchor(s); nothing was mutated. Fix the anchors "
+            f"(`--check-anchors`), do not drop the mutations.",
+        )
     baseline = run_suite()
     if baseline:
         # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare

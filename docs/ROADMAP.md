@@ -22,6 +22,35 @@ the *mechanism*.
 
 **So the first sprint is not an experiment. It is making a run capable of meaning something.**
 
+> 📌 **Update 2026-09-22 — the paragraph above is the 2026-09-20 state, kept as history.** Two of
+> its claims have since been measured again:
+>
+> - **Suite count.** `287` was measured at `d1c221f` on 2026-09-18 (RESEARCH-CONTEXT §9). A
+>   session on 2026-09-22 at `clean/2026-09-22` (`7871580`; Python 3.12.13, torch 2.14.0)
+>   reported `passed=420 failed=0 skipped=0 errors=0`, 1 xfailed, rc `0`; E0b and fidelity
+>   together `44 passed`. **This is a session measurement, not a ledger row.** The reconciliation
+>   that wrote this note did not re-run it.
+> - **"The trained model's working memory is inert."** That finding is S0-04 (#17,
+>   `runs/shuffle-control/ledger.json`), on the **old unmasked-objective model and the old
+>   corpus**. The decisive run (#34, `experiments/decisive-shuffle/RESULTS.md`,
+>   `runs/decisive-shuffle/ledger.json`, `provenance.git_sha` `90438f3`) re-ran the shuffle
+>   control on S0-03's rewardable corpus, three arms × three seeds. Ledger key `arm{A,B,C}.ratio`
+>   (train batch, mean ± sd): **A** (unmasked, hinge off) **0.0030 ± 0.0023, inert**; **B**
+>   (masked, hinge off) **9.33 ± 4.68, live**; **C** (masked, hinge on) **7.74 ± 6.06, live**.
+>   So **the memory path is not broken**; under the masked objective it is used. Two limits:
+>   - **Live is not retrieval.** Held-out answer-token NLL with the model's own memory
+>     (`arm{B,C}.heldout.answer.answer_all.honest_nll`) is **2.904 ± 0.057** (B) and
+>     **2.852 ± 0.088** (C), at or above chance `ln 16 ≈ 2.773`. This run does not test
+>     retrieval accuracy.
+>   - **Arm A's memory is row-agnostic.** Cross-row cosine of the trained memories
+>     (`armA.train.cosine_trained`) is **0.9995 ± 0.0005**, while matched-norm random replacement
+>     moves tokens at `armA.train.random_ratio` **2.10 ± 1.11** of the decoy. The memory is read,
+>     but it carries nothing row-specific.
+>
+>   The corpus claim was also addressed: S0-03 put the answer in the token stream
+>   (`experiments/s0-03-rewardable-corpus/RESULTS.md`, verdict `inconclusive`, "retrieval not
+>   shown"). The FIFO-arm and stub-count claims above were **not re-verified** by this note.
+
 ---
 
 ## 1. KEY: The blocker that was in no plan — the AttentionTrace capture bridge
@@ -78,6 +107,16 @@ tokens at **7.8e-4 ± 2.7e-4 of a live memory's rate** (`runs/shuffle-control/le
 base paper's own −54% for removing working memory. *(This line said "exactly 0.0" until
 2026-09-20; §11 retracts it.)* A run where memory
 contributes ≈0 is **refused, not filed**.
+
+> 📌 **Update 2026-09-22.** The `7.8e-4` figure is S0-04 (#17) on the old unmasked-objective model;
+> it stands as history. The decisive run (#34, `runs/decisive-shuffle/ledger.json`, sha `90438f3`)
+> gives, on S0-03's corpus, `armA.ratio` **0.0030 ± 0.0023** (unmasked: inert), `armB.ratio`
+> **9.33 ± 4.68** and `armC.ratio` **7.74 ± 6.06** (masked: live), three seeds each. **The
+> shuffle reads live on B and C.** Held-out answer NLL for B and C (2.904, 2.852) is still at or
+> above `ln 16`, so the memory is used but **retrieval is not shown**
+> (`experiments/decisive-shuffle/RESULTS.md`). Whether this gate is now "green" is the owner's
+> reading. The gate text above does not define "green" beyond a non-zero move with spread, and
+> this note does not decide it.
 
 ### Sprint 1 — the data kill gate (CPU, parallel with Sprint 0)
 
