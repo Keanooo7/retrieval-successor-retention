@@ -135,6 +135,12 @@ _AUDIT_FLAGS_COUPLING = (
     "render_scoreboard ---`) each redden only their gate."
 )
 
+_C0_RESTART_COUPLING = (
+    "capacity-c0 server safety (2026-09-22): a signal (S2) and a kill that raises "
+    "mid-stop (S1) are both exceptions out of the run with servers down, and each "
+    "test asserts they come back -- through the same finally this mutation empties."
+)
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -1709,7 +1715,93 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "capacity-c0: 'machine not quiet' after a YIELD stop is a refusal "
                 "raised with the servers down, and the test asserts they come back.",
             ),
+            *(
+                (node, _C0_RESTART_COUPLING)
+                for node in (
+                    "tests/test_capacity_c0.py::"
+                    "test_servers_signal_restarts_and_writes_partial[SIGTERM]",
+                    "tests/test_capacity_c0.py::"
+                    "test_servers_signal_restarts_and_writes_partial[SIGHUP]",
+                    "tests/test_capacity_c0.py::"
+                    "test_servers_stop_marks_each_kill_so_a_later_failure_still_restarts",
+                )
+            ),
         ),
+    ),
+    # --- capacity-c0: server safety (2026-09-22) ---
+    Mutation(
+        "C0: a server is not marked stopped when its kill succeeds",
+        "test_servers_stop_marks_each_kill",
+        "experiments/capacity-c0/run.py",
+        '        rec["stopped"] = True  # the kill succeeded: '
+        "from here on it is restarted\n",
+        "        pass\n",
+        "S1. A kill that raised at the NEXT server left every earlier record "
+        "stopped=False, so the finally skipped them as 'never stopped': the owner's "
+        "servers stayed down (R-2026-09-22-mlx-servers: restart after C0).",
+    ),
+    Mutation(
+        "C0: SIGTERM/SIGHUP handlers not installed",
+        "test_servers_signal_restarts",
+        "experiments/capacity-c0/run.py",
+        "    with interrupt_on_signals():\n",
+        "    with contextlib.nullcontext():\n",
+        "S2. A SIGTERM or a closed terminal (SIGHUP) killed C0 without running any "
+        "finally: servers left down, no ledger, not even 'partial'.",
+    ),
+    Mutation(
+        "C0: a raising restart skips the ledger write",
+        "test_servers_restart_failure_still_writes_ledger",
+        "experiments/capacity-c0/run.py",
+        "        try:\n            restarted = restart_servers(sysm, stopped, log_dir)\n"
+        "        except BaseException as e:  # S2: a failed restart never skips "
+        "led.write()\n",
+        "        if True:\n"
+        "            restarted = restart_servers(sysm, stopped, log_dir)\n"
+        "        if False:\n",
+        "S2. An exception out of restart_servers escaped the finally before "
+        "led.write(): the run left no ledger at all, the one record of what it "
+        "stopped.",
+    ),
+    Mutation(
+        "C0: a restarted server counted without the alive check",
+        "test_servers_restart_alive_check",
+        "experiments/capacity-c0/run.py",
+        "            alive = rc is None\n",
+        "            alive = True\n",
+        "S3. Popen succeeding is not a server running: one that exits at once (bad "
+        "venv, port taken) was recorded 'restarted' and nobody looked.",
+    ),
+    Mutation(
+        "C0: a caffeinate helper restarted like a server",
+        "test_servers_measured_layout",
+        "experiments/capacity-c0/run.py",
+        '        if rec.get("role") == "helper":\n',
+        "        if False:\n",
+        "S4. The measured helpers are `caffeinate -s <server argv>`: restarting one "
+        "launches a DUPLICATE server beside the restarted one.",
+    ),
+    Mutation(
+        "C0: a name/port disagreement not refused",
+        "test_servers_disagreement_refuses",
+        "experiments/capacity-c0/run.py",
+        "    if problems:\n        raise Refusal(\n"
+        '            "servers: name and port disagree',
+        "    if False:\n        raise Refusal(\n"
+        '            "servers: name and port disagree',
+        "S4. A name-matched process that is neither a listening server nor its "
+        "helper, or a foreign owner of a server's declared port, means the "
+        "identification is wrong; stopping anyway stops the wrong thing.",
+    ),
+    Mutation(
+        "C0: the start barrier released before every job is ready",
+        "test_barrier_",
+        "experiments/capacity-c0/run.py",
+        "        if not missing:\n            break\n",
+        "        if True:\n            break\n",
+        "S5. Without the barrier the jobs of a wave start their timed loops at "
+        "different times, so at high k the early ones run partly alone: "
+        "makespan(k) is biased down and cpu_det_slots up.",
     ),
 )
 
