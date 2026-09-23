@@ -108,6 +108,12 @@ _S003_CORPUS_COUPLING = (
     "cannot hold on a corpus that has no such token."
 )
 
+_C0_S003_WORKLOAD_COUPLING = (
+    "capacity-c0: C0's workloads are S0-03's CONFIG and rewardable corpus, imported "
+    "(PREREG training_workload / core_workload), and this test really trains the "
+    "core workload twice; a corpus with no in-stream answer token cannot train."
+)
+
 _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
@@ -138,6 +144,12 @@ _AUDIT_FLAGS_COUPLING = (
     "makes the audit flag nothing necessarily reddens every such assertion. The "
     "small-integer rule's own mutations (under `# --- orchestrator: "
     "render_scoreboard ---`) each redden only their gate."
+)
+
+_C0_RESTART_COUPLING = (
+    "capacity-c0 server safety (2026-09-22): a signal (S2) and a kill that raises "
+    "mid-stop (S1) are both exceptions out of the run with servers down, and each "
+    "test asserts they come back -- through the same finally this mutation empties."
 )
 
 MUTATIONS: tuple[Mutation, ...] = (
@@ -1073,6 +1085,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 _S003_REFUSAL_COUPLING,
             ),
             (
+                "tests/test_capacity_c0.py::"
+                "test_output_hash_identical_runs_equal_while_checkpoint_files_differ",
+                _C0_S003_WORKLOAD_COUPLING,
+            ),
+            (
                 "tests/test_train_loop.py::test_the_hinge_reaches_the_objective",
                 _S003_REFUSAL_COUPLING,
             ),
@@ -1568,6 +1585,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "2026-09-22 audit fix: any literal equal to any number in any ledger "
         "passed, so '3 seeds' was backed by whichever ledger held a 3. This is "
         "the hole itself.",
+        off_gate_allowed=(
+            (
+                "tests/test_capacity_c0.py::test_rendered_results_pass_the_prose_audit",
+                "C0's RESULTS renderer backs each small integer by naming its key in "
+                "the same sentence -- the rule this mutation removes. Under the old "
+                "value rule those integers have no equal value in C0's ledger, so the "
+                "rendered page fails the audit: the same rule, seen from C0.",
+            ),
+        ),
     ),
     Mutation(
         "a key from another run backs the sentence",
@@ -1664,6 +1690,163 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    return True\n",
         "A scratchpad_dir pointing into a repo would become a way around "
         "'the verifier never edits code'.",
+    ),
+    # --- capacity-c0 ---
+    Mutation(
+        "C0: the determinism comparison skipped (every job matches)",
+        "test_det_verdict",
+        "experiments/capacity-c0/run.py",
+        "        match = job.output_hash == ref\n",
+        "        match = True\n",
+        "capacity-c0 brief bar, mutation (1). The falsifier is the one gate in C0 "
+        "that fails where nothing else does; a verdict that never compares writes "
+        "capacities for a lane whose premise (CPU runs are bit-exact) is false.",
+    ),
+    Mutation(
+        "C0: cpu_det_slots from the faster repetition",
+        "test_cpu_det_slots_slower_rep",
+        "experiments/capacity-c0/run.py",
+        "    return max(per_rep)\n",
+        "    return min(per_rep)\n",
+        "capacity-c0 brief bar, mutation (2); PREREG repetitions: 'the SLOWER of "
+        "the two repetitions is used'. The faster one overstates the core ceiling.",
+    ),
+    Mutation(
+        "C0: the checkpoint file hashed instead of the state_dict",
+        "test_output_hash",
+        "experiments/capacity-c0/run.py",
+        '    digest = state_dict_sha256(payload["model"])\n',
+        "    digest = hashlib.sha256(ckpt.read_bytes()).hexdigest()\n",
+        "capacity-c0 brief bar, mutation (3); PREREG output_hash. The file carries "
+        "unseeded python/numpy RNG state, so identical runs would read as "
+        "non-deterministic and falsify C0 spuriously.",
+    ),
+    Mutation(
+        "C0: two jobs given the same out_dir",
+        "test_job_out_dirs",
+        "experiments/capacity-c0/run.py",
+        '        / f"rep{spec.rep}"\n        / f"job{spec.j}"\n',
+        '        / f"rep{spec.rep}"\n',
+        "capacity-c0 brief bar, mutation (4); PREREG job_isolation. Concurrent "
+        "jobs sharing an out_dir overwrite each other's checkpoint and heartbeat.",
+        off_gate_allowed=(
+            (
+                "tests/test_capacity_c0.py::"
+                "test_output_hash_identical_runs_equal_while_checkpoint_files_differ",
+                "capacity-c0: `Wave` refuses a job whose out_dir already exists, so "
+                "the real two-job wave in the output-hash test is refused under the "
+                "same edit. Defence in depth for job_isolation, by design.",
+            ),
+        ),
+    ),
+    Mutation(
+        "C0: the servers not restarted when the run raises",
+        "test_servers_restarted",
+        "experiments/capacity-c0/run.py",
+        "    except BaseException as e:\n        if led.doc.get(",
+        "    except BaseException as e:\n        stopped = []\n        if led.doc.get(",
+        "R-2026-09-22-mlx-servers: the owner's servers are restarted when C0 "
+        "completes, however it completes. A restart that runs only on success "
+        "leaves them down after a deadline, a refusal or a crash.",
+        off_gate_allowed=(
+            (
+                "tests/test_capacity_c0.py::test_partial_on_deadline",
+                "capacity-c0: a deadline is an exception out of the measurement, and "
+                "the test asserts the servers come back after it.",
+            ),
+            (
+                "tests/test_capacity_c0.py::"
+                "test_quiet_yield_stops_only_the_servers_and_records_them",
+                "capacity-c0: 'machine not quiet' after a YIELD stop is a refusal "
+                "raised with the servers down, and the test asserts they come back.",
+            ),
+            *(
+                (node, _C0_RESTART_COUPLING)
+                for node in (
+                    "tests/test_capacity_c0.py::"
+                    "test_servers_signal_restarts_and_writes_partial[SIGTERM]",
+                    "tests/test_capacity_c0.py::"
+                    "test_servers_signal_restarts_and_writes_partial[SIGHUP]",
+                    "tests/test_capacity_c0.py::"
+                    "test_servers_stop_marks_each_kill_so_a_later_failure_still_restarts",
+                )
+            ),
+        ),
+    ),
+    # --- capacity-c0: server safety (2026-09-22) ---
+    Mutation(
+        "C0: a server is not marked stopped when its kill succeeds",
+        "test_servers_stop_marks_each_kill",
+        "experiments/capacity-c0/run.py",
+        '        rec["stopped"] = True  # the kill succeeded: '
+        "from here on it is restarted\n",
+        "        pass\n",
+        "S1. A kill that raised at the NEXT server left every earlier record "
+        "stopped=False, so the finally skipped them as 'never stopped': the owner's "
+        "servers stayed down (R-2026-09-22-mlx-servers: restart after C0).",
+    ),
+    Mutation(
+        "C0: SIGTERM/SIGHUP handlers not installed",
+        "test_servers_signal_restarts",
+        "experiments/capacity-c0/run.py",
+        "    with interrupt_on_signals():\n",
+        "    with contextlib.nullcontext():\n",
+        "S2. A SIGTERM or a closed terminal (SIGHUP) killed C0 without running any "
+        "finally: servers left down, no ledger, not even 'partial'.",
+    ),
+    Mutation(
+        "C0: a raising restart skips the ledger write",
+        "test_servers_restart_failure_still_writes_ledger",
+        "experiments/capacity-c0/run.py",
+        "        try:\n            restarted = restart_servers(sysm, stopped, log_dir)\n"
+        "        except BaseException as e:  # S2: a failed restart never skips "
+        "led.write()\n",
+        "        if True:\n"
+        "            restarted = restart_servers(sysm, stopped, log_dir)\n"
+        "        if False:\n",
+        "S2. An exception out of restart_servers escaped the finally before "
+        "led.write(): the run left no ledger at all, the one record of what it "
+        "stopped.",
+    ),
+    Mutation(
+        "C0: a restarted server counted without the alive check",
+        "test_servers_restart_alive_check",
+        "experiments/capacity-c0/run.py",
+        "            alive = rc is None\n",
+        "            alive = True\n",
+        "S3. Popen succeeding is not a server running: one that exits at once (bad "
+        "venv, port taken) was recorded 'restarted' and nobody looked.",
+    ),
+    Mutation(
+        "C0: a caffeinate helper restarted like a server",
+        "test_servers_measured_layout",
+        "experiments/capacity-c0/run.py",
+        '        if rec.get("role") == "helper":\n',
+        "        if False:\n",
+        "S4. The measured helpers are `caffeinate -s <server argv>`: restarting one "
+        "launches a DUPLICATE server beside the restarted one.",
+    ),
+    Mutation(
+        "C0: a name/port disagreement not refused",
+        "test_servers_disagreement_refuses",
+        "experiments/capacity-c0/run.py",
+        "    if problems:\n        raise Refusal(\n"
+        '            "servers: name and port disagree',
+        "    if False:\n        raise Refusal(\n"
+        '            "servers: name and port disagree',
+        "S4. A name-matched process that is neither a listening server nor its "
+        "helper, or a foreign owner of a server's declared port, means the "
+        "identification is wrong; stopping anyway stops the wrong thing.",
+    ),
+    Mutation(
+        "C0: the start barrier released before every job is ready",
+        "test_barrier_",
+        "experiments/capacity-c0/run.py",
+        "        if not missing:\n            break\n",
+        "        if True:\n            break\n",
+        "S5. Without the barrier the jobs of a wave start their timed loops at "
+        "different times, so at high k the early ones run partly alone: "
+        "makespan(k) is biased down and cpu_det_slots up.",
     ),
 )
 
