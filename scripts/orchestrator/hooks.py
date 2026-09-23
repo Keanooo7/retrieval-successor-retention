@@ -985,12 +985,48 @@ def make_ctx(payload: dict, env: dict[str, str]) -> Ctx:
     )
 
 
+def _inside_work_tree(p: str) -> bool:
+    """True if `p` (or its would-be parent) sits inside a git work tree: any
+    ancestor directory holds a `.git` entry (a directory, or a worktree's file)."""
+    for v in _variants(p):
+        d = os.path.dirname(v)
+        while True:
+            if os.path.lexists(os.path.join(d, ".git")):
+                return True
+            up = os.path.dirname(d)
+            if up == d:
+                break
+            d = up
+    return False
+
+
+def _under(p: str, top: str, cwd: str) -> bool:
+    tops = _variants(norm(top, cwd))
+    return any(
+        v == t or v.startswith(t.rstrip("/") + "/") for v in _variants(p) for t in tops
+    )
+
+
 def _verifier_may_write(ctx: Ctx, p: str, payload: dict) -> bool:
+    """The verifier writes exactly two kinds of path:
+
+    * `runs/<id>/verification.json` -- its record;
+    * inside the payload's own `scratchpad_dir` -- and only if that is NOT inside a
+      git work tree.
+
+    🔴 2026-09-22 (PR #36, CI red on Linux): this used to allow all of `/tmp` and
+    `/private/tmp`. On Linux pytest's `tmp_path` is under `/tmp`, so a repo checked
+    out there let the verifier write `src/`; macOS hid it (`/private/var/folders`).
+    A blanket temp-dir allowance is an allowance to edit any repo that happens to
+    live in one.
+    """
     parts = _segments(p)
     if len(parts) >= 3 and parts[-1] == "verification.json" and parts[-3] == "runs":
         return True
-    scratch = [payload.get("scratchpad_dir"), "/tmp", "/private/tmp"]
-    return any(s and (p == s or p.startswith(s.rstrip("/") + "/")) for s in scratch)
+    allowed = [payload.get("scratchpad_dir")]
+    if not any(s and _under(p, s, ctx.cwd) for s in allowed):
+        return False
+    return not _inside_work_tree(p)
 
 
 def decide_pretooluse(payload: dict, env: dict[str, str]) -> str | None:

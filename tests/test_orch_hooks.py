@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -31,7 +33,11 @@ PROFILES = ("manager", "researcher", "verifier")
 
 @pytest.fixture
 def root(tmp_path: Path) -> Path:
-    r = tmp_path / "repo"
+    return _make_root(tmp_path)
+
+
+def _make_root(parent: Path) -> Path:
+    r = parent / "repo"
     for d in (
         ".git",
         ".orchestrator/outbox",
@@ -540,6 +546,45 @@ def test_verifier_never_edits_code(root):
     assert decide(root, "Edit", {"file_path": str(root / "tests/test_x.py")}, **kw)
     record = str(root / "runs/r1/verification.json")
     assert decide(root, "Write", {"file_path": record}, **kw) is None
+
+
+@pytest.fixture
+def tmp_root():
+    """A repo under a real `/tmp/...` path, on purpose: Linux's layout (pytest's
+    `tmp_path` is under `/tmp` there, under `/private/var/folders` on macOS). PR #36
+    was red on CI and green on the Mac for exactly that reason."""
+    base = Path(tempfile.mkdtemp(prefix="rsr-hooks-", dir="/tmp"))
+    try:
+        yield _make_root(base)
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
+
+
+def test_verifier_confined_under_a_tmp_prefix(tmp_root):
+    kw = _profile_kw("verifier")
+    scratch = Path(tempfile.mkdtemp(prefix="rsr-scratch-"))  # outside any repo
+    try:
+        kw["scratchpad_dir"] = str(scratch)
+        # the repo's code, under /tmp: denied
+        src = str(tmp_root / "src/rsr/x.py")
+        assert decide(tmp_root, "Write", {"file_path": src}, **kw)
+        # a non-repo, non-scratchpad file under /tmp: denied (no blanket /tmp)
+        loose = f"/tmp/rsr-hooks-loose-{os.getpid()}.txt"
+        assert decide(tmp_root, "Write", {"file_path": loose}, **kw)
+        # the two allowed kinds
+        record = str(tmp_root / "runs/r1/verification.json")
+        assert decide(tmp_root, "Write", {"file_path": record}, **kw) is None
+        note = str(scratch / "notes.txt")
+        assert decide(tmp_root, "Write", {"file_path": note}, **kw) is None
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
+def test_verifier_scratchpad_inside_a_work_tree_is_denied(root):
+    """A scratchpad_dir that points into a repo is not a way around 'never edits code'."""
+    kw = _profile_kw("verifier")
+    kw["scratchpad_dir"] = str(root / "src")
+    assert decide(root, "Write", {"file_path": str(root / "src/rsr/x.py")}, **kw)
 
 
 def test_unknown_tools_pass_through(root):

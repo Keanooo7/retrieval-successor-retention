@@ -1621,6 +1621,25 @@ MUTATIONS: tuple[Mutation, ...] = (
         "The one pre-commit check that would have caught the 09-22 YAML defect "
         "before a ruling reached any base.",
     ),
+    # --- orchestrator: verifier write guard (PR #36, 2026-09-22) ---
+    Mutation(
+        "the verifier's blanket /tmp allowance restored",
+        "test_verifier_confined_under_a_tmp_prefix",
+        "scripts/orchestrator/hooks.py",
+        '    allowed = [payload.get("scratchpad_dir")]\n',
+        '    allowed = [payload.get("scratchpad_dir"), "/tmp", "/private/tmp"]\n',
+        "PR #36 was red on Linux CI and green on the Mac: with /tmp allowed, a "
+        "repo checked out under /tmp let the verifier write src/.",
+    ),
+    Mutation(
+        "the verifier's work-tree check dropped",
+        "test_verifier_scratchpad_inside_a_work_tree_is_denied",
+        "scripts/orchestrator/hooks.py",
+        "    return not _inside_work_tree(p)\n",
+        "    return True\n",
+        "A scratchpad_dir pointing into a repo would become a way around "
+        "'the verifier never edits code'.",
+    ),
 )
 
 
