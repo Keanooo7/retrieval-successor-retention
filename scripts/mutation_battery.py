@@ -1602,6 +1602,25 @@ MUTATIONS: tuple[Mutation, ...] = (
         "2026-09-22 research map: an item citing a RESULTS.md that does not exist "
         "reads as evidenced.",
     ),
+    # --- orchestrator: workqueue rulings (2026-09-22) ---
+    Mutation(
+        "an unreadable ruling at base passes as absent again",
+        "test_unreadable_ruling_at_base_stops_ready",
+        "scripts/orchestrator/workqueue.py",
+        "    unreadable = q.unreadable_rulings(q.base())\n    if unreadable:\n",
+        "    unreadable = q.unreadable_rulings(q.base())\n    if False:\n",
+        "Three 09-22 rulings with an unquoted ': ' were invalid YAML and read as "
+        "'unsigned' with no error: a decision silently not in force.",
+    ),
+    Mutation(
+        "validate ignores ruling files that do not parse",
+        "test_unreadable_ruling_in_tree_fails_validate",
+        "scripts/orchestrator/workqueue.py",
+        "    return Exit.FAIL if (bad or rbad) else Exit.OK\n",
+        "    return Exit.FAIL if bad else Exit.OK\n",
+        "The one pre-commit check that would have caught the 09-22 YAML defect "
+        "before a ruling reached any base.",
+    ),
 )
 
 

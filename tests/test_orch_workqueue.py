@@ -508,3 +508,42 @@ def test_seed_item_sources_resolve_to_real_lines(monkeypatch):
             assert len(f.read_text().splitlines()) >= line, f"{it.id}: {path}:{line}"
             cites += 1
     assert cites >= 30
+
+
+# --------------------------------------------------------------------------- #
+# an unreadable ruling is loud, never a silent "unsigned" (2026-09-22)
+# --------------------------------------------------------------------------- #
+
+# The 09-22 defect, verbatim in shape: an unquoted `: ` inside stated_in.
+UNPARSEABLE = (
+    "---\nid: R-2026-09-22-go\ndate: 2026-09-22\n"
+    'stated_in: session -- Brendan: "go"\n---\nRuled.\n'
+)
+
+
+def test_unreadable_ruling_names_the_yaml_error():
+    why = wq.ruling_problem("R-2026-09-22-go.md", UNPARSEABLE)
+    assert why is not None and "not valid YAML" in why
+
+
+def test_unreadable_ruling_quoted_colon_signs():
+    quoted = UNPARSEABLE.replace(
+        'stated_in: session -- Brendan: "go"', "stated_in: 'session -- Brendan: \"go\"'"
+    )
+    assert wq.ruling_problem("R-2026-09-22-go.md", quoted) is None
+
+
+def test_unreadable_ruling_at_base_stops_ready(repo, capsys):
+    repo.commit({f"docs/owner/rulings/{R}.md": UNPARSEABLE})
+    repo.item("ok")
+    with pytest.raises(SystemExit) as e:
+        wq.main(["ready"])
+    assert e.value.code == 3
+    assert f"UNREADABLE RULING {R}.md" in capsys.readouterr().err
+
+
+def test_unreadable_ruling_in_tree_fails_validate(repo, capsys):
+    repo.write({f"docs/owner/rulings/{R}.md": UNPARSEABLE})
+    repo.item("ok")
+    assert wq.main(["validate"]) == wq.Exit.FAIL
+    assert f"INVALID RULING {R}.md" in capsys.readouterr().out

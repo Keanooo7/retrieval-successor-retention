@@ -243,6 +243,33 @@ def split_front_matter(text: str) -> tuple[dict[str, Any] | None, str]:
     return meta, text[end + 5 :]
 
 
+def ruling_problem(name: str, text: str) -> str | None:
+    """Why a ruling file does not sign, or ``None``. One rule for the working tree
+    (``validate``) and for the base (``ready``/``render``/``digest``).
+
+    🔴 2026-09-22: three rulings with an unquoted ``: `` in ``stated_in`` were invalid
+    YAML. ``split_front_matter`` returns ``None`` for that, which read as "no front
+    matter" -- i.e. *unsigned*, silently. An unparseable ruling is now an error that
+    stops the queue, never a quiet absence.
+    """
+    meta, _ = split_front_matter(text)
+    if meta is None:
+        if text.startswith("---\n"):
+            try:
+                end = text.find("\n---\n", 4)
+                yaml.safe_load(text[4 : end if end > 0 else len(text)])
+            except yaml.YAMLError as e:
+                return f"front matter is not valid YAML: {str(e).splitlines()[0]}"
+        return "no parseable front matter"
+    stem = name[:-3] if name.endswith(".md") else name
+    if meta.get("id") != stem:
+        return f"front-matter id {meta.get('id')!r} != {stem!r}"
+    for k in ("date", "stated_in"):
+        if not meta.get(k):
+            return f"unsigned (no {k})"
+    return None
+
+
 @dataclass
 class Item:
     path: Path
@@ -447,16 +474,19 @@ class Queue:
         text = self.git.show(base, f"{RULINGS_DIR}/{name}")
         if text is None:
             return "absent at base"
-        meta, _ = split_front_matter(text)
-        if meta is None:
-            return "present at base but has no front matter"
-        stem = name[:-3]
-        if meta.get("id") != stem:
-            return f"present at base but front-matter id {meta.get('id')!r} != {stem!r}"
-        for k in ("date", "stated_in"):
-            if not meta.get(k):
-                return f"present at base but unsigned (no {k})"
-        return None
+        why = ruling_problem(name, text)
+        return None if why is None else f"present at base but {why}"
+
+    def unreadable_rulings(self, base: str) -> dict[str, str]:
+        """Every ruling file at `base` that exists but does not parse or sign."""
+        out = {}
+        for n in self.git.ls(base, RULINGS_DIR):
+            if n.startswith("R-") and n.endswith(".md"):
+                text = self.git.show(base, f"{RULINGS_DIR}/{n}")
+                why = ruling_problem(n, text or "")
+                if why is not None:
+                    out[n] = why
+        return out
 
     def _ruling_matches(self, base: str, ref: str) -> tuple[bool, str]:
         names = [n for n in self.git.ls(base, RULINGS_DIR) if n.endswith(".md")]
@@ -591,6 +621,15 @@ def _atomic_write(path: Path, text: str) -> None:
 
 
 def _refuse_if_invalid(q: Queue) -> None:
+    unreadable = q.unreadable_rulings(q.base())
+    if unreadable:
+        for name, why in unreadable.items():
+            print(f"UNREADABLE RULING {name}: {why}", file=sys.stderr)
+        refuse(
+            Exit.DID_NOT_RUN,
+            f"{len(unreadable)} ruling file(s) at base do not parse or sign; a ruling "
+            f"that cannot be read must not pass as absent.",
+        )
     bad = q.validate()
     if bad:
         for name, errs in bad.items():
@@ -612,7 +651,13 @@ def cmd_validate(q: Queue, args: Any) -> Exit:
         for e in errs:
             print(f"INVALID {name}: {e}")
     print(f"{len(q.items) - len(bad)}/{len(q.items)} items valid")
-    return Exit.FAIL if bad else Exit.OK
+    rdir = q.root / RULINGS_DIR
+    files = sorted(rdir.glob("R-*.md")) if rdir.is_dir() else []
+    rbad = {f.name: why for f in files if (why := ruling_problem(f.name, f.read_text()))}
+    for name, why in rbad.items():
+        print(f"INVALID RULING {name}: {why}")
+    print(f"{len(files) - len(rbad)}/{len(files)} rulings parse and sign")
+    return Exit.FAIL if (bad or rbad) else Exit.OK
 
 
 def _row(q: Queue, it: Item) -> dict[str, Any]:
