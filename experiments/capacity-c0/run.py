@@ -21,7 +21,15 @@ Order (PREREG "Falsifier first"; brief "the solo training job runs first"):
 4. the suite timings W(n); 5. the MPS job; 6. the rules; 7. the ledger.
 
 The servers are restarted in a ``finally``, so an exception, a deadline or a
-falsified verdict still restarts them.
+falsified verdict still restarts them; SIGTERM and SIGHUP are turned into that path
+too, and a restart that raises is recorded, never allowed to skip the ledger write.
+Servers are identified by command line FIRST (the ruling) and cross-checked against
+their listening sockets (``identify_servers``): name-matched helpers that do not
+listen (the measured ``caffeinate -s`` children) are recorded, never signalled and
+never restarted; any other disagreement refuses before anything is stopped. A
+server is restarted from its exact recorded argv (``sysctl kern.procargs2``, not
+the space-joined ps line), in its recorded cwd, outside this run's venv, and counts
+as restarted only if still alive ``RESTART_ALIVE_S`` later.
 
 Usage (attended, on a quiet machine)::
 
@@ -46,7 +54,6 @@ import json
 import math
 import os
 import re
-import shlex
 import signal
 import subprocess
 import sys
@@ -128,6 +135,8 @@ _SERVER_RE = re.compile(
 STOP_GRACE_S = 30.0
 KILL_GRACE_S = 10.0
 RESPAWN_WATCH_S = 5.0
+#: S3: a restarted server counts as restarted only if still alive this long after.
+RESTART_ALIVE_S = 10.0
 
 #: Brief "Budget" -- PREDICTIONS for --dry-plan only, never used by a rule.
 PRED = {
@@ -461,7 +470,7 @@ def parse_ps(text: str) -> list[Proc]:
 
 def list_processes() -> list[Proc]:
     r = subprocess.run(
-        ["/bin/ps", "-axo", "pid=,ppid=,rss=,%cpu=,command="],
+        ["/bin/ps", "-wwaxo", "pid=,ppid=,rss=,%cpu=,command="],
         capture_output=True,
         text=True,
         timeout=30,
@@ -887,25 +896,154 @@ def _cwd_of(pid: int) -> str | None:
     return None
 
 
-def spawn_server(record: dict, log_dir: Path) -> int:
-    """Restart one stopped server from its recorded command line and cwd, detached
-    (its own session), with this process's environment."""
+def parse_lsof_listeners(text: str) -> dict[int, set[int]]:
+    """``lsof -nP -iTCP -sTCP:LISTEN -Fpn`` -> {pid: {port, ...}}. ``p`` lines set
+    the process, ``n`` lines are ``addr:port`` (``*:8092``, ``[::1]:8090``)."""
+    out: dict[int, set[int]] = {}
+    pid = None
+    for line in text.splitlines():
+        if line.startswith("p"):
+            try:
+                pid = int(line[1:])
+            except ValueError:
+                pid = None
+        elif line.startswith("n") and pid is not None:
+            port = line.rsplit(":", 1)[-1]
+            if port.isdigit():
+                out.setdefault(pid, set()).add(int(port))
+    return out
+
+
+def list_listeners() -> dict[int, set[int]]:
+    """Every TCP LISTEN socket this user can see, by owning pid (S4's cross-check).
+    lsof exits 1 when it finds nothing; that is an empty table, not a failure."""
+    try:
+        r = subprocess.run(
+            ["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN", "-Fpn"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        raise Refusal(f"lsof failed: {e!r}") from None
+    if r.returncode not in (0, 1) or (r.returncode == 1 and r.stdout.strip()):
+        raise Refusal(f"lsof exited {r.returncode}: {r.stderr.strip()}")
+    return parse_lsof_listeners(r.stdout)
+
+
+def parse_procargs2(raw: bytes, byteorder: str = sys.byteorder) -> list[str]:
+    """``sysctl kern.procargs2``: argc (int32), the exec path, NUL padding, then
+    argc NUL-terminated arguments (then the environment, not read)."""
+    argc = int.from_bytes(raw[:4], byteorder)
+    rest = raw[4:]
+    i = rest.index(b"\0")
+    while i < len(rest) and rest[i] == 0:
+        i += 1
+    args = []
+    for _ in range(argc):
+        j = rest.index(b"\0", i)
+        args.append(rest[i:j].decode(errors="surrogateescape"))
+        i = j + 1
+    return args
+
+
+def proc_argv(pid: int) -> list[str] | None:
+    """The EXACT argv of ``pid``. ``ps`` joins arguments with spaces, so it cannot
+    be split back: the measured mlx_lm.server passes ``--chat-template-args
+    {"enable_thinking": false}``, ONE argument with a space in it, which a split of
+    the ps line turns into two (and ``shlex.split`` also strips the quotes)."""
+    if sys.platform == "darwin":
+        import ctypes
+        import ctypes.util
+
+        libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
+        mib = (ctypes.c_int * 3)(1, 49, pid)  # CTL_KERN, KERN_PROCARGS2
+        size = ctypes.c_size_t(0)
+        if libc.sysctl(mib, 3, None, ctypes.byref(size), None, ctypes.c_size_t(0)):
+            return None
+        buf = ctypes.create_string_buffer(size.value)
+        if libc.sysctl(mib, 3, buf, ctypes.byref(size), None, ctypes.c_size_t(0)):
+            return None
+        try:
+            return parse_procargs2(buf.raw[: size.value])
+        except ValueError:
+            return None
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return None
+    return [a.decode(errors="surrogateescape") for a in raw.split(b"\0")[:-1]]
+
+
+def _is_executable(path: str) -> bool:
+    return os.path.isfile(path) and os.access(path, os.X_OK)
+
+
+def restart_argv(argv: list[str]) -> list[str] | None:
+    """The argv a stopped server is restarted with, from its recorded ORIGINAL argv.
+
+    ``python -m mlx_lm.server ...``: unchanged -- the interpreter named IS the
+    environment. A script (``<python> /venv/bin/mlx_lm.server ...``, which is how a
+    shebang script appears once the kernel has exec'd its interpreter): from the
+    SCRIPT on, so its shebang selects its own venv again. The interpreter the
+    kernel shows is the resolved Homebrew framework binary; run directly it
+    bypasses the vanta venv and cannot import mlx_lm. ``llama-server``: its own
+    path. None when no absolute executable can be derived (then nothing is
+    stopped: never stop what cannot be restarted)."""
+    for i, a in enumerate(argv):
+        if os.path.basename(a) in SERVER_NAMES:
+            out = argv if (i > 0 and argv[i - 1] == "-m") else argv[i:]
+            return list(out) if out and os.path.isabs(out[0]) else None
+    return None
+
+
+def restart_env(base: dict[str, str], drop_bins: Iterable[str]) -> dict[str, str]:
+    """The environment a server is restarted in: this run's, WITHOUT this run's
+    venv (VIRTUAL_ENV, its bin dir on PATH, PYTHONPATH/PYTHONHOME, the macOS
+    framework's __PYVENV_LAUNCHER__) and without the thread caps
+    (``lanes.THREAD_ENV_VARS``) a C0 process may carry."""
+    drop = {os.path.realpath(b) for b in drop_bins if b}
+    gone = {"VIRTUAL_ENV", "PYTHONPATH", "PYTHONHOME", "__PYVENV_LAUNCHER__"}
+    env = {
+        k: v for k, v in base.items() if k not in gone and k not in lanes.THREAD_ENV_VARS
+    }
+    path = [
+        p
+        for p in base.get("PATH", "").split(os.pathsep)
+        if os.path.realpath(p) not in drop
+    ]
+    env["PATH"] = os.pathsep.join(path)
+    return env
+
+
+def _own_venv_bins() -> list[str]:
+    bins = [str(ROOT / ".venv" / "bin"), str(Path(sys.prefix) / "bin")]
+    if os.environ.get("VIRTUAL_ENV"):
+        bins.append(str(Path(os.environ["VIRTUAL_ENV"]) / "bin"))
+    return bins
+
+
+def spawn_server(record: dict, log_dir: Path):
+    """Restart one stopped server: its recorded restart argv, its recorded cwd, the
+    environment without this run's venv, detached (its own session). Returns the
+    Popen handle, so the alive check can ``poll()`` it (a dead child of ours is a
+    zombie until reaped, and ``ps`` would still list its pid)."""
+    if not record.get("cwd"):
+        raise ValueError(f"pid {record['pid']}: no recorded cwd")
     log_dir.mkdir(parents=True, exist_ok=True)
     fh = open(log_dir / f"restart-{record['pid']}.log", "a")  # noqa: SIM115
     try:
-        argv = shlex.split(record["command"])
-    except ValueError:
-        argv = record["command"].split()
-    p = subprocess.Popen(
-        argv,
-        cwd=record.get("cwd") or str(Path.home()),
-        stdin=subprocess.DEVNULL,
-        stdout=fh,
-        stderr=fh,
-        start_new_session=True,
-    )
-    fh.close()
-    return p.pid
+        return subprocess.Popen(
+            record["restart_argv"],
+            cwd=record["cwd"],
+            env=restart_env(os.environ, _own_venv_bins()),
+            stdin=subprocess.DEVNULL,
+            stdout=fh,
+            stderr=fh,
+            start_new_session=True,
+        )
+    finally:
+        fh.close()
 
 
 @dataclass
@@ -914,13 +1052,16 @@ class System:
 
     procs: Callable[[], list[Proc]] = list_processes
     kill: Callable[[int, int], None] = os.kill
-    spawn_server: Callable[[dict, Path], int] = spawn_server
+    spawn_server: Callable[[dict, Path], Any] = spawn_server
     cwd_of: Callable[[int], str | None] = _cwd_of
     sleep: Callable[[float], None] = time.sleep
     now: Callable[[], float] = time.monotonic
     own_pid: int = field(default_factory=os.getpid)
     memsize: Callable[[], int] = lambda: int(_sysctl("hw.memsize"))
     free_bytes: Callable[[], int] = lanes.free_memory_bytes
+    listeners: Callable[[], dict[int, set[int]]] = list_listeners
+    argv_of: Callable[[int], list[str] | None] = proc_argv
+    executable: Callable[[str], bool] = _is_executable
 
 
 def _sysctl(name: str) -> str:
@@ -930,31 +1071,136 @@ def _sysctl(name: str) -> str:
     return r.stdout.strip()
 
 
+_PORT_RE = re.compile(r"(?:^|\s)--port(?:=|\s+)(\d+)(?=\s|$)")
+
+
+def declared_port(command: str) -> int | None:
+    """The ``--port N`` a server's own command line declares, if any."""
+    m = _PORT_RE.search(command)
+    return int(m.group(1)) if m else None
+
+
+def identify_servers(
+    procs: list[Proc], own: set[int], listeners: dict[int, set[int]]
+) -> tuple[list[Proc], list[Proc], list[str]]:
+    """S4: the owner's servers, by name FIRST (the ruling: "identified by command
+    line") and cross-checked against the listening sockets. Returns (servers,
+    helpers, disagreements).
+
+    - SERVER: name-matched AND owns a TCP LISTEN socket; its port(s) are read from
+      lsof, never from a fixed list.
+    - HELPER: name-matched, no socket, and its PARENT is a server (the measured
+      ``caffeinate -s <server argv>`` children). Stopped only by stopping its
+      server, never signalled, never restarted.
+    - DISAGREEMENT: a name-matched process that is neither; or a LISTEN socket on
+      the port a server's own command line declares, owned by a process that is
+      not a matched server.
+    """
+    matched = match_servers(procs, own)
+    server_pids = {p.pid for p in matched if listeners.get(p.pid)}
+    servers = [p for p in matched if p.pid in server_pids]
+    helpers = [p for p in matched if p.pid not in server_pids and p.ppid in server_pids]
+    helper_pids = {p.pid for p in helpers}
+    problems = [
+        f"pid {p.pid} (ppid {p.ppid}) matches a server name but owns no LISTEN "
+        f"socket and is not the child of a server that does: {p.command[:120]}"
+        for p in matched
+        if p.pid not in server_pids and p.pid not in helper_pids
+    ]
+    owners: dict[int, set[int]] = {}
+    for pid, ports in listeners.items():
+        for port in ports:
+            owners.setdefault(port, set()).add(pid)
+    for s in servers:
+        port = declared_port(s.command)
+        foreign = sorted(owners.get(port, set()) - server_pids) if port else []
+        if foreign:
+            problems.append(
+                f"pid {s.pid} declares --port {port}, but that port is owned by "
+                f"non-server pid(s) {foreign}"
+            )
+    return servers, helpers, problems
+
+
 def stop_servers(sysm: System, records: list[dict]) -> list[dict]:
     """Stop the owner's LLM servers (SIGTERM, then SIGKILL after a grace), appending
     to ``records`` -- the caller's list, so the record survives a refusal half-way:
-    PID, command line, cwd, RSS freed, how it was stopped. Refuses if a server
-    survives or respawns (a supervisor would fight the run)."""
+    PID, role, command line, exact argv, the argv it will be restarted with, cwd,
+    ports, RSS freed, how it was stopped.
+
+    Refuses BEFORE signalling anything on a name/port disagreement (S4), or when a
+    server's restart argv, executable or cwd cannot be established (it would be
+    stopped and never come back). Refuses AFTER, if a server or helper survives,
+    or a stopped server respawns or its port is re-bound (a supervisor would fight
+    the run). Each record is marked ``stopped`` the moment its signal is delivered
+    (or it is found already gone), so an exception at the NEXT server still
+    restarts every one before it (S1)."""
     procs = sysm.procs()
     own = descendants(procs, sysm.own_pid)
-    servers = match_servers(procs, own)
-    records.extend(
-        {
-            "pid": p.pid,
-            "ppid": p.ppid,
-            "command": p.command,
-            "cwd": sysm.cwd_of(p.pid),
-            "rss_bytes": p.rss_bytes,
-            "rss_gib": p.rss_bytes / GIB,
-            "signal": "SIGTERM",
-            "stopped": False,
-        }
-        for p in servers
-    )
+    listeners = sysm.listeners()
+    servers, helpers, problems = identify_servers(procs, own, listeners)
+    if problems:
+        raise Refusal(
+            "servers: name and port disagree, nothing stopped: " + "; ".join(problems)
+        )
+    new = []
+    for p in servers:
+        argv = sysm.argv_of(p.pid)
+        new.append(
+            {
+                "pid": p.pid,
+                "ppid": p.ppid,
+                "role": "server",
+                "command": p.command,
+                "argv": argv,
+                "restart_argv": restart_argv(argv) if argv else None,
+                "cwd": sysm.cwd_of(p.pid),
+                "ports": sorted(listeners.get(p.pid, ())),
+                "rss_bytes": p.rss_bytes,
+                "rss_gib": p.rss_bytes / GIB,
+                "signal": None,
+                "stopped": False,
+            }
+        )
+    for p in helpers:
+        new.append(
+            {
+                "pid": p.pid,
+                "ppid": p.ppid,
+                "role": "helper",
+                "command": p.command,
+                "rss_bytes": p.rss_bytes,
+                "rss_gib": p.rss_bytes / GIB,
+                "signal": f"none: stopped by stopping its server pid {p.ppid}",
+                "stopped": False,
+            }
+        )
+    unrestartable = [
+        f"pid {r['pid']}: argv {r['argv']!r} -> restart_argv {r['restart_argv']!r}, "
+        f"cwd {r['cwd']!r}"
+        for r in new
+        if r["role"] == "server"
+        and not (r["restart_argv"] and sysm.executable(r["restart_argv"][0]) and r["cwd"])
+    ]
+    if unrestartable:
+        raise Refusal(
+            "servers: cannot establish how to restart, nothing stopped: "
+            + "; ".join(unrestartable)
+        )
+    records.extend(new)
     if not records:
         return records
     for rec in records:
-        sysm.kill(rec["pid"], signal.SIGTERM)
+        if rec["role"] != "server":
+            continue
+        try:
+            sysm.kill(rec["pid"], signal.SIGTERM)
+        except ProcessLookupError:
+            rec["signal"] = "none: already gone"
+            rec["stopped"] = True  # gone before the signal: restart it all the same
+            continue
+        rec["signal"] = "SIGTERM"
+        rec["stopped"] = True  # the kill succeeded: from here on it is restarted
 
     def alive() -> set[int]:
         now = {p.pid for p in sysm.procs()}
@@ -969,50 +1215,97 @@ def stop_servers(sysm: System, records: list[dict]) -> list[dict]:
             break
         if sig is None:
             for rec in records:
-                rec["stopped"] = rec["pid"] not in left
-            raise Refusal(f"servers {sorted(left)} did not stop after SIGKILL")
+                rec["gone"] = rec["pid"] not in left
+            raise Refusal(
+                f"servers/helpers {sorted(left)} did not stop after SIGKILL "
+                f"(helpers are never signalled; one that outlives its server stays)"
+            )
         for rec in records:
-            if rec["pid"] in left:
-                sysm.kill(rec["pid"], sig)
+            if rec["pid"] in left and rec["role"] == "server":
+                with contextlib.suppress(ProcessLookupError):
+                    sysm.kill(rec["pid"], sig)
                 rec["signal"] = "SIGTERM then SIGKILL"
     for rec in records:
         rec["stopped"] = True
+        rec["gone"] = True
     t0 = sysm.now()
     while sysm.now() - t0 < RESPAWN_WATCH_S:
         sysm.sleep(1.0)
     procs = sysm.procs()
     again = match_servers(procs, descendants(procs, sysm.own_pid))
-    if again:
+    back = sorted({r["pid"] for r in records} & {p.pid for p in procs})
+    stopped_ports = {port for r in records for port in r.get("ports", ())}
+    bound = {port for ports in sysm.listeners().values() for port in ports}
+    rebound = sorted(bound & stopped_ports)
+    if again or back or rebound:
         raise Refusal(
-            f"servers respawned after being stopped (pids {[p.pid for p in again]}): "
-            f"something supervises them; C0 cannot measure a quiet machine"
+            f"servers respawned after being stopped (pids {[p.pid for p in again]}, "
+            f"stopped pids present again {back}, ports re-bound {rebound}): something "
+            f"supervises them (ppid 1: launchd KeepAlive / LM Studio?); C0 cannot "
+            f"measure a quiet machine"
         )
     return records
 
 
 def restart_servers(sysm: System, stopped: list[dict], log_dir: Path) -> list[dict]:
-    """Restart every server this run stopped, unless one with the same command line
-    is already running. Never touches any other process."""
-    out = []
+    """Restart every SERVER this run stopped, unless one with the same command line
+    is already running under a new pid. Helpers are never restarted: their server
+    launches its own, and restarting one would launch a duplicate server. A restart
+    counts only if the new process is still alive RESTART_ALIVE_S later (S3);
+    otherwise ``restart_failed`` with the reason. Never touches any other
+    process."""
+    out: list[dict] = []
     if not stopped:
         return out
-    running = {p.command for p in sysm.procs()}
+    ours = {r["pid"] for r in stopped if r.get("stopped")}
+    t0 = sysm.now()  # a server signalled a moment ago may still be exiting
+    while ours & {p.pid for p in sysm.procs()} and sysm.now() - t0 < STOP_GRACE_S:
+        sysm.sleep(0.5)
+    procs = sysm.procs()
+    still = ours & {p.pid for p in procs}
+    running = {p.command for p in procs if p.pid not in ours}
+    pending = []
     for rec in stopped:
+        entry: dict[str, Any] = {"pid_was": rec["pid"], "role": rec.get("role")}
+        out.append(entry)
+        if rec.get("role") == "helper":
+            entry.update(
+                restarted=False, why="helper: its server starts its own; never restarted"
+            )
+            continue
         if not rec.get("stopped"):
-            out.append(
-                {"pid_was": rec["pid"], "restarted": False, "why": "never stopped"}
+            entry.update(restarted=False, why="never stopped")
+            continue
+        if rec["pid"] in still:
+            entry.update(
+                restarted=False,
+                restart_failed=True,
+                why=f"pid {rec['pid']} had not exited after {STOP_GRACE_S} s",
             )
             continue
         if rec["command"] in running:
-            out.append(
-                {"pid_was": rec["pid"], "restarted": False, "why": "already running"}
-            )
+            entry.update(restarted=False, why="already running")
             continue
         try:
-            pid = sysm.spawn_server(rec, log_dir)
-            out.append({"pid_was": rec["pid"], "restarted": True, "new_pid": pid})
+            handle = sysm.spawn_server(rec, log_dir)
         except Exception as e:  # keep restarting the others
-            out.append({"pid_was": rec["pid"], "restarted": False, "why": repr(e)})
+            entry.update(restarted=False, restart_failed=True, why=repr(e))
+            continue
+        entry.update(new_pid=handle.pid, argv=rec.get("restart_argv"))
+        pending.append((entry, handle))
+    if pending:
+        sysm.sleep(RESTART_ALIVE_S)
+        for entry, handle in pending:
+            rc = handle.poll()
+            alive = rc is None
+            if alive:
+                entry.update(restarted=True, alive_after_s=RESTART_ALIVE_S)
+            else:
+                entry.update(
+                    restarted=False,
+                    restart_failed=True,
+                    why=f"exited rc={rc} within {RESTART_ALIVE_S} s",
+                )
     return out
 
 
@@ -1287,6 +1580,28 @@ _FALSIFIER = (
 )
 
 
+@contextlib.contextmanager
+def interrupt_on_signals(sigs=(signal.SIGTERM, signal.SIGHUP)):
+    """S2: SIGTERM and SIGHUP raise KeyboardInterrupt, so the ``finally`` in
+    ``execute`` restarts the servers and the ``except`` writes the ledger
+    ``partial`` -- a closed terminal or a ``kill`` no longer leaves the owner's
+    servers down. The previous handlers are restored on the way out. Python allows
+    ``signal.signal`` only in the main thread; elsewhere nothing is installed."""
+
+    def handler(signum, _frame):
+        raise KeyboardInterrupt(f"signal {signal.Signals(signum).name}")
+
+    previous = {}
+    if threading.current_thread() is threading.main_thread():
+        for s in sigs:
+            previous[s] = signal.signal(s, handler)
+    try:
+        yield
+    finally:
+        for s, h in previous.items():
+            signal.signal(s, h)
+
+
 def execute(
     led,
     sysm: System,
@@ -1296,7 +1611,20 @@ def execute(
     log_dir: Path,
 ) -> Exit:
     """Servers -> quiet check -> measure -> ledger, with the servers restarted in a
-    ``finally``. ``make_measure(deadline_at)`` builds the measurement."""
+    ``finally``, under SIGTERM/SIGHUP handlers that turn a signal into that path.
+    ``make_measure(deadline_at)`` builds the measurement."""
+    with interrupt_on_signals():
+        return _execute(led, sysm, make_measure, ruling=ruling, log_dir=log_dir)
+
+
+def _execute(
+    led,
+    sysm: System,
+    make_measure: Callable[[float], Measure],
+    *,
+    ruling: ServersRuling,
+    log_dir: Path,
+) -> Exit:
     led.note(
         "c0.servers_ruling",
         {"id": ruling.id, "mode": ruling.mode, "text": ruling.text},
@@ -1386,9 +1714,23 @@ def execute(
             )
         raise
     finally:
-        restarted = restart_servers(sysm, stopped, log_dir)
+        restart_error = None
+        try:
+            restarted = restart_servers(sysm, stopped, log_dir)
+        except BaseException as e:  # S2: a failed restart never skips led.write()
+            restart_error = e
+            restarted = [
+                {
+                    "restarted": False,
+                    "restart_failed": True,
+                    "why": f"restart_servers raised {type(e).__name__}: {e}",
+                    "pids_was": [r["pid"] for r in stopped if r.get("role") == "server"],
+                }
+            ]
         led.note("c0.restarted_servers", restarted, how="restart_servers, in a finally")
         led.write()
+        if restart_error is not None and not isinstance(restart_error, Exception):
+            raise restart_error  # a second signal during the restart still stops C0
     return code
 
 

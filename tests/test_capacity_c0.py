@@ -13,6 +13,13 @@ Mutation-battery gates (`scripts/mutation_battery.py`, ``# --- capacity-c0 ---``
 (the faster repetition used), ``test_output_hash`` (the checkpoint file hashed),
 ``test_job_out_dirs`` (two jobs sharing an out_dir) and
 ``test_servers_restarted`` (the restart moved out of the ``finally``).
+
+``# --- capacity-c0: server safety (2026-09-22) ---``:
+``test_servers_stop_marks_each_kill`` (S1), ``test_servers_signal_restarts`` and
+``test_servers_restart_failure_still_writes_ledger`` (S2),
+``test_servers_restart_alive_check`` (S3), ``test_servers_measured_layout`` and
+``test_servers_disagreement_refuses`` (S4). The measured
+process layout of the Studio (2026-09-22) is the fixture ``MEASURED_ARGV``.
 """
 
 from __future__ import annotations
@@ -54,28 +61,75 @@ CAPACITY_KEYS = set(lanes.C0_LEDGER_KEYS.values())
 # --------------------------------------------------------------------------- #
 
 
+class FakeHandle:
+    """What `spawn_server` returns: a pid and `poll()` (None = still running). The
+    clock time of each poll is recorded, for the alive-after-10-s check."""
+
+    def __init__(self, pid, machine, rc=None):
+        self.pid, self.machine, self.rc = pid, machine, rc
+        self.polled_at: list[float] = []
+
+    def poll(self):
+        self.polled_at.append(self.machine.t)
+        return self.rc
+
+
 class FakeMachine:
-    """A process table the run can list and signal; nothing real is touched."""
+    """A process table the run can list and signal; nothing real is touched.
+
+    Listening sockets default to: every name-matched process listens on the
+    ``--port`` its command line declares. ``listeners=`` overrides that with an
+    explicit {pid: {ports}} (the measured layout, where the caffeinate helpers
+    carry ``--port`` in their argv and listen on nothing). ``argv=`` gives exact
+    argvs by pid; the default is the ps line split on whitespace."""
 
     OWN = 1000
 
-    def __init__(self, procs):
+    def __init__(self, procs, *, listeners=None, argv=None, reap_children=False):
         me = run.Proc(self.OWN, 1, 100 * 2**20, 0.0, "python run.py")
         self.procs = [*procs, me]
         self.killed: list[tuple[int, int]] = []
         self.spawned: list[dict] = []
+        self.handles: list[FakeHandle] = []
+        self.spawn_rc = None
         self.t = 0.0
+        self._listeners = listeners
+        self._argv = argv or {}
+        self.reap_children = reap_children
 
     def list(self):
         return list(self.procs)
 
+    def listeners(self):
+        alive = {p.pid for p in self.procs}
+        if self._listeners is not None:
+            return {pid: set(v) for pid, v in self._listeners.items() if pid in alive}
+        out = {}
+        for p in self.procs:
+            port = run.declared_port(p.command)
+            if run.is_server(p.command) and port is not None:
+                out[p.pid] = {port}
+        return out
+
+    def argv_of(self, pid):
+        if pid in self._argv:
+            a = self._argv[pid]
+            return None if a is None else list(a)  # None: unreadable
+        return next(p.command.split() for p in self.procs if p.pid == pid)
+
     def kill(self, pid, sig):
         self.killed.append((pid, sig))
-        self.procs = [p for p in self.procs if p.pid != pid]
+        self.procs = [
+            p
+            for p in self.procs
+            if p.pid != pid and not (self.reap_children and p.ppid == pid)
+        ]
 
     def spawn(self, record, log_dir):
         self.spawned.append(record)
-        return 90000 + len(self.spawned)
+        h = FakeHandle(90000 + len(self.spawned), self, self.spawn_rc)
+        self.handles.append(h)
+        return h
 
     def now(self):
         return self.t
@@ -94,6 +148,9 @@ class FakeMachine:
             own_pid=self.OWN,
             memsize=lambda: MEMSIZE,
             free_bytes=lambda: 40 * GIB,
+            listeners=self.listeners,
+            argv_of=self.argv_of,
+            executable=lambda path: True,
         )
 
 
@@ -506,10 +563,319 @@ def test_servers_restarted_when_measurement_raises(led, tmp_path):
 def test_restart_skips_a_server_already_running(tmp_path):
     m = FakeMachine([_server(10, 20.0, MLX)])
     out = run.restart_servers(
-        m.system(), [{"pid": 3, "command": MLX, "stopped": True}], tmp_path
+        m.system(),
+        [{"pid": 3, "role": "server", "command": MLX, "stopped": True}],
+        tmp_path,
     )
-    assert out == [{"pid_was": 3, "restarted": False, "why": "already running"}]
+    assert out == [
+        {"pid_was": 3, "role": "server", "restarted": False, "why": "already running"}
+    ]
     assert m.spawned == []
+
+
+# --------------------------------------------------------------------------- #
+# server safety (2026-09-22): S1-S4, against the layout measured on the Studio
+# --------------------------------------------------------------------------- #
+
+#: Measured 2026-09-22 on the Mac Studio, read-only (`ps -wwo pid,ppid,rss,command`,
+#: `lsof -nP -iTCP -sTCP:LISTEN -Fpn`, `sysctl kern.procargs2`). RSS ~0.01 GiB
+#: each at the time (the models paged out). The caffeinate helpers are CHILDREN of
+#: their server, carry the server's argv (so `--port`), and listen on nothing.
+_PY = (
+    "/opt/homebrew/Cellar/python@3.12/3.12.13_4/Frameworks/Python.framework/"
+    "Versions/3.12/Resources/Python.app/Contents/MacOS/Python"
+)
+_VANTA = "/Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server"
+_LLAMA_BIN = (
+    "/Users/keanooo7/.lmstudio/extensions/backends/"
+    "llama.cpp-mac-arm64-apple-metal-advsimd-2.39.0/llama-server"
+)
+_TAIL = ["--chat-template-args", '{"enable_thinking": false}', "--log-level", "INFO"]
+_A2051 = [
+    _PY,
+    _VANTA,
+    "--model",
+    "mlx-community/Qwen3.8-27B-4bit",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8090",
+    *_TAIL,
+]
+_A2059 = [
+    _PY,
+    _VANTA,
+    "--model",
+    "/Users/keanooo7/dev/vanta/models/fast-nomtp",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8091",
+    *_TAIL,
+]
+_A2058 = ["/usr/bin/caffeinate", "-s", *_A2051[1:]]
+_A2065 = ["/usr/bin/caffeinate", "-s", *_A2059[1:]]
+_A2067 = [
+    _LLAMA_BIN,
+    "--model",
+    "/Users/keanooo7/second-brain/models/Qwen3-Embedding-4B-GGUF/"
+    "Qwen3-Embedding-4B-Q8_0.gguf",
+    "--embedding",
+    "--pooling",
+    "last",
+    "-ub",
+    "8192",
+    "-c",
+    "8192",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8092",
+]
+MEASURED_ARGV = {2051: _A2051, 2058: _A2058, 2059: _A2059, 2065: _A2065, 2067: _A2067}
+MEASURED_PPID = {2051: 1, 2058: 2051, 2059: 1, 2065: 2059, 2067: 1}
+MEASURED_LISTEN = {2051: {8090}, 2059: {8091}, 2067: {8092}}
+
+
+def measured_machine(**kw):
+    procs = [
+        run.Proc(pid, MEASURED_PPID[pid], int(0.01 * GIB), 0.0, " ".join(argv))
+        for pid, argv in MEASURED_ARGV.items()
+    ]
+    return FakeMachine(
+        procs,
+        listeners=MEASURED_LISTEN,
+        argv=MEASURED_ARGV,
+        reap_children=True,  # caffeinate goes when its server goes
+        **kw,
+    )
+
+
+def test_identify_the_measured_layout():
+    m = measured_machine()
+    servers, helpers, problems = run.identify_servers(
+        m.list(), {FakeMachine.OWN}, m.listeners()
+    )
+    assert [p.pid for p in servers] == [2051, 2059, 2067]
+    assert [p.pid for p in helpers] == [2058, 2065]
+    assert problems == []
+
+
+def test_servers_measured_layout_stops_servers_restarts_servers_never_helpers(
+    led, tmp_path
+):
+    m = measured_machine()
+    assert _execute(led, m, fake_measure(), tmp=tmp_path) == run.Exit.OK
+    # only the three listening servers are signalled; the helpers never are
+    assert m.killed == [
+        (2051, signal.SIGTERM),
+        (2059, signal.SIGTERM),
+        (2067, signal.SIGTERM),
+    ]
+    rec = {r["pid"]: r for r in _rows(led)["c0.stopped_servers"]["value"]}
+    assert {p: r["role"] for p, r in rec.items()} == {
+        2051: "server",
+        2059: "server",
+        2067: "server",
+        2058: "helper",
+        2065: "helper",
+    }
+    assert rec[2051]["ports"] == [8090] and rec[2067]["ports"] == [8092]
+    assert all(r["stopped"] and r["gone"] for r in rec.values())
+    # restarted: the three servers, from the venv SCRIPT, argv intact
+    assert [r["pid"] for r in m.spawned] == [2051, 2059, 2067]
+    a = m.spawned[0]["restart_argv"]
+    assert a == _A2051[1:] and a[0] == _VANTA
+    assert '{"enable_thinking": false}' in a, "one argument, space and quotes intact"
+    assert m.spawned[2]["restart_argv"] == _A2067
+    out = {r["pid_was"]: r for r in _rows(led)["c0.restarted_servers"]["value"]}
+    assert [p for p, r in out.items() if r["restarted"]] == [2051, 2059, 2067]
+    assert out[2058]["restarted"] is False and out[2058]["why"].startswith("helper")
+    assert out[2065]["restarted"] is False
+
+
+@pytest.mark.parametrize(
+    "extra,listen,match",
+    [
+        # a name-matched process that neither listens nor has a server parent
+        (
+            [run.Proc(3000, 1, 1, 0.0, f"/usr/bin/caffeinate -s {_VANTA} --port 8093")],
+            MEASURED_LISTEN,
+            "owns no LISTEN",
+        ),
+        # the port 2051 declares (8090) held by a process that is not a server
+        (
+            [run.Proc(4000, 1, 1, 0.0, "/usr/bin/python3 -m http.server 8090")],
+            {**MEASURED_LISTEN, 2051: {8095}, 4000: {8090}},
+            "declares --port 8090",
+        ),
+    ],
+    ids=["name-match-not-server-nor-helper", "declared-port-foreign-owner"],
+)
+def test_servers_disagreement_refuses_before_stopping_anything(
+    led, tmp_path, extra, listen, match
+):
+    m = measured_machine()
+    m.procs = [*extra, *m.procs]
+    m._listeners = listen
+    with pytest.raises(run.Refusal, match=match):
+        _execute(led, m, fake_measure(), tmp=tmp_path)
+    assert m.killed == [] and m.spawned == []
+    assert json.loads(led.path.read_text())["status"] == "did_not_run"
+
+
+def test_servers_unrestartable_refuses_before_stopping_anything(led, tmp_path):
+    m = measured_machine()
+    m._argv = {**MEASURED_ARGV, 2067: None}  # argv unreadable: cannot restart it
+    with pytest.raises(run.Refusal, match="cannot establish how to restart"):
+        _execute(led, m, fake_measure(), tmp=tmp_path)
+    assert m.killed == [] and m.spawned == []
+
+
+def test_servers_stop_marks_each_kill_so_a_later_failure_still_restarts(led, tmp_path):
+    """S1: 10 stops; 11 dies on its own mid-stop (ProcessLookupError); 12's kill
+    raises. Both 10 and 11 were stopped, so both are restarted."""
+    m = FakeMachine(
+        [
+            _server(10, 20.0, MLX),
+            _server(11, 5.0, LLAMA),
+            _server(12, 3.0, MLX.replace("8080", "8082")),
+        ]
+    )
+    real_kill = m.kill
+
+    def kill(pid, sig):
+        if pid == 11:
+            m.procs = [p for p in m.procs if p.pid != 11]
+            raise ProcessLookupError(pid)
+        if pid == 12:
+            raise PermissionError(pid)
+        real_kill(pid, sig)
+
+    sysm = m.system()
+    sysm.kill = kill
+    with pytest.raises(PermissionError):
+        run.execute(led, sysm, fake_measure(), ruling=YIELD, log_dir=tmp_path)
+    assert [r["pid"] for r in m.spawned] == [10, 11]
+    out = {r["pid_was"]: r for r in _rows(led)["c0.restarted_servers"]["value"]}
+    assert out[10]["restarted"] and out[11]["restarted"]
+    assert out[12] == {
+        "pid_was": 12,
+        "role": "server",
+        "restarted": False,
+        "why": "never stopped",
+    }
+
+
+def _signalling_measure(sig):
+    """A measurement that delivers `sig` by calling the INSTALLED handler (no real
+    signal is ever sent) during the core sweep."""
+
+    def make(deadline_at):
+        inner = fake_measure()(deadline_at)
+
+        def wave(specs):
+            if specs[0].tag.startswith("core/t1/k8"):
+                signal.getsignal(sig)(sig, None)
+            return inner.wave(specs)
+
+        return run.Measure(wave=wave, suite=inner.suite, sampler=inner.sampler)
+
+    return make
+
+
+@pytest.mark.parametrize(
+    "sig", [signal.SIGTERM, signal.SIGHUP], ids=["SIGTERM", "SIGHUP"]
+)
+def test_servers_signal_restarts_and_writes_partial(led, tmp_path, sig):
+    before = signal.getsignal(sig)
+    m = FakeMachine([_server(10, 20.0, MLX)])
+    with pytest.raises(KeyboardInterrupt, match=signal.Signals(sig).name):
+        _execute(led, m, _signalling_measure(sig), tmp=tmp_path)
+    doc = json.loads(led.path.read_text())
+    assert doc["status"] == "partial"
+    assert [r["pid"] for r in m.spawned] == [10]
+    assert signal.getsignal(sig) is before, "the previous handler is restored"
+
+
+def test_servers_restart_failure_still_writes_ledger(led, tmp_path, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("restart boom")
+
+    monkeypatch.setattr(run, "restart_servers", boom)
+    m = FakeMachine([_server(10, 20.0, MLX)])
+    assert _execute(led, m, fake_measure(), tmp=tmp_path) == run.Exit.OK
+    doc = json.loads(led.path.read_text())
+    assert doc["status"] == "ok"
+    (row,) = _rows(led)["c0.restarted_servers"]["value"]
+    assert row["restart_failed"] is True and "restart boom" in row["why"]
+    assert row["pids_was"] == [10]
+
+
+def test_servers_restart_alive_check(tmp_path):
+    """S3: `restarted` only if the new process is alive RESTART_ALIVE_S later."""
+    rec = {
+        "pid": 3,
+        "role": "server",
+        "command": MLX,
+        "restart_argv": MLX.split(),
+        "stopped": True,
+    }
+    m = FakeMachine([])
+    m.spawn_rc = 1  # dies at once
+    (out,) = run.restart_servers(m.system(), [rec], tmp_path)
+    assert out["restarted"] is False and out["restart_failed"] is True
+    assert "exited rc=1" in out["why"]
+    m = FakeMachine([])
+    (out,) = run.restart_servers(m.system(), [rec], tmp_path)
+    assert out["restarted"] is True and out["new_pid"] == 90001
+    assert m.handles[0].polled_at == [pytest.approx(run.RESTART_ALIVE_S)]
+
+
+def test_restart_argv_runs_the_venv_script_not_the_resolved_interpreter():
+    assert run.restart_argv(_A2051) == _A2051[1:]
+    assert run.restart_argv(_A2067) == _A2067
+    m = ["/opt/homebrew/bin/python3.12", "-m", "mlx_lm.server", "--port", "1"]
+    assert run.restart_argv(m) == m  # -m: the interpreter IS the environment
+    assert run.restart_argv(["llama-server", "--port", "1"]) is None  # not absolute
+    assert run.restart_argv(["/usr/bin/python3", "x.py"]) is None
+
+
+def test_restart_env_strips_this_runs_venv(tmp_path):
+    venv_bin = tmp_path / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    base = {
+        "PATH": f"{venv_bin}:/opt/homebrew/bin:/usr/bin",
+        "VIRTUAL_ENV": str(venv_bin.parent),
+        "PYTHONPATH": "/x/src",
+        "__PYVENV_LAUNCHER__": "/x/.venv/bin/python",
+        "OMP_NUM_THREADS": "1",
+        "RSR_TORCH_THREADS": "1",
+        "HOME": "/Users/o",
+        "HF_HOME": "/Users/o/.hf",
+    }
+    env = run.restart_env(base, [str(venv_bin)])
+    assert env["PATH"] == "/opt/homebrew/bin:/usr/bin"
+    assert env["HOME"] == "/Users/o" and env["HF_HOME"] == "/Users/o/.hf"
+    for k in ("VIRTUAL_ENV", "PYTHONPATH", "__PYVENV_LAUNCHER__", "OMP_NUM_THREADS"):
+        assert k not in env
+    assert "RSR_TORCH_THREADS" not in env
+
+
+def test_parse_lsof_and_procargs2():
+    text = "p2051\nf4\nn127.0.0.1:8090\np2067\nf5\nn*:8092\nf6\nn[::1]:8092\n"
+    assert run.parse_lsof_listeners(text) == {2051: {8090}, 2067: {8092}}
+    argv = ["/bin/x", "--a", '{"k": false}']
+    raw = (
+        len(argv).to_bytes(4, "little")
+        + b"/bin/x\0\0\0\0"
+        + b"\0".join(a.encode() for a in argv)
+        + b"\0HOME=/Users/o\0"
+    )
+    assert run.parse_procargs2(raw, "little") == argv
+    assert run.declared_port("x --port 8090 --y") == 8090
+    assert run.declared_port("x --port=8091") == 8091
+    assert run.declared_port("x --portal 1") is None
 
 
 # --------------------------------------------------------------------------- #
