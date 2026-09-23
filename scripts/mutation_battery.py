@@ -1132,8 +1132,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "an unsigned ruling satisfies the queue",
         "test_ruling_unsigned_",
         "scripts/orchestrator/workqueue.py",
-        '        for k in ("date", "stated_in"):\n            if not meta.get(k):',
-        "        for k in ():\n            if not meta.get(k):",
+        # 📌 Re-anchored 2026-09-22: the check moved into the module-level
+        # ruling_problem() (one indent shallower) when unparseable rulings were
+        # made loud (2e2063f). The battery at 5ecda88 refused 3 on this anchor.
+        '    for k in ("date", "stated_in"):\n        if not meta.get(k):',
+        "    for k in ():\n        if not meta.get(k):",
         "a ruling file with no date or stated_in (docs/owner/rulings/README.md) "
         "unblocks work as if Brendan had stated it",
     ),
