@@ -9,7 +9,7 @@ slots: 0
 requires: []
 status: blocked
 attempts: 0
-source: docs/RESEARCH-CONTEXT.md:996
+source: docs/RESEARCH-CONTEXT.md:1046
 owner_question: 'RESEARCH-CONTEXT §12 item 1: one sentence naming the invariant that makes
   `b_max` comparable across `M` (equal flip rate? equal `b_max`/margin? equal fraction of
   decisions `b` could cross?), or rule that `b_max` is not frozen.'

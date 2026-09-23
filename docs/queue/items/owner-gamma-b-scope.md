@@ -9,7 +9,7 @@ slots: 0
 requires: []
 status: blocked
 attempts: 0
-source: docs/RESEARCH-CONTEXT.md:1011
+source: docs/RESEARCH-CONTEXT.md:1061
 owner_question: 'RESEARCH-CONTEXT §12 item 2: correction 4 gives `gamma_b` 0.5 at `M = 8`,
   5x over its own stated range; the audit reads it as a scoping bug. Is `gamma_b` per-scope
   like `M`, `K`, `S`, `A_max`?'

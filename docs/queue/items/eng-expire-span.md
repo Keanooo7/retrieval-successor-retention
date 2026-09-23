@@ -9,7 +9,7 @@ slots: 1
 requires: []
 status: blocked
 attempts: 0
-source: src/rsr/baselines/expire_span.py:25; docs/ROADMAP.md:112
+source: src/rsr/baselines/expire_span.py:25; docs/ROADMAP.md:151
 ---
 # baselines/expire_span.py: the referendum
 

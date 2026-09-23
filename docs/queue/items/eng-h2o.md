@@ -9,7 +9,7 @@ slots: 1
 requires: []
 status: blocked
 attempts: 0
-source: src/rsr/baselines/h2o.py:35; docs/ROADMAP.md:112
+source: src/rsr/baselines/h2o.py:35; docs/ROADMAP.md:151
 ---
 # baselines/h2o.py: both halves at the 50/50 split
 

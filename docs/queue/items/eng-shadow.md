@@ -10,7 +10,7 @@ requires:
 - item_done: eng-loo
 status: blocked
 attempts: 0
-source: src/rsr/retention/shadow.py:40; docs/ROADMAP.md:95
+source: src/rsr/retention/shadow.py:40; docs/ROADMAP.md:134
 ---
 # retention/shadow.py: the shadow buffer
 

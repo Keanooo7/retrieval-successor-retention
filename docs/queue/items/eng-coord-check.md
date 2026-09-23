@@ -9,7 +9,7 @@ slots: 1
 requires: []
 status: blocked
 attempts: 0
-source: src/rsr/mup/coord_check.py:42; docs/ROADMAP.md:97
+source: src/rsr/mup/coord_check.py:42; docs/ROADMAP.md:136
 ---
 # Port mup/coord_check.py from macbook-local-2026-09-18
 

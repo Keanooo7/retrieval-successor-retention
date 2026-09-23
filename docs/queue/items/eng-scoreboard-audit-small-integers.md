@@ -9,7 +9,7 @@ slots: 1
 requires: []
 status: done
 attempts: 0
-source: docs/lab-notes/overnight-2026-09-21.md:30; scripts/render_scoreboard.py:289
+source: docs/lab-notes/overnight-2026-09-21.md:30; scripts/render_scoreboard.py:289 at 7871580 (rewritten by 46fcb35)
 ---
 # render_scoreboard --audit: small integers are backed by accident
 

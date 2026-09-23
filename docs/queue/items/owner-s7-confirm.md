@@ -9,7 +9,7 @@ slots: 0
 requires: []
 status: blocked
 attempts: 0
-source: docs/RESEARCH-CONTEXT.md:1030
+source: docs/RESEARCH-CONTEXT.md:1080
 owner_question: 'RESEARCH-CONTEXT §12 item 6: confirm the S-7 edit to `docs/release-conditions.md`
   condition 4 (commit `f1ea1a0`) was authorised; nothing in the repo records it beyond the
   loop''s prose.'

@@ -9,7 +9,7 @@ slots: 1
 requires: []
 status: blocked
 attempts: 0
-source: src/rsr/metrics/loo.py:22; docs/ROADMAP.md:95
+source: src/rsr/metrics/loo.py:22; docs/ROADMAP.md:134
 ---
 # metrics/loo.py: the LOO metric (§3.2.1's arbiter)
 

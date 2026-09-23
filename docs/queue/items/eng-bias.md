@@ -10,7 +10,7 @@ requires:
 - ruling: R-*-bias-interface
 status: blocked
 attempts: 0
-source: src/rsr/retention/bias.py:60; docs/RESEARCH-CONTEXT.md:1018
+source: src/rsr/retention/bias.py:60; docs/RESEARCH-CONTEXT.md:1068
 ---
 # retention/bias.py: ProtectionBias
 

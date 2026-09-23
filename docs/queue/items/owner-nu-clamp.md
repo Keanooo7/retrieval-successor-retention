@@ -9,7 +9,7 @@ slots: 0
 requires: []
 status: blocked
 attempts: 0
-source: docs/RESEARCH-CONTEXT.md:1024
+source: docs/RESEARCH-CONTEXT.md:1074
 owner_question: 'RESEARCH-CONTEXT §12 item 4: is §3.4''s term `- nu * max cos` or `- nu *
   max(0, cos)`? (To be decided in E1''s `nu` sweep.)'
 answered_by: R-*-nu-clamp

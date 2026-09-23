@@ -9,7 +9,7 @@ slots: 0
 requires: []
 status: blocked
 attempts: 0
-source: docs/RESEARCH-CONTEXT.md:1028
+source: docs/RESEARCH-CONTEXT.md:1078
 owner_question: 'RESEARCH-CONTEXT §12 item 5: per-step vs global normalizer in `_score`; they
   differ on a measured fraction of victims and neither is wrong. Which one?'
 answered_by: R-*-score-normalizer

@@ -12,7 +12,7 @@ requires:
 - prereg: experiments/e0e/PREREG.md
 status: blocked
 attempts: 0
-source: docs/ROADMAP.md:96; experiments/e0e/run.py:16
+source: docs/ROADMAP.md:135; experiments/e0e/run.py:16
 ---
 # E0e: FIFO run + EMA bookkeeping -> E_lifetime -> gamma_b
 

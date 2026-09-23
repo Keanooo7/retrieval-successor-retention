@@ -13,7 +13,7 @@ requires:
 - prereg: experiments/e0d/PREREG.md
 status: blocked
 attempts: 0
-source: docs/ROADMAP.md:95; experiments/e0d/run.py:16
+source: docs/ROADMAP.md:134; experiments/e0d/run.py:16
 ---
 # E0d: LOO answers
 

@@ -9,7 +9,7 @@ slots: 0
 requires: []
 status: blocked
 attempts: 0
-source: docs/RESEARCH-CONTEXT.md:1018
+source: docs/RESEARCH-CONTEXT.md:1068
 owner_question: 'RESEARCH-CONTEXT §12 item 3: `_score` calls `self.bias.b(slots)`; `ProtectionBias`
   declares `update`/`values`/`reset` and no `b`. Which side of the interface moves?'
 answered_by: R-*-bias-interface

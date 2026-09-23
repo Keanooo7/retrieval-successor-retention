@@ -9,7 +9,7 @@ slots: 0
 requires: []
 status: blocked
 attempts: 0
-source: docs/lab-notes/for-brendan-2026-09-21.md:3; preregistration/e0i_threshold.md:3
+source: docs/lab-notes/for-brendan-2026-09-21.md:5; preregistration/e0i_threshold.md:3
 owner_question: '`fcd79d4` fills the signature block (`e0i_threshold.md:300-302`) under author
   `bkbrohon795@gmail.com`, not the ucsd address, while `:3` and `:291` still say unsigned.
   Is `fcd79d4` your signature, and will you correct the unsigned text (no agent edits `preregistration/`)?'

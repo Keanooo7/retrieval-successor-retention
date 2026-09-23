@@ -14,7 +14,7 @@ requires:
 - prereg: experiments/e0a/PREREG-rerun.md
 status: blocked
 attempts: 0
-source: docs/ROADMAP.md:99; experiments/e0a/run.py
+source: docs/ROADMAP.md:138; experiments/e0a/run.py
 ---
 # E0a re-run with unit-norm gestalts
 
