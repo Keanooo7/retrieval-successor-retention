@@ -1640,6 +1640,77 @@ MUTATIONS: tuple[Mutation, ...] = (
         "A scratchpad_dir pointing into a repo would become a way around "
         "'the verifier never edits code'.",
     ),
+    # --- capacity-c0 ---
+    Mutation(
+        "C0: the determinism comparison skipped (every job matches)",
+        "test_det_verdict",
+        "experiments/capacity-c0/run.py",
+        "        match = job.output_hash == ref\n",
+        "        match = True\n",
+        "capacity-c0 brief bar, mutation (1). The falsifier is the one gate in C0 "
+        "that fails where nothing else does; a verdict that never compares writes "
+        "capacities for a lane whose premise (CPU runs are bit-exact) is false.",
+    ),
+    Mutation(
+        "C0: cpu_det_slots from the faster repetition",
+        "test_cpu_det_slots_slower_rep",
+        "experiments/capacity-c0/run.py",
+        "    return max(per_rep)\n",
+        "    return min(per_rep)\n",
+        "capacity-c0 brief bar, mutation (2); PREREG repetitions: 'the SLOWER of "
+        "the two repetitions is used'. The faster one overstates the core ceiling.",
+    ),
+    Mutation(
+        "C0: the checkpoint file hashed instead of the state_dict",
+        "test_output_hash",
+        "experiments/capacity-c0/run.py",
+        '    digest = state_dict_sha256(payload["model"])\n',
+        "    digest = hashlib.sha256(ckpt.read_bytes()).hexdigest()\n",
+        "capacity-c0 brief bar, mutation (3); PREREG output_hash. The file carries "
+        "unseeded python/numpy RNG state, so identical runs would read as "
+        "non-deterministic and falsify C0 spuriously.",
+    ),
+    Mutation(
+        "C0: two jobs given the same out_dir",
+        "test_job_out_dirs",
+        "experiments/capacity-c0/run.py",
+        '        / f"rep{spec.rep}"\n        / f"job{spec.j}"\n',
+        '        / f"rep{spec.rep}"\n',
+        "capacity-c0 brief bar, mutation (4); PREREG job_isolation. Concurrent "
+        "jobs sharing an out_dir overwrite each other's checkpoint and heartbeat.",
+        off_gate_allowed=(
+            (
+                "tests/test_capacity_c0.py::"
+                "test_output_hash_identical_runs_equal_while_checkpoint_files_differ",
+                "capacity-c0: `Wave` refuses a job whose out_dir already exists, so "
+                "the real two-job wave in the output-hash test is refused under the "
+                "same edit. Defence in depth for job_isolation, by design.",
+            ),
+        ),
+    ),
+    Mutation(
+        "C0: the servers not restarted when the run raises",
+        "test_servers_restarted",
+        "experiments/capacity-c0/run.py",
+        "    except BaseException as e:\n        if led.doc.get(",
+        "    except BaseException as e:\n        stopped = []\n        if led.doc.get(",
+        "R-2026-09-22-mlx-servers: the owner's servers are restarted when C0 "
+        "completes, however it completes. A restart that runs only on success "
+        "leaves them down after a deadline, a refusal or a crash.",
+        off_gate_allowed=(
+            (
+                "tests/test_capacity_c0.py::test_partial_on_deadline",
+                "capacity-c0: a deadline is an exception out of the measurement, and "
+                "the test asserts the servers come back after it.",
+            ),
+            (
+                "tests/test_capacity_c0.py::"
+                "test_quiet_yield_stops_only_the_servers_and_records_them",
+                "capacity-c0: 'machine not quiet' after a YIELD stop is a refusal "
+                "raised with the servers down, and the test asserts they come back.",
+            ),
+        ),
+    ),
 )
 
 
