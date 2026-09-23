@@ -1,7 +1,7 @@
 ---
 id: R-2026-09-22-inert-exit-5
 date: 2026-09-22
-stated_in: interactive planning session, 2026-09-22 — Brendan: "it is better to build better systems than be stuck with old ones we micro fix. see if the new code 5 is better"; evaluated, recommended, plan approved.
+stated_in: 'interactive planning session, 2026-09-22 — Brendan: "it is better to build better systems than be stuck with old ones we micro fix. see if the new code 5 is better"; evaluated, recommended, plan approved.'
 ---
 "Ran and inert" gets a new exit code **`5 INERT`**, not `1`.
 
