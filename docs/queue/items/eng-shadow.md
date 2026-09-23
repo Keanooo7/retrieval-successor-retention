@@ -16,4 +16,4 @@ source: src/rsr/retention/shadow.py:40; docs/ROADMAP.md:134
 
 Stub code item. Code may land before its sprint's gate (the experiment items that consume it carry the `sprint_gate`). Replace every `raise NotImplementedError` in the file with the implementation the cited spec section describes, tests first; add a mutation-battery entry that reddens only the new tests.
 
-Spec §3.4; `K` is read from `rsr.constants`, never hardcoded. Built on the LOO machinery (ROADMAP:95).
+Spec §3.4; `K` is read from `rsr.constants`, never hardcoded. Built on the LOO machinery (ROADMAP:134).

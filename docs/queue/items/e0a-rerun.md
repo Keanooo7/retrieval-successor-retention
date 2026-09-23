@@ -18,4 +18,4 @@ source: docs/ROADMAP.md:138; experiments/e0a/run.py
 ---
 # E0a re-run with unit-norm gestalts
 
-ROADMAP:99: the existing E0a numbers fed `torch.randn` gestalts, the wrong premise for real TG. Kill gate (ROADMAP:102). `c_t` must be pinned by the owner before E0a runs (RESEARCH-CONTEXT:1035).
+ROADMAP:138: the existing E0a numbers fed `torch.randn` gestalts, the wrong premise for real TG. Kill gate (ROADMAP:141). `c_t` must be pinned by the owner before E0a runs (RESEARCH-CONTEXT:1085).

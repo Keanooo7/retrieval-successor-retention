@@ -15,4 +15,4 @@ source: src/rsr/metrics/loo.py:22; docs/ROADMAP.md:134
 
 Stub code item. Code may land before its sprint's gate (the experiment items that consume it carry the `sprint_gate`). Replace every `raise NotImplementedError` in the file with the implementation the cited spec section describes, tests first; add a mutation-battery entry that reddens only the new tests.
 
-Spec §3.2.1. ROADMAP:95: the same machinery serves the oracle and the shadow scorer -- build once, use three times. E0d consumes it.
+Spec §3.2.1. ROADMAP:134: the same machinery serves the oracle and the shadow scorer -- build once, use three times. E0d consumes it.

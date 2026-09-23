@@ -17,4 +17,4 @@ source: docs/ROADMAP.md:134; experiments/e0d/run.py:16
 ---
 # E0d: LOO answers
 
-Kill gate (ROADMAP:102). Consumes `metrics/loo.py`.
+Kill gate (ROADMAP:141). Consumes `metrics/loo.py`.
