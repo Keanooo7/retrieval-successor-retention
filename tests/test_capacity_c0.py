@@ -18,7 +18,7 @@ Mutation-battery gates (`scripts/mutation_battery.py`, ``# --- capacity-c0 ---``
 ``test_servers_stop_marks_each_kill`` (S1), ``test_servers_signal_restarts`` and
 ``test_servers_restart_failure_still_writes_ledger`` (S2),
 ``test_servers_restart_alive_check`` (S3), ``test_servers_measured_layout`` and
-``test_servers_disagreement_refuses`` (S4). The measured
+``test_servers_disagreement_refuses`` (S4), ``test_barrier_`` (S5). The measured
 process layout of the Studio (2026-09-22) is the fixture ``MEASURED_ARGV``.
 """
 
@@ -879,6 +879,115 @@ def test_parse_lsof_and_procargs2():
 
 
 # --------------------------------------------------------------------------- #
+# S5 start barrier and S6 thread count
+# --------------------------------------------------------------------------- #
+
+
+def test_barrier_releases_only_when_every_job_is_ready(tmp_path):
+    ready = [tmp_path / f"job{j}" / "ready" for j in range(3)]
+    for r in ready:
+        r.parent.mkdir()
+    go = tmp_path / "go"
+    t = [0.0]
+    seen = []
+
+    def sleep(s):
+        assert not go.exists(), "released before every job was ready"
+        n = len(seen)
+        if n < len(ready):
+            ready[n].write_text("x")
+        seen.append(n)
+        t[0] += s
+
+    run.barrier_release(
+        ready, go, exited=lambda: [], now=lambda: t[0], sleep=sleep, deadline_at=1e9
+    )
+    assert go.exists() and all(r.exists() for r in ready)
+    assert len(seen) == 3
+
+
+def test_barrier_a_job_never_ready_fails_the_wave(tmp_path):
+    ready = [tmp_path / "a", tmp_path / "b"]
+    ready[0].write_text("x")
+    go = tmp_path / "go"
+    t = [0.0]
+
+    def sleep(s):
+        t[0] += 1.0
+
+    with pytest.raises(run.JobFailed, match="not ready after"):
+        run.barrier_release(
+            ready,
+            go,
+            exited=lambda: [],
+            now=lambda: t[0],
+            sleep=sleep,
+            deadline_at=1e9,
+            timeout_s=5.0,
+        )
+    assert not go.exists()
+    with pytest.raises(run.JobFailed, match="exited before becoming ready"):
+        run.barrier_release(
+            ready,
+            go,
+            exited=lambda: ["det/t1/k2"],
+            now=lambda: 0.0,
+            sleep=sleep,
+            deadline_at=1e9,
+        )
+    assert not go.exists()
+
+
+def test_barrier_child_waits_for_go(tmp_path):
+    ready, go = tmp_path / "ready", tmp_path / "go"
+    calls = []
+
+    def sleep(s):
+        assert ready.exists(), "ready is announced before waiting"
+        calls.append(s)
+        if len(calls) == 4:
+            go.write_text("x")
+
+    info = run.wait_at_barrier(ready, go, sleep=sleep)
+    assert len(calls) == 4 and info["go_seen_wall"] >= info["ready_wall"]
+    go.unlink()
+    t = [0.0]
+    with pytest.raises(TimeoutError):
+        run.wait_at_barrier(
+            tmp_path / "r2",
+            go,
+            timeout_s=1.0,
+            clock=lambda: t[0],
+            sleep=lambda s: t.__setitem__(0, t[0] + 0.5),
+        )
+
+
+def test_job_threads_asserted():
+    class Torch:
+        def __init__(self, obey):
+            self.n, self.obey = 16, obey
+
+        def set_num_threads(self, n):
+            if self.obey:
+                self.n = n
+
+        def get_num_threads(self):
+            return self.n
+
+    assert run.apply_threads(5, Torch(True)) == 5
+    with pytest.raises(RuntimeError, match="spec says 5"):
+        run.apply_threads(5, Torch(False))
+    assert run.apply_threads(None, Torch(False)) is None  # uncapped MPS job
+    argv = run.job_argv(
+        run.JobSpec("det", "training", 5, 3, 0, 1, "cpu", 10), Path("/r/j")
+    )
+    assert argv[argv.index("--threads") + 1] == "5"
+    assert argv[argv.index("--go-file") + 1] == "/r/go"
+    mps = run.job_argv(run.mps_wave()[0], Path("/r/m"))
+    assert "--threads" not in mps
+
+
+# --------------------------------------------------------------------------- #
 # job layout, output hash, heartbeat
 # --------------------------------------------------------------------------- #
 
@@ -933,6 +1042,10 @@ def test_output_hash_identical_runs_equal_while_checkpoint_files_differ(tmp_path
     assert ck[0] != ck[1], "identical runs, different checkpoint bytes (RngState)"
     assert all(r.maxrss_bytes > 100 * 2**20 for r in rs)
     assert all(r.result["torch_num_threads"] == 1 for r in rs)
+    assert all(r.result["spec_threads"] == 1 for r in rs)
+    # S5: no job passed the start barrier before every job of the wave was ready
+    b = [r.result["barrier"] for r in rs]
+    assert max(x["ready_wall"] for x in b) <= min(x["go_seen_wall"] for x in b)
 
 
 def test_heartbeat_stats_first_to_last_beat(tmp_path):

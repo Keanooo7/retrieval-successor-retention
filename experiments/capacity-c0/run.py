@@ -31,6 +31,9 @@ server is restarted from its exact recorded argv (``sysctl kern.procargs2``, not
 the space-joined ps line), in its recorded cwd, outside this run's venv, and counts
 as restarted only if still alive ``RESTART_ALIVE_S`` later.
 
+Every wave's jobs pass a start barrier after start-up (``barrier_release`` /
+``wait_at_barrier``), so all k jobs of a wave overlap for the whole timed window.
+
 Usage (attended, on a quiet machine)::
 
     uv run python experiments/capacity-c0/run.py --dry-plan     # prints, runs nothing
@@ -137,6 +140,11 @@ KILL_GRACE_S = 10.0
 RESPAWN_WATCH_S = 5.0
 #: S3: a restarted server counts as restarted only if still alive this long after.
 RESTART_ALIVE_S = 10.0
+#: S5 start barrier: how long the parent waits for every job of a wave to be ready
+#: (imports, model build, data) before failing the wave; the child's own wait for
+#: the go-file is longer, so the parent always decides first.
+READY_TIMEOUT_S = 600.0
+GO_TIMEOUT_S = 1200.0
 
 #: Brief "Budget" -- PREDICTIONS for --dry-plan only, never used by a rule.
 PRED = {
@@ -630,16 +638,91 @@ def _s003():
     return mod
 
 
-def job_main(workload: str, device: str, iters: int, out_dir: Path) -> dict:
+def apply_threads(expected: int | None, torch_mod) -> int | None:
+    """S6: set the job's torch thread count to its spec's and FAIL the job loudly if
+    torch does not report exactly that. A job silently running at another count
+    would put its timing (and hash) in the wrong row of the sweep."""
+    if expected is None:
+        return None  # the uncapped MPS job
+    torch_mod.set_num_threads(expected)
+    check_threads(expected, torch_mod)
+    return expected
+
+
+def check_threads(expected: int | None, torch_mod) -> None:
+    if expected is None:
+        return
+    got = torch_mod.get_num_threads()
+    if got != expected:
+        raise RuntimeError(
+            f"torch.get_num_threads() == {got}, but this job's spec says {expected}"
+        )
+
+
+def _atomic_touch(path: Path, text: str) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text)
+    os.replace(tmp, path)
+
+
+def wait_at_barrier(
+    ready: Path,
+    go: Path,
+    *,
+    timeout_s: float = GO_TIMEOUT_S,
+    clock=time.time,
+    sleep=time.sleep,
+) -> dict[str, float]:
+    """S5, the child's half: announce READY, then wait for the parent's GO. Wall
+    clock times are returned for the job's result.json."""
+    ready_wall = clock()
+    _atomic_touch(ready, f"{ready_wall!r}\n")
+    t0 = clock()
+    while not go.exists():
+        if clock() - t0 >= timeout_s:
+            raise TimeoutError(f"no go-file {go} after {timeout_s} s")
+        sleep(0.005)
+    return {"ready_wall": ready_wall, "go_seen_wall": clock()}
+
+
+def _barrier_after_header(ready: Path, go: Path, info: dict) -> None:
+    """Hook the barrier in where start-up ENDS: ``train()`` writes the heartbeat
+    header after the imports, the model build and the data, and before the first
+    iteration. The first beat follows the barrier, so the timed window (first beat
+    to last) is one in which every job of the wave has been released together.
+    Only the waiting is added; the training computation is untouched."""
+    from rsr.train import heartbeat as hbmod
+
+    original = hbmod.Heartbeat.header
+
+    def header(self, **fields):
+        original(self, **fields)
+        if not info:
+            info.update(wait_at_barrier(ready, go))
+
+    hbmod.Heartbeat.header = header
+
+
+def job_main(
+    workload: str,
+    device: str,
+    iters: int,
+    out_dir: Path,
+    *,
+    threads: int | None = None,
+    ready_file: Path | None = None,
+    go_file: Path | None = None,
+) -> dict:
     """One job, in its own process. S0-03's ``single()`` -- its ``train()`` call,
     unchanged -- with ``batch`` replaced by 4 for the core workload."""
     import torch
 
     from rsr.train import checkpoint as ck
 
-    threads = os.environ.get("RSR_TORCH_THREADS")
-    if threads is not None:
-        torch.set_num_threads(int(threads))
+    apply_threads(threads, torch)
+    barrier: dict[str, float] = {}
+    if ready_file is not None and go_file is not None:
+        _barrier_after_header(ready_file, go_file, barrier)
     mod = _s003()
     if workload == "core":
         mod.CONFIG = {**mod.CONFIG, "batch": CORE_BATCH}
@@ -647,6 +730,9 @@ def job_main(workload: str, device: str, iters: int, out_dir: Path) -> dict:
         raise ValueError(f"unknown workload {workload!r}")
     out_dir.mkdir(parents=True, exist_ok=True)
     r = mod.single(SEED, iters, device, out_dir)
+    check_threads(threads, torch)
+    if ready_file is not None and not barrier:
+        raise RuntimeError("the start barrier was never reached (no heartbeat header)")
     ckpt = Path(r["checkpoint"])
     payload = ck.load(ckpt, restore_rng=False, map_location="cpu")
     digest = state_dict_sha256(payload["model"])
@@ -664,6 +750,8 @@ def job_main(workload: str, device: str, iters: int, out_dir: Path) -> dict:
         "output_hash": output_hash(final_loss, digest),
         "checkpoint": str(ckpt),
         "torch_num_threads": torch.get_num_threads(),
+        "spec_threads": threads,
+        "barrier": barrier or None,
         "torch_version": torch.__version__,
     }
 
@@ -705,6 +793,7 @@ class JobResult:
 
 
 def job_argv(spec: JobSpec, out_dir: Path) -> list[str]:
+    threads = [] if spec.threads is None else ["--threads", str(spec.threads)]
     return [
         sys.executable,
         str(Path(__file__).resolve()),
@@ -717,7 +806,53 @@ def job_argv(spec: JobSpec, out_dir: Path) -> list[str]:
         str(spec.iters),
         "--out-dir",
         str(out_dir),
+        *threads,
+        "--ready-file",
+        str(out_dir / "ready"),
+        "--go-file",
+        str(go_path(out_dir)),
     ]
+
+
+def go_path(out_dir: Path) -> Path:
+    """One go-file per wave: the wave's rep directory (unique per wave, job_isolation)."""
+    return out_dir.parent / "go"
+
+
+def barrier_release(
+    ready: list[Path],
+    go: Path,
+    *,
+    exited: Callable[[], list[str]],
+    now: Callable[[], float],
+    sleep: Callable[[float], None],
+    deadline_at: float,
+    timeout_s: float = READY_TIMEOUT_S,
+) -> float:
+    """S5, the parent's half: write the wave's go-file only once EVERY job has
+    written its ready-file, so all k jobs start their timed loops together (without
+    it the early starters run partly alone, which biases makespan(k) down and
+    cpu_det_slots up at high k). A job that exits first, never becomes ready within
+    ``timeout_s``, or the deadline, fails the wave (``partial``) instead of hanging.
+    Returns the seconds waited."""
+    t0 = now()
+    while True:
+        missing = [p for p in ready if not p.exists()]
+        if not missing:
+            break
+        dead = exited()
+        if dead:
+            raise JobFailed(f"start barrier: {dead} exited before becoming ready")
+        if now() >= deadline_at:
+            raise DeadlineExceeded(f"deadline reached at the start barrier ({go})")
+        if now() - t0 >= timeout_s:
+            raise JobFailed(
+                f"start barrier: {[str(p) for p in missing]} not ready after "
+                f"{timeout_s} s"
+            )
+        sleep(0.05)
+    _atomic_touch(go, f"{time.time()!r}\n")
+    return now() - t0
 
 
 def job_env(threads: int | None) -> dict[str, str]:
@@ -764,6 +899,16 @@ class Wave:
                 )
                 procs.append((spec, out, argv, p, fh))
             self.on_start([p.pid for *_x, p, _fh in procs])
+            self.barrier_wait_s = barrier_release(
+                [out / "ready" for _s, out, *_x in procs],
+                go_path(procs[0][1]),
+                exited=lambda: [
+                    s.tag for s, _o, _a, p, _f in procs if p.poll() is not None
+                ],
+                now=self.now,
+                sleep=time.sleep,
+                deadline_at=self.deadline_at,
+            )
             pending = {
                 p.pid: (spec, out, argv, p, fh) for spec, out, argv, p, fh in procs
             }
@@ -1373,6 +1518,8 @@ def _job_row(r: JobResult) -> dict[str, Any]:
         "n_beats": r.n_beats,
         "output_hash": r.output_hash,
         "torch_num_threads": r.result.get("torch_num_threads"),
+        "spec_threads": r.result.get("spec_threads"),
+        "barrier": r.result.get("barrier"),
         "mem_gb_max": r.mem_gb_max,
     }
 
@@ -1932,12 +2079,23 @@ def main(argv: list[str] | None = None) -> Exit:
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--iters", type=int, default=TRAINING_ITERS)
     ap.add_argument("--out-dir", type=Path, default=None)
+    ap.add_argument("--threads", type=int, default=None)
+    ap.add_argument("--ready-file", type=Path, default=None)
+    ap.add_argument("--go-file", type=Path, default=None)
     a = ap.parse_args(argv)
 
     if a.job:
         if a.out_dir is None:
             refuse(Exit.DID_NOT_RUN, "--job needs --out-dir")
-        r = job_main(a.workload, a.device, a.iters, a.out_dir)
+        r = job_main(
+            a.workload,
+            a.device,
+            a.iters,
+            a.out_dir,
+            threads=a.threads,
+            ready_file=a.ready_file,
+            go_file=a.go_file,
+        )
         (a.out_dir / "result.json").write_text(
             json.dumps(r, indent=2, default=str) + "\n"
         )
