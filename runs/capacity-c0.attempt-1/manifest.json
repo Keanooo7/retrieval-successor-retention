@@ -1,0 +1,60 @@
+{
+  "agent_pid": 83489,
+  "battery_threads": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "core": {
+    "batch": 4,
+    "iters": 30
+  },
+  "core_reps": 2,
+  "core_sweep_k": [
+    1,
+    2,
+    4,
+    8,
+    10,
+    12,
+    14,
+    15,
+    16
+  ],
+  "deadline_hours": 4,
+  "det_reps": 2,
+  "det_t1_ks": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "det_t5": [
+    5,
+    3
+  ],
+  "mps_iters": 50,
+  "prereg": "experiments/capacity-c0/PREREG.md",
+  "s003_config": {
+    "batch": 16,
+    "corpus": "synthetic S0-03, SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+    "d": 128,
+    "iters": 300,
+    "lr": 0.001,
+    "masked_loss": true,
+    "max_tokens": 64,
+    "measure_heldout": "generate(SyntheticConfig(n_documents=128, seed=<seed>))[64:]",
+    "measure_train": "generate(SyntheticConfig(seed=<seed>))  # docs 0..63",
+    "memory_slots": 16,
+    "policy": "fifo",
+    "srep_norm_reg_weight": 0.0,
+    "steps_per_stream": 48,
+    "vocab": "derived from the corpus"
+  },
+  "seed": 0,
+  "training": {
+    "config": "S0-03 CONFIG (imported)",
+    "iters": 10
+  }
+}

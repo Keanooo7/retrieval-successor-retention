@@ -1,0 +1,283 @@
+{
+  "run_id": "capacity-c0",
+  "cycle": null,
+  "question": "What lane capacities does this machine measure? (PREREG C0)",
+  "started_utc": "2026-09-24T20:47:42Z",
+  "provenance": {
+    "git_sha": "fee5f04bcbf7bc4224ef8cc8011092acfe287dc2",
+    "dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu+mps",
+  "seeds_actually_run": [
+    0
+  ],
+  "steps_requested": null,
+  "steps_done": null,
+  "status": "did_not_run",
+  "config_hash": "9ca4542f33f126fec11faa085a80f39a99635667ba6ef9fecfce8aa72980302c",
+  "manifest_written_utc": "2026-09-24T20:47:48Z",
+  "commands": [
+    {
+      "argv": "uv run python experiments/capacity-c0/run.py",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": null,
+      "note": "this run",
+      "at_utc": "2026-09-24T20:47:42Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "c0.machine",
+      "kind": "observation",
+      "value": {
+        "hw.model": "Mac16,9",
+        "hw.memsize": "68719476736",
+        "hw.ncpu": "16",
+        "hw.perflevel0.physicalcpu": "12",
+        "hw.perflevel1.physicalcpu": "4",
+        "machdep.cpu.brand_string": "Apple M4 Max",
+        "kern.osproductversion": "26.6.2",
+        "summary": "sysctl hw.model Mac16,9, Apple M4 Max, hw.perflevel0.physicalcpu 12, hw.perflevel1.physicalcpu 4, hw.memsize 68719476736"
+      },
+      "how": "sysctl"
+    },
+    {
+      "key": "c0.corpus_sha256",
+      "kind": "observation",
+      "value": "894e829934ea7bd1b7761eba6647b557727f9fb4437ac1fa81e3abb84a5d3af8",
+      "how": "sha256 of S0-03's training documents, seed 0"
+    },
+    {
+      "key": "c0.agent.pid",
+      "kind": "observation",
+      "value": 83489,
+      "how": "--agent-pid, else the nearest `claude` ancestor"
+    },
+    {
+      "key": "c0.servers_ruling",
+      "kind": "observation",
+      "value": {
+        "id": "R-2026-09-22-mlx-servers",
+        "mode": "yield",
+        "text": "**RSR training has full priority on the Mac Studio.** The owner's Local Second Brain servers\n(`mlx_lm.server` / `llama-server`, ~25 GB) **yield to it**.\n\n- **Stop them** before C0 runs, and whenever an RSR night opens. A run or an orchestrator step may\n  stop them itself; this ruling authorises it. The stop must be recorded: the PIDs, the command\n  lines and the RSS freed go in the run's ledger or the night log.\n- **Restart them** only when no RSR work holds the machine: after C0 completes, and at night\n  close. They are a daytime tool.\n- **Measure capacity on the machine RSR actually gets.** C0 runs with the servers stopped, and\n  `reserve_gb` does not budget for them.\n- \u26a0\ufe0f This does not license killing arbitrary processes. It covers the owner's LLM servers only,\n  identified by command line. Anything else over 2 GB at C0 start still makes C0 refuse with\n  exit 3."
+      },
+      "how": "docs/owner/rulings/R-*-mlx-servers.md, latest signed"
+    },
+    {
+      "key": "c0.stopped_servers",
+      "kind": "observation",
+      "value": [
+        {
+          "pid": 2051,
+          "ppid": 1,
+          "role": "server",
+          "command": "/opt/homebrew/Cellar/python@3.12/3.12.13_4/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python /Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server --model mlx-community/Qwen3.8-27B-4bit --host 127.0.0.1 --port 8090 --chat-template-args {\"enable_thinking\": false} --log-level INFO",
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.12/3.12.13_4/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python",
+            "/Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server",
+            "--model",
+            "mlx-community/Qwen3.8-27B-4bit",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8090",
+            "--chat-template-args",
+            "{\"enable_thinking\": false}",
+            "--log-level",
+            "INFO"
+          ],
+          "restart_argv": [
+            "/Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server",
+            "--model",
+            "mlx-community/Qwen3.8-27B-4bit",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8090",
+            "--chat-template-args",
+            "{\"enable_thinking\": false}",
+            "--log-level",
+            "INFO"
+          ],
+          "cwd": "/Users/keanooo7/dev/vanta",
+          "ports": [
+            8090
+          ],
+          "rss_bytes": 11599872,
+          "rss_gib": 0.01080322265625,
+          "signal": "SIGTERM",
+          "stopped": true,
+          "gone": true
+        },
+        {
+          "pid": 2059,
+          "ppid": 1,
+          "role": "server",
+          "command": "/opt/homebrew/Cellar/python@3.12/3.12.13_4/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python /Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server --model /Users/keanooo7/dev/vanta/models/fast-nomtp --host 127.0.0.1 --port 8091 --chat-template-args {\"enable_thinking\": false} --log-level INFO",
+          "argv": [
+            "/opt/homebrew/Cellar/python@3.12/3.12.13_4/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python",
+            "/Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server",
+            "--model",
+            "/Users/keanooo7/dev/vanta/models/fast-nomtp",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8091",
+            "--chat-template-args",
+            "{\"enable_thinking\": false}",
+            "--log-level",
+            "INFO"
+          ],
+          "restart_argv": [
+            "/Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server",
+            "--model",
+            "/Users/keanooo7/dev/vanta/models/fast-nomtp",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8091",
+            "--chat-template-args",
+            "{\"enable_thinking\": false}",
+            "--log-level",
+            "INFO"
+          ],
+          "cwd": "/Users/keanooo7/dev/vanta",
+          "ports": [
+            8091
+          ],
+          "rss_bytes": 10076160,
+          "rss_gib": 0.0093841552734375,
+          "signal": "SIGTERM",
+          "stopped": true,
+          "gone": true
+        },
+        {
+          "pid": 2067,
+          "ppid": 1,
+          "role": "server",
+          "command": "/Users/keanooo7/.lmstudio/extensions/backends/llama.cpp-mac-arm64-apple-metal-advsimd-2.39.0/llama-server --model /Users/keanooo7/second-brain/models/Qwen3-Embedding-4B-GGUF/Qwen3-Embedding-4B-Q8_0.gguf --embedding --pooling last -ub 8192 -c 8192 --host 127.0.0.1 --port 8092",
+          "argv": [
+            "/Users/keanooo7/.lmstudio/extensions/backends/llama.cpp-mac-arm64-apple-metal-advsimd-2.39.0/llama-server",
+            "--model",
+            "/Users/keanooo7/second-brain/models/Qwen3-Embedding-4B-GGUF/Qwen3-Embedding-4B-Q8_0.gguf",
+            "--embedding",
+            "--pooling",
+            "last",
+            "-ub",
+            "8192",
+            "-c",
+            "8192",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8092"
+          ],
+          "restart_argv": [
+            "/Users/keanooo7/.lmstudio/extensions/backends/llama.cpp-mac-arm64-apple-metal-advsimd-2.39.0/llama-server",
+            "--model",
+            "/Users/keanooo7/second-brain/models/Qwen3-Embedding-4B-GGUF/Qwen3-Embedding-4B-Q8_0.gguf",
+            "--embedding",
+            "--pooling",
+            "last",
+            "-ub",
+            "8192",
+            "-c",
+            "8192",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8092"
+          ],
+          "cwd": "/Users/keanooo7/dev/vanta",
+          "ports": [
+            8092
+          ],
+          "rss_bytes": 6242304,
+          "rss_gib": 0.0058135986328125,
+          "signal": "SIGTERM",
+          "stopped": true,
+          "gone": true
+        },
+        {
+          "pid": 2058,
+          "ppid": 2051,
+          "role": "helper",
+          "command": "/usr/bin/caffeinate -s /Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server --model mlx-community/Qwen3.8-27B-4bit --host 127.0.0.1 --port 8090 --chat-template-args {\"enable_thinking\": false} --log-level INFO",
+          "rss_bytes": 327680,
+          "rss_gib": 0.00030517578125,
+          "signal": "none: stopped by stopping its server pid 2051",
+          "stopped": true,
+          "gone": true
+        },
+        {
+          "pid": 2065,
+          "ppid": 2059,
+          "role": "helper",
+          "command": "/usr/bin/caffeinate -s /Users/keanooo7/dev/vanta/.venv/bin/mlx_lm.server --model /Users/keanooo7/dev/vanta/models/fast-nomtp --host 127.0.0.1 --port 8091 --chat-template-args {\"enable_thinking\": false} --log-level INFO",
+          "rss_bytes": 327680,
+          "rss_gib": 0.00030517578125,
+          "signal": "none: stopped by stopping its server pid 2059",
+          "stopped": true,
+          "gone": true
+        }
+      ],
+      "how": "R-2026-09-22-mlx-servers: PIDs, command lines, RSS freed"
+    },
+    {
+      "key": "c0.stopped_because",
+      "kind": "observation",
+      "value": "Refusal: servers respawned after being stopped (pids [66283, 66284, 66285, 66296, 66301], stopped pids present again [], ports re-bound [8090, 8091, 8092]): something supervises them (ppid 1: launchd KeepAlive / LM Studio?); C0 cannot measure a quiet machine",
+      "how": "the refusal"
+    },
+    {
+      "key": "c0.restarted_servers",
+      "kind": "observation",
+      "value": [
+        {
+          "pid_was": 2051,
+          "role": "server",
+          "restarted": false,
+          "why": "already running"
+        },
+        {
+          "pid_was": 2059,
+          "role": "server",
+          "restarted": false,
+          "why": "already running"
+        },
+        {
+          "pid_was": 2067,
+          "role": "server",
+          "restarted": false,
+          "why": "already running"
+        },
+        {
+          "pid_was": 2058,
+          "role": "helper",
+          "restarted": false,
+          "why": "helper: its server starts its own; never restarted"
+        },
+        {
+          "pid_was": 2065,
+          "role": "helper",
+          "restarted": false,
+          "why": "helper: its server starts its own; never restarted"
+        }
+      ],
+      "how": "restart_servers, in a finally"
+    }
+  ],
+  "verdict": {
+    "falsifier": "A deterministic CPU training job on the Mac Studio produces bit-identical output no matter how many other such jobs run beside it, at a fixed per-job thread count (1 and 5).",
+    "outcome": "inconclusive",
+    "detail": "did not run: servers respawned after being stopped (pids [66283, 66284, 66285, 66296, 66301], stopped pids present again [], ports re-bound [8090, 8091, 8092]): something supervises them (ppid 1: launchd KeepAlive / LM Studio?); C0 cannot measure a quiet machine",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-24T20:47:55Z"
+}

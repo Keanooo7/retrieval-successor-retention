@@ -1,0 +1,20 @@
+{
+  "workload": "core",
+  "device": "cpu",
+  "iters": 30,
+  "batch": 4,
+  "seed": 0,
+  "steps_done": 30,
+  "config_hash": "3f1c5b88a166394c",
+  "final_loss": 3.0040159225463867,
+  "state_sha256": "32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+  "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+  "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job2/ckpt-000030.pt",
+  "torch_num_threads": 1,
+  "spec_threads": 1,
+  "barrier": {
+    "ready_wall": 1790284643.473896,
+    "go_seen_wall": 1790284643.551997
+  },
+  "torch_version": "2.14.0"
+}
