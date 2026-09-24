@@ -1,0 +1,22 @@
+{
+  "generated_from": {
+    "experiment": "C0",
+    "run_id": "capacity-c0",
+    "ledger_path": "runs/capacity-c0/ledger.json",
+    "ledger_git_sha": "91e4910217ef37b4f62eeaef862fd3700b8e1892",
+    "ledger_status": "ok",
+    "ledger_keys": {
+      "cpu_det_slots": "c0.cpu_det_slots",
+      "battery_cpu_slots": "c0.battery_cpu_slots",
+      "agent_sessions": "c0.agent_sessions",
+      "reserve_gb": "c0.reserve_gb",
+      "mps_reserves_cpu_slots": "c0.mps_reserves_cpu_slots"
+    },
+    "generated_utc": "2026-09-24T21:26:20+00:00"
+  },
+  "cpu_det_slots": 12,
+  "battery_cpu_slots": 1,
+  "agent_sessions": 2,
+  "reserve_gb": 5.5,
+  "mps_reserves_cpu_slots": 2
+}

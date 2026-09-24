@@ -1,0 +1,2971 @@
+{
+  "run_id": "capacity-c0",
+  "cycle": null,
+  "question": "What lane capacities does this machine measure? (PREREG C0)",
+  "started_utc": "2026-09-24T21:08:48Z",
+  "provenance": {
+    "git_sha": "91e4910217ef37b4f62eeaef862fd3700b8e1892",
+    "dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu+mps",
+  "seeds_actually_run": [
+    0
+  ],
+  "steps_requested": null,
+  "steps_done": null,
+  "status": "ok",
+  "config_hash": "9ca4542f33f126fec11faa085a80f39a99635667ba6ef9fecfce8aa72980302c",
+  "manifest_written_utc": "2026-09-24T21:08:48Z",
+  "commands": [
+    {
+      "argv": "uv run python experiments/capacity-c0/run.py",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": null,
+      "note": "this run",
+      "at_utc": "2026-09-24T21:08:48Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k1/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k1/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k1/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k1/rep0/job0",
+      "at_utc": "2026-09-24T21:09:17Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k1/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k1/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k1/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k1/rep1/job0",
+      "at_utc": "2026-09-24T21:09:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k2/rep0/job0",
+      "at_utc": "2026-09-24T21:10:18Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep0/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep0/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k2/rep0/job1",
+      "at_utc": "2026-09-24T21:10:18Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k2/rep1/job0",
+      "at_utc": "2026-09-24T21:10:50Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep1/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep1/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k2/rep1/job1",
+      "at_utc": "2026-09-24T21:10:50Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k4/rep0/job0",
+      "at_utc": "2026-09-24T21:11:26Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k4/rep0/job1",
+      "at_utc": "2026-09-24T21:11:27Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k4/rep0/job2",
+      "at_utc": "2026-09-24T21:11:27Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k4/rep0/job3",
+      "at_utc": "2026-09-24T21:11:27Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k4/rep1/job0",
+      "at_utc": "2026-09-24T21:12:03Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k4/rep1/job1",
+      "at_utc": "2026-09-24T21:12:03Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k4/rep1/job2",
+      "at_utc": "2026-09-24T21:12:03Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t1/k4/rep1/job3",
+      "at_utc": "2026-09-24T21:12:03Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k1/rep0/job0 --threads 5 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k1/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k1/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t5/k1/rep0/job0",
+      "at_utc": "2026-09-24T21:12:29Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job0 --threads 5 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t5/k3/rep0/job0",
+      "at_utc": "2026-09-24T21:13:07Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job1 --threads 5 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t5/k3/rep0/job1",
+      "at_utc": "2026-09-24T21:13:07Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device cpu --iters 10 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job2 --threads 5 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "det/t5/k3/rep0/job2",
+      "at_utc": "2026-09-24T21:13:07Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k1/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k1/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k1/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k1/rep0/job0",
+      "at_utc": "2026-09-24T21:13:34Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k1/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k1/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k1/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k1/rep1/job0",
+      "at_utc": "2026-09-24T21:14:01Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k2/rep0/job0",
+      "at_utc": "2026-09-24T21:14:32Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep0/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep0/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k2/rep0/job1",
+      "at_utc": "2026-09-24T21:14:32Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k2/rep1/job0",
+      "at_utc": "2026-09-24T21:15:02Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep1/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep1/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k2/rep1/job1",
+      "at_utc": "2026-09-24T21:15:02Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k4/rep0/job0",
+      "at_utc": "2026-09-24T21:15:35Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k4/rep0/job1",
+      "at_utc": "2026-09-24T21:15:35Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k4/rep0/job2",
+      "at_utc": "2026-09-24T21:15:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k4/rep0/job3",
+      "at_utc": "2026-09-24T21:15:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k4/rep1/job0",
+      "at_utc": "2026-09-24T21:16:09Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k4/rep1/job1",
+      "at_utc": "2026-09-24T21:16:09Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k4/rep1/job2",
+      "at_utc": "2026-09-24T21:16:09Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k4/rep1/job3",
+      "at_utc": "2026-09-24T21:16:09Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep0/job0",
+      "at_utc": "2026-09-24T21:16:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep0/job1",
+      "at_utc": "2026-09-24T21:16:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep0/job2",
+      "at_utc": "2026-09-24T21:16:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep0/job3",
+      "at_utc": "2026-09-24T21:16:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job4 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job4/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep0/job4",
+      "at_utc": "2026-09-24T21:16:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job5 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job5/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep0/job5",
+      "at_utc": "2026-09-24T21:16:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job6 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job6/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep0/job6",
+      "at_utc": "2026-09-24T21:16:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job7 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job7/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep0/job7",
+      "at_utc": "2026-09-24T21:16:46Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep1/job0",
+      "at_utc": "2026-09-24T21:17:22Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep1/job1",
+      "at_utc": "2026-09-24T21:17:22Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep1/job2",
+      "at_utc": "2026-09-24T21:17:22Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep1/job3",
+      "at_utc": "2026-09-24T21:17:22Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job4 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job4/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep1/job4",
+      "at_utc": "2026-09-24T21:17:22Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job5 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job5/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep1/job5",
+      "at_utc": "2026-09-24T21:17:22Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job6 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job6/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep1/job6",
+      "at_utc": "2026-09-24T21:17:22Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job7 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job7/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k8/rep1/job7",
+      "at_utc": "2026-09-24T21:17:22Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job0",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job1",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job2",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job3",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job4 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job4/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job4",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job5 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job5/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job5",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job6 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job6/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job6",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job7 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job7/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job7",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job8 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job8/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job8",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job9 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job9/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep0/job9",
+      "at_utc": "2026-09-24T21:17:59Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job0",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job1",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job2",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job3",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job4 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job4/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job4",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job5 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job5/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job5",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job6 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job6/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job6",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job7 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job7/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job7",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job8 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job8/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job8",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job9 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job9/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k10/rep1/job9",
+      "at_utc": "2026-09-24T21:18:36Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job0",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job1",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job2",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job3",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job4 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job4/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job4",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job5 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job5/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job5",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job6 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job6/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job6",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job7 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job7/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job7",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job8 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job8/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job8",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job9 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job9/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job9",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job10 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job10/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job10",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job11 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job11/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep0/job11",
+      "at_utc": "2026-09-24T21:19:14Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job0 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job0",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job1 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job1/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job1",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job2 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job2/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job2",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job3 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job3/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job3",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job4 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job4/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job4",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job5 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job5/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job5",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job6 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job6/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job6",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job7 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job7/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job7",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job8 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job8/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job8",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job9 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job9/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job9",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job10 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job10/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job10",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload core --device cpu --iters 30 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job11 --threads 1 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job11/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "core/t1/k12/rep1/job11",
+      "at_utc": "2026-09-24T21:19:54Z"
+    },
+    {
+      "argv": ".venv/bin/python experiments/capacity-c0/run.py --job --workload training --device mps --iters 50 --out-dir /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/mps/tuncapped/k1/rep0/job0 --ready-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/mps/tuncapped/k1/rep0/job0/ready --go-file /Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/mps/tuncapped/k1/rep0/go",
+      "entry_point": "experiments/capacity-c0/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "mps/tuncapped/k1/rep0/job0",
+      "at_utc": "2026-09-24T21:25:37Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "c0.machine",
+      "kind": "observation",
+      "value": {
+        "hw.model": "Mac16,9",
+        "hw.memsize": "68719476736",
+        "hw.ncpu": "16",
+        "hw.perflevel0.physicalcpu": "12",
+        "hw.perflevel1.physicalcpu": "4",
+        "machdep.cpu.brand_string": "Apple M4 Max",
+        "kern.osproductversion": "26.6.2",
+        "summary": "sysctl hw.model Mac16,9, Apple M4 Max, hw.perflevel0.physicalcpu 12, hw.perflevel1.physicalcpu 4, hw.memsize 68719476736"
+      },
+      "how": "sysctl"
+    },
+    {
+      "key": "c0.corpus_sha256",
+      "kind": "observation",
+      "value": "894e829934ea7bd1b7761eba6647b557727f9fb4437ac1fa81e3abb84a5d3af8",
+      "how": "sha256 of S0-03's training documents, seed 0"
+    },
+    {
+      "key": "c0.agent.pid",
+      "kind": "observation",
+      "value": 83489,
+      "how": "--agent-pid, else the nearest `claude` ancestor"
+    },
+    {
+      "key": "c0.servers_ruling",
+      "kind": "observation",
+      "value": {
+        "id": "R-2026-09-22-mlx-servers",
+        "mode": "yield",
+        "text": "**RSR training has full priority on the Mac Studio.** The owner's Local Second Brain servers\n(`mlx_lm.server` / `llama-server`, ~25 GB) **yield to it**.\n\n- **Stop them** before C0 runs, and whenever an RSR night opens. A run or an orchestrator step may\n  stop them itself; this ruling authorises it. The stop must be recorded: the PIDs, the command\n  lines and the RSS freed go in the run's ledger or the night log.\n- **Restart them** only when no RSR work holds the machine: after C0 completes, and at night\n  close. They are a daytime tool.\n- **Measure capacity on the machine RSR actually gets.** C0 runs with the servers stopped, and\n  `reserve_gb` does not budget for them.\n- \u26a0\ufe0f This does not license killing arbitrary processes. It covers the owner's LLM servers only,\n  identified by command line. Anything else over 2 GB at C0 start still makes C0 refuse with\n  exit 3."
+      },
+      "how": "docs/owner/rulings/R-*-mlx-servers.md, latest signed"
+    },
+    {
+      "key": "c0.stopped_servers",
+      "kind": "observation",
+      "value": [],
+      "how": "R-2026-09-22-mlx-servers: PIDs, command lines, RSS freed"
+    },
+    {
+      "key": "c0.stopped_servers_rss_gib",
+      "kind": "observation",
+      "value": 0,
+      "how": "sum of rss_gib over c0.stopped_servers"
+    },
+    {
+      "key": "c0.free_gib.start",
+      "kind": "observation",
+      "value": 59.11869812011719,
+      "how": "lanes.free_memory_bytes before any server stop"
+    },
+    {
+      "key": "c0.free_gib.after_stop",
+      "kind": "observation",
+      "value": 59.11448669433594,
+      "how": "lanes.free_memory_bytes after the stop"
+    },
+    {
+      "key": "c0.quiet.offenders",
+      "kind": "observation",
+      "value": [],
+      "how": "processes outside this run with RSS > 2 GiB at start"
+    },
+    {
+      "key": "c0.deadline_hours",
+      "kind": "observation",
+      "value": 4,
+      "how": "PREREG deadline_hours"
+    },
+    {
+      "key": "c0.memsize_bytes",
+      "kind": "observation",
+      "value": 68719476736,
+      "how": "sysctl hw.memsize"
+    },
+    {
+      "key": "c0.physical_gib",
+      "kind": "observation",
+      "value": 64.0,
+      "how": "sysctl hw.memsize / 2^30"
+    },
+    {
+      "key": "c0.jobs",
+      "kind": "observation",
+      "value": [
+        {
+          "tag": "det/t1/k1/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k1/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 14638661632,
+          "job_time_s": 24.397,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284129.882018,
+            "go_seen_wall": 1790284129.933835
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k1/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k1/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 14640037888,
+          "job_time_s": 24.835,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284158.545439,
+            "go_seen_wall": 1790284158.605891
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k2/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 14624030720,
+          "job_time_s": 27.154999999999998,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284187.657737,
+            "go_seen_wall": 1790284187.6715279
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k2/rep0/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep0/job1",
+          "rc": 0,
+          "maxrss_bytes": 14662909952,
+          "job_time_s": 27.346,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284187.6577358,
+            "go_seen_wall": 1790284187.672957
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k2/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 14626979840,
+          "job_time_s": 27.404,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284219.6704068,
+            "go_seen_wall": 1790284219.7232552
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k2/rep1/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k2/rep1/job1",
+          "rc": 0,
+          "maxrss_bytes": 14659911680,
+          "job_time_s": 26.964,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284219.670408,
+            "go_seen_wall": 1790284219.723256
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k4/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 13496877056,
+          "job_time_s": 30.529999999999998,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284251.863845,
+            "go_seen_wall": 1790284251.914974
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k4/rep0/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job1",
+          "rc": 0,
+          "maxrss_bytes": 13720125440,
+          "job_time_s": 30.741,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284251.8638442,
+            "go_seen_wall": 1790284251.914975
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k4/rep0/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job2",
+          "rc": 0,
+          "maxrss_bytes": 13159497728,
+          "job_time_s": 30.267,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284251.863842,
+            "go_seen_wall": 1790284251.914979
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k4/rep0/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep0/job3",
+          "rc": 0,
+          "maxrss_bytes": 13255147520,
+          "job_time_s": 30.016999999999996,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284251.86384,
+            "go_seen_wall": 1790284251.914979
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k4/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 13023674368,
+          "job_time_s": 30.189999999999998,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284287.9555771,
+            "go_seen_wall": 1790284287.963469
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k4/rep1/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job1",
+          "rc": 0,
+          "maxrss_bytes": 13353205760,
+          "job_time_s": 30.377,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284287.9555762,
+            "go_seen_wall": 1790284287.961688
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k4/rep1/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job2",
+          "rc": 0,
+          "maxrss_bytes": 12880543744,
+          "job_time_s": 30.342999999999996,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284287.956218,
+            "go_seen_wall": 1790284287.961688
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t1/k4/rep1/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t1/k4/rep1/job3",
+          "rc": 0,
+          "maxrss_bytes": 12707692544,
+          "job_time_s": 30.825,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284287.956202,
+            "go_seen_wall": 1790284287.9638898
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t5/k1/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k1/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 14623801344,
+          "job_time_s": 22.42,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:5c2a19d42ab56baf29024941ae34a70aae87cc03de26f37f76413aff1e05cff8",
+          "torch_num_threads": 5,
+          "spec_threads": 5,
+          "barrier": {
+            "ready_wall": 1790284324.000095,
+            "go_seen_wall": 1790284324.0604632
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t5/k3/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 11089756160,
+          "job_time_s": 32.416,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:5c2a19d42ab56baf29024941ae34a70aae87cc03de26f37f76413aff1e05cff8",
+          "torch_num_threads": 5,
+          "spec_threads": 5,
+          "barrier": {
+            "ready_wall": 1790284350.7126331,
+            "go_seen_wall": 1790284350.7505112
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t5/k3/rep0/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job1",
+          "rc": 0,
+          "maxrss_bytes": 11099701248,
+          "job_time_s": 32.541999999999994,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:5c2a19d42ab56baf29024941ae34a70aae87cc03de26f37f76413aff1e05cff8",
+          "torch_num_threads": 5,
+          "spec_threads": 5,
+          "barrier": {
+            "ready_wall": 1790284350.712637,
+            "go_seen_wall": 1790284350.750517
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "det/t5/k3/rep0/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/det/t5/k3/rep0/job2",
+          "rc": 0,
+          "maxrss_bytes": 11082743808,
+          "job_time_s": 32.131,
+          "n_beats": 10,
+          "output_hash": "4.130329767862956:5c2a19d42ab56baf29024941ae34a70aae87cc03de26f37f76413aff1e05cff8",
+          "torch_num_threads": 5,
+          "spec_threads": 5,
+          "barrier": {
+            "ready_wall": 1790284350.712639,
+            "go_seen_wall": 1790284350.7505112
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k1/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k1/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 4565090304,
+          "job_time_s": 24.959999999999997,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284388.1665401,
+            "go_seen_wall": 1790284388.219477
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k1/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k1/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 4560879616,
+          "job_time_s": 24.911,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284415.427158,
+            "go_seen_wall": 1790284415.464962
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k2/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 4564828160,
+          "job_time_s": 27.334000000000003,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284442.6814709,
+            "go_seen_wall": 1790284442.749425
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k2/rep0/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep0/job1",
+          "rc": 0,
+          "maxrss_bytes": 4556341248,
+          "job_time_s": 28.447,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284442.68147,
+            "go_seen_wall": 1790284442.7494242
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k2/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 4560896000,
+          "job_time_s": 27.427000000000003,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284473.51739,
+            "go_seen_wall": 1790284473.532629
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k2/rep1/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k2/rep1/job1",
+          "rc": 0,
+          "maxrss_bytes": 4564844544,
+          "job_time_s": 27.299000000000003,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284473.517389,
+            "go_seen_wall": 1790284473.532883
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k4/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 4557111296,
+          "job_time_s": 30.817000000000004,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284503.326228,
+            "go_seen_wall": 1790284503.3790421
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k4/rep0/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job1",
+          "rc": 0,
+          "maxrss_bytes": 4553834496,
+          "job_time_s": 30.807,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284503.323679,
+            "go_seen_wall": 1790284503.382293
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k4/rep0/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job2",
+          "rc": 0,
+          "maxrss_bytes": 4556767232,
+          "job_time_s": 30.845000000000002,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284503.3262022,
+            "go_seen_wall": 1790284503.3790421
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k4/rep0/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep0/job3",
+          "rc": 0,
+          "maxrss_bytes": 4556505088,
+          "job_time_s": 30.962000000000003,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284503.3234172,
+            "go_seen_wall": 1790284503.376323
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k4/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 4556767232,
+          "job_time_s": 30.898000000000003,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284536.972429,
+            "go_seen_wall": 1790284537.018079
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k4/rep1/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job1",
+          "rc": 0,
+          "maxrss_bytes": 4556718080,
+          "job_time_s": 30.891000000000002,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284536.972417,
+            "go_seen_wall": 1790284537.01808
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k4/rep1/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job2",
+          "rc": 0,
+          "maxrss_bytes": 4556521472,
+          "job_time_s": 30.905,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284536.972424,
+            "go_seen_wall": 1790284537.015862
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k4/rep1/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k4/rep1/job3",
+          "rc": 0,
+          "maxrss_bytes": 4561141760,
+          "job_time_s": 30.871,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284536.972416,
+            "go_seen_wall": 1790284537.01808
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 4539498496,
+          "job_time_s": 32.362,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284570.76729,
+            "go_seen_wall": 1790284570.8522081
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep0/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job1",
+          "rc": 0,
+          "maxrss_bytes": 4552704000,
+          "job_time_s": 34.32599999999999,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284570.750883,
+            "go_seen_wall": 1790284570.856123
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep0/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job2",
+          "rc": 0,
+          "maxrss_bytes": 4547641344,
+          "job_time_s": 32.326,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284570.78601,
+            "go_seen_wall": 1790284570.8522072
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep0/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job3",
+          "rc": 0,
+          "maxrss_bytes": 4530421760,
+          "job_time_s": 31.793000000000003,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284570.822813,
+            "go_seen_wall": 1790284570.852223
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep0/job4",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job4",
+          "rc": 0,
+          "maxrss_bytes": 4546854912,
+          "job_time_s": 32.38,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284570.822817,
+            "go_seen_wall": 1790284570.8522198
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep0/job5",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job5",
+          "rc": 0,
+          "maxrss_bytes": 4557078528,
+          "job_time_s": 31.747,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284570.7882,
+            "go_seen_wall": 1790284570.85226
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep0/job6",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job6",
+          "rc": 0,
+          "maxrss_bytes": 4344872960,
+          "job_time_s": 31.796,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284570.806911,
+            "go_seen_wall": 1790284570.8497732
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep0/job7",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep0/job7",
+          "rc": 0,
+          "maxrss_bytes": 4554375168,
+          "job_time_s": 32.359,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284570.822795,
+            "go_seen_wall": 1790284570.852212
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 4542169088,
+          "job_time_s": 32.058,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284607.896163,
+            "go_seen_wall": 1790284607.946677
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep1/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job1",
+          "rc": 0,
+          "maxrss_bytes": 4546953216,
+          "job_time_s": 32.149,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284607.922213,
+            "go_seen_wall": 1790284607.946677
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep1/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job2",
+          "rc": 0,
+          "maxrss_bytes": 4556111872,
+          "job_time_s": 31.647,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284607.937173,
+            "go_seen_wall": 1790284607.9436538
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep1/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job3",
+          "rc": 0,
+          "maxrss_bytes": 4548034560,
+          "job_time_s": 32.378,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284607.935939,
+            "go_seen_wall": 1790284607.948661
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep1/job4",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job4",
+          "rc": 0,
+          "maxrss_bytes": 4548345856,
+          "job_time_s": 32.484,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284607.91166,
+            "go_seen_wall": 1790284607.948661
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep1/job5",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job5",
+          "rc": 0,
+          "maxrss_bytes": 4556603392,
+          "job_time_s": 32.42,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284607.933973,
+            "go_seen_wall": 1790284607.946691
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep1/job6",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job6",
+          "rc": 0,
+          "maxrss_bytes": 4548493312,
+          "job_time_s": 32.416,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284607.910827,
+            "go_seen_wall": 1790284607.946677
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k8/rep1/job7",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k8/rep1/job7",
+          "rc": 0,
+          "maxrss_bytes": 4547772416,
+          "job_time_s": 32.513999999999996,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284607.93951,
+            "go_seen_wall": 1790284607.944853
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 4550475776,
+          "job_time_s": 32.78,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.443997,
+            "go_seen_wall": 1790284643.557229
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job1",
+          "rc": 0,
+          "maxrss_bytes": 4545544192,
+          "job_time_s": 33.580999999999996,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.4264529,
+            "go_seen_wall": 1790284643.552006
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job2",
+          "rc": 0,
+          "maxrss_bytes": 4555194368,
+          "job_time_s": 33.328,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.473896,
+            "go_seen_wall": 1790284643.551997
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job3",
+          "rc": 0,
+          "maxrss_bytes": 4556570624,
+          "job_time_s": 33.342999999999996,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.49794,
+            "go_seen_wall": 1790284643.554652
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job4",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job4",
+          "rc": 0,
+          "maxrss_bytes": 4552523776,
+          "job_time_s": 33.551,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.484137,
+            "go_seen_wall": 1790284643.553289
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job5",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job5",
+          "rc": 0,
+          "maxrss_bytes": 4557504512,
+          "job_time_s": 33.268,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.4984,
+            "go_seen_wall": 1790284643.5549362
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job6",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job6",
+          "rc": 0,
+          "maxrss_bytes": 4551245824,
+          "job_time_s": 33.091,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.484135,
+            "go_seen_wall": 1790284643.553293
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job7",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job7",
+          "rc": 0,
+          "maxrss_bytes": 4555407360,
+          "job_time_s": 33.122,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.497935,
+            "go_seen_wall": 1790284643.554649
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job8",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job8",
+          "rc": 0,
+          "maxrss_bytes": 4553867264,
+          "job_time_s": 33.489,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.472091,
+            "go_seen_wall": 1790284643.5532942
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep0/job9",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep0/job9",
+          "rc": 0,
+          "maxrss_bytes": 4550459392,
+          "job_time_s": 33.196999999999996,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284643.48008,
+            "go_seen_wall": 1790284643.553287
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 4552704000,
+          "job_time_s": 33.238,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.26597,
+            "go_seen_wall": 1790284680.360435
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job1",
+          "rc": 0,
+          "maxrss_bytes": 4553670656,
+          "job_time_s": 32.946,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.2874181,
+            "go_seen_wall": 1790284680.359927
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job2",
+          "rc": 0,
+          "maxrss_bytes": 4556701696,
+          "job_time_s": 33.722,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.353986,
+            "go_seen_wall": 1790284680.360438
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job3",
+          "rc": 0,
+          "maxrss_bytes": 4560240640,
+          "job_time_s": 33.532999999999994,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.324218,
+            "go_seen_wall": 1790284680.360435
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job4",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job4",
+          "rc": 0,
+          "maxrss_bytes": 4561420288,
+          "job_time_s": 33.464999999999996,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.35367,
+            "go_seen_wall": 1790284680.359925
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job5",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job5",
+          "rc": 0,
+          "maxrss_bytes": 4560994304,
+          "job_time_s": 33.526,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.342247,
+            "go_seen_wall": 1790284680.354744
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job6",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job6",
+          "rc": 0,
+          "maxrss_bytes": 4547854336,
+          "job_time_s": 32.761,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.353445,
+            "go_seen_wall": 1790284680.359925
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job7",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job7",
+          "rc": 0,
+          "maxrss_bytes": 4558553088,
+          "job_time_s": 33.39,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.324179,
+            "go_seen_wall": 1790284680.360435
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job8",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job8",
+          "rc": 0,
+          "maxrss_bytes": 4554997760,
+          "job_time_s": 33.141999999999996,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.350788,
+            "go_seen_wall": 1790284680.357224
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k10/rep1/job9",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k10/rep1/job9",
+          "rc": 0,
+          "maxrss_bytes": 4557897728,
+          "job_time_s": 33.326,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284680.34251,
+            "go_seen_wall": 1790284680.354748
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 4569694208,
+          "job_time_s": 34.754999999999995,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.151398,
+            "go_seen_wall": 1790284717.2521899
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job1",
+          "rc": 0,
+          "maxrss_bytes": 4566827008,
+          "job_time_s": 35.137,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.155676,
+            "go_seen_wall": 1790284717.249142
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job2",
+          "rc": 0,
+          "maxrss_bytes": 4570316800,
+          "job_time_s": 35.212,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.1936908,
+            "go_seen_wall": 1790284717.249194
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job3",
+          "rc": 0,
+          "maxrss_bytes": 4573396992,
+          "job_time_s": 35.18,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.189793,
+            "go_seen_wall": 1790284717.252191
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job4",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job4",
+          "rc": 0,
+          "maxrss_bytes": 4569972736,
+          "job_time_s": 35.156000000000006,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.1899562,
+            "go_seen_wall": 1790284717.252191
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job5",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job5",
+          "rc": 0,
+          "maxrss_bytes": 4568367104,
+          "job_time_s": 35.129,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.19422,
+            "go_seen_wall": 1790284717.2491488
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job6",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job6",
+          "rc": 0,
+          "maxrss_bytes": 4565499904,
+          "job_time_s": 35.160000000000004,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.203681,
+            "go_seen_wall": 1790284717.2476642
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job7",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job7",
+          "rc": 0,
+          "maxrss_bytes": 4568694784,
+          "job_time_s": 35.205000000000005,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.205268,
+            "go_seen_wall": 1790284717.249208
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job8",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job8",
+          "rc": 0,
+          "maxrss_bytes": 4571283456,
+          "job_time_s": 35.135999999999996,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.209755,
+            "go_seen_wall": 1790284717.247665
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job9",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job9",
+          "rc": 0,
+          "maxrss_bytes": 4572266496,
+          "job_time_s": 34.737,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.203677,
+            "go_seen_wall": 1790284717.247666
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job10",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job10",
+          "rc": 0,
+          "maxrss_bytes": 4574593024,
+          "job_time_s": 35.178,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.2055,
+            "go_seen_wall": 1790284717.249196
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep0/job11",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep0/job11",
+          "rc": 0,
+          "maxrss_bytes": 4564762624,
+          "job_time_s": 35.151,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284717.211257,
+            "go_seen_wall": 1790284717.249154
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job0",
+          "rc": 0,
+          "maxrss_bytes": 4579934208,
+          "job_time_s": 35.242000000000004,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.512678,
+            "go_seen_wall": 1790284756.519626
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job1",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job1",
+          "rc": 0,
+          "maxrss_bytes": 4571873280,
+          "job_time_s": 35.340999999999994,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.514108,
+            "go_seen_wall": 1790284756.5201201
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job2",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job2",
+          "rc": 0,
+          "maxrss_bytes": 4573659136,
+          "job_time_s": 35.292,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.514097,
+            "go_seen_wall": 1790284756.519674
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job3",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job3",
+          "rc": 0,
+          "maxrss_bytes": 4568023040,
+          "job_time_s": 35.048,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.512676,
+            "go_seen_wall": 1790284756.5195572
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job4",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job4",
+          "rc": 0,
+          "maxrss_bytes": 4575756288,
+          "job_time_s": 35.367999999999995,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.513741,
+            "go_seen_wall": 1790284756.5196218
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job5",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job5",
+          "rc": 0,
+          "maxrss_bytes": 4569038848,
+          "job_time_s": 35.382,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.512801,
+            "go_seen_wall": 1790284756.519676
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job6",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job6",
+          "rc": 0,
+          "maxrss_bytes": 4573118464,
+          "job_time_s": 34.904,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.5141,
+            "go_seen_wall": 1790284756.5195599
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job7",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job7",
+          "rc": 0,
+          "maxrss_bytes": 4564156416,
+          "job_time_s": 35.312,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.5133052,
+            "go_seen_wall": 1790284756.520061
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job8",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job8",
+          "rc": 0,
+          "maxrss_bytes": 4573806592,
+          "job_time_s": 35.023999999999994,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.5140932,
+            "go_seen_wall": 1790284756.519556
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job9",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job9",
+          "rc": 0,
+          "maxrss_bytes": 4571627520,
+          "job_time_s": 35.203,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.5132852,
+            "go_seen_wall": 1790284756.519608
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job10",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job10",
+          "rc": 0,
+          "maxrss_bytes": 4573396992,
+          "job_time_s": 35.311,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.512683,
+            "go_seen_wall": 1790284756.5195572
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "core/t1/k12/rep1/job11",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/core/t1/k12/rep1/job11",
+          "rc": 0,
+          "maxrss_bytes": 4561829888,
+          "job_time_s": 35.083999999999996,
+          "n_beats": 30,
+          "output_hash": "3.0040159225463867:32c6d3ee1ee52735bc2c4614311e72a4d0a4a9bab1cc196a56eae6bc2eb2c198",
+          "torch_num_threads": 1,
+          "spec_threads": 1,
+          "barrier": {
+            "ready_wall": 1790284756.512697,
+            "go_seen_wall": 1790284756.519609
+          },
+          "mem_gb_max": null
+        },
+        {
+          "tag": "mps/tuncapped/k1/rep0/job0",
+          "out_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/c0-run/runs/capacity-c0/sweep/mps/tuncapped/k1/rep0/job0",
+          "rc": 0,
+          "maxrss_bytes": 661815296,
+          "job_time_s": 56.931000000000004,
+          "n_beats": 50,
+          "output_hash": "2.077459176381429:2a017916e3ee9ef4891dc255e9c6dde1d3d6202a73029c30cf2ddb13933efff8",
+          "torch_num_threads": 12,
+          "spec_threads": null,
+          "barrier": {
+            "ready_wall": 1790285075.825235,
+            "go_seen_wall": 1790285075.831684
+          },
+          "mem_gb_max": 7.99
+        }
+      ],
+      "how": "every job: out_dir, rc, os.wait4 ru_maxrss, heartbeat"
+    },
+    {
+      "key": "c0.r_job_gib.training",
+      "kind": "observation",
+      "value": 13.633316040039062,
+      "how": "solo 1-thread training job, os.wait4 ru_maxrss"
+    },
+    {
+      "key": "c0.k_mem_training",
+      "kind": "observation",
+      "value": 4,
+      "how": "floor((hw.memsize/2^30 - 8) / R_training)"
+    },
+    {
+      "key": "c0.det.solo_hash",
+      "kind": "observation",
+      "value": {
+        "t1": "4.130329767862956:7a4b4d3ac11b6ce2a3beea29338890d62bd1de7ea25cb97f16ca17c2b2a360d2",
+        "t5": "4.130329767862956:5c2a19d42ab56baf29024941ae34a70aae87cc03de26f37f76413aff1e05cff8"
+      },
+      "how": "PREREG output_hash of the solo job per thread count"
+    },
+    {
+      "key": "c0.det.levels",
+      "kind": "observation",
+      "value": {
+        "t1.k1.rep0": {
+          "n_jobs": 1,
+          "n_match": 1
+        },
+        "t1.k1.rep1": {
+          "n_jobs": 1,
+          "n_match": 1
+        },
+        "t1.k2.rep0": {
+          "n_jobs": 2,
+          "n_match": 2
+        },
+        "t1.k2.rep1": {
+          "n_jobs": 2,
+          "n_match": 2
+        },
+        "t1.k4.rep0": {
+          "n_jobs": 4,
+          "n_match": 4
+        },
+        "t1.k4.rep1": {
+          "n_jobs": 4,
+          "n_match": 4
+        },
+        "t5.k1.rep0": {
+          "n_jobs": 1,
+          "n_match": 1
+        },
+        "t5.k3.rep0": {
+          "n_jobs": 3,
+          "n_match": 3
+        }
+      },
+      "how": "match count per (threads, k, rep) vs the solo hash at the same thread count"
+    },
+    {
+      "key": "c0.det.n_jobs",
+      "kind": "observation",
+      "value": 18,
+      "how": "len(determinism-sweep jobs)"
+    },
+    {
+      "key": "c0.det.n_mismatch",
+      "kind": "observation",
+      "value": 0,
+      "how": "len(mismatches)"
+    },
+    {
+      "key": "c0.det.mismatches",
+      "kind": "observation",
+      "value": [],
+      "how": "determinism_verdict"
+    },
+    {
+      "key": "c0.det.t1_equals_t5",
+      "kind": "observation",
+      "value": false,
+      "how": "secondary: not a rule"
+    },
+    {
+      "key": "c0.verdict",
+      "kind": "observation",
+      "value": "survived",
+      "how": "PREREG decision_rule"
+    },
+    {
+      "key": "c0.r_job_gib.core",
+      "kind": "observation",
+      "value": 4.2515716552734375,
+      "how": "solo 1-thread core job, os.wait4 ru_maxrss"
+    },
+    {
+      "key": "c0.k_mem_core",
+      "kind": "observation",
+      "value": 13,
+      "how": "floor((hw.memsize/2^30 - 8) / R_core)"
+    },
+    {
+      "key": "c0.core.job_times_s",
+      "kind": "observation",
+      "value": {
+        "k1": [
+          [
+            24.959999999999997
+          ],
+          [
+            24.911
+          ]
+        ],
+        "k2": [
+          [
+            27.334000000000003,
+            28.447
+          ],
+          [
+            27.427000000000003,
+            27.299000000000003
+          ]
+        ],
+        "k4": [
+          [
+            30.817000000000004,
+            30.807,
+            30.845000000000002,
+            30.962000000000003
+          ],
+          [
+            30.898000000000003,
+            30.891000000000002,
+            30.905,
+            30.871
+          ]
+        ],
+        "k8": [
+          [
+            32.362,
+            34.32599999999999,
+            32.326,
+            31.793000000000003,
+            32.38,
+            31.747,
+            31.796,
+            32.359
+          ],
+          [
+            32.058,
+            32.149,
+            31.647,
+            32.378,
+            32.484,
+            32.42,
+            32.416,
+            32.513999999999996
+          ]
+        ],
+        "k10": [
+          [
+            32.78,
+            33.580999999999996,
+            33.328,
+            33.342999999999996,
+            33.551,
+            33.268,
+            33.091,
+            33.122,
+            33.489,
+            33.196999999999996
+          ],
+          [
+            33.238,
+            32.946,
+            33.722,
+            33.532999999999994,
+            33.464999999999996,
+            33.526,
+            32.761,
+            33.39,
+            33.141999999999996,
+            33.326
+          ]
+        ],
+        "k12": [
+          [
+            34.754999999999995,
+            35.137,
+            35.212,
+            35.18,
+            35.156000000000006,
+            35.129,
+            35.160000000000004,
+            35.205000000000005,
+            35.135999999999996,
+            34.737,
+            35.178,
+            35.151
+          ],
+          [
+            35.242000000000004,
+            35.340999999999994,
+            35.292,
+            35.048,
+            35.367999999999995,
+            35.382,
+            34.904,
+            35.312,
+            35.023999999999994,
+            35.203,
+            35.311,
+            35.083999999999996
+          ]
+        ]
+      },
+      "how": "heartbeat first->last beat, per rep"
+    },
+    {
+      "key": "c0.core.table",
+      "kind": "observation",
+      "value": [
+        {
+          "k": 1,
+          "makespan_s": 24.959999999999997,
+          "T": 0.04006410256410257,
+          "g": 0.04006410256410257,
+          "threshold": 0.020032051282051284,
+          "step_passes": true,
+          "prefix_passes": true
+        },
+        {
+          "k": 2,
+          "makespan_s": 28.447,
+          "T": 0.07030618342883256,
+          "g": 0.030242080864729994,
+          "threshold": 0.020032051282051284,
+          "step_passes": true,
+          "prefix_passes": true
+        },
+        {
+          "k": 4,
+          "makespan_s": 30.962000000000003,
+          "T": 0.12919062076093274,
+          "g": 0.02944221866605009,
+          "threshold": 0.020032051282051284,
+          "step_passes": true,
+          "prefix_passes": true
+        },
+        {
+          "k": 8,
+          "makespan_s": 34.32599999999999,
+          "T": 0.23305948843442292,
+          "g": 0.025967216918372546,
+          "threshold": 0.020032051282051284,
+          "step_passes": true,
+          "prefix_passes": true
+        },
+        {
+          "k": 10,
+          "makespan_s": 33.722,
+          "T": 0.29654231658857716,
+          "g": 0.03174141407707712,
+          "threshold": 0.020032051282051284,
+          "step_passes": true,
+          "prefix_passes": true
+        },
+        {
+          "k": 12,
+          "makespan_s": 35.382,
+          "T": 0.3391555027980329,
+          "g": 0.021306593104727878,
+          "threshold": 0.020032051282051284,
+          "step_passes": true,
+          "prefix_passes": true
+        }
+      ],
+      "how": "cpu_det_slots rule, T(k) = k / makespan(k), slower repetition"
+    },
+    {
+      "key": "c0.battery.n1",
+      "kind": "observation",
+      "value": {
+        "n": 1,
+        "wall_s": 72.98886833293363,
+        "rc": 0,
+        "census": [
+          "1116 passed, 1 xfailed, 1 warning in 72.15s (0:01:12)"
+        ]
+      },
+      "how": "pytest -rs --tb=no wall time under lanes.thread_env(n)"
+    },
+    {
+      "key": "c0.battery.n2",
+      "kind": "observation",
+      "value": {
+        "n": 2,
+        "wall_s": 68.41931354196277,
+        "rc": 0,
+        "census": [
+          "1116 passed, 1 xfailed, 1 warning in 68.12s (0:01:08)"
+        ]
+      },
+      "how": "pytest -rs --tb=no wall time under lanes.thread_env(n)"
+    },
+    {
+      "key": "c0.battery.n4",
+      "kind": "observation",
+      "value": {
+        "n": 4,
+        "wall_s": 66.59326541703194,
+        "rc": 0,
+        "census": [
+          "1116 passed, 1 xfailed, 1 warning in 66.29s (0:01:06)"
+        ]
+      },
+      "how": "pytest -rs --tb=no wall time under lanes.thread_env(n)"
+    },
+    {
+      "key": "c0.battery.n8",
+      "kind": "observation",
+      "value": {
+        "n": 8,
+        "wall_s": 72.69488216703758,
+        "rc": 0,
+        "census": [
+          "1116 passed, 1 xfailed, 1 warning in 72.39s (0:01:12)"
+        ]
+      },
+      "how": "pytest -rs --tb=no wall time under lanes.thread_env(n)"
+    },
+    {
+      "key": "c0.mps.cores_samples",
+      "kind": "observation",
+      "value": [
+        0.777,
+        0.147,
+        0.69,
+        0.10300000000000001,
+        0.861,
+        0.672,
+        0.706,
+        0.76,
+        0.792,
+        0.893,
+        1.041,
+        0.995,
+        0.905,
+        0.7440000000000001,
+        0.705,
+        0.687,
+        0.772,
+        0.8170000000000001,
+        0.932,
+        1.026,
+        0.988,
+        0.856,
+        0.72,
+        0.706,
+        0.7659999999999999,
+        0.784,
+        0.86,
+        1.015,
+        0.9620000000000001,
+        0.932,
+        0.8029999999999999,
+        0.708,
+        0.718,
+        0.764,
+        0.775,
+        0.855,
+        1.03,
+        0.953,
+        0.937,
+        0.833,
+        0.7020000000000001,
+        0.7140000000000001,
+        0.77,
+        0.789,
+        0.871,
+        1.062,
+        0.93,
+        0.8640000000000001,
+        0.742,
+        0.703,
+        0.7509999999999999,
+        0.767,
+        0.835,
+        0.983,
+        0.975,
+        0.872,
+        0.836,
+        0.688,
+        0.7140000000000001,
+        0.765,
+        0.5870000000000001
+      ],
+      "how": "ps %cpu/100 of the MPS job's tree, 1 Hz"
+    },
+    {
+      "key": "c0.mps.maxrss_gib",
+      "kind": "observation",
+      "value": 0.616363525390625,
+      "how": "os.wait4 ru_maxrss, secondary"
+    },
+    {
+      "key": "c0.agent.rss_gib_p95",
+      "kind": "observation",
+      "value": 0.62957763671875,
+      "how": "nearest-rank p95 of the agent tree RSS (C0's own tree excluded), 1 Hz"
+    },
+    {
+      "key": "c0.agent.n_samples",
+      "kind": "observation",
+      "value": 978,
+      "how": "len(agent RSS samples)"
+    },
+    {
+      "key": "c0.cpu_det_slots",
+      "kind": "observation",
+      "value": 12,
+      "how": "cpu_det_slots rule over c0.core.table"
+    },
+    {
+      "key": "c0.battery_cpu_slots_raw",
+      "kind": "observation",
+      "value": 1,
+      "how": "smallest n with W(n) <= 1.15 * min W"
+    },
+    {
+      "key": "c0.battery_cpu_slots",
+      "kind": "observation",
+      "value": 1,
+      "how": "battery_cpu_slots_raw clamped to cpu_det_slots"
+    },
+    {
+      "key": "c0.mps.cores_p95",
+      "kind": "observation",
+      "value": 1.026,
+      "how": "nearest-rank p95 of c0.mps.cores_samples"
+    },
+    {
+      "key": "c0.mps_reserves_cpu_slots_raw",
+      "kind": "observation",
+      "value": 2,
+      "how": "max(1, ceil(p95))"
+    },
+    {
+      "key": "c0.mps_reserves_cpu_slots",
+      "kind": "observation",
+      "value": 2,
+      "how": "raw clamped to cpu_det_slots"
+    },
+    {
+      "key": "c0.mps_job_peak_gb",
+      "kind": "observation",
+      "value": 7.99,
+      "how": "max heartbeat mem_gb (mps driver_allocated_memory / 1e9), C0's own MPS run"
+    },
+    {
+      "key": "c0.agent_sessions",
+      "kind": "observation",
+      "value": 2,
+      "how": "policy 2; 1 if 2 * p95 agent RSS > 0.10 * physical RAM"
+    },
+    {
+      "key": "c0.reserve_gb",
+      "kind": "observation",
+      "value": 5.5,
+      "how": "agent_sessions * p95 agent RSS + 4.0 (+ foreign if STAY UP), up to 0.5"
+    },
+    {
+      "key": "c0.conflict.a",
+      "kind": "observation",
+      "value": {
+        "cpu_det_slots": 12,
+        "retrieval_curve_slots": 15,
+        "cpu_det_slots_ge_retrieval_curve": false,
+        "blocks_retrieval_curve": true
+      },
+      "how": "PREREG conflicts: reported, never resolved by a rule"
+    },
+    {
+      "key": "c0.conflict.b",
+      "kind": "observation",
+      "value": {
+        "k_mem_training": 4,
+        "cpu_det_slots": 12,
+        "conflict": true
+      },
+      "how": "PREREG conflicts: reported, never resolved by a rule"
+    },
+    {
+      "key": "c0.conflict.c",
+      "kind": "observation",
+      "value": {
+        "reserve_gb": 5.5,
+        "mps_job_peak_gb": 7.99,
+        "sum": 13.49,
+        "physical_gib": 64.0,
+        "conflict": false
+      },
+      "how": "PREREG conflicts: reported, never resolved by a rule"
+    },
+    {
+      "key": "c0.restarted_servers",
+      "kind": "observation",
+      "value": [],
+      "how": "restart_servers, in a finally"
+    }
+  ],
+  "verdict": {
+    "falsifier": "A deterministic CPU training job on the Mac Studio produces bit-identical output no matter how many other such jobs run beside it, at a fixed per-job thread count (1 and 5).",
+    "outcome": "survived",
+    "detail": "all 18 determinism-sweep jobs match the solo hash at their thread count",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-24T21:25:37Z"
+}
