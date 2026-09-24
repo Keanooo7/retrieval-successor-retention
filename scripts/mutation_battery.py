@@ -1871,6 +1871,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "every other check here.",
     ),
     Mutation(
+        "retrieval-curve: the reproduction control's comparison ledger swapped",
+        "test_reproduction_control_reads_the_s003_ledger",
+        "experiments/retrieval-curve/run.py",
+        "    path = path or ROOT / S003_LEDGER\n",
+        '    path = path or ROOT / "runs/decisive-shuffle/ledger.json"\n',
+        "retrieval-curve brief bar, mutation (2), the swap half (PR #39 listed it "
+        "unproven). A control read against another run's ledger compares the "
+        "curve with the wrong reference; the gate reads the S0-03 row by key from "
+        "the real ledger and must go red.",
+    ),
+    Mutation(
         "retrieval-curve: every checkpoint measured from the final checkpoint",
         "test_each_checkpoint_label_",
         "experiments/retrieval-curve/run.py",
