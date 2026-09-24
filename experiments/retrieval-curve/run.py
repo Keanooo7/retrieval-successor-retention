@@ -43,8 +43,12 @@ Usage::
 Exit codes (`rsr.exit_codes`): 0 a verdict was reached (``falsified``,
 ``survived``, or ``inconclusive`` because bar 1 failed with every checkpoint
 measured) · 3 did not run or did not complete (the reproduction control failed,
-the deadline or a crashed child cut the run before a verdict, a refused
-precondition).
+the deadline or a crashed child cut the run before a verdict, a measurement
+raised, a refused precondition).
+
+RESULTS.md is generated from the ledger. Its BRIEF ERRORS section is the one part
+written by hand: it lives in ``BRIEF-ERRORS.md`` beside this file and is inlined on
+every render, so regenerating never erases it.
 """
 
 from __future__ import annotations
@@ -74,6 +78,7 @@ from rsr.train import checkpoint as ck  # noqa: E402
 EXPERIMENT = "experiments/retrieval-curve/run.py"
 RUN_ID = "retrieval-curve"
 PREREG = "experiments/retrieval-curve/PREREG.md"
+BRIEF_ERRORS = "experiments/retrieval-curve/BRIEF-ERRORS.md"
 
 
 def _load(name: str, rel: str):
@@ -334,11 +339,22 @@ def decisions(per: dict[int, dict[int, dict]]) -> dict[int, dict]:
     }
 
 
-def verdict(per: dict, control: dict, stopped: str | None) -> dict:
+def verdict(
+    per: dict, control: dict, stopped: str | None, error: str | None = None
+) -> dict:
     """PREREG "Primary readout and decision rule", row for row.
 
     The reproduction control is checked first and overrides every row below it.
+    A measurement that raised overrides everything: what it would have read is
+    unknown, so no row can be read.
     """
+    if error is not None:
+        return {
+            "outcome": "inconclusive",
+            "detail": f"a measurement raised ({error}); the run did not complete",
+            "falsified_at": [],
+            "exit": Exit.DID_NOT_RUN,
+        }
     failed = sorted(s for s, c in control.items() if not c["ok"])
     if failed:
         return {
@@ -440,15 +456,22 @@ def run_curve(
     def sweep() -> str | None:
         """Measure every pending checkpoint already on disk, lowest label first
         across seeds -- so every seed's control is read before any later
-        checkpoint of any seed."""
+        checkpoint of any seed.
+
+        Once a control has failed, only the other seeds' ckpt-300s already on disk
+        are still measured: PREREG "Stop, exit 3, report both sets of samples" --
+        every control sample there is to report, and nothing past it."""
+        failed_control = False
         while True:
             ready = [
                 (pending[s][0], s)
                 for s in SEEDS
-                if pending[s] and ckpt_path(dirs[s], pending[s][0]).exists()
+                if pending[s]
+                and ckpt_path(dirs[s], pending[s][0]).exists()
+                and not (failed_control and pending[s][0] != CONTROL_CHECKPOINT)
             ]
             if not ready:
-                return None
+                return "reproduction control failed" if failed_control else None
             label, s = min(ready)
             pending[s].pop(0)
             per[s][label] = measure_fn(dirs[s], s, label)
@@ -456,8 +479,7 @@ def run_curve(
             if label == CONTROL_CHECKPOINT:
                 control[s] = reproduction_control(s, per[s][label]["s003"], reference)
                 log(f"  seed {s}: reproduction control {control[s]}")
-                if not control[s]["ok"]:
-                    return "reproduction control failed"
+                failed_control = failed_control or not control[s]["ok"]
 
     def stop_all() -> None:
         live = [p for p in procs.values() if p.poll() is None]
@@ -471,33 +493,44 @@ def run_curve(
 
     stopped: str | None = None
     failed: list[int] = []
-    while True:
-        stopped = sweep()
-        if stopped:
-            stop_all()
-            break
-        if not any(pending.values()):
-            break
-        if clock() - t0 >= deadline_s:
-            stop_all()
-            stopped = sweep() or "deadline"
-            break
-        dead = [s for s in SEEDS if pending[s] and procs[s].poll() is not None]
-        if dead:
-            # A child that exited normally has already written every checkpoint.
+    error: str | None = None
+    try:
+        while True:
             stopped = sweep()
-            failed = [s for s in SEEDS if pending[s] and procs[s].poll() is not None]
-            if stopped or failed:
-                stop_all()
-                stopped = stopped or "training child exited early"
+            if stopped:
                 break
-            continue
-        sleep(poll_s)
+            if not any(pending.values()):
+                break
+            if clock() - t0 >= deadline_s:
+                stop_all()
+                stopped = sweep() or "deadline"
+                break
+            dead = [s for s in SEEDS if pending[s] and procs[s].poll() is not None]
+            if dead:
+                # A child that exited normally has already written every checkpoint.
+                stopped = sweep()
+                failed = [s for s in SEEDS if pending[s] and procs[s].poll() is not None]
+                if stopped or failed:
+                    stopped = stopped or "training child exited early"
+                    break
+                continue
+            sleep(poll_s)
+    except (Exception, SystemExit) as e:
+        # A measurement that raises (StepMismatch, CheckpointError, S0-03's
+        # SystemExit) is recorded and ends the run as not completed (exit 3). It
+        # never escapes past three training children still running.
+        error = f"{type(e).__name__}: {e}"
+        stopped = "measurement raised"
+        log(f"  measurement raised: {error}")
+    finally:
+        # Every way out -- including KeyboardInterrupt -- stops the children.
+        stop_all()
     exit_codes = {s: p.wait() for s, p in procs.items()}
     return {
         "per": per,
         "control": control,
         "stopped": stopped,
+        "error": error,
         "failed_seeds": failed,
         "exit_codes": exit_codes,
         "argv": {s: getattr(p, "argv", None) for s, p in procs.items()},
@@ -662,7 +695,7 @@ def write_rows(led, run: dict) -> dict:
         )
         led.note(f"ckpt{c}.bar1", d["bar1_zeroed_not_below_chance"], how="decide()")
         led.note(f"ckpt{c}.h4", d["h4_retrieval_shown"], how="decide()")
-    v = verdict(per, control, run["stopped"])
+    v = verdict(per, control, run["stopped"], run.get("error"))
     led.note("checkpoints_preregistered", list(CHECKPOINTS), how="PREREG thresholds")
     led.note(
         "checkpoints_measured",
@@ -672,6 +705,7 @@ def write_rows(led, run: dict) -> dict:
     led.note("checkpoints_measured_on_every_seed", sorted(dec), how="run_curve + decide")
     led.note("falsified_at_checkpoints", v["falsified_at"], how="verdict()")
     led.note("stopped_because", run["stopped"], how="run_curve")
+    led.note("measurement_error", run.get("error"), how="run_curve; None if none")
     led.note("margin", MARGIN, how="S0-03 run.py MARGIN, imported")
     led.note("chance_ln16", CHANCE, how="S0-03 run.py CHANCE, imported")
     led.note("wall_deadline_hours", DEADLINE_HOURS, how="PREREG thresholds")
@@ -740,7 +774,10 @@ def execute(
         steps_requested=ITERS,
         steps_done=max((max(run["per"][s]) for s in SEEDS if run["per"][s]), default=0),
     )
-    if run["failed_seeds"]:
+    # A child that exits nonzero on a run nobody stopped crashed, even with every
+    # checkpoint on disk (its result.json may be missing or wrong).
+    nonzero = run["stopped"] is None and any(rc != 0 for rc in run["exit_codes"].values())
+    if run["failed_seeds"] or run.get("error") is not None or nonzero:
         led.status("crashed")
     else:
         led.status("ok" if len(done) == len(SEEDS) else "partial")
@@ -748,7 +785,9 @@ def execute(
     (root / "raw.json").write_text(json.dumps(run, indent=2, default=str) + "\n")
     path = led.write()
     if results_path is not None:
-        results_path.write_text(render_results(json.loads(path.read_text())))
+        results_path.write_text(
+            render_results(json.loads(path.read_text()), read_brief_errors())
+        )
     print(f"ledger: {path}  verdict={v['outcome']}  exit={int(v['exit'])}")
     return v["exit"]
 
@@ -756,6 +795,12 @@ def execute(
 # --------------------------------------------------------------------------- #
 # RESULTS.md, rendered from the ledger
 # --------------------------------------------------------------------------- #
+
+
+def read_brief_errors(path: Path | None = None) -> str | None:
+    """The hand-written BRIEF ERRORS text, or None before it is written."""
+    path = path or ROOT / BRIEF_ERRORS
+    return path.read_text() if path.exists() else None
 
 
 def _rows(doc: dict) -> dict:
@@ -781,9 +826,10 @@ def _fmt(xs: Any) -> str:
     return str(xs)
 
 
-def render_results(doc: dict) -> str:
+def render_results(doc: dict, brief_errors: str | None = None) -> str:
     """Every number beside its ledger key, so `render_scoreboard.py --audit`
-    backs it (done_when). No number is typed here."""
+    backs it (done_when). No number is typed here. ``brief_errors`` is the text of
+    ``BRIEF_ERRORS`` (hand-written, after the run), inlined verbatim."""
     rows = _rows(doc)
     prov = doc.get("provenance", {})
     v = doc.get("verdict") or {}
@@ -799,7 +845,9 @@ def render_results(doc: dict) -> str:
         f"**{doc.get('status')}**.",
         "",
         f"Provenance of run `{rid}`: `provenance.git_sha` `{prov.get('git_sha')}` · "
-        f"`device` {doc.get('device')} · `corpus_sha256` "
+        f"`device` {doc.get('device')} · hardware `provenance.machine` "
+        f"`{prov.get('machine')}`, `provenance.platform` `{prov.get('platform')}` · "
+        f"`corpus_sha256` "
         + " ".join(f"{k} `{x}`" for k, x in sorted(shas.items()))
         + f" · `seeds_actually_run` {doc.get('seeds_actually_run')}.",
         "",
@@ -880,7 +928,9 @@ def render_results(doc: dict) -> str:
         "",
         "## BRIEF ERRORS",
         "",
-        "Written by the executor after the run.",
+        (brief_errors or "").strip()
+        or f"Not yet written: the executor writes `{BRIEF_ERRORS}` after the run "
+        "('none' if none) and re-renders.",
         "",
     ]
     return "\n".join(out)
@@ -955,7 +1005,9 @@ def main(argv: list[str] | None = None) -> Exit:
         path = root / "ledger.json"
         if not path.exists():
             refuse(Exit.DID_NOT_RUN, f"{path} is absent: the curve has not run")
-        results.write_text(render_results(json.loads(path.read_text())))
+        results.write_text(
+            render_results(json.loads(path.read_text()), read_brief_errors())
+        )
         print(f"wrote {results}")
         return Exit.OK
     return status(_run(a, root, results))

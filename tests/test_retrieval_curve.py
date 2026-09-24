@@ -139,6 +139,9 @@ def test_thresholds_are_the_preregs():
     assert run.CONTROL_CHECKPOINT == 300 and run.ITERS == 3000
     assert run.CKPT_EVERY == 100 and all(c % run.CKPT_EVERY == 0 for c in run.CHECKPOINTS)
     assert run.DEVICE == "cpu"
+    # the brief names S0-03's manifest as THREADS_PER_SEED's source
+    s003 = json.loads((ROOT / "runs/s0-03-rewardable-corpus/manifest.json").read_text())
+    assert s003["threads_per_seed"] == run.THREADS_PER_SEED
 
 
 def test_decide_and_measure_are_imported_not_copied():
@@ -455,18 +458,23 @@ def _rows(led):
 
 
 def test_control_failure_terminates_every_child_and_exits_3(led, tmp_path):
+    """PREREG: "Stop, exit 3, report both sets of samples". Seed 1 fails; seed 2's
+    ckpt-300, already on disk, is still measured so every control sample is
+    reported. Nothing past ckpt-300 is read."""
     root = tmp_path / "runs" / run.RUN_ID
     world = World(root, [(300, 1000)])  # 1000 is already on disk, and never read
     measure = fake_measure(_no(1000), off={1: 0.05})
     code = _execute(led, tmp_path, world, measure)
     assert code == Exit.DID_NOT_RUN
     assert all(ch.terminated for ch in world.children.values())
-    assert all(label == 300 for _, label in measure.calls)
+    assert sorted(measure.calls) == [(s, 300) for s in SEEDS]
     doc = json.loads(led.path.read_text())
     assert doc["verdict"]["outcome"] == "inconclusive"
     assert doc["status"] == "partial"
     rows = _rows(led)
-    assert rows["reproduction_control.ok"]["value"] == [True, False, None]
+    assert rows["reproduction_control.ok"]["value"] == [True, False, True]
+    assert None not in rows["reproduction_control.measured"]["value"]
+    assert None not in rows["reproduction_control.reference"]["value"]
     assert rows["stopped_because"]["value"] == "reproduction control failed"
 
 
@@ -529,3 +537,72 @@ def test_full_run_writes_every_key_and_renders_audited_results(led, tmp_path):
     assert text == run.render_results(doc)
     assert "**falsified**" in text and "cannot move here" in text
     assert render_scoreboard.audit_prose(tmp_path / "runs", text) == []
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [run.StepMismatch("stored 1100"), SystemExit("S0-03 _sets refused")],
+    ids=["step-mismatch", "s003-systemexit"],
+)
+def test_a_measurement_that_raises_stops_every_child_and_writes_a_ledger(
+    led, tmp_path, exc
+):
+    """A raise inside the measurement never escapes past live training children:
+    they are stopped, the ledger is written, the run is inconclusive, exit 3."""
+    root = tmp_path / "runs" / run.RUN_ID
+    world = World(root, [(300,), (1000,), (3000,)])
+    inner = fake_measure(_no(None))
+
+    def measure(seed_dir, seed, label):
+        if label == 1000:
+            raise exc
+        return inner(seed_dir, seed, label)
+
+    assert _execute(led, tmp_path, world, measure) == Exit.DID_NOT_RUN
+    assert all(ch.terminated for ch in world.children.values())
+    doc = json.loads(led.path.read_text())
+    assert doc["status"] == "crashed"
+    assert doc["verdict"]["outcome"] == "inconclusive"
+    rows = _rows(led)
+    assert type(exc).__name__ in rows["measurement_error"]["value"]
+    assert rows["stopped_because"]["value"] == "measurement raised"
+    assert (root / "raw.json").exists()
+
+
+def test_a_child_exiting_nonzero_after_every_checkpoint_is_crashed(led, tmp_path):
+    root = tmp_path / "runs" / run.RUN_ID
+    world = World(root, [(300,), (1000,), (3000,)])
+    orig = world.sleep
+
+    def sleep(x):
+        orig(x)
+        if run.ckpt_path(root / "seed0", run.ITERS).exists():
+            world.children[0].rc = 1  # wrote ckpt-3000, then failed
+
+    world.sleep = sleep
+    _execute(led, tmp_path, world, fake_measure(_no(None)))
+    assert json.loads(led.path.read_text())["status"] == "crashed"
+
+
+def test_results_carry_the_hardware_and_the_hand_written_brief_errors(tmp_path):
+    doc = {
+        "run_id": run.RUN_ID,
+        "provenance": {"git_sha": "abc", "machine": "arm64", "platform": "macOS-x"},
+        "rows": [],
+    }
+    text = run.render_results(doc)
+    assert "`provenance.machine` `arm64`" in text
+    assert "`provenance.platform` `macOS-x`" in text
+    assert run.BRIEF_ERRORS in text.split("## BRIEF ERRORS")[1]
+    p = tmp_path / "BRIEF-ERRORS.md"
+    assert run.read_brief_errors(p) is None
+    p.write_text("none\n")
+    errs = run.read_brief_errors(p)
+    assert run.render_results(doc, errs).split("## BRIEF ERRORS")[1].strip() == "none"
+
+
+def test_corpus_sha256_is_per_seed_and_deterministic():
+    a = run.corpus_sha256(0)
+    assert len(a) == 64 and int(a, 16) >= 0
+    assert a == run.corpus_sha256(0)
+    assert a != run.corpus_sha256(1)
