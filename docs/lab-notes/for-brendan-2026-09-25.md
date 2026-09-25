@@ -58,7 +58,7 @@ After the run:
   - The retrieval curve's `REPRO_TOL` mutation reddens a corpus-size-curve test. **This matters for reading the code:** the corpus-size curve imports the retrieval curve's `reproduction_control`, so the tolerance the run actually applied is the retrieval curve's `REPRO_TOL`. That value is 1e-6, the same as the PREREG's. The curve's own `REPRO_TOL` constant is only asserted equal to it.
   - Two of my declared couplings used substrings, but the battery matches exact node ids.
 - **Fix:** `846291c` (on `exp/corpus-size-curve`, pushed) declares all four with reasons. Each of the 4 was re-proven by applying it over the **full** suite with the battery's exact-id rule: PROVEN, 0 undeclared.
-- **Not done:** a full battery re-run at `846291c`. It is needed before merging #44 (~3.6 h at 12 threads). The raw battery output is in this session's scratchpad, not committed.
+- **Not done by 08:00:** a full battery re-run at `846291c`, which is needed before merging #44. It was **started at 06:28 PDT** in `.worktrees/battery-csc` (detached at `846291c`, `RSR_BATTERY_THREADS=12`). At ~3.6 h it should finish around 10:00. Its output goes to `battery2.log` in this session's scratchpad (`/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/b22d7401-2128-46c5-a7df-54573416ecb9/scratchpad/`). Read the `BATTERY_RC=` line: an exit I have not seen is not a pass.
 
 ## Track R — research corpus
 
