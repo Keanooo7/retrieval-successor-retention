@@ -1121,6 +1121,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_derived_vocabulary_is_what_the_model_is_built_with",
                 _S003_REFUSAL_COUPLING,
             ),
+            *(
+                (f"tests/test_corpus_size_curve.py::{t}", _S003_REFUSAL_COUPLING)
+                for t in (
+                    "test_default_corpus_call_is_unchanged",
+                    "test_default_path_config_hash_is_s003s",
+                )
+            ),
         ),
     ),
     # --- orchestrator: workqueue ---
@@ -1869,6 +1876,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "fails where nothing else does: a curve that silently is not S0-03's "
         "configuration (another thread count, another interpreter) would pass "
         "every other check here.",
+        off_gate_allowed=(
+            (
+                "tests/test_corpus_size_curve.py::"
+                "test_control_failure_stops_every_later_arm",
+                "corpus-size-curve imports this reproduction_control, so the "
+                "tolerance it applies is this REPRO_TOL; widened, its 1e-3 fake "
+                "miss passes and every later arm runs.",
+            ),
+        ),
     ),
     Mutation(
         "retrieval-curve: the reproduction control's comparison ledger swapped",
@@ -1930,16 +1946,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    prim = arms.get(CONTROL_ARM)\n",
         "corpus-size-curve brief bar (4). The N=64 arm is the memorised one; the "
         "question is the N=4096 arm's.",
-        off_gate_allowed=(
+        off_gate_allowed=tuple(
             (
-                "test_row_",
-                "the table's rows are built with the N=4096 arm only; read off another "
-                "arm, every row sees no arm and reads 'stopped before ckpt1000'.",
-            ),
-            (
+                f"tests/test_corpus_size_curve.py::{t}",
+                "the decision-table rows are built with the N=4096 arm only; read off "
+                "another arm, every row sees no arm and reads 'stopped before "
+                "ckpt1000'.",
+            )
+            for t in (
                 "test_B_needs_every_seed",
-                "same: its arms dict holds N=4096 only.",
-            ),
+                "test_row_bar1_fails_where_B_would_be_read",
+                "test_row_falsified_at_any_checkpoint[1000-gaps0]",
+                "test_row_falsified_at_any_checkpoint[300-gaps1]",
+                "test_row_stopped_before_ckpt1000",
+                "test_row_survived",
+            )
         ),
     ),
     Mutation(
@@ -1971,7 +1992,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "control itself is the retrieval curve's, imported.",
         off_gate_allowed=(
             (
-                "test_thresholds_are_the_preregs",
+                "tests/test_corpus_size_curve.py::test_thresholds_are_the_preregs",
                 "it also transcribes REPRO_TOL from the PREREG front matter.",
             ),
         ),
