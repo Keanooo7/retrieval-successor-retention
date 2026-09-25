@@ -2082,6 +2082,142 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scaffold-timing PREREG 'instrument': the corpus-size curve's measurement path, "
         "imported -- the object called must be that function, not a copy.",
     ),
+    # --- fresh-stream (experiments/fresh-stream/PREREG.md, 83128ee) ---
+    Mutation(
+        "fresh-stream: the stream stamped on the default path",
+        "test_default_path_config_is_unchanged",
+        "src/rsr/train/loop.py",
+        "    if stream is not None:\n"
+        "        # Stamped only when set, like n_documents: the default path's "
+        "config_hash\n"
+        "        # is unchanged and a stream run can never share it.\n"
+        '        frozen["stream"] = asdict(stream)\n',
+        '    frozen["stream"] = None if stream is None else asdict(stream)\n',
+        "fresh-stream PREREG 'Condition': the stream argument's default (None) is "
+        "today's path, byte for byte -- nothing stamped, S0-03's config_hash.",
+        off_gate_allowed=(
+            (
+                "tests/test_corpus_size_curve.py::test_default_path_config_hash_is_s003s",
+                "it checks the same default-path config_hash against S0-03's ledger.",
+            ),
+        ),
+    ),
+    Mutation(
+        "fresh-stream: a global-RNG draw before model init in stream mode",
+        "test_initial_parameters_identical_with_and_without_the_stream",
+        "src/rsr/train/loop.py",
+        '        corpus_kw = {"n_documents": stream.vocab_documents}\n',
+        '        corpus_kw = {"n_documents": stream.vocab_documents}\n'
+        "        torch.rand(1)  # a draw from the global RNG before model init\n",
+        "fresh-stream PREREG 'Arm A': the same initialisation as the corpus-size "
+        "N = 64 arm of that seed -- anything drawn from the global RNG before model "
+        "init shifts it (CLAUDE.md, test_reduction.py's RNG-ordering note).",
+    ),
+    Mutation(
+        "fresh-stream: a resumed run restarts the stream at its first window",
+        "test_resume_continues_the_stream_at_the_resumed_step",
+        "src/rsr/train/loop.py",
+        "                sdocs = stream_documents(stream, it, batch, stream_cfg)\n",
+        "                sdocs = stream_documents(\n"
+        "                    stream, it - start, batch, stream_cfg\n"
+        "                )\n",
+        "fresh-stream PREREG 'stream': A and B see identical documents at every step "
+        "t in [1000, 3000) -- arm B, resumed at 1000, must read window 1000, not 0.",
+    ),
+    Mutation(
+        "fresh-stream: SCAFFOLD and TRAP swapped",
+        "test_classify_table",
+        "experiments/fresh-stream/run.py",
+        '    if r_b:\n        return "SCAFFOLD"\n    if r_a:\n        return "TRAP"\n',
+        '    if r_a:\n        return "SCAFFOLD"\n    if r_b:\n        return "TRAP"\n',
+        "fresh-stream PREREG classification table: R3000(B) only is SCAFFOLD, "
+        "R3000(A) only is TRAP.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_stream.py::{t}",
+                "it asserts a SCAFFOLD or TRAP classification end to end.",
+            )
+            for t in (
+                "test_render_results_passes_the_audit",
+                "test_run_all_happy_path_order_and_scaffold",
+                "test_verdict_all_four_cells_from_tables[0.015625-0.0625-SCAFFOLD]",
+                "test_verdict_all_four_cells_from_tables[0.0625-0.015625-TRAP]",
+                "test_verdict_reads_ckpt3000_only",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-stream: control 1's tolerance widened",
+        "test_control_1_fails_at_2e_6",
+        "experiments/fresh-stream/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-5\n",
+        "fresh-stream PREREG control 1: every n64.ckpt100 statistic key within 1e-6 "
+        "absolute; a 2e-6 difference must fail.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_stream.py::{t}",
+                "it transcribes or exercises the same tolerance.",
+            )
+            for t in (
+                "test_thresholds_are_the_preregs",
+                "test_control_1_failure_stops_before_any_arm",
+                "test_render_results_after_a_failed_control_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-stream: the vocabulary closure disabled",
+        "test_vocabulary_closure_raises_on_an_out_of_vocab_word",
+        "src/rsr/train/loop.py",
+        "                if w not in vocab:\n",
+        "                if w not in vocab and False:\n",
+        "fresh-stream PREREG 'Vocabulary': a word outside the [0, 64) map must be "
+        "refused before any step, not met as a KeyError mid-run.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::test_preflight_reports_a_closure_failure",
+                "the run's preflight proves the closure with the same function.",
+            ),
+        ),
+    ),
+    Mutation(
+        "fresh-stream: control 3 drops the held-out overlap",
+        "test_disjointness_catches_overlap",
+        "experiments/fresh-stream/run.py",
+        '"ok": bool(ids) and not (in_probe or in_vocab or in_heldout or repeats),',
+        '"ok": bool(ids) and not (in_probe or in_vocab or repeats),',
+        "fresh-stream PREREG control 3: no stream id in [0, 64) or [4096, 4160), and "
+        "no id repeats.",
+    ),
+    Mutation(
+        "fresh-stream: C holds on ANY seed instead of every seed",
+        "test_C_needs_every_seed",
+        "experiments/fresh-stream/run.py",
+        "all(v <= C_THRESHOLD for v in values)",
+        "any(v <= C_THRESHOLD for v in values)",
+        "fresh-stream PREREG 'Primary readout': C(c) holds only when Brier16(live) "
+        "<= 0.8875 on every seed.",
+    ),
+    Mutation(
+        "fresh-stream: the measurement retyped as a local wrapper, not imported",
+        "test_measurement_is_the_corpus_size_function",
+        "experiments/fresh-stream/run.py",
+        "measure_checkpoint = CSC.measure_checkpoint\n",
+        "def measure_checkpoint(seed_dir, seed, label, n):\n"
+        "    return CSC.measure_checkpoint(seed_dir, seed, label, n)\n",
+        "fresh-stream PREREG 'Instrument': the corpus-size curve's measure_checkpoint, "
+        "imported -- the object called must be that function, not a copy.",
+    ),
+    Mutation(
+        "fresh-stream: control 2 made approximate",
+        "test_resume_check_is_exact",
+        "experiments/fresh-stream/run.py",
+        "            and torch.equal(a, b)\n",
+        "            and torch.allclose(a.double(), b.double(), atol=1e-3)\n",
+        "fresh-stream PREREG control 2: arm B's model and optimizer state after load "
+        "must equal ckpt-001000.pt exactly.",
+    ),
 )
 
 
