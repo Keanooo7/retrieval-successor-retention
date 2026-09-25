@@ -777,10 +777,16 @@ def render_results(doc: dict, brief_errors: str | None = None) -> str:
         "about RSR, eviction policy, ψ̂ or Kintsch & van Dijk (PREREG, *What this does "
         "not establish*). No scaling claim.",
         "",
-        f"Pre-registered expectation (`expected`, frozen in the manifest before any "
-        f"child ran): **{val(rows, 'expected')}**",
+        f"Pre-registered expectation of run `{rid}` (`expected`, frozen in the manifest "
+        "before any child ran), sentence by sentence:",
         "",
-        "## The reproduction control (N=64, ckpt300, S0-03's own held-out)",
+        *[
+            f"- run `{rid}` `expected`: **{x.strip().removesuffix('.')}.**"
+            for x in str(val(rows, "expected") or "").split(". ")
+            if x.strip()
+        ],
+        "",
+        "## The reproduction control (the `n64` arm, `ckpt300`, S0-03's own held-out)",
         "",
         f"`reproduction_tolerance` {val(rows, 'reproduction_tolerance')!r} absolute.",
         "",
