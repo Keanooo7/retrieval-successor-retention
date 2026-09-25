@@ -1848,6 +1848,49 @@ MUTATIONS: tuple[Mutation, ...] = (
         "different times, so at high k the early ones run partly alone: "
         "makespan(k) is biased down and cpu_det_slots up.",
     ),
+    # --- retrieval-curve (docs/lab-notes/dispatch-retrieval-curve.md, Bar) ---
+    Mutation(
+        "retrieval-curve: decide() fed the train population",
+        "test_decide_is_fed_heldout_not_train",
+        "experiments/retrieval-curve/run.py",
+        '    feed = {s: {"heldout": m["heldout"]} for s, m in per_seed.items()}\n',
+        '    feed = {s: {"heldout": m["train"]} for s, m in per_seed.items()}\n',
+        "retrieval-curve brief bar, mutation (1). The training set is 64 documents "
+        "seen ~750 times by 3000 iterations: fed the train population, decide() "
+        "reads memorisation as retrieval and the curve reports 'falsified'.",
+    ),
+    Mutation(
+        "retrieval-curve: the reproduction control's tolerance widened",
+        "test_reproduction_control_tolerance",
+        "experiments/retrieval-curve/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-3\n",
+        "retrieval-curve brief bar, mutation (2). The control is the one gate that "
+        "fails where nothing else does: a curve that silently is not S0-03's "
+        "configuration (another thread count, another interpreter) would pass "
+        "every other check here.",
+    ),
+    Mutation(
+        "retrieval-curve: the reproduction control's comparison ledger swapped",
+        "test_reproduction_control_reads_the_s003_ledger",
+        "experiments/retrieval-curve/run.py",
+        "    path = path or ROOT / S003_LEDGER\n",
+        '    path = path or ROOT / "runs/decisive-shuffle/ledger.json"\n',
+        "retrieval-curve brief bar, mutation (2), the swap half (PR #39 listed it "
+        "unproven). A control read against another run's ledger compares the "
+        "curve with the wrong reference; the gate reads the S0-03 row by key from "
+        "the real ledger and must go red.",
+    ),
+    Mutation(
+        "retrieval-curve: every checkpoint measured from the final checkpoint",
+        "test_each_checkpoint_label_",
+        "experiments/retrieval-curve/run.py",
+        "    ckpt = ckpt_path(seed_dir, label)\n",
+        "    ckpt = ckpt_path(seed_dir, ITERS)\n",
+        "retrieval-curve brief bar, mutation (3). Every label read off the last "
+        "checkpoint turns the curve into three copies of one point; the step "
+        "stored in the checkpoint must equal its label.",
+    ),
 )
 
 

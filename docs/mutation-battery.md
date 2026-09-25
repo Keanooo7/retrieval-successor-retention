@@ -8,7 +8,7 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**71/71 gates proven.**
+**136/136 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
@@ -40,7 +40,7 @@
 | the scoreboard resolves a cycle number | `test_the_scoreboard_refuses_the_prose_verdict_for_cycle_4` | **PROVEN** | 0 | 0 |
 | a scoreboard count is typed rather than counted | `test_every_scoreboard_count_is_a_len_not_a_typed_number` | **PROVEN** | 0 | 0 |
 | the prose audit reads timestamps as measurements | `test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement` | **PROVEN** | 0 | 0 |
-| the prose audit backs every number | `test_the_audit_flags_a_number_that_is_in_no_ledger` | **PROVEN** | 1 | 1 |
+| the prose audit backs every number | `test_the_audit_flags_a_number_that_is_in_no_ledger` | **PROVEN** | 6 | 6 |
 | a mutated run writes the real census file | `test_a_mutated_suite_run_does_not_clobber_the_census` | **PROVEN** | 0 | 0 |
 | the board's own counts stop backing the prose | `test_the_rendered_artefact_passes_its_own_audit` | **PROVEN** | 0 | 0 |
 | off-gate failures stop counting | `test_an_off_gate_failure_makes_a_mutation_unproven` | **PROVEN** | 0 | 0 |
@@ -55,7 +55,7 @@
 | a stale battery anchor exits 1 again | `test_a_stale_battery_anchor_exits_3` | **PROVEN** | 0 | 0 |
 | a red baseline exits 1 again | `test_a_red_baseline_exits_3` | **PROVEN** | 0 | 0 |
 | an empty battery passes | `test_a_battery_with_no_mutations_exits_2` | **PROVEN** | 0 | 0 |
-| a usage error exits 2 again | `test_a_usage_error_exits_3_not_2` | **PROVEN** | 0 | 0 |
+| a usage error exits 2 again | `test_a_usage_error_exits_3_not_2` | **PROVEN** | 2 | 2 |
 | extract_golden_tensors exits 1 without JAX again | `test_extract_golden_tensors_without_jax_exits_3` | **PROVEN** | 0 | 0 |
 | a checker bypasses run_main | `test_every_converted_checker_exits_through_the_protocol` | **PROVEN** | 0 | 0 |
 | a truncated canary run is compared over the overlap | `test_a_length_mismatch_is_a_move` | **PROVEN** | 0 | 0 |
@@ -82,7 +82,72 @@
 | cross-row cosine reports a constant | `test_cross_row_cosine_is_one_for_identical_rows_and_bounded_otherwise` | **PROVEN** | 0 | 0 |
 | the oracle evicts the sentence most needed | `test_oracle.py::` | **PROVEN** | 0 | 0 |
 | checkpoints written straight to the final path | `test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint` | **PROVEN** | 0 | 0 |
-| the synthetic answer goes back out of band | `test_every_query_carries_its_answer_as_its_final_token` | **PROVEN** | 11 | 11 |
+| the synthetic answer goes back out of band | `test_every_query_carries_its_answer_as_its_final_token` | **PROVEN** | 12 | 12 |
+| the work queue offers owner items | `test_owner_item_` | **PROVEN** | 0 | 0 |
+| a PREREG co-committed with code satisfies the queue | `test_prereg_cocommitted_` | **PROVEN** | 0 | 0 |
+| the work queue's §16 sprint cap moves to 5 | `test_sprint_cap_` | **PROVEN** | 0 | 0 |
+| an unsigned ruling satisfies the queue | `test_ruling_unsigned_` | **PROVEN** | 0 | 0 |
+| a blocked item can be claimed | `test_claim_of_` | **PROVEN** | 0 | 0 |
+| lane flock becomes a no-op | `test_processes_cannot_hold_more_than_N_slots` | **PROVEN** | 6 | 6 |
+| absent ops/lanes.json falls back to typed defaults | `test_missing_lanes_file_is_refused_naming_C0` | **PROVEN** | 2 | 2 |
+| mps admission skips the memory check | `test_mps_admission_refuses_when_free_memory_is_insufficient` | **PROVEN** | 0 | 0 |
+| slot collapses the child's rc to a bool | `test_the_childs_rc_passes_through_verbatim` | **PROVEN** | 2 | 2 |
+| slot does not force the thread env | `test_cpu_det_forces_exactly_slots_threads` | **PROVEN** | 0 | 0 |
+| slot does not pass its lock fds to the child | `test_slots_stay_held_while_an_orphaned_child_lives` | **PROVEN** | 0 | 0 |
+| battery suite threads not capped | `test_the_env_override_caps_every_thread_pool` | **PROVEN** | 1 | 1 |
+| lint_brief: a drifted anchor passes | `test_a_drifted_anchor_is_a_finding` | **PROVEN** | 0 | 0 |
+| lint_brief: a writer premise is run | `test_a_writer_command_is_rejected_and_not_run` | **PROVEN** | 0 | 0 |
+| lint_brief: a baseline the base does not contain passes | `test_a_baseline_the_base_does_not_contain_is_a_finding` | **PROVEN** | 0 | 0 |
+| lint_brief: the brief's own commit passes as its baseline | `test_a_wrong_baseline_sha_is_a_finding` | **PROVEN** | 0 | 0 |
+| lint_brief: no base exits 0 | `test_no_base_exits_3` | **PROVEN** | 1 | 1 |
+| lint_brief: the throwaway worktree is kept | `test_premises_run_in_a_throwaway_worktree_at_base` | **PROVEN** | 0 | 0 |
+| reconcile: a repeated cause no longer parks | `test_two_failures_with_the_same_cause_park_the_item` | **PROVEN** | 0 | 0 |
+| reconcile: a dead job pid is read as alive | `test_a_running_job_whose_pid_is_dead_becomes_crashed_and_its_item_collecting` | **PROVEN** | 0 | 0 |
+| merge: preregistration/ dropped from the frozen globs | `test_the_guard_trips_on_a_preregistration_edit` | **PROVEN** | 0 | 0 |
+| merge: a changed FROZEN definition is not compared | `test_the_guard_trips_on_a_frozen_constant_edit` | **PROVEN** | 0 | 0 |
+| merge: no verification record is not a refusal | `test_merge_is_refused_without_a_verification_record` | **PROVEN** | 0 | 0 |
+| tick: HALT ignored | `test_halt_is_respected_before_anything_else` | **PROVEN** | 0 | 0 |
+| tick: the idle path falls through to launching | `test_the_idle_path_launches_nothing_and_notifies_once` | **PROVEN** | 0 | 0 |
+| tick: UNSET spend caps are not refused | `test_caps_unset_refuse_3_and_notify_once` | **PROVEN** | 1 | 1 |
+| notify: the content-hash dedupe removed | `test_the_same_content_is_posted_once` | **PROVEN** | 1 | 1 |
+| hooks: .claude/** is no longer owner-only | `test_orch_hooks.py::test_owner_only_` | **PROVEN** | 0 | 0 |
+| hooks: a push that names main is not recognised | `test_orch_hooks.py::test_push_to_main_` | **PROVEN** | 0 | 0 |
+| hooks: a researcher may read every outbox file | `test_orch_hooks.py::test_blinding_` | **PROVEN** | 0 | 0 |
+| hooks: bare pytest is no longer slot-wrapped | `test_orch_hooks.py::test_unwrapped_compute_` | **PROVEN** | 0 | 0 |
+| hooks: an internal error lets the tool call through | `test_orch_hooks.py::test_fail_closed_` | **PROVEN** | 0 | 0 |
+| outbox: the template placeholder counts as an answer | `test_orch_outbox.py::test_template_placeholder_is_not_an_answer` | **PROVEN** | 1 | 1 |
+| verify: the claim draw ignores the run id | `test_orch_verify.py::test_draw_is_seeded_by_run_id` | **PROVEN** | 0 | 0 |
+| a changed loss path is compared anyway | `test_canary_not_comparable` | **PROVEN** | 0 | 0 |
+| the CPU canary gets a tolerance | `test_the_cpu_canary_is_bit_exact` | **PROVEN** | 0 | 0 |
+| the CPU canary runs on every thread | `test_the_cpu_canary_trains_on_one_thread` | **PROVEN** | 0 | 0 |
+| loss_path_hash ignores file contents | `test_loss_path_hash_moves_with_the_code` | **PROVEN** | 0 | 0 |
+| small integers are backed by any ledger again | `test_the_audit_refuses_a_small_integer` | **PROVEN** | 1 | 1 |
+| a key from another run backs the sentence | `test_the_audit_refuses_a_small_integer_from_another_run` | **PROVEN** | 0 | 0 |
+| a plain English word names a key | `test_the_audit_refuses_a_small_integer_matched_only_by_an_unrelated_ledger` | **PROVEN** | 0 | 0 |
+| a dangling token passes | `test_a_token_that_resolves_to_no_key_is_flagged` | **PROVEN** | 0 | 0 |
+| status.json numbers are not compared to their ledgers | `test_render_status_refuses_a_number` | **PROVEN** | 0 | 0 |
+| status.json evidence paths are not checked | `test_render_status_flags_a_missing_evidence_path` | **PROVEN** | 0 | 0 |
+| an unreadable ruling at base passes as absent again | `test_unreadable_ruling_at_base_stops_ready` | **PROVEN** | 0 | 0 |
+| validate ignores ruling files that do not parse | `test_unreadable_ruling_in_tree_fails_validate` | **PROVEN** | 0 | 0 |
+| the anchor check counts nothing | `test_check_anchors_` | **PROVEN** | 0 | 0 |
+| the verifier's blanket /tmp allowance restored | `test_verifier_confined_under_a_tmp_prefix` | **PROVEN** | 0 | 0 |
+| the verifier's work-tree check dropped | `test_verifier_scratchpad_inside_a_work_tree_is_denied` | **PROVEN** | 0 | 0 |
+| C0: the determinism comparison skipped (every job matches) | `test_det_verdict` | **PROVEN** | 0 | 0 |
+| C0: cpu_det_slots from the faster repetition | `test_cpu_det_slots_slower_rep` | **PROVEN** | 0 | 0 |
+| C0: the checkpoint file hashed instead of the state_dict | `test_output_hash` | **PROVEN** | 0 | 0 |
+| C0: two jobs given the same out_dir | `test_job_out_dirs` | **PROVEN** | 1 | 1 |
+| C0: the servers not restarted when the run raises | `test_servers_restarted` | **PROVEN** | 5 | 5 |
+| C0: a server is not marked stopped when its kill succeeds | `test_servers_stop_marks_each_kill` | **PROVEN** | 0 | 0 |
+| C0: SIGTERM/SIGHUP handlers not installed | `test_servers_signal_restarts` | **PROVEN** | 0 | 0 |
+| C0: a raising restart skips the ledger write | `test_servers_restart_failure_still_writes_ledger` | **PROVEN** | 0 | 0 |
+| C0: a restarted server counted without the alive check | `test_servers_restart_alive_check` | **PROVEN** | 0 | 0 |
+| C0: a caffeinate helper restarted like a server | `test_servers_measured_layout` | **PROVEN** | 0 | 0 |
+| C0: a name/port disagreement not refused | `test_servers_disagreement_refuses` | **PROVEN** | 0 | 0 |
+| C0: the start barrier released before every job is ready | `test_barrier_` | **PROVEN** | 0 | 0 |
+| retrieval-curve: decide() fed the train population | `test_decide_is_fed_heldout_not_train` | **PROVEN** | 0 | 0 |
+| retrieval-curve: the reproduction control's tolerance widened | `test_reproduction_control_tolerance` | **PROVEN** | 0 | 0 |
+| retrieval-curve: the reproduction control's comparison ledger swapped | `test_reproduction_control_reads_the_s003_ledger` | **PROVEN** | 0 | 0 |
+| retrieval-curve: every checkpoint measured from the final checkpoint | `test_each_checkpoint_label_` | **PROVEN** | 0 | 0 |
 
 ## What each mutation breaks, and what else went red
 
@@ -365,8 +430,13 @@ Reddened nothing else.
 
 5.2: `1.5476` goes back to passing an audit it should fail
 
-Also reddened (1):
+Also reddened (6):
 
+- `tests/test_audit_small_ints.py::test_decimals_keep_the_value_rule` — ✔ declared
+- `tests/test_audit_small_ints.py::test_the_audit_refuses_a_small_integer_beside_its_key_with_the_wrong_value` — ✔ declared
+- `tests/test_audit_small_ints.py::test_the_audit_refuses_a_small_integer_from_another_run` — ✔ declared
+- `tests/test_audit_small_ints.py::test_the_audit_refuses_a_small_integer_in_a_table_cell_its_header_key_denies` — ✔ declared
+- `tests/test_audit_small_ints.py::test_the_audit_refuses_a_small_integer_matched_only_by_an_unrelated_ledger` — ✔ declared
 - `tests/test_evidence_machinery.py::test_the_audit_does_not_read_a_wall_clock_time_as_a_measurement` — ✔ declared
 
 ### a mutated run writes the real census file
@@ -487,7 +557,10 @@ Reddened nothing else.
 
 S0-05: argparse's 2 gave render_scoreboard's `2` two meanings, bad arguments and an empty board.
 
-Reddened nothing else.
+Also reddened (2):
+
+- `tests/test_canary_split.py::test_an_unknown_canary_device_did_not_run` — ✔ declared
+- `tests/test_orch_outbox.py::test_the_cli_usage_error_exits_3` — ✔ declared
 
 ### extract_golden_tensors exits 1 without JAX again
 
@@ -705,8 +778,9 @@ Reddened nothing else.
 
 S0-03's fixture mutation: the default corpus reverts to the pre-S0-03 generator, whose answer lived only in `Sentence.answer` and never entered the token stream -- so no next-token target required retrieval and 'the memory is inert' was a finding about the corpus. The named gate must redden; the rest are the declared consequences of the refusal.
 
-Also reddened (11):
+Also reddened (12):
 
+- `tests/test_capacity_c0.py::test_output_hash_identical_runs_equal_while_checkpoint_files_differ` — ✔ declared
 - `tests/test_decisive_shuffle.py::test_the_decoy_pointed_at_the_trained_checkpoint_reads_ratio_one_and_inconclusive` — ✔ declared
 - `tests/test_synthetic.py::test_the_answer_is_the_only_difference_between_the_two_corpora` — ✔ declared
 - `tests/test_synthetic.py::test_the_answer_targets_are_a_minority_that_a_pooled_loss_would_hide` — ✔ declared
@@ -718,6 +792,559 @@ Also reddened (11):
 - `tests/test_train_loop.py::test_the_hinge_has_a_documented_off_switch` — ✔ declared
 - `tests/test_train_loop.py::test_the_hinge_is_on_by_default` — ✔ declared
 - `tests/test_train_loop.py::test_the_hinge_reaches_the_objective` — ✔ declared
+
+### the work queue offers owner items
+
+**Gate:** `test_owner_item_` — **PROVEN**
+
+an owner decision (RESEARCH-CONTEXT §12, sprint gates) becomes dispatchable work: the queue would hand an agent a decision only Brendan may make
+
+Reddened nothing else.
+
+### a PREREG co-committed with code satisfies the queue
+
+**Gate:** `test_prereg_cocommitted_` — **PROVEN**
+
+CLAUDE.md: pre-registration commits land in their own commit, ahead of the experiment; a threshold committed alongside its experiment's code is not evidence it came first
+
+Reddened nothing else.
+
+### the work queue's §16 sprint cap moves to 5
+
+**Gate:** `test_sprint_cap_` — **PROVEN**
+
+§16 approves weeks 1-4 only; a sprint-5 item would validate and be scheduled
+
+Reddened nothing else.
+
+### an unsigned ruling satisfies the queue
+
+**Gate:** `test_ruling_unsigned_` — **PROVEN**
+
+a ruling file with no date or stated_in (docs/owner/rulings/README.md) unblocks work as if Brendan had stated it
+
+Reddened nothing else.
+
+### a blocked item can be claimed
+
+**Gate:** `test_claim_of_` — **PROVEN**
+
+set-status is the only writer; without the check a caller claims an item the deterministic rule says is not ready, and the LLM decides readiness
+
+Reddened nothing else.
+
+### lane flock becomes a no-op
+
+**Gate:** `test_processes_cannot_hold_more_than_N_slots` — **PROVEN**
+
+the semaphore stops counting: every process is admitted, so nine 1-thread CPU jobs become as many as ask, on 16 cores
+
+Also reddened (6):
+
+- `tests/test_orch_lanes.py::test_a_killed_holder_releases_its_slots` — ✔ declared
+- `tests/test_orch_lanes.py::test_a_multi_slot_admission_is_all_or_nothing` — ✔ declared
+- `tests/test_orch_lanes.py::test_battery_reserves_cpu_det_slots` — ✔ declared
+- `tests/test_orch_lanes.py::test_status_json_names_the_holder` — ✔ declared
+- `tests/test_orch_slot.py::test_a_full_lane_refuses_3_after_the_wait` — ✔ declared
+- `tests/test_orch_slot.py::test_slots_stay_held_while_an_orphaned_child_lives` — ✔ declared
+
+### absent ops/lanes.json falls back to typed defaults
+
+**Gate:** `test_missing_lanes_file_is_refused_naming_C0` — **PROVEN**
+
+capacities stop being MEASURED by C0: a hand-typed default is D-1's shape applied to the scheduler
+
+Also reddened (2):
+
+- `tests/test_orch_lanes.py::test_status_cli_without_lanes_file_exits_3` — ✔ declared
+- `tests/test_orch_slot.py::test_missing_lanes_file_refuses_3_and_does_not_run` — ✔ declared
+
+### mps admission skips the memory check
+
+**Gate:** `test_mps_admission_refuses_when_free_memory_is_insufficient` — **PROVEN**
+
+an MPS job is admitted into unified memory it does not fit, and swaps the CPU lanes it shares 64 GB with
+
+Reddened nothing else.
+
+### slot collapses the child's rc to a bool
+
+**Gate:** `test_the_childs_rc_passes_through_verbatim` — **PROVEN**
+
+2/3/5/137 all become 1: 'nothing to compare', 'did not run' and 'killed' collapse into 'real failure'
+
+Also reddened (2):
+
+- `tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plus_n` — ✔ declared
+- `tests/test_orch_slot.py::test_sigterm_is_forwarded_and_recorded` — ✔ declared
+
+### slot does not force the thread env
+
+**Gate:** `test_cpu_det_forces_exactly_slots_threads` — **PROVEN**
+
+a 1-slot cpu-det job spawns a BLAS/OpenMP pool per core; the slot count stops meaning cores
+
+Reddened nothing else.
+
+### slot does not pass its lock fds to the child
+
+**Gate:** `test_slots_stay_held_while_an_orphaned_child_lives` — **PROVEN**
+
+a SIGKILLed wrapper frees the slots of a job that is still running
+
+Reddened nothing else.
+
+### battery suite threads not capped
+
+**Gate:** `test_the_env_override_caps_every_thread_pool` — **PROVEN**
+
+the battery's pytest ignores RSR_BATTERY_THREADS and battery_cpu_slots and takes every core from the cpu-det lane
+
+Also reddened (1):
+
+- `tests/test_orch_battery.py::test_lanes_file_supplies_battery_cpu_slots` — ✔ declared
+
+### lint_brief: a drifted anchor passes
+
+**Gate:** `test_a_drifted_anchor_is_a_finding` — **PROVEN**
+
+The rsr.py:433-vs-:448 class. Accepting any line as the anchor means a brief citing a line that no longer holds its text lints clean.
+
+Reddened nothing else.
+
+### lint_brief: a writer premise is run
+
+**Gate:** `test_a_writer_command_is_rejected_and_not_run` — **PROVEN**
+
+A premise is a READ of the base. With no writer filter, a redirect, `rm`, a commit and a push are executed rather than rejected.
+
+Reddened nothing else.
+
+### lint_brief: a baseline the base does not contain passes
+
+**Gate:** `test_a_baseline_the_base_does_not_contain_is_a_finding` — **PROVEN**
+
+A brief written against a tree this night's base does not contain lints clean; its anchors were derived somewhere else.
+
+Reddened nothing else.
+
+### lint_brief: the brief's own commit passes as its baseline
+
+**Gate:** `test_a_wrong_baseline_sha_is_a_finding` — **PROVEN**
+
+The baseline off by the brief's own commit (Brief 0, S0-03, 2026-09-21) lints clean.
+
+Reddened nothing else.
+
+### lint_brief: no base exits 0
+
+**Gate:** `test_no_base_exits_3` — **PROVEN**
+
+3 collapsing to 0: a lint that never ran -- no base to check against -- reported as a clean brief.
+
+Also reddened (1):
+
+- `tests/test_orch_lint_brief.py::test_the_cli_exits_through_the_protocol_with_json` — ✔ declared
+
+### lint_brief: the throwaway worktree is kept
+
+**Gate:** `test_premises_run_in_a_throwaway_worktree_at_base` — **PROVEN**
+
+Premise checks run in a detached worktree at base; if it is not removed every lint leaves a registered worktree behind in the shared repository.
+
+Reddened nothing else.
+
+### reconcile: a repeated cause no longer parks
+
+**Gate:** `test_two_failures_with_the_same_cause_park_the_item` — **PROVEN**
+
+the stop rule 'two failures with the same cause' (dispatch-2026-09-21-overnight) stops being a mechanism: the item goes back to ready and the same failure is re-dispatched until RSR_MAX_ATTEMPTS.
+
+Reddened nothing else.
+
+### reconcile: a dead job pid is read as alive
+
+**Gate:** `test_a_running_job_whose_pid_is_dead_becomes_crashed_and_its_item_collecting` — **PROVEN**
+
+a job whose process died stays `running` forever: no collector is ever spawned and the night reads as busy until park_by.
+
+Reddened nothing else.
+
+### merge: preregistration/ dropped from the frozen globs
+
+**Gate:** `test_the_guard_trips_on_a_preregistration_edit` — **PROVEN**
+
+an unattended branch that edits a signed threshold merges into the night branch -- 'a threshold registered after seeing the data is not a threshold'.
+
+Reddened nothing else.
+
+### merge: a changed FROZEN definition is not compared
+
+**Gate:** `test_the_guard_trips_on_a_frozen_constant_edit` — **PROVEN**
+
+defect D-1's shape: a FROZEN constant's value edited on a run branch passes the guard, because only additions and removals are checked.
+
+Reddened nothing else.
+
+### merge: no verification record is not a refusal
+
+**Gate:** `test_merge_is_refused_without_a_verification_record` — **PROVEN**
+
+the verification gate stops being a gate: with no record the merge crashes (1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.
+
+Reddened nothing else.
+
+### tick: HALT ignored
+
+**Gate:** `test_halt_is_respected_before_anything_else` — **PROVEN**
+
+the owner's stop switch, and the loop's own (guard trip, spend cap), no longer stop the python pass; only tick.zsh's first line still would.
+
+Reddened nothing else.
+
+### tick: the idle path falls through to launching
+
+**Gate:** `test_the_idle_path_launches_nothing_and_notifies_once` — **PROVEN**
+
+an idle night starts a paid manager cycle every ten minutes with nothing to review.
+
+Reddened nothing else.
+
+### tick: UNSET spend caps are not refused
+
+**Gate:** `test_caps_unset_refuse_3_and_notify_once` — **PROVEN**
+
+the spend caps are an owner decision; without the refusal the loop runs with no cap at all (here it crashes on the None cap, exit 1 not 3).
+
+Also reddened (1):
+
+- `tests/test_orch_tick.py::test_tick_zsh_reports_the_pass_status_unborrowed` — ✔ declared
+
+### notify: the content-hash dedupe removed
+
+**Gate:** `test_the_same_content_is_posted_once` — **PROVEN**
+
+the owner is posted the same notice on every tick (R-2026-09-22-owner-out-of-loop).
+
+Also reddened (1):
+
+- `tests/test_orch_tick.py::test_caps_unset_refuse_3_and_notify_once` — ✔ declared
+
+### hooks: .claude/** is no longer owner-only
+
+**Gate:** `test_orch_hooks.py::test_owner_only_` — **PROVEN**
+
+A headless agent could rewrite its own role file or the settings that load its hooks -- the one edit that switches every other guardrail off. Only the .claude cases of the owner-only tests can see it.
+
+Reddened nothing else.
+
+### hooks: a push that names main is not recognised
+
+**Gate:** `test_orch_hooks.py::test_push_to_main_` — **PROVEN**
+
+R-2026-09-22-night-branch: main never moves in a night. With the refspec check gone every spelling of a push to main -- main, HEAD:main, x:refs/heads/main, :main, via -C/-c/bash -c, or `git update-ref` -- goes through.
+
+Reddened nothing else.
+
+### hooks: a researcher may read every outbox file
+
+**Gate:** `test_orch_hooks.py::test_blinding_` — **PROVEN**
+
+The blinding failure of 09-21: the decisive researcher read S0-03's numbers through the shared outbox. The own-file exemption widened to 'any file' un-blinds every researcher while its own report still works.
+
+Reddened nothing else.
+
+### hooks: bare pytest is no longer slot-wrapped
+
+**Gate:** `test_orch_hooks.py::test_unwrapped_compute_` — **PROVEN**
+
+Compute outside lane slots: two sessions each running the full suite on the Studio at once is the contention the slot lanes exist to prevent.
+
+Reddened nothing else.
+
+### hooks: an internal error lets the tool call through
+
+**Gate:** `test_orch_hooks.py::test_fail_closed_` — **PROVEN**
+
+Claude Code treats any hook exit other than 0/2 as a non-blocking error and runs the tool call. A parser bug would then silently disable every rule.
+
+Reddened nothing else.
+
+### outbox: the template placeholder counts as an answer
+
+**Gate:** `test_orch_outbox.py::test_template_placeholder_is_not_an_answer` — **PROVEN**
+
+`BELIEVED, NOT VERIFIED: <list>` would pass the Stop hook: a report can end with the template's own text in a required field, which is an absent field that looks present.
+
+Also reddened (1):
+
+- `tests/test_orch_outbox.py::test_new_writes_the_template_with_the_run_id` — ✔ declared
+
+### verify: the claim draw ignores the run id
+
+**Gate:** `test_orch_verify.py::test_draw_is_seeded_by_run_id` — **PROVEN**
+
+Every run would re-execute the same claim positions, so a researcher who knew the draw could put the claims it trusts least where it is never drawn. Consistent everywhere else, so only the seed test sees it.
+
+Reddened nothing else.
+
+### a changed loss path is compared anyway
+
+**Gate:** `test_canary_not_comparable` — **PROVEN**
+
+canary split 2026-09-22: at 945b501 a code change read MOVED on 6 of 6 beats and exited 1 -- a code change reported as an environment move. Skipping the comparability check restores exactly that.
+
+Reddened nothing else.
+
+### the CPU canary gets a tolerance
+
+**Gate:** `test_the_cpu_canary_is_bit_exact` — **PROVEN**
+
+canary split: the CPU variant exists to be bit-exact; a tolerance silently makes it a second MPS canary.
+
+Reddened nothing else.
+
+### the CPU canary runs on every thread
+
+**Gate:** `test_the_cpu_canary_trains_on_one_thread` — **PROVEN**
+
+canary split: multi-threaded CPU reductions are the nondeterminism a bit-exact canary cannot absorb.
+
+Reddened nothing else.
+
+### loss_path_hash ignores file contents
+
+**Gate:** `test_loss_path_hash_moves_with_the_code` — **PROVEN**
+
+canary split: a hash over names only reads an edited loop.py as the same code, and a code change goes back to reading as a MOVED environment.
+
+Reddened nothing else.
+
+### small integers are backed by any ledger again
+
+**Gate:** `test_the_audit_refuses_a_small_integer` — **PROVEN**
+
+2026-09-22 audit fix: any literal equal to any number in any ledger passed, so '3 seeds' was backed by whichever ledger held a 3. This is the hole itself.
+
+Also reddened (1):
+
+- `tests/test_capacity_c0.py::test_rendered_results_pass_the_prose_audit` — ✔ declared
+
+### a key from another run backs the sentence
+
+**Gate:** `test_the_audit_refuses_a_small_integer_from_another_run` — **PROVEN**
+
+2026-09-22 audit fix: a sentence about canary/cycle-08 borrowing decisive-shuffle's steps_done is a same-value match across unrelated ledgers wearing a key's name.
+
+Reddened nothing else.
+
+### a plain English word names a key
+
+**Gate:** `test_the_audit_refuses_a_small_integer_matched_only_by_an_unrelated_ledger` — **PROVEN**
+
+2026-09-22 audit fix: `seeds` is a key in four ledgers, so the prose word 'seeds' backed '3 seeds' by one of them listing seed 3.
+
+Reddened nothing else.
+
+### a dangling token passes
+
+**Gate:** `test_a_token_that_resolves_to_no_key_is_flagged` — **PROVEN**
+
+2026-09-22 audit fix: a {{run_id:key}} that resolves to nothing would read as backed prose while naming no measurement.
+
+Reddened nothing else.
+
+### status.json numbers are not compared to their ledgers
+
+**Gate:** `test_render_status_refuses_a_number` — **PROVEN**
+
+2026-09-22 research map: a number typed into status.json that its ledger does not hold would reach the page -- the transcription layer every retracted number on this project came from (RESEARCH-CONTEXT §11).
+
+Reddened nothing else.
+
+### status.json evidence paths are not checked
+
+**Gate:** `test_render_status_flags_a_missing_evidence_path` — **PROVEN**
+
+2026-09-22 research map: an item citing a RESULTS.md that does not exist reads as evidenced.
+
+Reddened nothing else.
+
+### an unreadable ruling at base passes as absent again
+
+**Gate:** `test_unreadable_ruling_at_base_stops_ready` — **PROVEN**
+
+Three 09-22 rulings with an unquoted ': ' were invalid YAML and read as 'unsigned' with no error: a decision silently not in force.
+
+Reddened nothing else.
+
+### validate ignores ruling files that do not parse
+
+**Gate:** `test_unreadable_ruling_in_tree_fails_validate` — **PROVEN**
+
+The one pre-commit check that would have caught the 09-22 YAML defect before a ruling reached any base.
+
+Reddened nothing else.
+
+### the anchor check counts nothing
+
+**Gate:** `test_check_anchors_` — **PROVEN**
+
+5ecda88's battery ran 87 minutes, then refused on one stale anchor a string search finds at once; the check is what makes that a 0-second exit.
+
+Reddened nothing else.
+
+### the verifier's blanket /tmp allowance restored
+
+**Gate:** `test_verifier_confined_under_a_tmp_prefix` — **PROVEN**
+
+PR #36 was red on Linux CI and green on the Mac: with /tmp allowed, a repo checked out under /tmp let the verifier write src/.
+
+Reddened nothing else.
+
+### the verifier's work-tree check dropped
+
+**Gate:** `test_verifier_scratchpad_inside_a_work_tree_is_denied` — **PROVEN**
+
+A scratchpad_dir pointing into a repo would become a way around 'the verifier never edits code'.
+
+Reddened nothing else.
+
+### C0: the determinism comparison skipped (every job matches)
+
+**Gate:** `test_det_verdict` — **PROVEN**
+
+capacity-c0 brief bar, mutation (1). The falsifier is the one gate in C0 that fails where nothing else does; a verdict that never compares writes capacities for a lane whose premise (CPU runs are bit-exact) is false.
+
+Reddened nothing else.
+
+### C0: cpu_det_slots from the faster repetition
+
+**Gate:** `test_cpu_det_slots_slower_rep` — **PROVEN**
+
+capacity-c0 brief bar, mutation (2); PREREG repetitions: 'the SLOWER of the two repetitions is used'. The faster one overstates the core ceiling.
+
+Reddened nothing else.
+
+### C0: the checkpoint file hashed instead of the state_dict
+
+**Gate:** `test_output_hash` — **PROVEN**
+
+capacity-c0 brief bar, mutation (3); PREREG output_hash. The file carries unseeded python/numpy RNG state, so identical runs would read as non-deterministic and falsify C0 spuriously.
+
+Reddened nothing else.
+
+### C0: two jobs given the same out_dir
+
+**Gate:** `test_job_out_dirs` — **PROVEN**
+
+capacity-c0 brief bar, mutation (4); PREREG job_isolation. Concurrent jobs sharing an out_dir overwrite each other's checkpoint and heartbeat.
+
+Also reddened (1):
+
+- `tests/test_capacity_c0.py::test_output_hash_identical_runs_equal_while_checkpoint_files_differ` — ✔ declared
+
+### C0: the servers not restarted when the run raises
+
+**Gate:** `test_servers_restarted` — **PROVEN**
+
+R-2026-09-22-mlx-servers: the owner's servers are restarted when C0 completes, however it completes. A restart that runs only on success leaves them down after a deadline, a refusal or a crash.
+
+Also reddened (5):
+
+- `tests/test_capacity_c0.py::test_partial_on_deadline` — ✔ declared
+- `tests/test_capacity_c0.py::test_quiet_yield_stops_only_the_servers_and_records_them` — ✔ declared
+- `tests/test_capacity_c0.py::test_servers_signal_restarts_and_writes_partial[SIGHUP]` — ✔ declared
+- `tests/test_capacity_c0.py::test_servers_signal_restarts_and_writes_partial[SIGTERM]` — ✔ declared
+- `tests/test_capacity_c0.py::test_servers_stop_marks_each_kill_so_a_later_failure_still_restarts` — ✔ declared
+
+### C0: a server is not marked stopped when its kill succeeds
+
+**Gate:** `test_servers_stop_marks_each_kill` — **PROVEN**
+
+S1. A kill that raised at the NEXT server left every earlier record stopped=False, so the finally skipped them as 'never stopped': the owner's servers stayed down (R-2026-09-22-mlx-servers: restart after C0).
+
+Reddened nothing else.
+
+### C0: SIGTERM/SIGHUP handlers not installed
+
+**Gate:** `test_servers_signal_restarts` — **PROVEN**
+
+S2. A SIGTERM or a closed terminal (SIGHUP) killed C0 without running any finally: servers left down, no ledger, not even 'partial'.
+
+Reddened nothing else.
+
+### C0: a raising restart skips the ledger write
+
+**Gate:** `test_servers_restart_failure_still_writes_ledger` — **PROVEN**
+
+S2. An exception out of restart_servers escaped the finally before led.write(): the run left no ledger at all, the one record of what it stopped.
+
+Reddened nothing else.
+
+### C0: a restarted server counted without the alive check
+
+**Gate:** `test_servers_restart_alive_check` — **PROVEN**
+
+S3. Popen succeeding is not a server running: one that exits at once (bad venv, port taken) was recorded 'restarted' and nobody looked.
+
+Reddened nothing else.
+
+### C0: a caffeinate helper restarted like a server
+
+**Gate:** `test_servers_measured_layout` — **PROVEN**
+
+S4. The measured helpers are `caffeinate -s <server argv>`: restarting one launches a DUPLICATE server beside the restarted one.
+
+Reddened nothing else.
+
+### C0: a name/port disagreement not refused
+
+**Gate:** `test_servers_disagreement_refuses` — **PROVEN**
+
+S4. A name-matched process that is neither a listening server nor its helper, or a foreign owner of a server's declared port, means the identification is wrong; stopping anyway stops the wrong thing.
+
+Reddened nothing else.
+
+### C0: the start barrier released before every job is ready
+
+**Gate:** `test_barrier_` — **PROVEN**
+
+S5. Without the barrier the jobs of a wave start their timed loops at different times, so at high k the early ones run partly alone: makespan(k) is biased down and cpu_det_slots up.
+
+Reddened nothing else.
+
+### retrieval-curve: decide() fed the train population
+
+**Gate:** `test_decide_is_fed_heldout_not_train` — **PROVEN**
+
+retrieval-curve brief bar, mutation (1). The training set is 64 documents seen ~750 times by 3000 iterations: fed the train population, decide() reads memorisation as retrieval and the curve reports 'falsified'.
+
+Reddened nothing else.
+
+### retrieval-curve: the reproduction control's tolerance widened
+
+**Gate:** `test_reproduction_control_tolerance` — **PROVEN**
+
+retrieval-curve brief bar, mutation (2). The control is the one gate that fails where nothing else does: a curve that silently is not S0-03's configuration (another thread count, another interpreter) would pass every other check here.
+
+Reddened nothing else.
+
+### retrieval-curve: the reproduction control's comparison ledger swapped
+
+**Gate:** `test_reproduction_control_reads_the_s003_ledger` — **PROVEN**
+
+retrieval-curve brief bar, mutation (2), the swap half (PR #39 listed it unproven). A control read against another run's ledger compares the curve with the wrong reference; the gate reads the S0-03 row by key from the real ledger and must go red.
+
+Reddened nothing else.
+
+### retrieval-curve: every checkpoint measured from the final checkpoint
+
+**Gate:** `test_each_checkpoint_label_` — **PROVEN**
+
+retrieval-curve brief bar, mutation (3). Every label read off the last checkpoint turns the curve into three copies of one point; the step stored in the checkpoint must equal its label.
+
+Reddened nothing else.
 
 ## Declared couplings
 
@@ -734,9 +1361,25 @@ A coupling worth knowing about is one somebody wrote down. These are the reasons
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006). Added 2026-09-18: the on-the-real-model variant post-dates docs/mutation-battery.md's table.
 - SOURCE_ROOTS is one enumeration: what gates and what does not are the same list, so widening it necessarily moves both assertions
 - the timestamp test asserts both halves of the same behaviour -- a clock is skipped AND a real number beside it is still flagged -- so an audit that flags nothing necessarily reddens it too
+- the test asserts that `audit_prose` flags a specific literal; a mutation that makes the audit flag nothing necessarily reddens every such assertion. The small-integer rule's own mutations (under `# --- orchestrator: render_scoreboard ---`) each redden only their gate.
+- all three tests exercise the shared rsr.exit_codes.ArgumentParser usage-error path; one edit to its refusal reddens each CLI that asserts it. Confirmed 2026-09-22 by applying the mutation at 5ecda88 (owner proxy, MacBook).
 - the same refusal statement guards both the arm hash and the config's own stamp; disabling it must redden both, by design.
 - S0-03: the test reads a property of the in-stream answer token itself (its position, its id under the supervision mask, the vocabulary it adds), so it cannot hold on a corpus that has no such token.
 - S0-03: `rsr.train.loop.answer_targets` REFUSES a corpus whose answers are out of band rather than return an empty supervision mask, and `train()` calls it, so every test that trains reddens when the default corpus reverts to the pre-S0-03 one. The refusal is the design: an empty mask would make every answer-token loss a mean over nothing and pass silently.
+- capacity-c0: C0's workloads are S0-03's CONFIG and rewardable corpus, imported (PREREG training_workload / core_workload), and this test really trains the core workload twice; a corpus with no in-stream answer token cannot train.
+- orchestrator: the flock is the only thing that makes a slot exclusive, and every one of these asserts that a held slot is held -- against a second process, a killed holder, a reservation, the status probe, a full lane, or an orphaned child. One mechanism, observed from six places.
+- orchestrator: every CLI path loads ops/lanes.json through load_config, so the refusal naming C0 is observed through `lanes status` and `slot run` as well.
+- orchestrator: a signalled child's 128+N is passed through the same verbatim exit as any other rc, so collapsing it reddens the signal tests too.
+- both sources of the cap reach the suite through the one env.update; one edit, both sources lost
+- the CLI test asserts the same refusal end to end through `python -m`, so one edit to the refusal reddens both: the unit and the process exit status.
+- the zsh wrapper's test drives the same UNSET refusal through tick.zsh to prove the status is reported unborrowed; it cannot hold when the refusal it reports is gone. Skipped where zsh is absent (CI), so it may or may not redden there.
+- the tick's refusal notice is posted once BECAUSE notify dedupes it -- the tick deliberately has no second guard for a refusal.
+- a freshly generated template must fail on every required field; the placeholder rule is exactly what makes it fail.
+- C0's RESULTS renderer backs each small integer by naming its key in the same sentence -- the rule this mutation removes. Under the old value rule those integers have no equal value in C0's ledger, so the rendered page fails the audit: the same rule, seen from C0.
+- capacity-c0: `Wave` refuses a job whose out_dir already exists, so the real two-job wave in the output-hash test is refused under the same edit. Defence in depth for job_isolation, by design.
+- capacity-c0: a deadline is an exception out of the measurement, and the test asserts the servers come back after it.
+- capacity-c0: 'machine not quiet' after a YIELD stop is a refusal raised with the servers down, and the test asserts they come back.
+- capacity-c0 server safety (2026-09-22): a signal (S2) and a kill that raises mid-stop (S1) are both exceptions out of the run with servers down, and each test asserts they come back -- through the same finally this mutation empties.
 
 ## Not covered here
 
