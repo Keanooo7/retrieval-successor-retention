@@ -1997,6 +1997,91 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
         ),
     ),
+    # --- scaffold-timing (experiments/scaffold-timing/PREREG.md, 167d650) ---
+    Mutation(
+        "scaffold-timing: the sustained requirement dropped (first crossing = onset)",
+        "test_single_noisy_crossing_that_lapses_is_not_an_onset",
+        "experiments/scaffold-timing/run.py",
+        "        if not flags[c]:\n            break\n",
+        "        if not flags[c]:\n            continue\n",
+        "scaffold-timing PREREG 'Primary readout': onset is the earliest checkpoint "
+        "from which R (or M) holds at that and EVERY later checkpoint -- a single "
+        "noisy crossing does not count.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_timing.py::{t}",
+                "it reads an onset off flags that lapse after an early crossing.",
+            )
+            for t in (
+                "test_onset_absent_when_the_last_checkpoint_fails",
+                "test_R_and_M_need_every_seed",
+                "test_noisy_crossing_in_tables_does_not_move_the_onset",
+            )
+        ),
+    ),
+    Mutation(
+        "scaffold-timing: the reproduction control's tolerance widened",
+        "test_reproduction_control_fails_at_2e_6",
+        "experiments/scaffold-timing/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-5\n",
+        "scaffold-timing PREREG 'The reproduction control': every ledger key within "
+        "1e-6 absolute; a 2e-6 difference must fail.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_timing.py::{t}",
+                "it transcribes or exercises the same tolerance.",
+            )
+            for t in (
+                "test_thresholds_are_the_preregs",
+                "test_reproduction_control_exact_passes",
+                "test_run_measures_the_control_first_and_stops_on_failure",
+                "test_render_results_after_a_failed_control_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "scaffold-timing: the onset comparison swapped (BEFORE <-> AFTER)",
+        "test_classify_table",
+        "experiments/scaffold-timing/run.py",
+        "    if onset_r < onset_m:\n",
+        "    if onset_r > onset_m:\n",
+        "scaffold-timing PREREG decision table: BEFORE iff onset_R < onset_M, AFTER "
+        "iff onset_R > onset_M.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_timing.py::{t}",
+                "it asserts a BEFORE or AFTER classification end to end.",
+            )
+            for t in (
+                "test_R_and_M_need_every_seed",
+                "test_after_and_before_from_tables",
+                "test_noisy_crossing_in_tables_does_not_move_the_onset",
+                "test_verdict_reads_the_n64_arm_only",
+                "test_run_passes_the_control_then_measures_everything",
+                "test_render_results_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "scaffold-timing: R and M hold on ANY seed instead of every seed",
+        "test_R_and_M_need_every_seed",
+        "experiments/scaffold-timing/run.py",
+        "all(v >= DELTA for v in values)",
+        "any(v >= DELTA for v in values)",
+        "scaffold-timing PREREG 'Primary readout': R(c) and M(c) hold only when the "
+        "quantity is >= DELTA on every seed.",
+    ),
+    Mutation(
+        "scaffold-timing: the measurement retyped as a local wrapper, not imported",
+        "test_measurement_is_the_corpus_size_function",
+        "experiments/scaffold-timing/run.py",
+        "measure_checkpoint = CSC.measure_checkpoint\n",
+        "def measure_checkpoint(seed_dir, seed, label, n):\n"
+        "    return CSC.measure_checkpoint(seed_dir, seed, label, n)\n",
+        "scaffold-timing PREREG 'instrument': the corpus-size curve's measurement path, "
+        "imported -- the object called must be that function, not a copy.",
+    ),
 )
 
 
