@@ -39,6 +39,7 @@ N = 4096 arm before a verdict, a refused precondition).
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import datetime as _dt
 import hashlib
@@ -160,7 +161,7 @@ def doc_sets(seed: int, n_train: int):
     vmap = build_vocab(tr)
     missing = set(build_vocab(ho)) - set(vmap)
     if missing:
-        raise SystemExit(f"seed {seed}: held-out words not in the vocab: {missing}")
+        raise ValueError(f"seed {seed}: held-out words not in the vocab: {missing}")
     return {"heldout": ho, "train": probe}, vmap, 4 + len(vmap)
 
 
@@ -452,6 +453,12 @@ def run_arm(
         stopped = "measurement raised"
         log(f"  N={n} measurement raised: {error}")
     finally:
+        if stopped is None and error is None:
+            # Every checkpoint measured: let the children finish their footer and
+            # result.json rather than SIGTERM a clean exit into a "crash".
+            for p in procs.values():
+                with contextlib.suppress(subprocess.TimeoutExpired):
+                    p.wait(timeout=10 * STOP_GRACE_S)
         stop_all()
     exit_codes = {s: p.wait() for s, p in procs.items()}
     return {
@@ -651,6 +658,9 @@ def manifest(parent_threads: int) -> dict:
 
 def execute(led, root: Path, *, results_path: Path | None, **kw) -> Exit:
     res = run_all(root, **kw)
+    # Written first, so a raise below still leaves every measurement on disk.
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "raw.json").write_text(json.dumps(res, indent=2, default=str) + "\n")
     for n, arm in res["arms"].items():
         for s in SEEDS:
             argv = arm["argv"].get(s)
@@ -709,7 +719,6 @@ def execute(led, root: Path, *, results_path: Path | None, **kw) -> Exit:
     )
     led.status("crashed" if crashed else ("ok" if complete else "partial"))
     v = write_rows(led, res)
-    (root / "raw.json").write_text(json.dumps(res, indent=2, default=str) + "\n")
     path = led.write()
     if results_path is not None:
         results_path.write_text(

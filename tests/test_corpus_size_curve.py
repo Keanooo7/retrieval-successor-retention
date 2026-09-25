@@ -620,8 +620,9 @@ def test_measure_checkpoint_default_measure_only_for_the_control(tmp_path, monke
 
 
 def test_render_results_backs_every_number_with_a_key(tmp_path):
-    """A rendered page from a real Ledger over the fake run: every row key it cites
-    exists."""
+    """A rendered page from a ledger-shaped stand-in over the fake run: the keys it
+    cites exist. (The real Ledger path was exercised end to end by the pre-run
+    review, not by this test.)"""
     sys.path.insert(0, str(ROOT / "scripts"))
     m, _ = fake_measure()
     res = run.run_all(tmp_path, **_kw(m))
