@@ -52,7 +52,13 @@ After the run:
 
 ### Full mutation battery
 
-**Pending at the time of writing.** It runs after training, at `ec9332d` in `.worktrees/battery-csc`, with `RSR_BATTERY_THREADS=12`. The handoff estimates about 3 h.
+- **Run:** `RSR_BATTERY_THREADS=12 uv run --extra dev python scripts/mutation_battery.py --check`, at `ec9332d` in `.worktrees/battery-csc`, after training. It ran 02:39 → 06:18 PDT. **Exit 1: "139/143 gates proven by mutation".**
+- **The 4 unproven were undeclared couplings, not defects:**
+  - S0-03's "answer goes back out of band" mutation now also reddens two new tests that run `train()` to its header.
+  - The retrieval curve's `REPRO_TOL` mutation reddens a corpus-size-curve test. **This matters for reading the code:** the corpus-size curve imports the retrieval curve's `reproduction_control`, so the tolerance the run actually applied is the retrieval curve's `REPRO_TOL`. That value is 1e-6, the same as the PREREG's. The curve's own `REPRO_TOL` constant is only asserted equal to it.
+  - Two of my declared couplings used substrings, but the battery matches exact node ids.
+- **Fix:** `846291c` (on `exp/corpus-size-curve`, pushed) declares all four with reasons. Each of the 4 was re-proven by applying it over the **full** suite with the battery's exact-id rule: PROVEN, 0 undeclared.
+- **Not done:** a full battery re-run at `846291c`. It is needed before merging #44 (~3.6 h at 12 threads). The raw battery output is in this session's scratchpad, not committed.
 
 ## Track R — research corpus
 
@@ -110,4 +116,5 @@ After the run:
 - **`render_scoreboard --audit` failed twice** on RESULTS.md: 9 unbacked numbers, then 1. The renderer and BRIEF-ERRORS were reworded. Now exit 0.
 - **The R2 note had 11 citation errors and 3 unsupported claims** caught by its verifier: wrong line numbers, one misquote, and one per-seed range overstated. All were corrected before the push.
 - **The run commit message was first written with a placeholder sha,** then amended before the push.
+- **The full mutation battery exited 1 (139/143).** My pre-run hand proofs had said all 7 new mutations were PROVEN. They were wrong in scope: they ran only 4 test files, not the full suite, and matched declared couplings by substring. The battery matches exact node ids. The fix and the full-suite re-proof are in `846291c`, described above.
 - **The experiment itself:** at N=512 and N=4096 nothing was learned in 1000 iterations, which the PREREG named as its main risk.
