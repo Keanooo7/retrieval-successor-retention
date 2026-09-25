@@ -1122,7 +1122,8 @@ def execute(led, root: Path, *, results_path: Path | None, start: dict, **kw) ->
     crashed = res["error"] is not None or any(
         a["failed_seeds"]
         or (a["stopped"] is None and any(rc != 0 for rc in a["exit_codes"].values()))
-        for a in res["arms"].values()
+        for a in runs.values()
+        if a
     )
     complete = not res["not_run"] and all(
         a["stopped"] is None for a in res["arms"].values()
