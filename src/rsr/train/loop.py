@@ -284,13 +284,22 @@ def train(
     policy_name: str = "fifo",
     masked_loss: bool = True,
     srep_norm_reg_weight: float | None = None,  # None -> TGConfig's 0.01
+    n_documents: int | None = None,  # None -> SyntheticConfig's 64, today's path
 ) -> dict:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     torch.manual_seed(seed)
     gen = torch.Generator(device=device).manual_seed(seed)
 
-    probe = generate(SyntheticConfig(sentences_per_document=steps_per_stream, seed=seed))
+    # corpus-size-curve: `n_documents=None` builds the corpus with SyntheticConfig's
+    # own default, byte for byte the pre-existing call; an int sets the training-set
+    # size (experiments/corpus-size-curve/PREREG.md). The generator is prefix-stable
+    # (`src/rsr/data/synthetic.py`, per-document RNG), so documents 0..N-1 are the
+    # same at every N.
+    corpus_kw = {} if n_documents is None else {"n_documents": n_documents}
+    probe = generate(
+        SyntheticConfig(sentences_per_document=steps_per_stream, seed=seed, **corpus_kw)
+    )
     V = vocab if vocab else 4 + len(build_vocab(probe))
     cfg = TGConfig(
         D=d,
@@ -340,6 +349,10 @@ def train(
         "masked_loss": masked_loss,
         "srep_norm_reg_weight": w_srep,
     }
+    if n_documents is not None:
+        # Stamped only when set, so the default path's config_hash is unchanged
+        # and two corpus sizes can never share one.
+        frozen["n_documents"] = n_documents
     run_id = f"{policy_name}-d{d}-s{steps_per_stream}-b{batch}-{_config_hash(frozen)}"
 
     start = 0
@@ -349,7 +362,9 @@ def train(
         )
         start = int(state.get("step", 0))
 
-    docs = generate(SyntheticConfig(sentences_per_document=steps_per_stream, seed=seed))
+    docs = generate(
+        SyntheticConfig(sentences_per_document=steps_per_stream, seed=seed, **corpus_kw)
+    )
     vocab_map = build_vocab(docs)
     all_ids, all_mask = encode(
         docs, vocab_map, max_tokens=max_tokens, steps=steps_per_stream
