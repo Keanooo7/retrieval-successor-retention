@@ -1,0 +1,276 @@
+{
+  "run_id": "e0e",
+  "cycle": null,
+  "question": "E0e (\u00a73.5): the u_bar distribution and E[lifetime] on a FIFO run -> tau, E_lifetime, the EMA half-life and gamma_b (not recorded: D2)",
+  "started_utc": "2026-09-26T19:02:51Z",
+  "provenance": {
+    "git_sha": "fdb241167cf283e32acbf1ec44261198632dd4e1",
+    "dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": null,
+  "steps_done": null,
+  "status": "ok",
+  "config_hash": "4e3e2c7025e53427406a811adf233b5c6cc4bc2568f6be1a2cdfe6d7bdc1f7cb",
+  "manifest_written_utc": "2026-09-26T19:02:51Z",
+  "commands": [
+    {
+      "argv": "uv run python experiments/e0e/run.py",
+      "entry_point": "experiments/e0e/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-26T19:03:42Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "seed0.liveness",
+      "kind": "observation",
+      "value": {
+        "band": "live",
+        "ratio": 55.56427689781304,
+        "A_trained": 0.5674291377764736,
+        "A_decoy": 0.010212121338679873,
+        "reason": "ratio 55.56427689781304 >= 0.1"
+      },
+      "how": "rsr.metrics.memory_liveness.measure_liveness vs untrained decoy"
+    },
+    {
+      "key": "seed1.liveness",
+      "kind": "observation",
+      "value": {
+        "band": "live",
+        "ratio": 98.96836250429023,
+        "A_trained": 0.5375737322883077,
+        "A_decoy": 0.005431773535355849,
+        "reason": "ratio 98.96836250429023 >= 0.1"
+      },
+      "how": "rsr.metrics.memory_liveness.measure_liveness vs untrained decoy"
+    },
+    {
+      "key": "seed2.liveness",
+      "kind": "observation",
+      "value": {
+        "band": "live",
+        "ratio": 96.8403547316998,
+        "A_trained": 0.5993669147060748,
+        "A_decoy": 0.006189226757446786,
+        "reason": "ratio 96.8403547316998 >= 0.1"
+      },
+      "how": "rsr.metrics.memory_liveness.measure_liveness vs untrained decoy"
+    },
+    {
+      "key": "E_lifetime",
+      "kind": "observation",
+      "value": 13.166666666666666,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "n_written",
+      "kind": "observation",
+      "value": 9216,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "evicted_only_mean",
+      "kind": "observation",
+      "value": 16.0,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "n_evicted",
+      "kind": "observation",
+      "value": 6144,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "write_to_boundary_mean",
+      "kind": "observation",
+      "value": 13.5,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "half_life",
+      "kind": "observation",
+      "value": 3.2916666666666665,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "ema_alpha",
+      "kind": "observation",
+      "value": 0.1898828066645991,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "tau",
+      "kind": "observation",
+      "value": 0.2755544238890353,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "n_obs",
+      "kind": "observation",
+      "value": 121344,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "fraction_inside_tau",
+      "kind": "observation",
+      "value": 0.75,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "fraction_inside_v04_025",
+      "kind": "observation",
+      "value": 0.7040315137130801,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "tau_at_50pct_firing",
+      "kind": "observation",
+      "value": 0.15896459788796802,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "tau_init_first_obs",
+      "kind": "observation",
+      "value": 0.39787507647639714,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "tau_full_memory_only",
+      "kind": "observation",
+      "value": 0.2911534897922462,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "n_obs_full_memory",
+      "kind": "observation",
+      "value": 98304,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "ubar_mean",
+      "kind": "observation",
+      "value": 0.06294865928947274,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "ubar_min",
+      "kind": "observation",
+      "value": 0.024222464783213847,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "ubar_max",
+      "kind": "observation",
+      "value": 0.1843321448804702,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "M_ubar_quantiles",
+      "kind": "observation",
+      "value": {
+        "0.01": 0.5321588633874331,
+        "0.1": 0.7107583327889152,
+        "0.25": 0.8306474189554646,
+        "0.5": 0.9790997791879623,
+        "0.75": 1.1439637389228643,
+        "0.9": 1.342796332491281,
+        "0.99": 1.7647770265974005
+      },
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "b_max",
+      "kind": "observation",
+      "value": 1.0,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "gamma_b",
+      "kind": "observation",
+      "value": 0.3037974683544304,
+      "how": "pooled over live seeds [0, 1, 2] (PREREG)"
+    },
+    {
+      "key": "per_seed.E_lifetime",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        13.166666666666666,
+        13.166666666666666,
+        13.166666666666666
+      ],
+      "mean": 13.166666666666666,
+      "sd": 0.0,
+      "how": "per live seed [0, 1, 2]; each seed's own half-life for tau",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "per_seed.tau",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.24097336652407644,
+        0.27572882687968725,
+        0.3180487282301054
+      ],
+      "mean": 0.2782503072112897,
+      "sd": 0.038599497960799846,
+      "how": "per live seed [0, 1, 2]; each seed's own half-life for tau",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "per_seed.evicted_only_mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        16.0,
+        16.0,
+        16.0
+      ],
+      "mean": 16.0,
+      "sd": 0.0,
+      "how": "per live seed [0, 1, 2]; each seed's own half-life for tau",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "live_seeds",
+      "kind": "observation",
+      "value": [
+        0,
+        1,
+        2
+      ],
+      "how": "Amendment 1 band == live"
+    },
+    {
+      "key": "consistency_problems",
+      "kind": "observation",
+      "value": [],
+      "how": "PREREG consistency checks"
+    },
+    {
+      "key": "would_be_record_calls_NOT_MADE",
+      "kind": "observation",
+      "value": [
+        "rsr.constants.record(\"E_lifetime\", 13.166666666666666, experiment=\"E0e\", run_id=\"e0e\", scope=\"synthetic\", note=\"FIFO, fresh-stream arm B ckpt 3000, held-out docs 64..127, live seeds\")",
+        "rsr.constants.record(\"tau\", 0.2755544238890353, experiment=\"E0e\", run_id=\"e0e\", scope=\"synthetic\", note=\"q0.75 of |M u_bar - 1|, half-life E_lifetime/4, u_bar init 1/M (PREREG)\")"
+      ],
+      "how": "D2 is the owner's: printed and ledgered, never executed"
+    }
+  ],
+  "verdict": null,
+  "finished_utc": "2026-09-26T19:03:42Z"
+}
