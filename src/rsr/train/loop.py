@@ -313,7 +313,9 @@ def build_policy(
     Routing both through one function is the fix: there is now no path on which the
     stamped name and the constructed policy can differ.
 
-    **`"rsr"` raises `UnmeasuredConstant` on today's ledger, and that is correct.**
+    **`"rsr"` is refused on today's tree, and that is correct.** `train()` passes
+    `steps_per_epoch=None`, which raises first (correction 31 (b), below); a caller
+    with a real epoch then meets `UnmeasuredConstant`.
     `nu`, `beta` and `gamma` are MEASURED and E1 has not run (§4.5). The registry
     refusing the read is the D-1 guard; the answer is to run E1, never to supply a
     default here.

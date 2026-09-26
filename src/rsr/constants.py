@@ -260,9 +260,9 @@ def _t_warm_steps(epochs: float, ctx: Mapping[str, Any]) -> float:
 
     Section 3.4 states the warmup as **one epoch**, and requires it be *reported*
     as a fraction of total epochs -- one of three is a different experiment from
-    one of twelve. The quantity the dispatch compares against `t` is a step count,
-    so the registry returns steps and the epoch figure stays readable as
-    `T_warm_epochs`.
+    one of twelve. The dispatch compares it against the optimizer step `k` (not the
+    sentence index `t`; correction 31), so the registry returns optimizer steps and
+    the epoch figure stays readable as `T_warm_epochs`.
     """
     return float(epochs) * float(ctx["steps_per_epoch"])
 

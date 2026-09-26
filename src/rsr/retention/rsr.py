@@ -419,7 +419,11 @@ class RSRPolicy:
         """Tell the policy which optimizer step is running (§3.4; correction 31).
 
         Survives `reset()`: it is training progress, not per-stream state. The
-        training loop calls this before every stream batch.
+        training loop calls this before every stream batch. **Eval-time callers
+        must set it too** -- e.g. a trained policy restored from a checkpoint and
+        run through `run_policy_loop` or `headroom.simulate`: pass the step it was
+        trained to (or any `k >= T_warm`) to evaluate the scored rule. Leaving it
+        unset raises rather than silently evaluating FIFO.
         """
         self._train_step = int(k)
 

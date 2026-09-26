@@ -748,7 +748,8 @@ For general SR claims, cite **Carvalho, Tomov, de Cothi, Barry & Gershman (2024)
 `t < T_warm` / `t ≥ T_warm` where `t` is read as the sentence index.
 
 **Found 2026-09-26** by the day-roadmap red team (reading), then **executed**:
-`tests/test_t_warm_dispatch.py` failed on `main` at `2fdd0a0` for the stated reason.
+`tests/test_t_warm_dispatch.py` failed on `main` at `2fdd0a0` for the stated reason
+(the tests land with the fix, so the failing run is recorded in the PR body, verbatim).
 
 **(a) The counter — fixed.** §3.4 gives the warmup's purpose: `ψ̂` is untrained
 *early in training*, and "one epoch" is a training quantity. But `select_eviction`
@@ -759,8 +760,9 @@ failures, one either side of `S`:
 - `T_warm ≥ S`: `t < T_warm` at every sentence of every stream → **FIFO for the arm's
   whole life** (gauntlet 0.1's `T_warm = ∞`, by mixed units).
 - `M ≤ T_warm < S`: a FIFO prefix of every stream, then the score — from optimizer step
-  0, so no warmup at all. Measured: `T_warm = 10`, `M = 4`, `S = 48`, one stream went 12
-  FIFO evictions then 76 scored.
+  0, so no warmup at all. Measured: `T_warm = 10`, `M = 4`, `S = 48`, batch 2 — each stream
+  went 6 FIFO evictions (sentences 4–9) then 38 scored; the optimizer step's record is 12 then
+  76.
 
 The dispatch is now `k < T_warm` with `k` the optimizer step, handed to the policy by
 `train()` through `RSRPolicy.set_train_step(k)`. A policy with `T_warm > 0` that was
