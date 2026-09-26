@@ -9,7 +9,7 @@ Mutation-battery gates (`scripts/mutation_battery.py`, ``# --- scaffold-dose ---
 * ``test_k_star_is_the_smallest`` -- k* the largest k with U(k), not the smallest;
 * ``test_U_needs_every_seed`` -- U(k) on ANY seed instead of every seed;
 * ``test_control_2_fails_at_2e_6`` -- the measurement-path tolerance widened;
-* ``test_arm_stream_ids_are_disjoint`` -- control 3 drops the held-out overlap;
+* ``test_arm_disjointness_catches_overlap`` -- control 3 drops the held-out overlap;
 * ``test_start_checkpoint_sha_mismatch_refuses`` -- the sha256 comparison dropped;
 * ``test_monotonicity_is_reported`` -- a violation not named;
 * ``test_measurement_is_the_corpus_size_function`` -- the measurement retyped.
