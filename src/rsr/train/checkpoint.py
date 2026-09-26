@@ -36,6 +36,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import io
+import json
 import os
 import platform
 from collections.abc import Callable
@@ -279,6 +280,46 @@ def save(
     return path
 
 
+# --------------------------------------------------------------------------- #
+# Quarantine -- R-2026-09-22-inert-checkpoint-quarantine
+# --------------------------------------------------------------------------- #
+
+#: An INERT run (exit 5, `R-2026-09-22-inert-exit-5`) still writes its
+#: checkpoints, but under `<out_dir>/quarantine/` beside this marker file.
+QUARANTINE_DIR = "quarantine"
+INERT_MARKER = "INERT"
+
+
+class QuarantinedCheckpoint(CheckpointError):
+    """A checkpoint from a run whose memory measured inert. Refused by `load`
+    unless `allow_quarantined=True`: forensics are kept, and nothing downstream
+    consumes it silently."""
+
+
+def is_quarantined(path: Path | str) -> bool:
+    """Under a `quarantine/` directory, or beside an `INERT` marker."""
+    path = Path(path)
+    return QUARANTINE_DIR in path.parent.parts or (path.parent / INERT_MARKER).exists()
+
+
+def quarantine(out_dir: Path | str, marker: dict[str, Any]) -> Path:
+    """Move every `ckpt-*.pt` in `out_dir` under `out_dir/quarantine/` and write
+    the `INERT` marker there (JSON: why). Returns the quarantine directory.
+
+    The marker is written FIRST, so a crash between the two leaves the
+    checkpoints refused where they stand (`is_quarantined` reads a marker beside
+    them as well) rather than loadable."""
+    out_dir = Path(out_dir)
+    q = out_dir / QUARANTINE_DIR
+    q.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(marker, indent=2, sort_keys=True, default=str) + "\n"
+    (out_dir / INERT_MARKER).write_text(text)
+    (q / INERT_MARKER).write_text(text)
+    for ckpt in sorted(out_dir.glob("ckpt-*.pt")):
+        os.replace(ckpt, q / ckpt.name)
+    return q
+
+
 def load(
     path: Path | str,
     *,
@@ -287,16 +328,27 @@ def load(
     policy: Any = None,
     restore_rng: bool = True,
     map_location: Any = "cpu",
+    allow_quarantined: bool = False,
 ) -> dict[str, Any]:
     """Read a checkpoint and restore into whatever was passed.
 
     Raises `CheckpointError` on a truncated or unreadable file rather than
     returning a half-restored model -- a partially restored run is the failure
     that looks like a training instability three days later.
+
+    Raises `QuarantinedCheckpoint` on a checkpoint of an INERT run (under
+    `quarantine/` or beside an `INERT` marker) unless `allow_quarantined=True`
+    (`R-2026-09-22-inert-checkpoint-quarantine`). The default refuses.
     """
     path = Path(path)
     if not path.exists():
         raise CheckpointError(f"no checkpoint at {path}")
+    if is_quarantined(path) and not allow_quarantined:
+        raise QuarantinedCheckpoint(
+            f"{path} is quarantined: its run measured memory INERT (exit 5, "
+            f"R-2026-09-22-inert-exit-5). Retention experiments on it are refused. "
+            f"Pass allow_quarantined=True for forensics only."
+        )
     try:
         payload = torch.load(path, map_location=map_location, weights_only=False)
     except Exception as exc:  # truncation, corruption, version skew

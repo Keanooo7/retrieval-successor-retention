@@ -1,0 +1,87 @@
+{
+  "batch": 16,
+  "c_threshold": 0.8875,
+  "checkpoints_measured": [
+    4000,
+    5000,
+    6000,
+    7000,
+    8000,
+    9000
+  ],
+  "child": "experiments/fresh-stream/run.py::single('B') with start_ckpt = fresh-stream A/seed<s>/ckpt-003000.pt, iters = 9000",
+  "ckpt_every": 100,
+  "control_1": "measure_checkpoint of A/seed<s>/ckpt-003000.pt vs runs/fresh-stream/ledger.json A.ckpt3000.* statistic keys",
+  "corpus": "synthetic S0-03, SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+  "d": 128,
+  "deadline": "2026-09-26T08:30:00-07:00",
+  "decision_rule": "A failed control or a measurement that raised makes the result inconclusive (exit 3). The primary checkpoint P is the largest listed checkpoint measured on every seed before the deadline; if P < 6000 the result is inconclusive. ESCAPES if R(P) holds on every seed; STIRRING if R(P) fails but at least one seed's stream answer loss has a 100-step window below 2.6726 at or before P; NO_ESCAPE otherwise, reported as NO_ESCAPE by P.",
+  "delta": 0.03,
+  "device": "cpu",
+  "end_step": 9000,
+  "expected": "NO_ESCAPE by 9000 (about 60 %). If anything moves, it is one seed, late, reading as STIRRING (about 30 %). ESCAPES about 10 %. The basis is the flat 2.78 plateau from step 500 to 3000 and the very slow creep.",
+  "heldout_documents": [
+    4096,
+    4160
+  ],
+  "instrument": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported, identity), n=64",
+  "iters": 300,
+  "lr": 0.001,
+  "masked_loss": true,
+  "max_tokens": 64,
+  "measure_heldout": "generate(SyntheticConfig(n_documents=128, seed=<seed>))[64:]",
+  "measure_train": "generate(SyntheticConfig(seed=<seed>))  # docs 0..63",
+  "memory_slots": 16,
+  "min_primary_ckpt": 6000,
+  "parent_torch_num_threads": 12,
+  "policy": "fifo",
+  "prereg": "experiments/fresh-escape/PREREG.md",
+  "prereg_commit": "d5b9a23",
+  "probe_documents": [
+    0,
+    64
+  ],
+  "python": "3.12.13",
+  "question": "Does a fresh-start TG model escape the chance plateau on a non-repeating stream if it is simply trained longer? Continue fresh-stream arm A from its ckpt 3000 to ckpt 9000 on the same stream.",
+  "reading": {
+    "ESCAPES": "a fresh start learns memory-mediated retrieval with enough steps; memorisation speeds it up rather than being required",
+    "NO_ESCAPE": "no sign of learning in P steps of a non-repeating stream",
+    "STIRRING": "learning has begun on at least one seed but has not reached R by P"
+  },
+  "reference_ledger": "runs/fresh-stream/ledger.json",
+  "reference_ledger_sha256": "56d065caa8b22a48fccf4a3e1124d26ffd2d92e17c6bab588218f1da6ad93782",
+  "reproduction_tolerance": 1e-06,
+  "resume_step": 3000,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seeds_trained_in_parallel": true,
+  "source_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream",
+  "srep_norm_reg_weight": 0.0,
+  "start_checkpoint_sha256": {
+    "seed0": "f8adcebeb730d160d62ce3d46de0e173a82fe25efd4730a32bf733bf607a2e64",
+    "seed1": "9763cbc61f06496919058036113583b5f57a2aa923ab7d5e80b1b35882d4bb98",
+    "seed2": "f79c006f1a23f9d72cd9d8ba72299071ac2e738997d5a7965e1f42f6c76545fb"
+  },
+  "steps_per_stream": 48,
+  "stream": {
+    "offset": 4160,
+    "stride": 16,
+    "vocab_documents": 64
+  },
+  "stream_documents": [
+    52160,
+    148160
+  ],
+  "stream_loss_threshold": 2.672588722239781,
+  "stream_loss_window": 100,
+  "threads_per_seed": 5,
+  "torch": "2.14.0",
+  "vocab": "derived from the corpus",
+  "vocab_documents": [
+    0,
+    64
+  ]
+}

@@ -78,6 +78,26 @@ _REDUCTION_TABLE_COUPLING = (
     "entry makes every reduction test fail to construct a config. The coupling is "
     "the design: one enumeration, not two."
 )
+_REDUCTION_WARMUP_LOUD_COUPLING = (
+    "since correction 31 a policy with T_warm > 0 and no optimizer step set raises "
+    "instead of evicting FIFO. Under `t_warm = inf` every caller of the reduction "
+    "that sets no step -- the accelerator placement test, the reduction's own "
+    "no-counter test -- now fails loudly: the gauntlet 0.1 defect surfacing as an "
+    "error rather than as a silently FIFO reduction. Found by the 2026-09-26 "
+    "review (the raise confirmed in-process); the full battery is the measurement."
+)
+_BUILD_POLICY_INJECTION_COUPLING = (
+    "correction 31's train-driven tests put their RSRPolicy into the real train() "
+    "by patching build_policy -- the one path S0-01 made the only path. A train() "
+    "that builds FIFOPolicy unconditionally never consults it, so those tests see "
+    "zero RSR evictions: the same defect, observed from the warmup side."
+)
+_T_WARM_COUPLING = (
+    "correction 31 states one defect three ways -- below S (a FIFO prefix), above "
+    "S (FIFO forever), and the invariant that warm never flips inside one stream. "
+    "Restoring the sentence-index counter or dropping the loop's hand-off breaks "
+    "all of them at once, by design."
+)
 _MUP_COUPLING = (
     "the muP multipliers are checked both on the attribute and on the output, "
     "deliberately -- an attribute set correctly and never applied is precisely the "
@@ -101,6 +121,35 @@ _S003_REFUSAL_COUPLING = (
     "so every test that trains reddens when the default corpus reverts to the "
     "pre-S0-03 one. The refusal is the design: an empty mask would make every "
     "answer-token loss a mean over nothing and pass silently."
+)
+_FRESH_STREAM_S003_COUPLING = (
+    "fresh-stream trains and hashes on the S0-03 corpus: its default-path bit "
+    "identity, its init and resume exactness, and its vocabulary-closure preflight "
+    "all build documents through the generator this mutation reverts. They fail "
+    "for the corpus change, not for a defect of their own."
+)
+_FRESH_STREAM_AUDIT_COUPLING = (
+    "fresh-stream's RESULTS renderer backs each small integer by naming its key in "
+    "the same sentence -- the rule this mutation removes -- so its failed-control "
+    "page fails the audit: the same rule seen from fresh-stream, as from C0."
+)
+_DEFAULT_PATH_HASH_COUPLING = (
+    "fresh-stream's control 1 asserts the default path's config is S0-03's, byte "
+    "for byte. Stamping n_documents on the default path moves that hash: bar (1) "
+    "read from the experiment that reproduces it."
+)
+_N64_CALL_COUPLING = (
+    "fresh-stream arm B and scaffold-dose's single run are defined as the "
+    "corpus-size N=64 call. If the control arm passes n_documents, that call leaves "
+    "train()'s default path, so both identity tests fail: bar (1) seen from its two "
+    "consumers."
+)
+_EVERY_SEED_COUPLING = (
+    "fresh-stream's verdict and scaffold-dose's U call scaffold-timing's `holds` "
+    "(imported: experiments/fresh-stream/run.py `ST.holds`), so weakening it to "
+    "any-seed weakens their every-seed readouts too; fresh-escape reads R through "
+    "fresh-stream's `arm_readout` (experiments/fresh-escape/run.py `FS.arm_readout`), "
+    "so it is the fourth reader. One rule, four readers."
 )
 _S003_CORPUS_COUPLING = (
     "S0-03: the test reads a property of the in-stream answer token itself (its "
@@ -128,12 +177,95 @@ _SCAFFOLD_DOSE_CLASSIFIED = (
     "test_verdict_every_row_from_tables[unlocked5-EARLY]",
 )
 
+#: fresh-escape tests that assert a classification reached through P, R(P), the
+#: stream-loss windows and the table, end to end: a mutation of the table reddens
+#: them by design.
+_FRESH_ESCAPE_CLASSIFIED = (
+    "test_P_is_the_largest_checkpoint_on_every_seed",
+    "test_R_needs_every_seed_and_reads_P_only",
+    "test_deadline_stops_the_children_and_P_is_what_exists",
+    "test_render_results_passes_the_audit",
+    "test_run_all_stirring_from_the_heartbeats",
+    "test_stirring_window_must_end_at_or_before_P",
+    "test_verdict_every_row_from_tables[stirring]",
+    "test_verdict_every_row_from_tables[stirring_R_before_P]",
+    "test_verdict_every_row_from_tables[none]",
+    "test_post_deadline_measurement_is_excluded_from_P",
+)
+#: fresh-escape tests that read P = 9000 (or 6000 / 7000) from a full or partial
+#: run: P the smallest checkpoint makes every one of them read P = 4000.
+_FRESH_ESCAPE_READS_P = (
+    "test_P_below_6000_is_inconclusive",
+    "test_P_below_6000_under_the_deadline_filter",
+    "test_post_deadline_measurement_is_excluded_from_P",
+    "test_run_all_under_the_stamped_deadline",
+    "test_R_needs_every_seed_and_reads_P_only",
+    "test_deadline_before_6000_is_inconclusive",
+    "test_deadline_stops_the_children_and_P_is_what_exists",
+    *(
+        f"test_failed_controls_are_inconclusive[{c}]"
+        for c in (
+            "control_1_absent",
+            "control_1_failed",
+            "control_1_raised",
+            "measurement_raised",
+            "preflight_absent",
+            "preflight_failed",
+            "resume_failed",
+            "resume_missing",
+        )
+    ),
+    "test_render_results_passes_the_audit",
+    "test_run_all_order_and_classification",
+    "test_run_all_stirring_from_the_heartbeats",
+    "test_stirring_window_must_end_at_or_before_P",
+    "test_verdict_every_row_from_tables[escapes]",
+    "test_verdict_every_row_from_tables[escapes_also_stirring]",
+    "test_verdict_every_row_from_tables[stirring]",
+    "test_verdict_every_row_from_tables[stirring_R_before_P]",
+    "test_verdict_every_row_from_tables[none]",
+)
+
 _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
     "of the reduction (ADR-0006)."
 )
 
+#: liveness-wiring: tests that read the measurement a real train() run wrote.
+_LIVENESS_HOOK_READERS = (
+    "test_the_controls_read_what_they_must_on_a_real_run",
+    "test_the_decoy_is_the_untrained_model_at_the_same_seed",
+    "test_an_inert_run_quarantines_its_checkpoints",
+    "test_the_loader_refuses_a_quarantined_checkpoint",
+)
+_LIVENESS_HOOK_COUPLING = (
+    "liveness-wiring: it reads what the real train() measured (the controls, the "
+    "decoy, or the band that triggers the quarantine). With the hook skipped there "
+    "is no measurement to read: the same defect, seen from each reader."
+)
+_LIVENESS_MAPPING_COUPLING = (
+    "liveness-wiring: main() and the quarantine test read the exit through the one "
+    "band->exit table (loop.LIVENESS_EXIT), so its mapping reddens them too, by "
+    "design: one table, not two."
+)
+_LIVENESS_INSTRUMENT_COUPLING = (
+    "liveness-wiring: every train() now ends with memory_liveness's controls, and "
+    "these tests read them off a real run. Breaking the instrument breaks the "
+    "controls those tests assert: the same instrument, seen from the wiring."
+)
+_LIVENESS_TRAIN_S003_COUPLING = (
+    "liveness-wiring: the test trains a real run on the default corpus (and the "
+    "liveness batch is built from it), so a corpus answer_targets refuses cannot "
+    "train: _S003_REFUSAL_COUPLING, seen from the liveness tests."
+)
+_T_WARM_TRAIN_S003_COUPLING = (
+    "correction 31's train-driven tests put an RSRPolicy into the real train() on "
+    "the default corpus, so a corpus answer_targets refuses cannot train: "
+    "_S003_REFUSAL_COUPLING, seen from the warmup tests. Undeclared since PR #47; "
+    "found by liveness-wiring's subset battery (2026-09-26) and confirmed on "
+    "cd41d4e with the two tests alone."
+)
 _LANE_FLOCK_COUPLING = (
     "orchestrator: the flock is the only thing that makes a slot exclusive, and "
     "every one of these asserts that a held slot is held -- against a second "
@@ -174,6 +306,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    "t_warm": 0.0,',
         '    "t_warm": float("inf"),',
         "gauntlet 0.1: the reduction stops reaching the score path",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                _REDUCTION_WARMUP_LOUD_COUPLING,
+            ),
+            (
+                "tests/test_device_placement.py::"
+                "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+                _REDUCTION_WARMUP_LOUD_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "reduction uses the learned head",
@@ -836,9 +979,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "policy built unconditionally again",
         "test_train_does_not_stamp_a_policy_it_did_not_build",
         "src/rsr/train/loop.py",
-        "    policy = build_policy(\n"
-        "        policy_name, d_model=d, steps_per_epoch=float(iters), generator=gen\n"
-        "    )",
+        "    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, "
+        "generator=gen)",
         "    policy = FIFOPolicy()",
         "S0-01 defect (b), the original line. `policy_name` still flows into the "
         "frozen config and the `run_id`, so `train(policy_name='rsr')` completes "
@@ -847,6 +989,99 @@ MUTATIONS: tuple[Mutation, ...] = (
         "defect silent and what makes the test necessary: no assertion about the "
         "loss curve could ever have caught this, because the loss curve is "
         "genuine.",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                _BUILD_POLICY_INJECTION_COUPLING,
+            ),
+            (
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                _BUILD_POLICY_INJECTION_COUPLING,
+            ),
+        ),
+    ),
+    # Correction 31: T_warm counts optimizer steps, not sentences.
+    Mutation(
+        "T_warm compared against the sentence index again",
+        "test_warmup_below_S_covers_whole_training_steps",
+        "src/rsr/retention/rsr.py",
+        "        warm = self.config.t_warm > 0 and "
+        "self._train_step < self.config.t_warm\n",
+        "        warm = step < self.config.t_warm\n",
+        "Correction 31 (a), the original line. `step` is the sentence index inside "
+        "one stream, so below S the warmup becomes a FIFO prefix of every stream "
+        "from optimizer step 0, and at T_warm >= S the arm is FIFO forever -- "
+        "gauntlet 0.1 by mixed units. Nothing crashes and the attribution field "
+        "still reads plausibly, which is why it survived a registry, a correction "
+        "and two warmup tests that fed `select_eviction` the sentence index.",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                _T_WARM_COUPLING,
+            ),
+            (
+                "tests/test_t_warm_dispatch.py::test_warmup_longer_than_a_stream_ends",
+                _T_WARM_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "train() stops handing the policy its optimizer step",
+        "test_warm_status_never_flips_inside_one_stream",
+        "src/rsr/train/loop.py",
+        "                policy.set_train_step(it)\n",
+        "                pass  # MUTATED\n",
+        "Correction 31 (a), the call-site half. A policy fixed to count optimizer "
+        "steps is useless if the loop never tells it which step it is on; here the "
+        "unset-step guard is what turns that into a failure instead of a silent "
+        "FIFO arm.",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                _T_WARM_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "an unset training step defaults to 0",
+        "test_a_warmup_policy_refuses_to_guess_its_training_step",
+        "src/rsr/retention/rsr.py",
+        "        self._train_step: int | None = None\n",
+        "        self._train_step: int | None = 0\n",
+        "Correction 31 (a). The natural 'harmless' default: a policy nobody told "
+        "the step is at step 0, so it is warm, so it is FIFO -- every eval-time "
+        "use of a trained RSR policy would silently report FIFO numbers as RSR's.",
+    ),
+    Mutation(
+        "build_policy accepts rsr without an epoch",
+        "test_build_policy_refuses_rsr_without_an_epoch",
+        "src/rsr/train/loop.py",
+        "        if steps_per_epoch is None:\n",
+        "        if False:  # MUTATED\n",
+        "Correction 31 (b). With the check gone, None reaches the registry, which "
+        "then fails for a reason unrelated to the open epoch decision -- or, once "
+        "a ledger exists, not at all.",
+        off_gate_allowed=(
+            (
+                "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_not_build",
+                "train() reaches the epoch refusal through build_policy: one "
+                "refusal, two call sites, and the S0-01 test matches its message "
+                "to prove `iters` is no longer passed.",
+            ),
+        ),
+    ),
+    Mutation(
+        "train() passes iters as steps_per_epoch again",
+        "test_train_does_not_stamp_a_policy_it_did_not_build",
+        "src/rsr/train/loop.py",
+        "    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, "
+        "generator=gen)",
+        "    policy = build_policy(policy_name, d_model=d, "
+        "steps_per_epoch=float(iters), generator=gen)",
+        "Correction 31 (b), the original line. `iters` makes section 3.4's one "
+        "epoch the whole run, so the warmup never ends and a future 'rsr' run is "
+        "FIFO throughout. Today the registry would still refuse (E1 has not "
+        "logged nu/beta/gamma); the day it does not, this line is the defect.",
     ),
     Mutation(
         "--policy stops reaching train()",
@@ -921,6 +1156,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "permutation the control reads exactly 0.0 on ANY model, live or dead -- "
         "the reading §10.3's null was, and the one cycle 1 was rejected for not "
         "having ruled out. Only the live-memory decoy can see it.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in (
+                "test_the_controls_read_what_they_must_on_a_real_run",
+                "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+            )
+        ),
     ),
     Mutation(
         "the shuffle control never applies its permutation",
@@ -931,6 +1173,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the same no-op with a correct `derangement()`: the replay reaches the "
         "forward un-permuted. The derangement test stays green, so only the "
         "live-memory reading catches it.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in (
+                "test_the_controls_read_what_they_must_on_a_real_run",
+                "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+            )
+        ),
     ),
     Mutation(
         "the shuffle replay perturbs the memory it replays",
@@ -943,6 +1192,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the live-memory decoy still moves, so neither of the other two entries "
         "sees it -- only a replay of each row's OWN memory, which must read "
         "exactly 0.0, can tell a faithful replay from a perturbed one.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        ),
     ),
     Mutation(
         "the shuffle replay hands over the bos gestalt too",
@@ -954,6 +1207,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "delta measures memory PLUS the bos gestalt rather than memory alone. With "
         "memory disabled the kv swap is a no-op but the bos swap is not, so the "
         "disabled-memory reading stops being exactly 0.0.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        ),
     ),
     # -- decisive run (experiments/decisive-shuffle/PREREG.md, Mutation bar) -- #
     Mutation(
@@ -1013,6 +1270,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            return kv.clone() + 1e-3",
         "PREREG Secondary 2: the replacement path's own control. A path that moves "
         "tokens by itself would read as 'memory is read' on any model.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        ),
     ),
     Mutation(
         "random replacement is not norm-matched",
@@ -1079,6 +1340,42 @@ MUTATIONS: tuple[Mutation, ...] = (
         "redden; the rest are the declared consequences of the refusal.",
         off_gate_allowed=(
             (
+                "tests/test_fresh_stream.py::test_default_path_config_is_unchanged",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::"
+                "test_initial_parameters_identical_with_and_without_the_stream[0]",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::"
+                "test_initial_parameters_identical_with_and_without_the_stream[2]",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::test_preflight_reports_a_closure_failure",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::test_resume_check_is_exact",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::test_resume_check_passes_on_a_real_resume",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::"
+                "test_resume_continues_the_stream_at_the_resumed_step",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::"
+                "test_train_default_path_is_bit_identical_with_explicit_none",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
                 "tests/test_synthetic.py::"
                 "test_the_answer_is_the_only_difference_between_the_two_corpora",
                 _S003_CORPUS_COUPLING,
@@ -1140,6 +1437,25 @@ MUTATIONS: tuple[Mutation, ...] = (
                 for t in (
                     "test_default_corpus_call_is_unchanged",
                     "test_default_path_config_hash_is_s003s",
+                )
+            ),
+            *(
+                (f"tests/test_t_warm_dispatch.py::{t}", _T_WARM_TRAIN_S003_COUPLING)
+                for t in (
+                    "test_warm_status_never_flips_inside_one_stream",
+                    "test_warmup_below_S_covers_whole_training_steps",
+                )
+            ),
+            *(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_TRAIN_S003_COUPLING)
+                for t in (
+                    "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+                    "test_a_live_run_is_not_quarantined",
+                    "test_an_inert_run_quarantines_its_checkpoints",
+                    "test_every_train_ends_with_the_liveness_measurement",
+                    "test_the_controls_read_what_they_must_on_a_real_run",
+                    "test_the_decoy_is_the_untrained_model_at_the_same_seed",
+                    "test_the_loader_refuses_a_quarantined_checkpoint",
                 )
             ),
         ),
@@ -1608,6 +1924,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the hole itself.",
         off_gate_allowed=(
             (
+                "tests/test_fresh_stream.py::"
+                "test_render_results_after_a_failed_control_passes_the_audit",
+                _FRESH_STREAM_AUDIT_COUPLING,
+            ),
+            (
                 "tests/test_capacity_c0.py::test_rendered_results_pass_the_prose_audit",
                 "C0's RESULTS renderer backs each small integer by naming its key in "
                 "the same sentence -- the rule this mutation removes. Under the old "
@@ -1931,6 +2252,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "corpus-size-curve brief bar (1). The default path must stay byte for byte "
         "S0-03's: a config_hash that moves on the default call means the N=64 arm "
         "is not the configuration its reproduction control compares against.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::test_default_path_config_is_unchanged",
+                _DEFAULT_PATH_HASH_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "corpus-size-curve: held-out drawn from S0-03's docs 64..127",
@@ -1995,6 +2322,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    kw = {"n_documents": n}\n',
         "corpus-size-curve brief bar (1), the call-site half: the N=64 arm must take "
         "train()'s default path, or its config_hash is not S0-03's.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::test_arms_are_the_n64_call_plus_the_stream",
+                _N64_CALL_COUPLING,
+            ),
+            (
+                "tests/test_scaffold_dose.py::"
+                "test_single_is_fresh_streams_arm_B_from_ckpt_k",
+                _N64_CALL_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "corpus-size-curve: the reproduction control's tolerance widened",
@@ -2085,6 +2423,20 @@ MUTATIONS: tuple[Mutation, ...] = (
         "any(v >= DELTA for v in values)",
         "scaffold-timing PREREG 'Primary readout': R(c) and M(c) hold only when the "
         "quantity is >= DELTA on every seed.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::test_verdict_reads_ckpt3000_only",
+                _EVERY_SEED_COUPLING,
+            ),
+            (
+                "tests/test_scaffold_dose.py::test_U_needs_every_seed",
+                _EVERY_SEED_COUPLING,
+            ),
+            (
+                "tests/test_fresh_escape.py::test_R_needs_every_seed_and_reads_P_only",
+                _EVERY_SEED_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "scaffold-timing: the measurement retyped as a local wrapper, not imported",
@@ -2338,6 +2690,266 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    return FS.measure_checkpoint(seed_dir, seed, label, n)\n",
         "scaffold-dose PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
         "imported -- the object called must be that function, not a copy.",
+    ),
+    # --- fresh-escape (experiments/fresh-escape/PREREG.md, d5b9a23) ---
+    Mutation(
+        "fresh-escape: STIRRING and NO_ESCAPE swapped",
+        "test_classification_table",
+        "experiments/fresh-escape/run.py",
+        '        return "STIRRING"\n    return "NO_ESCAPE"\n',
+        '        return "NO_ESCAPE"\n    return "STIRRING"\n',
+        "fresh-escape PREREG classification table: not R(P) with a stream-loss window "
+        "below 2.6726 at or before P is STIRRING; neither is NO_ESCAPE by P.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it asserts a STIRRING or NO_ESCAPE classification end to end.",
+            )
+            for t in _FRESH_ESCAPE_CLASSIFIED
+        ),
+    ),
+    Mutation(
+        "fresh-escape: P the smallest checkpoint measured on every seed",
+        "test_P_is_the_largest_checkpoint_on_every_seed",
+        "experiments/fresh-escape/run.py",
+        "    return max(done) if done else None\n",
+        "    return min(done) if done else None\n",
+        "fresh-escape PREREG decision rule: P is the LARGEST listed checkpoint "
+        "measured on every seed before the deadline.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it reads the classification or P of a run that reached ckpt >= 6000.",
+            )
+            for t in _FRESH_ESCAPE_READS_P
+            if t != "test_P_is_the_largest_checkpoint_on_every_seed"
+        ),
+    ),
+    Mutation(
+        "fresh-escape: the 6000 minimum on P lowered",
+        "test_P_below_6000_is_inconclusive",
+        "experiments/fresh-escape/run.py",
+        "MIN_PRIMARY_CKPT = 6000\n",
+        "MIN_PRIMARY_CKPT = 4000\n",
+        "fresh-escape PREREG decision rule: if P < 6000 the result is inconclusive.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it transcribes or exercises the same minimum.",
+            )
+            for t in (
+                "test_classification_table[4000-True-True-inconclusive]",
+                "test_classification_table[5000-True-False-inconclusive]",
+                "test_deadline_before_6000_is_inconclusive",
+                "test_P_below_6000_under_the_deadline_filter",
+                "test_manifest_records_the_start_checkpoints",
+                "test_thresholds_are_the_preregs",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-escape: control 1's tolerance widened",
+        "test_control_1_fails_at_2e_6",
+        "experiments/fresh-escape/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-5\n",
+        "fresh-escape PREREG control 1: every A.ckpt3000 statistic key within 1e-6 "
+        "of runs/fresh-stream/ledger.json; a 2e-6 difference must fail.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it transcribes or exercises the same tolerance.",
+            )
+            for t in (
+                "test_thresholds_are_the_preregs",
+                "test_render_results_after_a_failed_control_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-escape: control 3 drops the held-out overlap",
+        "test_stream_disjointness_catches_overlap",
+        "experiments/fresh-escape/run.py",
+        '"ok": bool(ids) and not (in_probe or in_vocab or in_heldout or repeats),',
+        '"ok": bool(ids) and not (in_probe or in_vocab or repeats),',
+        "fresh-escape PREREG control 3: no id of [4160 + 16*3000, 4160 + 16*9000) in "
+        "[0, 64) or [4096, 4160), and no id repeats.",
+    ),
+    Mutation(
+        "fresh-escape: the start-checkpoint sha256 comparison dropped",
+        "test_start_checkpoint_sha_mismatch_refuses",
+        "experiments/fresh-escape/run.py",
+        "        if sha != START_SHA256[s]:\n",
+        "        if False and sha != START_SHA256[s]:\n",
+        "fresh-escape PREREG control 3: the sha256 of each start checkpoint equals "
+        "the front matter, or the run is refused.",
+    ),
+    Mutation(
+        "fresh-escape: stream-loss windows after P counted",
+        "test_stirring_window_must_end_at_or_before_P",
+        "experiments/fresh-escape/run.py",
+        "if int(w0) + STREAM_LOSS_WINDOW <= p}",
+        "if int(w0) <= p}",
+        "fresh-escape PREREG decision rule: STIRRING needs a 100-step window below "
+        "2.6726 AT OR BEFORE P; ckpt-P holds steps [0, P), so [P, P + 100) is after.",
+    ),
+    Mutation(
+        "fresh-escape: post-deadline measurements counted toward P",
+        "test_post_deadline_measurement_is_excluded_from_P",
+        "experiments/fresh-escape/run.py",
+        '    if "s003" not in rec or rec.get("post_deadline"):\n'
+        "        return False\n"
+        '    at = rec.get("measured_at")\n'
+        "    return at is None or _dt.datetime.fromisoformat(at).timestamp() <= "
+        "deadline\n",
+        '    return "s003" in rec\n',
+        "fresh-escape PREREG decision rule: P is the largest listed checkpoint "
+        "measured on every seed BEFORE the deadline, which is absolute; a measurement "
+        "completed after 08:30 is secondary and never feeds P.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it exercises the same deadline filter end to end.",
+            )
+            for t in (
+                "test_P_below_6000_under_the_deadline_filter",
+                "test_deadline_stamped_stamps_and_refuses_to_start_after_the_deadline",
+                "test_run_all_under_the_stamped_deadline",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-escape: the measurement retyped as a local wrapper, not imported",
+        "test_measurement_is_the_corpus_size_function",
+        "experiments/fresh-escape/run.py",
+        "measure_checkpoint = FS.measure_checkpoint\n",
+        "def measure_checkpoint(seed_dir, seed, label, n):\n"
+        "    return FS.measure_checkpoint(seed_dir, seed, label, n)\n",
+        "fresh-escape PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
+        "imported -- the object called must be that function, not a copy.",
+    ),
+    # ----------------------------------------------------------------------- #
+    # liveness-wiring (docs/lab-notes/dispatch-liveness-wiring.md): every run
+    # measures its memory's liveness; INERT exits 5 and is quarantined.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "liveness-wiring: the liveness hook skipped",
+        "test_every_train_ends_with_the_liveness_measurement",
+        "src/rsr/train/loop.py",
+        "    liveness = _measure_liveness(model, init_state, cfg, frozen, "
+        "device=device)\n",
+        '    liveness = {"band": "live"}\n',
+        "Bar 2: the falsifier itself -- a run that never measures and reports live "
+        "exits 0 with nothing behind it, so an inert run is again indistinguishable "
+        "from a live one.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_HOOK_COUPLING)
+            for t in _LIVENESS_HOOK_READERS
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: an inert run reported as 0",
+        "test_an_inert_ratio_is_inert_and_exits_5",
+        "src/rsr/train/loop.py",
+        '    "inert": Exit.INERT,\n',
+        '    "inert": Exit.OK,\n',
+        "R-2026-09-22-inert-exit-5: an inert run exiting 0 is consumed downstream "
+        "like a live one -- the state before this brief.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_MAPPING_COUPLING)
+            for t in (
+                "test_main_exits_on_the_liveness_band[inert-5]",
+                "test_an_inert_run_quarantines_its_checkpoints",
+            )
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: the decoy pointed at the trained model",
+        "test_the_decoy_is_the_untrained_model_at_the_same_seed",
+        "src/rsr/train/loop.py",
+        "        decoy.load_state_dict(init_state)\n",
+        "        decoy.load_state_dict(model.state_dict())\n",
+        "decisive PREREG *Mutation bar* (decoy aliasing): A_decoy == A_trained, "
+        "ratio == 1.0 exactly, which the rule makes invalid (3), never 0.",
+    ),
+    Mutation(
+        "liveness-wiring: an inconclusive ratio rounded to inert",
+        "test_an_inconclusive_ratio_exits_1_never_0_or_5",
+        "src/rsr/metrics/memory_liveness.py",
+        '    return "inconclusive", f"{INERT_MAX_RATIO} < ratio',
+        '    return "inert", f"{INERT_MAX_RATIO} < ratio',
+        "decisive PREREG :45: the band between is 'reported as such, not rounded "
+        "to either outcome'. Folding it into inert is the ruling's own erratum.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::"
+                "test_resume_continues_the_stream_at_the_resumed_step",
+                "that test's tiny stream run measures inconclusive (ratio 0.0506, "
+                "read from its footer 2026-09-26); rounded to inert, train() "
+                "quarantines the checkpoint the test resumes from, so the resume "
+                "cannot find it. The quarantine, seen from a checkpoint consumer.",
+            ),
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: an inconclusive run exits 0",
+        "test_an_inconclusive_ratio_exits_1_never_0_or_5",
+        "src/rsr/train/loop.py",
+        '    "inconclusive": Exit.FAIL,\n',
+        '    "inconclusive": Exit.OK,\n',
+        "R-2026-09-22-inert-exit-5: inconclusive is 1, liveness not demonstrated; "
+        "0 would report an undemonstrated memory as live.",
+        off_gate_allowed=(
+            (
+                "tests/test_liveness_wiring.py::"
+                "test_main_exits_on_the_liveness_band[inconclusive-1]",
+                _LIVENESS_MAPPING_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: an inert run's checkpoints left in place",
+        "test_an_inert_run_quarantines_its_checkpoints",
+        "src/rsr/train/loop.py",
+        '    if liveness["band"] == "inert":\n',
+        "    if False:\n",
+        "R-2026-09-22-inert-checkpoint-quarantine: an inert checkpoint left beside "
+        "the live ones is read by any loader, silently.",
+        off_gate_allowed=(
+            (
+                "tests/test_liveness_wiring.py::"
+                "test_the_loader_refuses_a_quarantined_checkpoint",
+                "it loads the checkpoint the quarantine put under quarantine/; "
+                "with no quarantine there is no such file to refuse.",
+            ),
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: the loader override defaults to allow",
+        "test_the_loader_refuses_a_",
+        "src/rsr/train/checkpoint.py",
+        "    allow_quarantined: bool = False,\n",
+        "    allow_quarantined: bool = True,\n",
+        "R-2026-09-22-inert-checkpoint-quarantine: 'loaders refuse a quarantined "
+        "checkpoint unless explicitly overridden'. A default of allow is no refusal.",
+    ),
+    Mutation(
+        "liveness-wiring: status() refuses 5",
+        "test_status_accepts_5_as_inert",
+        "src/rsr/exit_codes.py",
+        "    try:\n        return Exit(code)\n",
+        "    try:\n        if code == 5:\n            raise ValueError\n"
+        "        return Exit(code)\n",
+        "R-2026-09-22-inert-exit-5: a status() still bounded at 0-4 turns every "
+        "INERT run into a ValueError at run_main.",
+        off_gate_allowed=(
+            (
+                "tests/test_liveness_wiring.py::"
+                "test_main_exits_on_the_liveness_band[inert-5]",
+                "main() returns status(liveness_exit(...)); an INERT band reaches "
+                "status(5) there -- the same refusal seen from the entry point.",
+            ),
+        ),
     ),
 )
 

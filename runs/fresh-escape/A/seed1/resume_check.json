@@ -1,0 +1,15 @@
+{
+  "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/A/seed1/ckpt-003000.pt",
+  "stored_step": 3000,
+  "ok": true,
+  "model": {
+    "equal": true,
+    "n_tensors": 206,
+    "mismatches": []
+  },
+  "optimizer": {
+    "equal": true,
+    "n_tensors": 618,
+    "mismatches": []
+  }
+}

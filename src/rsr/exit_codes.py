@@ -1,6 +1,6 @@
 """The run protocol's exit codes -- one enum, and the helpers every checker uses.
 
-Five codes, as `docs/gates.md` ("Exit codes -- the protocol") specifies them:
+Six codes, as `docs/gates.md` ("Exit codes -- the protocol") specifies them:
 
 ====  =================  ==========================================================
 code  name               meaning
@@ -13,6 +13,10 @@ code  name               meaning
 3     ``DID_NOT_RUN``    environment / not implemented / precondition refused.
                          **Not a pass.**
 4     ``UNBANKED_RISE``  measured above the floor, floor not updated
+5     ``INERT``          a training run that trained, but whose memory carries no
+                         row-specific content (Amendment 1 ``ratio <= 0.01``).
+                         **Not ``1``**: nothing broke; no eviction rule has
+                         anything to act on (``R-2026-09-22-inert-exit-5``)
 ====  =================  ==========================================================
 
 🔴 **`2` and `3` are separate deliberately, and `3` is where this design can be
@@ -60,7 +64,8 @@ __all__ = [
 
 class Exit(IntEnum):
     """`0` ok · `1` real failure · `2` nothing to compare · `3` did not run ·
-    `4` unbanked rise. See the module docstring; `docs/gates.md` is the source."""
+    `4` unbanked rise · `5` inert memory. See the module docstring;
+    `docs/gates.md` is the source."""
 
     OK = 0
     FAIL = 1
@@ -68,6 +73,10 @@ class Exit(IntEnum):
     UNKNOWN = 2
     DID_NOT_RUN = 3
     UNBANKED_RISE = 4
+    #: `R-2026-09-22-inert-exit-5`: ran, and the memory is inert. `1` routes to a
+    #: regression/debug item; `5` to a model/training-config investigation, and
+    #: retention experiments on that checkpoint are refused (quarantine).
+    INERT = 5
 
 
 def status(code: object) -> Exit:
@@ -75,7 +84,7 @@ def status(code: object) -> Exit:
 
     🔴 **Refuses a bool.** `True`/`False` are ints in Python, so a checker that
     returns `ok` exits `1` on success and `0` on failure -- and one that returns
-    `not failed` has exactly two states where the protocol has five. There is no
+    `not failed` has exactly two states where the protocol has six. There is no
     boolean that means *did not run*.
 
     🔴 **Refuses `None`.** `sys.exit(None)` is exit **0**, so a `main()` that falls
@@ -87,7 +96,7 @@ def status(code: object) -> Exit:
     if isinstance(code, bool):
         raise TypeError(
             f"a checker returned the bool {code!r}. A bool has two states and the "
-            f"protocol has five; return an `Exit` member (rsr.exit_codes)."
+            f"protocol has six; return an `Exit` member (rsr.exit_codes)."
         )
     if code is None:
         raise TypeError(
@@ -100,7 +109,7 @@ def status(code: object) -> Exit:
         return Exit(code)
     except ValueError:
         raise ValueError(
-            f"exit status {code} is outside the protocol (0-4, docs/gates.md)"
+            f"exit status {code} is outside the protocol (0-5, docs/gates.md)"
         ) from None
 
 

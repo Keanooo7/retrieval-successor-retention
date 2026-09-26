@@ -59,6 +59,11 @@ TINY = dict(
 )
 
 
+#: What a monkeypatched `train` returns so that `main` exits 0: since
+#: liveness-wiring, `main` exits on the run's liveness band, and a run with no
+#: measurement exits 3 (`tests/test_liveness_wiring.py`).
+_LIVE = {"run_id": "x", "liveness": {"band": "live"}}
+
 # The CLI is exercised through `main` with `train` monkeypatched, never by rebuilding
 # the flag table here -- a test that rebuilds the parser stops testing the shipped one.
 
@@ -98,8 +103,14 @@ def test_train_does_not_stamp_a_policy_it_did_not_build(tmp_path):
 
     Before the fix this returned normally and `r["run_id"].startswith("rsr-")` was
     True while `FIFOPolicy` had evicted every slot.
+
+    It refuses at correction 31's epoch check (`build_policy` with
+    `steps_per_epoch=None`) -- before 2026-09-26 it refused at the registry's
+    `UnmeasuredConstant`, one line later, having been handed `steps_per_epoch=iters`,
+    which made the warmup the whole run. Either refusal proves the policy was built
+    from the name; matching the correction-31 message also proves `iters` is gone.
     """
-    with pytest.raises(C.UnmeasuredConstant):
+    with pytest.raises(ValueError, match="correction 31"):
         train(policy_name="rsr", out_dir=tmp_path / "rsr", **TINY)
 
 
@@ -109,7 +120,7 @@ def test_the_policy_is_selectable_from_the_command_line(monkeypatch, tmp_path):
 
     def fake_train(**kw):
         seen.update(kw)
-        return {"run_id": "x"}
+        return _LIVE
 
     monkeypatch.setattr("rsr.train.loop.train", fake_train)
     assert main(["--out-dir", str(tmp_path), "--policy", "rsr"]) == 0
@@ -239,7 +250,7 @@ def test_the_cli_vocab_default_reaches_the_derived_path(monkeypatch, tmp_path):
 
     def fake_train(**kw):
         seen.update(kw)
-        return {"run_id": "x"}
+        return _LIVE
 
     monkeypatch.setattr("rsr.train.loop.train", fake_train)
     assert main(["--out-dir", str(tmp_path)]) == 0
@@ -252,9 +263,7 @@ def test_the_cli_vocab_default_reaches_the_derived_path(monkeypatch, tmp_path):
 
 def test_an_explicit_vocab_still_overrides_the_derived_path(monkeypatch, tmp_path):
     seen: dict[str, object] = {}
-    monkeypatch.setattr(
-        "rsr.train.loop.train", lambda **kw: seen.update(kw) or {"run_id": "x"}
-    )
+    monkeypatch.setattr("rsr.train.loop.train", lambda **kw: seen.update(kw) or _LIVE)
     assert main(["--out-dir", str(tmp_path), "--vocab", "1024"]) == 0
     assert seen["vocab"] == 1024
 

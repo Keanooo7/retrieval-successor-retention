@@ -301,3 +301,103 @@ def cross_row_cosine(model: TGModel, ids: Tensor, mask: Tensor) -> dict:
         "max_pair_mean": max(vals) if vals else None,
         "n_slot_steps": len(vals),
     }
+
+
+# --------------------------------------------------------------------------- #
+# liveness-wiring: the one-run measurement and its band (additive, reuse only)
+# --------------------------------------------------------------------------- #
+
+#: 🔒 #17's Amendment 1 thresholds, fixed in `ba71e86` before any trained number
+#: existed, as applied by `experiments/decisive-shuffle/PREREG.md:36-37`.
+#: Transcribed, not chosen. Moving either needs a new PREREG committed first.
+INERT_MAX_RATIO = 0.01
+LIVE_MIN_RATIO = 0.1
+#: The matched-norm replacement's generator is seeded independently of the model
+#: (decisive PREREG *Secondary 2*): `RANDOM_SEED_BASE + seed`, as
+#: `experiments/decisive-shuffle/run.py` seeds it.
+RANDOM_SEED_BASE = 10_000
+
+
+def liveness_band(m: dict) -> tuple[str, str]:
+    """-> (band, reason). Decisive PREREG `:33-38`, for one run (one seed).
+
+    ``invalid`` -- a control failed, the decoy read zero, the ratio is undefined or
+    not finite, or ``ratio == 1.0`` exactly (decoy aliasing, `:35`, `:61`);
+    ``live`` -- ``ratio >= 0.1``; ``inert`` -- ``ratio <= 0.01``; otherwise
+    ``inconclusive``, "reported as such, not rounded to either outcome" (`:45`).
+    The cross-row cosine and the random-replacement ratio are NOT read here: they
+    are descriptive and have no threshold (`R-2026-09-22-inert-exit-5`).
+    """
+    failed = [
+        k
+        for k in (
+            "control_memory_disabled_ok",
+            "control_own_memory_ok",
+            "control_live_decoy_ok",
+        )
+        if m.get(k) is not True
+    ]
+    if failed:
+        return "invalid", f"a control failed: {failed}"
+    r = m.get("ratio")
+    if not m.get("A_decoy") or r is None:
+        return "invalid", f"the live decoy read {m.get('A_decoy')!r}: no ratio"
+    if r != r or r in (float("inf"), float("-inf")):
+        return "invalid", f"ratio {r!r} is not finite"
+    if r == 1.0:
+        return "invalid", "ratio == 1.0 exactly: the decoy is the trained model"
+    if r >= LIVE_MIN_RATIO:
+        return "live", f"ratio {r!r} >= {LIVE_MIN_RATIO}"
+    if r <= INERT_MAX_RATIO:
+        return "inert", f"ratio {r!r} <= {INERT_MAX_RATIO}"
+    return "inconclusive", f"{INERT_MAX_RATIO} < ratio {r!r} < {LIVE_MIN_RATIO}"
+
+
+def measure_liveness(
+    trained: TGModel, decoy: TGModel, ids: Tensor, mask: Tensor, *, seed: int
+) -> dict:
+    """Every primary and secondary readout of the decisive PREREG for ONE model,
+    through this module's functions, plus its `liveness_band`.
+
+    `decoy` is the untrained model at the same seed and config (PREREG *Decoy*).
+    All passes are `eval()` + `no_grad` (`shuffle_control`), so nothing here
+    reaches a gradient, and nothing draws from the global RNG: the replacement's
+    generator is its own.
+    """
+    B = ids.shape[0]
+    reading = shuffle_control(trained, ids, mask)
+    off = shuffle_control(with_memory_disabled(trained), ids, mask)
+    own = shuffle_control(trained, ids, mask, perm=torch.arange(B, device=ids.device))
+    dec = shuffle_control(decoy, ids, mask)
+    g = torch.Generator().manual_seed(RANDOM_SEED_BASE + seed)
+    rself = random_replacement(trained, ids, mask, generator=g, self_replace=True)
+    rand = random_replacement(trained, ids, mask, generator=g)
+    cos = cross_row_cosine(trained, ids, mask)
+    a_t = reading["mean_abs_token_delta"]
+    a_d = dec["mean_abs_token_delta"]
+    m = {
+        "statistic": "mean |per-token delta|, trained / untrained decoy "
+        "(#17 Amendment 1; decisive PREREG :33-38)",
+        "A_trained": a_t,
+        "A_decoy": a_d,
+        "ratio": a_t / a_d if a_d else None,
+        # decisive run.py `controls_pass`, the same three, the same tests.
+        "control_memory_disabled_ok": bool(off["delta_exactly_zero"]),
+        "control_memory_disabled_A": off["mean_abs_token_delta"],
+        "control_own_memory_ok": bool(own["delta_exactly_zero"]),
+        "control_own_memory_A": own["mean_abs_token_delta"],
+        "control_live_decoy_ok": a_d > 0.0,
+        # Descriptive only: no threshold, no effect on the band.
+        "cross_row_cosine": cos["mean_offdiag_cosine"],
+        "cross_row_cosine_n_slot_steps": cos["n_slot_steps"],
+        "random_replacement_A": rand["mean_abs_token_delta"],
+        "random_replacement_ratio": (rand["mean_abs_token_delta"] / a_d if a_d else None),
+        "random_self_ok": bool(rself["delta_exactly_zero"]),
+        "delta_nats_per_token": reading["delta_nats_per_token"],
+        "n_real_tokens": reading["n_real_tokens"],
+        "n_measure_documents": B,
+        "memory_gates": reading["memory_gates"],
+        "random_seed": RANDOM_SEED_BASE + seed,
+    }
+    m["band"], m["reason"] = liveness_band(m)
+    return m
