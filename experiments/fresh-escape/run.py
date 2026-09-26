@@ -32,7 +32,12 @@ Order (PREREG "Controls"; each failure overrides everything after it):
 4. The rule: P, R(P), the stream-loss windows at or before P, the classification.
 
 The parent enforces the absolute ``DEADLINE``: at it the children are stopped and
-whatever listed checkpoints exist are measured.
+whatever listed checkpoints exist are measured (fresh-stream's ``run_arm``). Reading
+of "measured on every seed before the deadline": a checkpoint written before the
+children were stopped counts for P even if its measurement finishes after the
+deadline. STIRRING reads this run's heartbeats (steps 3000 onward); fresh-stream's
+own windows over steps 0-2999 were below the threshold on no seed
+(``A.stream_answer_loss_first_window_below`` null on every seed).
 
 Usage::
 
