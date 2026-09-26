@@ -2880,6 +2880,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    return "inert", f"{INERT_MAX_RATIO} < ratio',
         "decisive PREREG :45: the band between is 'reported as such, not rounded "
         "to either outcome'. Folding it into inert is the ruling's own erratum.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::"
+                "test_resume_continues_the_stream_at_the_resumed_step",
+                "that test's tiny stream run measures inconclusive (ratio 0.0506, "
+                "read from its footer 2026-09-26); rounded to inert, train() "
+                "quarantines the checkpoint the test resumes from, so the resume "
+                "cannot find it. The quarantine, seen from a checkpoint consumer.",
+            ),
+        ),
     ),
     Mutation(
         "liveness-wiring: an inconclusive run exits 0",
