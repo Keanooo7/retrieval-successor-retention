@@ -1,0 +1,62 @@
+[
+  {
+    "claim": "Classification at ckpt 3000 is MIXED with CARRY on seed 2 only",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print(r['classification']['value']['outcome'], r['classification']['value']['carry_seeds'])\"",
+    "expected": "MIXED [2]"
+  },
+  {
+    "claim": "Every control passed (reproduction, bit-exact live, residency, coverage, disjointness, closure)",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print(r['controls_ok']['value'])\"",
+    "expected": "True"
+  },
+  {
+    "claim": "Seed 2 ckpt 3000 EXT pooled 17-40 excess over all_slots_resample is 0.1346 [0.1198, 0.1498]",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print([round(r['s2.ckpt3000.EXT.reach.17_40.excess.acc']['value'][k],4) for k in ('point','lo','hi')])\"",
+    "expected": "[0.1346, 0.1198, 0.1498]"
+  },
+  {
+    "claim": "Seed 0 ckpt 3000 EXT pooled excess 0.0105 [0.0011, 0.0201]: CI above 0 but below DELTA 0.03, so not CARRY",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print([round(r['s0.ckpt3000.EXT.reach.17_40.excess.acc']['value'][k],4) for k in ('point','lo','hi')], r['s0.ckpt3000.EXT.labels']['value']['carry'])\"",
+    "expected": "[0.0105, 0.0011, 0.0201] False"
+  },
+  {
+    "claim": "Seed 1 ckpt 3000 EXT pooled excess 0.0025 [-0.0074, 0.0127]",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print([round(r['s1.ckpt3000.EXT.reach.17_40.excess.acc']['value'][k],4) for k in ('point','lo','hi')])\"",
+    "expected": "[0.0025, -0.0074, 0.0127]"
+  },
+  {
+    "claim": "H64 L (primary) is LOCALISED on every seed at ckpt 3000, S SPECIFIC",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print([(r[f's{s}.ckpt3000.H64.labels']['value']['L'], r[f's{s}.ckpt3000.H64.labels']['value']['S']) for s in (0,1,2)])\"",
+    "expected": "[('LOCALISED', 'SPECIFIC'), ('LOCALISED', 'SPECIFIC'), ('LOCALISED', 'SPECIFIC')]"
+  },
+  {
+    "claim": "Reproduction control: H64 live and slots_zeroed equal fresh-stream's raw.json with max abs diff 0.0 on all six cells",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print([r[f'control.s{s}.ckpt{c}']['value']['reproduction'][k]['max_abs_diff'] for s in (0,1,2) for c in (2500,3000) for k in ('live','slots_zeroed')])\"",
+    "expected": "[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]"
+  },
+  {
+    "claim": "Bit-exact live control holds on all 30 loo_readout calls",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print(all(b['ok'] for s in (0,1,2) for c in (2500,3000) for b in r[f'control.s{s}.ckpt{c}']['value']['bitexact']), sum(len(r[f'control.s{s}.ckpt{c}']['value']['bitexact']) for s in (0,1,2) for c in (2500,3000)))\"",
+    "expected": "True 30"
+  },
+  {
+    "claim": "Ledger provenance: run sha 340f6d8, clean tree, seeds [0,1,2], 6 measurements, status ok",
+    "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print(d['provenance']['git_sha'][:7], d['provenance']['dirty'], d['seeds_actually_run'], d['steps_done'], d['status'])\"",
+    "expected": "340f6d8 False [0, 1, 2] 6 ok"
+  },
+  {
+    "claim": "carry-forward's own tests pass",
+    "command": "uv run --extra dev pytest -q tests/test_carry_forward.py",
+    "expected": "exit 0; census passed=35 failed=0 skipped=0 errors=0"
+  },
+  {
+    "claim": "RESULTS.md passes the prose audit",
+    "command": "uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/carry-forward/RESULTS.md",
+    "expected": "exit 0; OK: every number ... resolves to a ledger key"
+  },
+  {
+    "claim": "Full re-run reproduces the classification and the seed-2 excess (about 45 min CPU; needs .worktrees/fresh-stream/runs/fresh-stream read-only)",
+    "command": "uv run python experiments/carry-forward/run.py --run-id carry-forward-verify; uv run python -c \"import json; d=json.load(open('runs/carry-forward-verify/ledger.json')); r={x['key']: x for x in d['rows']}; print(r['classification']['value']['outcome'], round(r['s2.ckpt3000.EXT.reach.17_40.excess.acc']['value']['point'],4))\"",
+    "expected": "exit 0 then 'MIXED 0.1346'"
+  }
+]

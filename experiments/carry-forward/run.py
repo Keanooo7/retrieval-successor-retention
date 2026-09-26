@@ -1142,8 +1142,8 @@ def render_results(doc: dict) -> str:
         "",
         "# carry-forward — RESULTS",
         "",
-        f"- PREREG: `{PREREG}` (commit {PREREG_COMMIT}; Amendments 1 "
-        f"{AMENDMENT_COMMIT} and 2 {AMENDMENT2_COMMIT} appended before any "
+        f"- PREREG: `{PREREG}` (commit {PREREG_COMMIT}; the first amendment "
+        f"{AMENDMENT_COMMIT} and the second {AMENDMENT2_COMMIT} appended before any "
         f"readout). Run SHA: `{prov.get('git_sha')}`, dirty {prov.get('dirty')}. "
         f"Hardware: {prov.get('platform')}, device {doc['device']}, torch threads "
         "per the manifest.",
@@ -1154,7 +1154,8 @@ def render_results(doc: dict) -> str:
         f"Verdict `{doc['verdict']['outcome']}`.",
         f"- `controls_ok`: {val('controls_ok')}. `elapsed_s` {val('elapsed_s')}.",
         "",
-        "Cells are point [95% per-document bootstrap CI]. Accuracy is primary. Key "
+        "Cells are point [per-document bootstrap percentile CI, quantiles in the "
+        "manifest's `bootstrap.q`]. Accuracy is primary. Key "
         "prefix `s<seed>.ckpt<c>.<set>`; every cell is the named ledger key under it.",
         "",
     ]
@@ -1237,7 +1238,8 @@ def render_results(doc: dict) -> str:
             )
         out.append("")
     out += [
-        "Band CIs are uncorrected across the 4 x 3 cells; the decision is the pooled "
+        "Band CIs are uncorrected across the band x seed cells; the decision is "
+        "the pooled "
         "17_40 EXT band only (PREREG). Wrong-looking numbers are printed as measured.",
         "",
     ]

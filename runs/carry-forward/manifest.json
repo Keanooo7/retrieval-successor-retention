@@ -1,0 +1,121 @@
+{
+  "L_SENSITIVITY_MAX_DIFF": 0.15,
+  "M": 16,
+  "amendment2_commit": "e3cfcc2",
+  "amendment_commit": "f4e1c87",
+  "bands": {
+    "17_20": [
+      17,
+      20
+    ],
+    "17_40": [
+      17,
+      40
+    ],
+    "21_24": [
+      21,
+      24
+    ],
+    "25_32": [
+      25,
+      32
+    ],
+    "33_40": [
+      33,
+      40
+    ]
+  },
+  "bootstrap": {
+    "R": 2000,
+    "q": [
+      0.025,
+      0.975
+    ],
+    "seed": 20260926
+  },
+  "checkpoint_sha256": {
+    "seed0/ckpt2500": "26c4162e7dc6ef1f80dffa451e4ee75c56360bc94227533b38a45b62003e3176",
+    "seed0/ckpt3000": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+    "seed1/ckpt2500": "327c3facde61ef9a7f4b9fcaeb31efcf40ab36d65a5d584ec97637db334bdadd",
+    "seed1/ckpt3000": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+    "seed2/ckpt2500": "74b026f1dd3fe59eb473e501c37ed9bb7d836276270ec875939e5654d8e86ddd",
+    "seed2/ckpt3000": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8"
+  },
+  "checkpoints": [
+    2500,
+    3000
+  ],
+  "classification_checkpoint": 3000,
+  "decision_band": "17_40",
+  "device": "cpu",
+  "expected": "MIXED: CARRY on seed 2 only (pooled 17-40 excess ~0.04-0.08, CI clear of 0); L LOCALISED (point >= 0.8) and S SPECIFIC on every seed; L_zero >= L. Second most likely: LOCALISED (PREREG 'Prediction', written before any number of this run).",
+  "falsifier": "Arm B's FIFO memory carries answer information past the eviction of the answer's own slot (CARRY: pooled gap 17-40 excess of live over single-step all-slots-zeroed accuracy >= 0.03 with its 95% per-document CI lower bound > 0, on 1024 unseen documents) on at least one seed at ckpt 3000. Falsified if no seed shows CARRY.",
+  "forbidden": {
+    "fresh_escape": [
+      52160,
+      148160
+    ],
+    "fresh_stream": [
+      4160,
+      52160
+    ],
+    "heldout_H64": [
+      4096,
+      4160
+    ],
+    "vocab_probe_and_n64_training": [
+      0,
+      64
+    ]
+  },
+  "prereg": "experiments/carry-forward/PREREG.md",
+  "prereg_commit": "ca34aa7",
+  "question": "In fresh-stream arm B (FIFO, frozen checkpoints), does a query's answer on an unseen document live in the one memory slot that holds its assert, or is it carried forward past that slot's eviction?",
+  "run_id": "carry-forward",
+  "s003_config": {
+    "batch": 16,
+    "corpus": "synthetic S0-03, SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+    "d": 128,
+    "iters": 300,
+    "lr": 0.001,
+    "masked_loss": true,
+    "max_tokens": 64,
+    "measure_heldout": "generate(SyntheticConfig(n_documents=128, seed=<seed>))[64:]",
+    "measure_train": "generate(SyntheticConfig(seed=<seed>))  # docs 0..63",
+    "memory_slots": 16,
+    "policy": "fifo",
+    "srep_norm_reg_weight": 0.0,
+    "steps_per_stream": 48,
+    "vocab": "derived from the corpus"
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "sets": {
+    "EXT": [
+      64,
+      1088
+    ],
+    "EXT_chunk": 256,
+    "H64": [
+      4096,
+      4160
+    ]
+  },
+  "source": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream",
+  "thresholds": {
+    "L_DIFFUSE_HI": 0.5,
+    "L_LOCALISED_LO": 0.5,
+    "REACH_DELTA": 0.03,
+    "REPRO_TOL": 1e-06,
+    "RESAMPLE_MIN_COVERAGE": 0.8,
+    "S_MIN_COVERAGE": 0.2,
+    "S_NOT_SPECIFIC_LO": 0.25,
+    "S_SPECIFIC_HI": 0.25
+  },
+  "torch": "2.14.0",
+  "torch_threads": 12,
+  "trains": false
+}
