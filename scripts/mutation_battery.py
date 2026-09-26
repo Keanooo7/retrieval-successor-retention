@@ -78,6 +78,14 @@ _REDUCTION_TABLE_COUPLING = (
     "entry makes every reduction test fail to construct a config. The coupling is "
     "the design: one enumeration, not two."
 )
+_REDUCTION_WARMUP_LOUD_COUPLING = (
+    "since correction 31 a policy with T_warm > 0 and no optimizer step set raises "
+    "instead of evicting FIFO. Under `t_warm = inf` every caller of the reduction "
+    "that sets no step -- the accelerator placement test, the reduction's own "
+    "no-counter test -- now fails loudly: the gauntlet 0.1 defect surfacing as an "
+    "error rather than as a silently FIFO reduction. Found by the 2026-09-26 "
+    "review (the raise confirmed in-process); the full battery is the measurement."
+)
 _BUILD_POLICY_INJECTION_COUPLING = (
     "correction 31's train-driven tests put their RSRPolicy into the real train() "
     "by patching build_policy -- the one path S0-01 made the only path. A train() "
@@ -186,6 +194,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    "t_warm": 0.0,',
         '    "t_warm": float("inf"),',
         "gauntlet 0.1: the reduction stops reaching the score path",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                _REDUCTION_WARMUP_LOUD_COUPLING,
+            ),
+            (
+                "tests/test_device_placement.py::"
+                "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+                _REDUCTION_WARMUP_LOUD_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "reduction uses the learned head",
