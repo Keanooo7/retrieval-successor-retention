@@ -112,8 +112,12 @@ def test_one_hundred_evictions_are_attributable_to_the_score(measured):
     cfg = RSRConfig.from_registry(
         "synthetic", steps_per_epoch=0.5, registry=measured, b_enabled=False
     )
-    assert cfg.t_warm == 0.5  # warmup ends immediately; dispatch is t < T_warm
+    assert cfg.t_warm == 0.5  # warmup ends after optimizer step 0; dispatch is k < T_warm
     policy = RSRPolicy(cfg, d_model=4, generator=torch.Generator().manual_seed(0))
+    # Correction 31: the warmup counts optimizer steps `k`, not the sentence `step`
+    # passed below. Until 2026-09-26 this test relied on the sentence index (8..107)
+    # exceeding T_warm, which is the defect.
+    policy.set_train_step(1)
     capacity, written = 8, list(range(8))
     g = torch.Generator().manual_seed(0)
     for step in range(capacity, capacity + 100):
@@ -136,6 +140,7 @@ def test_warmup_is_attributed_to_fifo_not_to_the_score(measured):
         "synthetic", steps_per_epoch=10_000, registry=measured, b_enabled=False
     )
     policy = RSRPolicy(cfg, d_model=4, generator=torch.Generator().manual_seed(0))
+    policy.set_train_step(0)  # correction 31: warm because k = 0 < T_warm
     written = list(range(8))
     for step in range(8, 28):
         st = MemoryState(
