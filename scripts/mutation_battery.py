@@ -127,7 +127,9 @@ _N64_CALL_COUPLING = (
 _EVERY_SEED_COUPLING = (
     "fresh-stream's verdict and scaffold-dose's U call scaffold-timing's `holds` "
     "(imported: experiments/fresh-stream/run.py `ST.holds`), so weakening it to "
-    "any-seed weakens their every-seed readouts too: one rule, three readers."
+    "any-seed weakens their every-seed readouts too; fresh-escape reads R through "
+    "fresh-stream's `arm_readout` (experiments/fresh-escape/run.py `FS.arm_readout`), "
+    "so it is the fourth reader. One rule, four readers."
 )
 _S003_CORPUS_COUPLING = (
     "S0-03: the test reads a property of the in-stream answer token itself (its "
@@ -2226,6 +2228,10 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
             (
                 "tests/test_scaffold_dose.py::test_U_needs_every_seed",
+                _EVERY_SEED_COUPLING,
+            ),
+            (
+                "tests/test_fresh_escape.py::test_R_needs_every_seed_and_reads_P_only",
                 _EVERY_SEED_COUPLING,
             ),
         ),
