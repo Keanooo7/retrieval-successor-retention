@@ -229,3 +229,98 @@ The ckpt-2500 readouts are reported with the same labels, but they are not class
   nothing about the mechanism of carrying. Which later gestalts carry the fact is not measured here.
 - The seed-2 carry was seen before this PREREG, so a confirmation is a replication on new documents,
   not a test of a hypothesis blind to it.
+
+---
+
+## Amendment 1 — 2026-09-26, before any readout of this run
+
+**What prompted it:**
+- The manager's review of the instrument, PR #48, majors M1–M3. This is not data from this run.
+- The review quotes smoke numbers from a different checkpoint (corpus-size n64 seed 0 ckpt 1000,
+  716 in-memory targets). The mean answer NLL there was:
+  - live 6.19
+  - own_zero 7.56
+  - own_resample 7.55
+  - all_slots_zeroed 7.44
+
+  So a single-slot knockout cost more than zeroing every slot.
+- `all_slots_zeroed` is therefore not a like-for-like denominator for a resample numerator. Its
+  "excess" also mixes the effect of the memory's content with the effect of an out-of-distribution
+  input.
+- The instrument is being revised on `eng/loo` (test contract `1643d3e`). This run uses the revised
+  head.
+- **No `loo_readout` output on any arm B checkpoint has been produced or seen.** The only thing run
+  on arm B so far is the reproduction control (control 2) as a plumbing check. On all six cells it
+  reproduced fresh-stream's H64 `live` / `slots_zeroed` summaries with max |diff| 0.0. Those numbers
+  were already known (table above).
+
+**Changes.** Everything not listed here stands as written above.
+
+**A1 (M1): L is like-for-like, and a ratio of sums only**
+- **L** (primary) = (Σ live_ok − Σ own_resample_ok) / (Σ live_ok − Σ all_slots_resample_ok).
+  `all_slots_resample` puts another document's whole memory at the same step in place of this
+  row's, with the queried key excluded.
+- **L_zero** (secondary; out of distribution) = (Σ live_ok − Σ own_zero_ok) / (Σ live_ok − Σ
+  all_slots_zeroed_ok).
+- Both are ratios of sums with the per-document cluster bootstrap. They are never averaged per row.
+- The L population is: gap 2..M, `own_status` resident, both `own_resample` and
+  `all_slots_resample` applied, and not `dup_key_in_doc` (A3).
+- RESAMPLE_MIN_COVERAGE (0.80) now applies to "both resamples applied" among the gap 2..M targets.
+- **Denominator guard:** if the 95% CI lower bound of the mean (live_ok − all_slots_resample_ok) on
+  the L population is ≤ 0, L is **INDETERMINATE**, whatever its own CI. The memory is then not shown
+  to matter within the window, so there is nothing to localise.
+- The nll16 analogues stay secondary. So does `live − memory_off` (all slots masked for the query's
+  forward), which is reported with its CI as the memory's in-window contribution.
+
+**A2 (M2): the bos-copy context**
+- L was already restricted to gap 2..M, so the gap-1 case, where the bos context is the assert's own
+  gestalt, is excluded.
+- In addition, the `*_bos_off` twin of each primary quantity is reported as a secondary, unlabelled:
+  L, S's ratio, and reach excess, each on the same population.
+
+**A3 (M3): answer-object leaks**
+The revised instrument excludes donors that carry the answer object. As well as that:
+- **The L population excludes** rows with `dup_key_in_doc`. There, the same question is asserted
+  twice in the document, so knocking out one slot need not remove the fact.
+- **The S population is** the L population, restricted to:
+  - `ctrl_status == 0`;
+  - `ctrl_resample` applied;
+  - not `ctrl_same_object` (a control assert whose object is the queried answer);
+  - not `own_donor_same_object` and not `ctrl_donor_same_object` (should be empty after the
+    instrument's exclusion; checked and reported).
+- S stays paired, own against control on the **same rows**.
+- The reported coverage is n_S / n_L. S_MIN_COVERAGE (0.20) applies to it.
+- The counts excluded by each rule are reported.
+
+**A4 (M1): the reach baseline is `all_slots_resample`**
+- **excess** = mean(live_ok − all_slots_resample_ok), paired per target. The population is EXT,
+  `own_status` evicted, gap in band, `all_slots_resample` applied, and not `dup_key_in_doc`.
+- **Why this baseline.** It holds the memory in distribution (a real memory at the same fill level)
+  and removes only *this document's* content at the query's forward. It is also L's denominator
+  after A1.
+- **The donor memory may contain the answer object** in an assert of another question
+  (`all_donor_has_object`). That is chance-level information a generic memory would carry, so those
+  rows are **not** excluded. Their rate is reported.
+- **Secondaries, reported with CIs and not classified:**
+  - excess over `all_slots_zeroed` (the original A4 baseline);
+  - excess over `memory_off`;
+  - excess over S0-03's trajectory-wide `slots_zeroed`;
+  - the `_bos_off` twin (live_bos_off − all_slots_resample_bos_off).
+- **CARRY(s)** is unchanged in form: the pooled 17–40 excess ≥ 0.03 with its CI lower bound > 0, now
+  over `all_slots_resample`.
+- Resample coverage for reach is reported. **If fewer than 0.80 of the evicted gap 17–40 EXT
+  targets of a seed have `all_slots_resample` applied, that seed's CARRY is not decidable, and the
+  run is inconclusive (exit 3).**
+
+**A5: the instrument head**
+- `loo_readout` is taken from the revised `eng/loo` head that this branch is rebased on. Its sha is
+  recorded in the manifest as the run's git sha. That head contains it.
+- Controls 3 (bit-exact live) and 5 (residency) carry over:
+  - Control 3 now also covers the `*_bos_off` columns of `live` against `answer_readout(cond=
+    "live_bos_off")`, if S0-03 has that condition. If it does not, only `live` is checked.
+  - Control 5 is now `own_status == resident` iff gap ≤ M, among targets whose assert was written.
+
+**The classification table and the prediction are unchanged.** The prediction was MIXED (seed 2
+only), with L LOCALISED and S SPECIFIC. The one addition to the prediction is that L_zero may
+exceed 1, as the review's smoke numbers suggest. That is expected, and it is why L_zero is not
+primary.
