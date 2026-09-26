@@ -115,6 +115,17 @@ _CAPTURE_BRIDGE_COUPLING = (
     "reward, which is the failure this file was written to detect."
 )
 
+_LOOKAHEAD_READS_R_COUPLING = (
+    "lookahead-room (W10) reads r_i through the same retrieval_demand(gated=True) "
+    "and pins it on E0e's hand-built trace; an edit to reward.py reddening that "
+    "test is the target seen from the experiment that consumes it."
+)
+_LOOKAHEAD_S003_COUPLING = (
+    "lookahead-room's tiny-model tests build answer targets from the default "
+    "synthetic corpus via answer_targets, which refuses an out-of-band corpus: the "
+    "S0-03 refusal, seen from W10's harness."
+)
+
 _S003_REFUSAL_COUPLING = (
     "S0-03: `rsr.train.loop.answer_targets` REFUSES a corpus whose answers are out "
     "of band rather than return an empty supervision mask, and `train()` calls it, "
@@ -543,6 +554,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_e0e.py::test_r_i_is_the_gated_rescaled_target",
                 _E0E_READS_R_COUPLING,
             ),
+            (
+                "tests/test_lookahead_room.py::test_r_i_is_e0es_gated_rescaled_target",
+                _LOOKAHEAD_READS_R_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -605,6 +620,10 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_e0e.py::test_r_i_is_the_gated_rescaled_target",
                 _E0E_READS_R_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::test_r_i_is_e0es_gated_rescaled_target",
+                _LOOKAHEAD_READS_R_COUPLING,
             ),
         ),
     ),
@@ -992,6 +1011,27 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "observe never reached no sentence is seen live and every lifetime "
                 "reads 0: the same call site, seen from E0e.",
             ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                "lookahead-room records r_i and runs its probes and online_g0 rule from "
+                "observe(); never reached, no demand is recorded: the same call site, "
+                "seen from W10.",
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one",
+                "lookahead-room records r_i and runs its probes and online_g0 rule from "
+                "observe(); never reached, no demand is recorded: the same call site, "
+                "seen from W10.",
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_online_g0_evicts_its_own_argmin_and_replays_model_free",
+                "lookahead-room records r_i and runs its probes and online_g0 rule from "
+                "observe(); never reached, no demand is recorded: the same call site, "
+                "seen from W10.",
+            ),
         ),
     ),
     # ----------------------------------------------------------------------- #
@@ -1336,6 +1376,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "E-feas reads oracle - FIFO as an upper bound on what retention can buy. An "
         "oracle that is not optimal makes that bound a lower number than the truth, "
         "and 'oracle ~= FIFO' would then be a finding about the oracle.",
+        off_gate_allowed=(
+            (
+                "tests/test_lookahead_room.py::"
+                "test_control2_reproduces_the_red_team_on_seed_0",
+                "W10's control C2 re-derives the red team's oracle - FIFO headroom "
+                "and the oracle / pending-FIFO identity through OraclePolicy: an "
+                "anti-oracle fails both, the oracle seen from that control.",
+            ),
+        ),
     ),
     Mutation(
         "checkpoints written straight to the final path",
@@ -1365,6 +1414,26 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_fresh_stream.py::test_default_path_config_is_unchanged",
                 _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                _LOOKAHEAD_S003_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_the_probes_never_feed_back_into_the_fifo_rollout",
+                _LOOKAHEAD_S003_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one",
+                _LOOKAHEAD_S003_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_online_g0_evicts_its_own_argmin_and_replays_model_free",
+                _LOOKAHEAD_S003_COUPLING,
             ),
             (
                 "tests/test_fresh_stream.py::"
