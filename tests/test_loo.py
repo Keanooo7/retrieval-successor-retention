@@ -770,9 +770,11 @@ def test_all_slots_resample_donor_excludes_the_queried_key():
     assert (r["all_donor_row"][res] == -1).all()
 
 
-def _ctrl_rekeyed_world():
+def _ctrl_rekeyed_world(*, same_object=False):
     """A record with a control present; every adjacent pending assert rewritten
-    to ask the query's own question. -> (model, docs, tensors..., (b, t))."""
+    to ask the query's own question (or, with ``same_object``, to keep its
+    question and carry the query's answer object). -> (model, docs, tensors...,
+    (b, t))."""
     model, docs, ids, mask, tmask, gap, sym = _world()
     r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
     ann = loo.stream_annotations(docs, steps=S)
@@ -787,7 +789,10 @@ def _ctrl_rekeyed_world():
             s = t - k + rk
             if int(ann["kind"][b, s]) == 1 and int(ann["query_of"][b, s]) > t:
                 q = qa[s]
-                doc = _set_fact(doc, s, q, _key_of(doc, t), doc.sentences[q].answer)
+                if same_object:
+                    doc = _set_fact(doc, s, q, _key_of(doc, q), doc.sentences[t].answer)
+                else:
+                    doc = _set_fact(doc, s, q, _key_of(doc, t), doc.sentences[q].answer)
                 n += 1
     assert n > 0
     docs = tuple(doc if j == b else d for j, d in enumerate(docs))
@@ -827,6 +832,7 @@ def test_object_flags_and_the_donor_object_exclusion():
     r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
     ann = loo.stream_annotations(docs, steps=S)
     obj = ann["object_id"]
+    r0_same = r["ctrl_same_object"].sum()
     n_ctrl_same = 0
     for i in range(r["t"].numel()):
         b, t = int(r["row"][i]), int(r["t"][i])
@@ -851,7 +857,15 @@ def test_object_flags_and_the_donor_object_exclusion():
             int(ann["kind"][d, s]) == 1 and int(obj[d, s]) == ans for s in held
         )
         assert bool(r["all_donor_has_object"][i]) == has
-    assert n_ctrl_same > 0  # the fixture exercises the flag
+    # the flag fires where the control does carry the answer object
+    model, docs, ids, mask, tmask, gap, sym, (b, t) = _ctrl_rekeyed_world(
+        same_object=True
+    )
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    i = int(((r["row"] == b) & (r["t"] == t)).nonzero()[0])
+    assert int(r["ctrl_status"][i]) == loo.CTRL_PRESENT
+    assert bool(r["ctrl_same_object"][i])
+    assert n_ctrl_same == int(r0_same)
 
 
 def test_own_status_distinguishes_evicted_from_never_written():
