@@ -49,6 +49,7 @@ from __future__ import annotations
 import gzip
 import importlib.util
 import json
+import math
 import os
 import random
 import subprocess
@@ -427,6 +428,12 @@ def control2_compare(
             if theirs is None and mine is None:
                 continue
             if theirs is None or mine is None:
+                bad.append(key)
+                continue
+            # A NaN on either side -- or both -- is never a reproduction:
+            # `abs(nan - nan) > tol` is False and `max(0.0, nan)` is 0.0, so the
+            # comparison alone would pass it silently. Same for an infinity.
+            if not (math.isfinite(float(mine)) and math.isfinite(float(theirs))):
                 bad.append(key)
                 continue
             d = abs(float(mine) - float(theirs))

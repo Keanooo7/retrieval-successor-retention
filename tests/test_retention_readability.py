@@ -207,6 +207,21 @@ def test_control2_tolerance_and_missing_keys():
     assert not miss["ok"] and miss["missing"] == [k]
 
 
+def test_control2_fails_on_nan_on_either_or_both_sides():
+    """`abs(nan - nan) > tol` is False, so a NaN on both sides used to pass, and
+    `max(worst, nan)` kept `max_abs_diff` at 0.0. A NaN is never a reproduction."""
+    nan, k = float("nan"), "B.ckpt3000.heldout.live.all.answer_acc"
+    for mine, theirs in ((nan, nan), (nan, 0.5), (0.5, nan)):
+        m = _measured(0.5)
+        b, rd = k.split(".")[-2:]
+        m["heldout"]["live"][b][rd] = mine
+        ref = _ref(0.5)
+        ref[k]["samples"] = [theirs] * 3
+        got = run.control2_compare(m, ref, "B", 3000, 1)
+        assert not got["ok"], (mine, theirs, got)
+        assert got["out_of_tolerance"] == [k], (mine, theirs, got)
+
+
 def test_disjointness_catches_overlap():
     assert run.disjointness()["ok"]
     for bad in ((0, 100), (4000, 4100), (5000, 6000), (60000, 60001)):

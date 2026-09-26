@@ -2360,6 +2360,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "discounted_demand(doc, 0.97) of the document being run.",
     ),
     Mutation(
+        "retention-readability: control 2 passes a NaN again",
+        "test_control2_fails_on_nan_on_either_or_both_sides",
+        "experiments/retention-readability/run.py",
+        "            if not (math.isfinite(float(mine)) and "
+        "math.isfinite(float(theirs))):",
+        "            if False:",
+        "retention-readability PREREG control 2: abs(nan - nan) > tol is False, so "
+        "without the finiteness guard a NaN on both sides reproduces the reference "
+        "and max_abs_diff stays 0.0.",
+    ),
+    Mutation(
         "retention-readability: rank index read newest-first",
         "test_rank_index_is_M_minus_gap_under_fifo",
         "experiments/retention-readability/run.py",
