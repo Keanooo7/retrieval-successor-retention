@@ -67,7 +67,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from rsr.baselines.fifo import FIFOPolicy  # noqa: E402
 from rsr.baselines.oracle import OraclePolicy  # noqa: E402
 from rsr.data.synthetic import ANSWER_SYMBOLS, discounted_demand  # noqa: E402
-from rsr.exit_codes import ArgumentParser, Exit, run_main  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, run_main, status  # noqa: E402
 from rsr.metrics.headroom import simulate  # noqa: E402
 from rsr.model.tg.policy_loop import run_policy_loop  # noqa: E402
 from rsr.train.loop import (  # noqa: E402
@@ -1185,7 +1185,7 @@ def main(argv: list[str] | None = None) -> Exit:
     a = ap.parse_args(argv)
     source = a.source or default_source()
     if a.single:
-        return Exit(child(a.arm, a.checkpoint, a.seed, source, a.out))
+        return status(child(a.arm, a.checkpoint, a.seed, source, a.out))
     root = a.runs_root / RUN_ID
     if a.render_results:
         doc = json.loads((root / "ledger.json").read_text())
@@ -1214,7 +1214,7 @@ def main(argv: list[str] | None = None) -> Exit:
         note="the parent; its exit code is the run's",
     )
     led.write()
-    return rc
+    return status(rc)
 
 
 if __name__ == "__main__":
