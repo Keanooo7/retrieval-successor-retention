@@ -277,3 +277,52 @@ def test_the_run_never_calls_record(lr):
         and getattr(n.func, "attr", getattr(n.func, "id", None)) == "record"
     ]  # fmt: skip
     assert calls == []
+
+
+# --------------------------------------------------------------------------- #
+# C1 as amended (PREREG Amendment 1)
+# --------------------------------------------------------------------------- #
+
+
+def _c1_inputs(lr, oks):
+    """Three gap-1 answers on doc 4096; a reference ledger holding S0-03's float32
+    means for every bucket they fall in."""
+    answers = [(4096, 10 + i, 1, ok, 0.5) for i, ok in enumerate(oks)]
+    gap = torch.tensor([1] * len(oks))
+    okt = torch.tensor(oks)
+    ref = {}
+    for b, sel in lr.S003.BUCKETS.items():
+        m = sel(gap)
+        if int(m.sum()):
+            acc = float(okt[m].float().mean())
+            ref[f"B.ckpt3000.heldout.live.{b}.answer_acc"] = {"samples": [acc] * 3}
+            ref[f"B.ckpt3000.heldout.live.{b}.answer_nll"] = {"samples": [0.5] * 3}
+    batched = {(a[0], a[1]): a[3] for a in answers}
+    return answers, batched, ref
+
+
+def test_c1_passes_on_float32_exact_accuracy_that_float64_misses(lr):
+    """1/3 in float32 is not 1/3 in float64: run 1's failure, which the amended C1
+    must pass -- and still report the float64 gap descriptively."""
+    answers, batched, ref = _c1_inputs(lr, [True, False, False])
+    c = lr.control1(answers, batched, ref, 3000, 0)
+    assert c["ok"], c
+    assert c["argmax_mismatches"] == 0
+    assert c["max_abs_acc_diff"] > 1e-12
+
+
+def test_c1_fails_on_one_argmax_mismatch_or_a_wrong_accuracy(lr):
+    answers, batched, ref = _c1_inputs(lr, [True, False, False])
+    flipped = dict(batched)
+    flipped[(4096, 11)] = True
+    c = lr.control1(answers, flipped, ref, 3000, 0)
+    assert not c["ok"] and c["argmax_mismatches"] == 1
+    k = "B.ckpt3000.heldout.live.all.answer_acc"
+    ref[k] = {"samples": [0.5] * 3}
+    assert not lr.control1(answers, batched, ref, 3000, 0)["ok"]
+
+
+def test_run_1_is_never_overwritten(lr, tmp_path):
+    rc = lr.main(["--run-id", "lookahead-room", "--runs-root", str(tmp_path)])
+    assert int(rc) == 3
+    assert not (tmp_path / "lookahead-room").exists()

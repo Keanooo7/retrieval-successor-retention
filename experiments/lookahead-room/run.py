@@ -61,7 +61,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from rsr.baselines.fifo import FIFOPolicy  # noqa: E402
 from rsr.baselines.oracle import OraclePolicy  # noqa: E402
 from rsr.data.synthetic import ANSWER_SYMBOLS, discounted_demand  # noqa: E402
-from rsr.exit_codes import ArgumentParser, Exit, run_main, status  # noqa: E402
+from rsr.exit_codes import (  # noqa: E402
+    ArgumentParser,
+    Exit,
+    did_not_run,
+    run_main,
+    status,
+)
 from rsr.metrics.headroom import simulate  # noqa: E402
 from rsr.model.tg.policy_loop import (  # noqa: E402
     cross_capture,
@@ -72,9 +78,13 @@ from rsr.retention.reward import retrieval_demand  # noqa: E402
 from rsr.train.loop import answer_targets, build_vocab, encode  # noqa: E402
 
 EXPERIMENT = "experiments/lookahead-room/run.py"
-RUN_ID = "lookahead-room"
+#: Run 1 (`lookahead-room`, INCONCLUSIVE on C1) is on the record; Amendment 1's
+#: re-run is `lookahead-room-r2`, the default from Amendment 1 on.
+RUN_ID = "lookahead-room-r2"
+RESULTS_FILE = {"lookahead-room": "RESULTS.md", "lookahead-room-r2": "RESULTS-r2.md"}
 PREREG = "experiments/lookahead-room/PREREG.md"
 PREREG_COMMIT = "527daf4"
+AMENDMENT1_COMMIT = "674dd37"
 
 
 def _load(name: str, rel: str):
@@ -125,7 +135,7 @@ N_BOOT = 2000
 BOOT_SEED_BASE = 20260926
 SUM_TOL = 1e-5  # E0e's
 IDENTITY_TOL = 1e-6
-ACC_TOL = 1e-12
+ACC_TOL = 1e-12  # run 1 only; superseded by Amendment 1 (float32-exact)
 NLL_TOL = 1e-4
 C2_ORACLE = {0: 0.1852, 1: 0.1739, 2: 0.1896}
 C2_KINDRAND = {0: 0.1498, 1: 0.1403, 2: 0.1577}
@@ -764,46 +774,75 @@ def reference_rows(source: Path) -> dict[str, dict]:
     return {r["key"]: r for r in doc["rows"] if isinstance(r.get("key"), str)}
 
 
-def control1(answers: list[tuple[int, bool, float]], ref, label: int, seed: int) -> dict:
-    """``answers``: (gap, ok, nll) over P, FIFO rollout. Per S0-03 bucket."""
-    gap = torch.tensor([a[0] for a in answers])
-    ok = torch.tensor([a[1] for a in answers], dtype=torch.float64)
-    nll = torch.tensor([a[2] for a in answers], dtype=torch.float64)
+def control1(
+    answers: list[tuple[int, int, int, bool, float]],
+    batched_ok: dict[tuple[int, int], bool],
+    ref,
+    label: int,
+    seed: int,
+) -> dict:
+    """C1 as amended (PREREG Amendment 1). ``answers``: (doc, q, gap, ok, nll) over P
+    from the B = 1 FIFO rollout; ``batched_ok[(doc, q)]``: S0-03's
+    ``answer_readout(cond="live")`` batched over P.
+
+    Passes iff (1) every argmax-correct flag equals the batched instrument's, and
+    (2) per S0-03 bucket the float32 mean ``float(ok.float().mean())`` -- how the
+    reference ledger computed it -- equals the ledger sample exactly. The float64
+    |diff| and ``answer_nll`` stay descriptive (run 1's C1 failed on the former)."""
+    keys = [(a[0], a[1]) for a in answers]
+    mism = sum(batched_ok.get(k) != a[3] for k, a in zip(keys, answers, strict=True))
+    missing_keys = sum(k not in batched_ok for k in keys)
+    gap = torch.tensor([a[2] for a in answers])
+    okb = torch.tensor([a[3] for a in answers])
+    ok64 = okb.to(torch.float64)
+    nll = torch.tensor([a[4] for a in answers], dtype=torch.float64)
     worst_acc, worst_nll, bad, missing = 0.0, 0.0, [], []
     for b, sel in S003.BUCKETS.items():
         msk = sel(gap)
         if int(msk.sum()) == 0:
             continue
-        for rd, mine, tol in (
-            ("answer_acc", float(ok[msk].mean()), ACC_TOL),
-            ("answer_nll", float(nll[msk].mean()), NLL_TOL),
-        ):
+        for rd in ("answer_acc", "answer_nll"):
             key = f"B.ckpt{label}.heldout.live.{b}.{rd}"
             row = ref.get(key)
             if row is None or len(row.get("samples", [])) <= SEEDS.index(seed):
                 missing.append(key)
                 continue
             theirs = row["samples"][SEEDS.index(seed)]
-            if theirs is None or not (
-                math.isfinite(mine) and math.isfinite(float(theirs))
-            ):
+            if theirs is None or not math.isfinite(float(theirs)):
                 bad.append(key)
                 continue
-            d = abs(mine - float(theirs))
             if rd == "answer_acc":
-                worst_acc = max(worst_acc, d)
+                worst_acc = max(worst_acc, abs(float(ok64[msk].mean()) - theirs))
+                if float(okb[msk].float().mean()) != float(theirs):
+                    bad.append(key)
             else:
+                d = abs(float(nll[msk].mean()) - float(theirs))
                 worst_nll = max(worst_nll, d)
-            if d > tol:
-                bad.append(key)
+                if not d <= NLL_TOL:
+                    bad.append(key)
     return {
-        "ok": not bad and not missing,
+        "ok": not bad and not missing and mism == 0 and missing_keys == 0,
+        "argmax_mismatches": mism,
+        "argmax_keys_missing": missing_keys,
         "max_abs_acc_diff": worst_acc,
         "max_abs_nll_diff": worst_nll,
         "out_of_tolerance": bad,
         "missing": missing,
         "n_answers": len(answers),
     }
+
+
+def batched_readout_ok(model, p_docs, vmap, sym_ids) -> dict[tuple[int, int], bool]:
+    """S0-03's ``answer_readout(cond="live")`` over P in one batch, as the
+    fresh-stream ledger measured it: ``{(doc_id, q): argmax-correct}``."""
+    ids, mask = encode(list(p_docs), vmap, max_tokens=L, steps=S)
+    tm, gap = answer_targets(list(p_docs), vmap, max_tokens=L, steps=S)
+    r = S003.answer_readout(model, ids, mask, tm, gap, sym_ids, cond="live")
+    keys = []
+    for t in range(S):
+        for b, _pos in tm[:, t, 1:].nonzero().tolist():
+            keys.append((p_docs[b].doc_id, t))
+    return dict(zip(keys, (bool(x) for x in r["ok"].tolist()), strict=True))
 
 
 # --------------------------------------------------------------------------- #
@@ -845,6 +884,9 @@ def measure_doc(model, doc, vmap, sym_ids, seed: int, m: int, acc: dict) -> dict
         "identity_worst": fifo["identity_worst"],
         "n_probe_rows": fifo["n_probe_rows"],
         "fifo_answers": [(gap_of[t], ok, nll) for t, ok, nll in fifo["answers"]],
+        "fifo_answers_keyed": [
+            (doc.doc_id, t, gap_of[t], ok, nll) for t, ok, nll in fifo["answers"]
+        ],
         "online_answers": [(gap_of[t], ok, nll) for t, ok, nll in online["answers"]],
         "D": fifo["D"],
     }
@@ -870,12 +912,16 @@ def child(label: int, seed: int, source: Path, out: Path, limit: int | None) -> 
         r = measure_doc(model, doc, vmap, sym_ids, seed, M, acc)
         raw_D[doc.doc_id] = r.pop("D")
         if P_SET[0] <= doc.doc_id < P_SET[1]:
-            p_answers += r["fifo_answers"]
+            p_answers += r.pop("fifo_answers_keyed")
+        else:
+            r.pop("fifo_answers_keyed")
         per_doc.append(r)
         if n % 50 == 0:
             print(f"doc {n}/{len(docs)} {time.time() - t0:.0f}s", flush=True)
     ref = reference_rows(source)
-    c1 = control1(p_answers, ref, label, seed) if p_answers else {"ok": False}
+    p_docs = [d for d in docs if P_SET[0] <= d.doc_id < P_SET[1]]
+    batched = batched_readout_ok(model, p_docs, vmap, sym_ids) if p_docs else {}
+    c1 = control1(p_answers, batched, ref, label, seed) if p_answers else {"ok": False}
     payload = {
         "checkpoint": label,
         "seed": seed,
@@ -1198,11 +1244,13 @@ def write_rows(led, summaries: dict, dec: dict) -> None:
         led.note(f"{k}.controls", x["controls"], how="child payload")
 
 
-def manifest_config(source: Path) -> dict:
+def manifest_config(source: Path, run_id: str = RUN_ID) -> dict:
     return {
-        "run_id": RUN_ID,
+        "run_id": run_id,
         "prereg": PREREG,
         "prereg_commit": PREREG_COMMIT,
+        "amendment1_commit": AMENDMENT1_COMMIT,
+        "amendment1": "C1 = argmax identity + float32-mean accuracy exact",
         "question": QUESTION,
         "falsifier": FALSIFIER,
         "expected": EXPECTED,
@@ -1240,7 +1288,7 @@ def manifest_config(source: Path) -> dict:
 # --------------------------------------------------------------------------- #
 
 
-def render_results(doc: dict) -> str:
+def render_results(doc: dict, run_id: str = RUN_ID) -> str:
     rows = {r["key"]: r for r in doc["rows"]}
     prov = doc["provenance"]
 
@@ -1256,10 +1304,11 @@ def render_results(doc: dict) -> str:
         return f"{st(prefix + '.point', i)} [{lo}, {hi}]"
 
     out = [
-        "# RESULTS — lookahead room (W10)",
+        f"# RESULTS — lookahead room (W10), run `{run_id}`",
         "",
-        f"Rendered from `runs/{RUN_ID}/ledger.json` by `{EXPERIMENT} --render-results`. "
-        f"PREREG `{PREREG}` (commit `{PREREG_COMMIT}`). Run sha "
+        f"Rendered from `runs/{run_id}/ledger.json` by `{EXPERIMENT} --render-results "
+        f"--run-id {run_id}`. PREREG `{PREREG}` (commit `{PREREG_COMMIT}`; "
+        f"Amendment 1 `{AMENDMENT1_COMMIT}`). Run sha "
         f"`{prov.get('git_sha')}`, platform `{prov.get('platform')}`, device `cpu`.",
         "",
         f"Command: `uv run python {EXPERIMENT}` (children under `commands` in the "
@@ -1401,15 +1450,16 @@ def main(argv: list[str] | None = None) -> Exit:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--render-results", action="store_true")
     ap.add_argument("--runs-root", type=Path, default=ROOT / "runs")
+    ap.add_argument("--run-id", default=RUN_ID, choices=sorted(RESULTS_FILE))
     a = ap.parse_args(argv)
     source = a.source or default_source()
     if a.single:
         return status(child(a.checkpoint, a.seed, source, a.out, a.limit))
-    root = a.runs_root / RUN_ID
+    root = a.runs_root / a.run_id
     if a.render_results:
         doc = json.loads((root / "ledger.json").read_text())
-        (ROOT / "experiments" / "lookahead-room" / "RESULTS.md").write_text(
-            render_results(doc)
+        (ROOT / "experiments" / "lookahead-room" / RESULTS_FILE[a.run_id]).write_text(
+            render_results(doc, a.run_id)
         )
         return Exit.OK
     if a.dry_run:
@@ -1423,9 +1473,14 @@ def main(argv: list[str] | None = None) -> Exit:
         return Exit.OK
     from ledger import Ledger
 
-    led = Ledger(RUN_ID, question=QUESTION, runs_root=a.runs_root)
+    if a.run_id == "lookahead-room":
+        return did_not_run(
+            "run 1 (lookahead-room) is on the record and is not overwritten; "
+            "Amendment 1's re-run is --run-id lookahead-room-r2"
+        )
+    led = Ledger(a.run_id, question=QUESTION, runs_root=a.runs_root)
     led.run_meta(device="cpu", steps_requested=0, steps_done=0)
-    led.manifest(manifest_config(source))
+    led.manifest(manifest_config(source, a.run_id))
     rc = execute(led, source, root)
     led.command(
         [sys.executable, EXPERIMENT] + (argv if argv is not None else sys.argv[1:]),
