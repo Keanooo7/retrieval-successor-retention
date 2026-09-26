@@ -259,6 +259,13 @@ _LIVENESS_TRAIN_S003_COUPLING = (
     "liveness batch is built from it), so a corpus answer_targets refuses cannot "
     "train: _S003_REFUSAL_COUPLING, seen from the liveness tests."
 )
+_T_WARM_TRAIN_S003_COUPLING = (
+    "correction 31's train-driven tests put an RSRPolicy into the real train() on "
+    "the default corpus, so a corpus answer_targets refuses cannot train: "
+    "_S003_REFUSAL_COUPLING, seen from the warmup tests. Undeclared since PR #47; "
+    "found by liveness-wiring's subset battery (2026-09-26) and confirmed on "
+    "cd41d4e with the two tests alone."
+)
 _LANE_FLOCK_COUPLING = (
     "orchestrator: the flock is the only thing that makes a slot exclusive, and "
     "every one of these asserts that a held slot is held -- against a second "
@@ -1430,6 +1437,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 for t in (
                     "test_default_corpus_call_is_unchanged",
                     "test_default_path_config_hash_is_s003s",
+                )
+            ),
+            *(
+                (f"tests/test_t_warm_dispatch.py::{t}", _T_WARM_TRAIN_S003_COUPLING)
+                for t in (
+                    "test_warm_status_never_flips_inside_one_stream",
+                    "test_warmup_below_S_covers_whole_training_steps",
                 )
             ),
             *(
