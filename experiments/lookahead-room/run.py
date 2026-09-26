@@ -1275,8 +1275,8 @@ def render_results(doc: dict) -> str:
         f"{rows['controls_failed']['value'] or 'none'}",
         "",
         "🔴 The rule hit rates are an upper-bound-style proxy from FIFO-world targets "
-        "(demand-if-resident probes), not RSR's result; the gamma > 0 targets are "
-        "hindsight. See PREREG.",
+        "(demand-if-resident probes), not RSR's result; the discounted-return "
+        "targets are hindsight. See PREREG.",
         "",
     ]
     for c in CHECKPOINTS:
@@ -1342,7 +1342,7 @@ def render_results(doc: dict) -> str:
                             )
         out += [
             "",
-            "Pending asserts by k (steps to query; the last bin pools k > 16):",
+            "Pending asserts by k (steps to query; the last bin pools every k above M):",
             "",
             "| key | seed0 | seed1 | seed2 |",
             "|---|---|---|---|",
@@ -1377,9 +1377,7 @@ def render_results(doc: dict) -> str:
         ):
             if k in rows:
                 out.append(
-                    f"| `{k}` | "
-                    + " | ".join(f"{v:.3g}" for v in rows[k]["samples"])
-                    + " |"
+                    f"| `{k}` | " + " | ".join(repr(v) for v in rows[k]["samples"]) + " |"
                 )
         out.append("")
     return "\n".join(out) + "\n"
