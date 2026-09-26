@@ -1,0 +1,28 @@
+{
+  "status": "ok",
+  "seed": "1f05337f747d3cf348187ef67dca3d1ca1d51e23368cca8e46fe9e746bbf7a54",
+  "claims": [
+    {
+      "claim": "Classification at ckpt 3000 is MIXED with CARRY on seed 2 only",
+      "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print(r['classification']['value']['outcome'], r['classification']['value']['carry_seeds'])\"",
+      "expected": "MIXED [2]",
+      "observed": "MIXED [2] (rc 0) | independent: recomputed from records-s*-ckpt3000.pt with own code, pooled 17-40 EXT excess over all_slots_resample = s0 0.010491 [0.001114,0.020100], s1 0.002517 [-0.007416,0.012691], s2 0.134648 [0.119780,0.149766] (registered bootstrap replica; independent numpy bootstrap gives the same carry labels) -> MIXED [2]; under the all_slots_zeroed baseline also MIXED [2] (s2 0.140282 [0.126126,0.154633], s0 0.011872, s1 0.004755). run.py carry() reads excess.acc = live - all_slots_resample. Seed 2 ckpt 3000 re-executed at 340f6d8, 12 threads: all 78 record tensors (H64 and EXT) torch.equal to the committed records, rc 0.",
+      "match": true
+    },
+    {
+      "claim": "Seed 0 ckpt 3000 EXT pooled excess 0.0105 [0.0011, 0.0201]: CI above 0 but below DELTA 0.03, so not CARRY",
+      "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print([round(r['s0.ckpt3000.EXT.reach.17_40.excess.acc']['value'][k],4) for k in ('point','lo','hi')], r['s0.ckpt3000.EXT.labels']['value']['carry'])\"",
+      "expected": "[0.0105, 0.0011, 0.0201] False",
+      "observed": "[0.0105, 0.0011, 0.0201] False (rc 0) | independent: my recomputation point 0.010491441192711209, registered-scheme CI [0.0011138416729242042, 0.020099534328215075] (bit-equal to ledger); independent numpy bootstrap [0.0008, 0.0206]; n=3622, 1010 docs; 0.0105 < 0.03 so not CARRY under either CI.",
+      "match": true
+    },
+    {
+      "claim": "H64 L (primary) is LOCALISED on every seed at ckpt 3000, S SPECIFIC",
+      "command": "uv run python -c \"import json; d=json.load(open('runs/carry-forward/ledger.json')); r={x['key']: x for x in d['rows']}; print([(r[f's{s}.ckpt3000.H64.labels']['value']['L'], r[f's{s}.ckpt3000.H64.labels']['value']['S']) for s in (0,1,2)])\"",
+      "expected": "[('LOCALISED', 'SPECIFIC'), ('LOCALISED', 'SPECIFIC'), ('LOCALISED', 'SPECIFIC')]",
+      "observed": "[('LOCALISED', 'SPECIFIC'), ('LOCALISED', 'SPECIFIC'), ('LOCALISED', 'SPECIFIC')] (rc 0) | independent: H64 L (resample pair, gap 2..16, resident, both resamples applied, not dup_key) s0 1.0235 [1.0,1.0482], s1 1.0166 [0.9877,1.0463], s2 0.9918 [0.9626,1.0218], denominator CI lo > 0.8 on all; sensitivity L (no donor object) LOCALISED on all, |diff| <= 0.061; S ratio (ctrl_status==0, not ctrl_same_object) CI hi 0.0201/0.0316/0.0308 <= 0.25, coverage 0.347/0.364/0.375 -> SPECIFIC; labels identical under an independent bootstrap.",
+      "match": true
+    }
+  ],
+  "verifier_sha": "340f6d865a4f910ba364c0aa23546642c558549d"
+}
