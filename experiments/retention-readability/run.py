@@ -1125,7 +1125,7 @@ def render_results(ledger_doc: dict) -> str:
         if f"{pre}.RP.point" not in rows:
             continue
         out += [
-            f"## {a}.ckpt{c}, set U (point [95% CI], paired per-document bootstrap)",
+            f"## {a}.ckpt{c}, set U (point [percentile CI], paired per-document bootstrap)",
             "",
             "| readout | seed0 | seed1 | seed2 |",
             "|---|---|---|---|",
