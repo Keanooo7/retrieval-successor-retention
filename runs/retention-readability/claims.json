@@ -1,0 +1,42 @@
+[
+ {
+  "claim": "headline classification READABLE_AT_SHIFTED_RANK, both B checkpoints, no control failed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print(r['classification']['value'], r['per_checkpoint']['value'], r['controls_failed']['value'])\"",
+  "expected": "READABLE_AT_SHIFTED_RANK {'B.ckpt2500': {'a': 'NO_PENALTY', 'b': 'READABLE', 'combined': 'READABLE_AT_SHIFTED_RANK'}, 'B.ckpt3000': {'a': 'NO_PENALTY', 'b': 'READABLE', 'combined': 'READABLE_AT_SHIFTED_RANK'}} []"
+ },
+ {
+  "claim": "B.ckpt3000 rank penalty RP point per seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print([round(x,4) for x in r['B.ckpt3000.U.RP.point']['samples']], [round(x,4) for x in r['B.ckpt3000.U.RP.hi']['samples']])\"",
+  "expected": "[0.0016, 0.0033, 0.0084] [0.0032, 0.0051, 0.0106]"
+ },
+ {
+  "claim": "re-executing child B ckpt3000 seed2 reproduces its ledger readouts exactly (about 12 minutes, CPU)",
+  "command": "uv run python experiments/retention-readability/run.py --single --arm B --checkpoint 3000 --seed 2 --out /tmp/rr-verify/B-3000-2.json.gz; echo rc=$?; uv run python -c \"import gzip,json,importlib.util,sys; s=importlib.util.spec_from_file_location('rr','experiments/retention-readability/run.py'); m=importlib.util.module_from_spec(s); sys.modules['rr']=m; s.loader.exec_module(m); p=json.load(gzip.open('/tmp/rr-verify/B-3000-2.json.gz','rt')); o=m.summarise_child(p)['U']['readouts']; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print(all(o[n][f]==r[f'B.ckpt3000.U.{n}.{f}']['samples'][2] for n in ('RP','D_ref','D_floor','H_model') for f in ('point','lo','hi')), p['control1']['ok'], p['control2']['ok'], p['control4']['ok'])\"",
+  "expected": "rc=0 then: True True True True"
+ },
+ {
+  "claim": "model-free headroom on P reproduces the red team's held-out numbers",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print([round(x,4) for x in r['B.ckpt3000.P.H_free']['samples']])\"",
+  "expected": "[0.1852, 0.1739, 0.1896]"
+ },
+ {
+  "claim": "oracle rescued accuracy vs FIFO gap_eq_M at ckpt3000",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print([round(x,4) for x in r['B.ckpt3000.U.oracle.rescued.acc']['samples']], [round(x,4) for x in r['B.ckpt3000.U.fifo.gap_eq_M.acc']['samples']])\"",
+  "expected": "[0.8551, 0.8411, 0.877] [0.8412, 0.7838, 0.9011]"
+ },
+ {
+  "claim": "arm A null: H_model CI inside +-0.03 every seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print([round(x,4) for x in r['A.ckpt3000.U.H_model.lo']['samples']], [round(x,4) for x in r['A.ckpt3000.U.H_model.hi']['samples']])\"",
+  "expected": "[-0.0013, 0.0, 0.0] [0.0017, 0.0, 0.0]"
+ },
+ {
+  "claim": "the experiment's tests pass",
+  "command": "uv run pytest -q -p no:cacheprovider tests/test_retention_readability.py",
+  "expected": "passed=23 failed=0 skipped=0 errors=0"
+ },
+ {
+  "claim": "RESULTS.md passes the scoreboard audit",
+  "command": "uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/retention-readability/RESULTS.md; echo rc=$?",
+  "expected": "OK: every number ... resolves to a ledger key; rc=0"
+ }
+]
