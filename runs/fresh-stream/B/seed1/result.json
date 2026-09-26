@@ -1,0 +1,112 @@
+{
+  "run_id": "fifo-d128-s48-b16-9982c6a01218e069",
+  "heartbeat": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed1/heartbeat.jsonl",
+  "config_hash": "9982c6a01218e069",
+  "config": {
+    "tg": {
+      "D": 128,
+      "H": 2,
+      "N": 12,
+      "V": 176,
+      "F": 344,
+      "max_sentence_tokens": 64,
+      "sentence_tail_len": 1,
+      "max_sentences_in_short_term": 16,
+      "block_config": [
+        "S",
+        "C",
+        "S",
+        "C",
+        "S",
+        "C",
+        "S",
+        "C",
+        "S",
+        "C",
+        "S",
+        "C"
+      ],
+      "ffn_activation": "swiglu",
+      "layer_norm_epsilon": 1e-06,
+      "memory_gate_init": 1.0,
+      "dropout": 0.1,
+      "attn_dropout": 0.2,
+      "srep_dropout": 0.15,
+      "token_dropout": 0.15,
+      "memory_dropout": 0.0,
+      "dropout_scale": 1.0,
+      "srep_extraction_layer": 6,
+      "srep_norm_target": 1.0,
+      "srep_norm_margin": 0.1,
+      "srep_norm_reg_weight": 0.01,
+      "stm_cross_pos_mode": "sinusoidal",
+      "stm_positional_weight": 1.0,
+      "detach_sreps_for_memory": false,
+      "stm_backprop_window": null,
+      "bos_replacement_mode": "copy",
+      "bos_context_detach": false,
+      "use_memory": true,
+      "pad_id": 0,
+      "bos_id": 1,
+      "eos_id": 2,
+      "eod_id": 3
+    },
+    "iters": 3000,
+    "batch": 16,
+    "steps_per_stream": 48,
+    "lr": 0.001,
+    "seed": 1,
+    "policy": "fifo",
+    "device": "cpu",
+    "masked_loss": true,
+    "srep_norm_reg_weight": 0.0,
+    "stream": {
+      "offset": 4160,
+      "stride": 16,
+      "vocab_documents": 64
+    }
+  },
+  "policy": "FIFOPolicy",
+  "git_sha": "e45e4fe2a46ae32251b5f9edc0ac9197df013ed6",
+  "steps_requested": 3000,
+  "steps_done": 3000,
+  "final": {
+    "loss": 1.3553357124328613,
+    "loss_lm": 1.3553356652458508,
+    "loss_srep_hinge": 234.43190797170004,
+    "srep_norm_reg_weight": 0.0,
+    "loss_real_tokens": 1.3553356652458508,
+    "loss_all_targets": 23.231120069821674,
+    "pad_target_fraction": 0.927724041005291,
+    "n_targets_scored": 48384.0,
+    "n_pad_targets_scored": 44887.0,
+    "loss_answer_tokens": 0.8004143374931553,
+    "n_answer_targets": 299.0,
+    "answer_target_fraction": 0.08550185873605948,
+    "step": 2999
+  },
+  "seed": 1,
+  "n_documents": 64,
+  "torch_num_threads": 5,
+  "arm": "B",
+  "stream": {
+    "offset": 4160,
+    "stride": 16,
+    "vocab_documents": 64
+  },
+  "resume_check": {
+    "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/corpus-curve/runs/corpus-size-curve/n64/seed1/ckpt-001000.pt",
+    "stored_step": 1000,
+    "ok": true,
+    "model": {
+      "equal": true,
+      "n_tensors": 206,
+      "mismatches": []
+    },
+    "optimizer": {
+      "equal": true,
+      "n_tensors": 618,
+      "mismatches": []
+    }
+  }
+}

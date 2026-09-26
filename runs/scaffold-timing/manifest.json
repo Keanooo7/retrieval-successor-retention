@@ -1,0 +1,603 @@
+{
+  "arms": [
+    64,
+    512,
+    4096
+  ],
+  "bucket": "gap_2_to_M",
+  "checkpoint_sha256": {
+    "n4096/seed0/ckpt-000100.pt": "c345e93719c26155566374eeed7a765ae2cd8b7f6a8734449b577c2278cd225e",
+    "n4096/seed0/ckpt-000200.pt": "e04b3b9aa1bb7ff9437d5d84c4f78077a6d16aec270df98899f319cc4417ffe9",
+    "n4096/seed0/ckpt-000300.pt": "3cd8d773f7b0f6dcfb7044035e6853856f9196fb97bf80618e302ffcccc6f69d",
+    "n4096/seed0/ckpt-000400.pt": "56039deabe9c56c140263d238eac6e5c48d120f86b60e2ce9c4e63a65f08a23c",
+    "n4096/seed0/ckpt-000500.pt": "493afdcffe3382f2767fe6449e0a3c421d6f49e5d5ccd2039313cd1e93b57538",
+    "n4096/seed0/ckpt-000600.pt": "197256e52337e37169e4bfcdfe3d3f0ef127715714e723db65d67228a26bc30a",
+    "n4096/seed0/ckpt-000700.pt": "3939cb6675a430898b5646a019bb84a89cc20ae4f81cb2a1e9f9480d8785cd8c",
+    "n4096/seed0/ckpt-000800.pt": "94c6082b7d6bfa8a99976fd02f30e507e94fc62b4811e61b996ece61b9c7bb6e",
+    "n4096/seed0/ckpt-000900.pt": "bde013e1e113fbeff52c979fe228d93c2f0a15dabe92a2ef598e832bb3067db8",
+    "n4096/seed0/ckpt-001000.pt": "8a1d852fc479c93ba9c6291187a48fbe8387a95061e0a5d609f331556f21b27c",
+    "n4096/seed1/ckpt-000100.pt": "6d28abd6325a4f0790e94ca797a38141ec0a36b5b80f5a2fc059ff67720f22f6",
+    "n4096/seed1/ckpt-000200.pt": "bb2fffe336edae19f1691650d3ff2ce2212373792844935d04c56a1fe4bc9c92",
+    "n4096/seed1/ckpt-000300.pt": "8bc207416f78b856179bdccb6e407879193d44be874b593edaa2f86cf6398c36",
+    "n4096/seed1/ckpt-000400.pt": "fb49e6e71b11333c60ae29ae7680546b132bbab2717434170ae88c5f8615d1c6",
+    "n4096/seed1/ckpt-000500.pt": "7ed3838abe9a1e99fb577aebd52884606de5f7c4e1b8fdd5745c43a6beac5b45",
+    "n4096/seed1/ckpt-000600.pt": "b356d5478416ec7bb2382c4fae540c7c2210b8832425c07f70925bdd519ad660",
+    "n4096/seed1/ckpt-000700.pt": "8e756b2d0904462d7f28449a87881a7db7606483f05f332f7526f7e3660fdb21",
+    "n4096/seed1/ckpt-000800.pt": "254db07220350b88d618c5da871b75fec898cd6702d62113c5895f2e36da087b",
+    "n4096/seed1/ckpt-000900.pt": "074ae97c7205bb8aa9e873d1312e1107608251efbd08b76d06073c4180861a97",
+    "n4096/seed1/ckpt-001000.pt": "b1e7014701fb9e6eb8eb30e3b55e51cfb6664a2454290ac9bc862c76a4de7a11",
+    "n4096/seed2/ckpt-000100.pt": "573fd7157e5649d46340a6d758aa34f655dd49080a8105aee26f2d80d2ce0720",
+    "n4096/seed2/ckpt-000200.pt": "7f3b74eea3402507d9fed0b98060bd86e0ff2e2d187aa5c130bfa0f454995296",
+    "n4096/seed2/ckpt-000300.pt": "5d956c7abba1843a2fc0d8b3586a28240be1699624adf4c2d64ce680b1584740",
+    "n4096/seed2/ckpt-000400.pt": "7a133f8ff3c2b278122563876cdb445f5f9ed1f1b7b354a5e915843bfe514288",
+    "n4096/seed2/ckpt-000500.pt": "26fd4a56987b0d4a46f4bcc9b6fee0c54755fd17ca001db118dfa42a32877dd9",
+    "n4096/seed2/ckpt-000600.pt": "8231a828727c6c929e2b2fcef67d5157498fbd9de934fcf4bd144fa52ea68468",
+    "n4096/seed2/ckpt-000700.pt": "f9b408a46a329ef6e72d334ea6004c942a08675207fbdc3917ba12919a4cbbcc",
+    "n4096/seed2/ckpt-000800.pt": "6824e7c9f3f776cdff41685deeeb87ceff932f8e9d7aa39632654bf4a9b16f0b",
+    "n4096/seed2/ckpt-000900.pt": "29045ef022644b27f81bfacea90d42b2fdd889a8d4c556816dc49749d6309f5a",
+    "n4096/seed2/ckpt-001000.pt": "598df9637dcfb416897cc001e155ee8ea552c7349ec459287895cb3924c4e2e0",
+    "n512/seed0/ckpt-000100.pt": "7b5defdd0e4476f07bccca4f0c25e610d4f805c3adeee7f5cfa64e494e7c325b",
+    "n512/seed0/ckpt-000200.pt": "8f16622bf14c82f7cf17b7b3ae61961402b11e8b2554fc8474ba7a90a28f79d5",
+    "n512/seed0/ckpt-000300.pt": "bc3dc4c65ea19834bea204fa446abb71047577471ed140e61f572c9af113927b",
+    "n512/seed0/ckpt-000400.pt": "a0261b2044885048417f6dfa0956e207dfb9f6cae589f18163b39183d280378d",
+    "n512/seed0/ckpt-000500.pt": "808ebe90b1cc5ddd9ee1a87e989a852ccf6f65323a9d4010004fcdb3b877f75c",
+    "n512/seed0/ckpt-000600.pt": "a1e30f5eacadb23c4e571f3f3e3d91d0f31a3b9667ec2f56e6a1a0990d0f4b2c",
+    "n512/seed0/ckpt-000700.pt": "9e44e4288adaaf8818efc091bfc402c418c8f3cdae4eb12567ef3a3a796a510d",
+    "n512/seed0/ckpt-000800.pt": "8eb6dfff094cdc84efc8f1a7c3ef0fd2053211831b969877d42fd18cfda63af8",
+    "n512/seed0/ckpt-000900.pt": "b0fd60746c9c2152f8d3adbda87bd36111c6ae81f855523b8ed46594c6fcca89",
+    "n512/seed0/ckpt-001000.pt": "03f51ab38c570ebe2209c53cbb053b55df3beaa9cfe07241eab1397a5c6049e1",
+    "n512/seed1/ckpt-000100.pt": "9a001e6585a4fd66faaeedc1f48a2f21d49110637d620c8ddc3ad8ad68e50a48",
+    "n512/seed1/ckpt-000200.pt": "1276be960b5a08bbfc6a56c9633efd934b2c59e31b71f7030d8a072a720c5e8a",
+    "n512/seed1/ckpt-000300.pt": "182dd0ebcc1a25c2d63839dbbe3f23eed366417aa6271e98a25ed59272d01d1d",
+    "n512/seed1/ckpt-000400.pt": "cdb00e122db3906f7b6112df5e1a62a2b978b86d02850dfa4c1b8ead75b805b1",
+    "n512/seed1/ckpt-000500.pt": "8adf5176c3bfa626aa9a99905b9d273149d85d76b25e4da2ffb9a91a03dba0f6",
+    "n512/seed1/ckpt-000600.pt": "01b411e8ba1ed10446847cda902b873a389c33fec2ab072bb25f8c1067601d78",
+    "n512/seed1/ckpt-000700.pt": "56f0ef5de8a833b10a2ba84e02bd2d31a287f26f57aa8e2d5cf8c558748779d4",
+    "n512/seed1/ckpt-000800.pt": "9118efbfed0cd195c03d4cead1589c765482e0f04aaec6fb58846288b3c8182e",
+    "n512/seed1/ckpt-000900.pt": "653f80135e05ebd87d908316ee32ab9441ef95781557114060fb8e3ba08a68c8",
+    "n512/seed1/ckpt-001000.pt": "2eab916de4191c72a7dda2bfd4416098ddb058f86e06f832843e673bc15e37ea",
+    "n512/seed2/ckpt-000100.pt": "10eec6e03469ba06cdea534e50f2d856979d69d5b17aed04ef30a8536f2b2ea3",
+    "n512/seed2/ckpt-000200.pt": "0a93f108f01bb2bd5a1213cf2a7ab5302fd988cf51f6c86aede72d43ecc47f1c",
+    "n512/seed2/ckpt-000300.pt": "1419a12d02dc27c484313ce6b853be8dff81576c3471c32b7339c0c4424154d1",
+    "n512/seed2/ckpt-000400.pt": "976306a0cf7891088cc999ed007eacdafc73bafdd265ce3e44d3b3aac037ef87",
+    "n512/seed2/ckpt-000500.pt": "b265302f49be058842017ec40406e1f1b9697610241e475c1f9cb51753678ba6",
+    "n512/seed2/ckpt-000600.pt": "ed088d601f1d8fea0da41eb2258bb9fc71a3f7cd5ea485df67ed7e45a0b81a16",
+    "n512/seed2/ckpt-000700.pt": "c2542cd9d9c3299bbd5bef9536e11d1645501976a65f2d276ff31ef106eb0591",
+    "n512/seed2/ckpt-000800.pt": "5991f2840665bcc0957faccf996f715cceed8a700ab2a99e1f66abc2499abdc0",
+    "n512/seed2/ckpt-000900.pt": "6f186d094d72982c3d02938eee791872802b541bd9c48c40d4d0c235f968905f",
+    "n512/seed2/ckpt-001000.pt": "68865363066e2e1966494baf8a4c748dd8459b836d4666f994ace32a5225e629",
+    "n64/seed0/ckpt-000100.pt": "8b08d5bbe886b60f1feb79932d5ec3930b83e41240b34e9d4123c13ae6c5e807",
+    "n64/seed0/ckpt-000200.pt": "c2afe93f94962b9b0a30083f1a33e6ff8c7af444616c4df8cbffdc6ca5ce5e25",
+    "n64/seed0/ckpt-000300.pt": "1ee3823be06803d24cdac6d58a8d4235d135f8aa7fcba9b4318a5724c7ef27b5",
+    "n64/seed0/ckpt-000400.pt": "c374783b0ad50132c5fa016089fb32b1315d10683d70097a921d77245c7a5be7",
+    "n64/seed0/ckpt-000500.pt": "406ee084465f84234cf2d9d15fd6af642759e8ee81ee3bba8df82a11cb85aec5",
+    "n64/seed0/ckpt-000600.pt": "64cf46176322af7b5428e1ffabfbca8cdb9a9eac595c0b0071a4050dc387cd94",
+    "n64/seed0/ckpt-000700.pt": "7995e9a440c0361b9a280e211666583bcfd9aabc5d92a40a6d9e8463b1aa2f38",
+    "n64/seed0/ckpt-000800.pt": "3ac78818aa944383e46077d4b2c6ac4eb4858d9b3c3d8fdc832d482cd713ee10",
+    "n64/seed0/ckpt-000900.pt": "6ce00593fe8bd8aabc3d90d274d41222c77e0fc280eb109ad3352c5d873f0404",
+    "n64/seed0/ckpt-001000.pt": "b902fa2475e3cdbf0436e1ac6916841b23506e13ba81fe7b80f1dac131280534",
+    "n64/seed1/ckpt-000100.pt": "a37c83bcf132578fd2b60fd7ede2dae53a9986ad510cf9020f0942a3c30da13f",
+    "n64/seed1/ckpt-000200.pt": "20519dbec63668200d3c399a18f3a27db5fc87774cc78bec48370184efc30ffb",
+    "n64/seed1/ckpt-000300.pt": "efbd2fc1624c0187131f2a8e0fe836d5d7e147b657b99771f171c49df15e70bf",
+    "n64/seed1/ckpt-000400.pt": "e83639919ca2e8a9c88ab972ffbdaa3e9475c3328b13ef8355f49e738f7f220d",
+    "n64/seed1/ckpt-000500.pt": "3d13ab2c86aee4f07a31ee17aecf8016580eb99fd205ac5efde12d971935d4e0",
+    "n64/seed1/ckpt-000600.pt": "7dc5e3fa73d921af2ac67b34b562f214ad95af20c3de88fa1de572072e5099b4",
+    "n64/seed1/ckpt-000700.pt": "6a1c4d196edc18048ed1e058a69825059e9b631b70a78aa3e7b36d727df556a4",
+    "n64/seed1/ckpt-000800.pt": "1949f2fc64308234bf40e5b18da9087097c9ebfa768aa1af950a488c585261ed",
+    "n64/seed1/ckpt-000900.pt": "0a7fc5ba2012f0e19921029c766e270c78b5f0bc70cd39666c4e9e48c3a4c116",
+    "n64/seed1/ckpt-001000.pt": "d46a498188305f51d8b05ea237f325a4860421f1a1882e073b3308e0ebc208db",
+    "n64/seed2/ckpt-000100.pt": "2e26430c516f518002d28edc3f45df473a88baec856c78c08d81169a5bd02ca0",
+    "n64/seed2/ckpt-000200.pt": "cb2435f6a00d201970d85e7dc037dc6c4fb5e649f1cfa0ab8a824b2817710e9e",
+    "n64/seed2/ckpt-000300.pt": "575ab0cac83911273a07988a3356f270ed5c50d1e042eb0a61077efed21802d7",
+    "n64/seed2/ckpt-000400.pt": "3353adf68474ace05ef84fc37960c96d2a427f79eb5474138bb11a16a7c292e3",
+    "n64/seed2/ckpt-000500.pt": "dcc842b1f38533f11c63fb6c3b785f6c32b4b582f9a3af531923056b81b7d0ab",
+    "n64/seed2/ckpt-000600.pt": "53767e7ecdf299ca807e1c363e956d3776014fd3f78847a947f2521495b19665",
+    "n64/seed2/ckpt-000700.pt": "bf7b0e0b719f146b28aa3f774a7a143e316bd52a5cfd6eebd0ae21381a951896",
+    "n64/seed2/ckpt-000800.pt": "f564e709774069b84dd1c03610510e3ae6c238904300329c1a8dfa0172440256",
+    "n64/seed2/ckpt-000900.pt": "1066aca137c253e703fdfadb4db57b30ff7aea6ffe7fa86e35453a4f5414d28d",
+    "n64/seed2/ckpt-001000.pt": "8356364f504d386e776f0c7b0c95dd334eda3b1ca6bf5fc17606e30463796890"
+  },
+  "checkpoints": [
+    100,
+    200,
+    300,
+    400,
+    500,
+    600,
+    700,
+    800,
+    900,
+    1000
+  ],
+  "control_checkpoints": [
+    300,
+    1000
+  ],
+  "decision_rule": "A failed or incomplete reproduction control, or a measurement that raised, makes the result inconclusive (exit 3). Otherwise, on the N = 64 arm: onset_R is the earliest checkpoint from which R holds at that and every later checkpoint through 1000; onset_M likewise for M. BEFORE if onset_R < onset_M; WITH if equal; AFTER if onset_R > onset_M; inconclusive if either onset does not exist.",
+  "delta": 0.03,
+  "device": "cpu",
+  "expected": "AFTER, with onset_M at 200 or 300 and onset_R at 500\u2013700. R rises steadily once train accuracy passes ~0.5, rather than jumping. The train memory share rises before R does. At N = 512 and N = 4096 nothing reaches DELTA except possibly N = 512 seed 2 at 900\u20131000.",
+  "heldout_documents": [
+    4096,
+    4160
+  ],
+  "instrument": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported, identity)",
+  "job_order": [
+    [
+      64,
+      0,
+      300
+    ],
+    [
+      64,
+      0,
+      1000
+    ],
+    [
+      64,
+      1,
+      300
+    ],
+    [
+      64,
+      1,
+      1000
+    ],
+    [
+      64,
+      2,
+      300
+    ],
+    [
+      64,
+      2,
+      1000
+    ],
+    [
+      64,
+      0,
+      100
+    ],
+    [
+      64,
+      0,
+      200
+    ],
+    [
+      64,
+      0,
+      400
+    ],
+    [
+      64,
+      0,
+      500
+    ],
+    [
+      64,
+      0,
+      600
+    ],
+    [
+      64,
+      0,
+      700
+    ],
+    [
+      64,
+      0,
+      800
+    ],
+    [
+      64,
+      0,
+      900
+    ],
+    [
+      64,
+      1,
+      100
+    ],
+    [
+      64,
+      1,
+      200
+    ],
+    [
+      64,
+      1,
+      400
+    ],
+    [
+      64,
+      1,
+      500
+    ],
+    [
+      64,
+      1,
+      600
+    ],
+    [
+      64,
+      1,
+      700
+    ],
+    [
+      64,
+      1,
+      800
+    ],
+    [
+      64,
+      1,
+      900
+    ],
+    [
+      64,
+      2,
+      100
+    ],
+    [
+      64,
+      2,
+      200
+    ],
+    [
+      64,
+      2,
+      400
+    ],
+    [
+      64,
+      2,
+      500
+    ],
+    [
+      64,
+      2,
+      600
+    ],
+    [
+      64,
+      2,
+      700
+    ],
+    [
+      64,
+      2,
+      800
+    ],
+    [
+      64,
+      2,
+      900
+    ],
+    [
+      512,
+      0,
+      100
+    ],
+    [
+      512,
+      0,
+      200
+    ],
+    [
+      512,
+      0,
+      300
+    ],
+    [
+      512,
+      0,
+      400
+    ],
+    [
+      512,
+      0,
+      500
+    ],
+    [
+      512,
+      0,
+      600
+    ],
+    [
+      512,
+      0,
+      700
+    ],
+    [
+      512,
+      0,
+      800
+    ],
+    [
+      512,
+      0,
+      900
+    ],
+    [
+      512,
+      0,
+      1000
+    ],
+    [
+      512,
+      1,
+      100
+    ],
+    [
+      512,
+      1,
+      200
+    ],
+    [
+      512,
+      1,
+      300
+    ],
+    [
+      512,
+      1,
+      400
+    ],
+    [
+      512,
+      1,
+      500
+    ],
+    [
+      512,
+      1,
+      600
+    ],
+    [
+      512,
+      1,
+      700
+    ],
+    [
+      512,
+      1,
+      800
+    ],
+    [
+      512,
+      1,
+      900
+    ],
+    [
+      512,
+      1,
+      1000
+    ],
+    [
+      512,
+      2,
+      100
+    ],
+    [
+      512,
+      2,
+      200
+    ],
+    [
+      512,
+      2,
+      300
+    ],
+    [
+      512,
+      2,
+      400
+    ],
+    [
+      512,
+      2,
+      500
+    ],
+    [
+      512,
+      2,
+      600
+    ],
+    [
+      512,
+      2,
+      700
+    ],
+    [
+      512,
+      2,
+      800
+    ],
+    [
+      512,
+      2,
+      900
+    ],
+    [
+      512,
+      2,
+      1000
+    ],
+    [
+      4096,
+      0,
+      100
+    ],
+    [
+      4096,
+      0,
+      200
+    ],
+    [
+      4096,
+      0,
+      300
+    ],
+    [
+      4096,
+      0,
+      400
+    ],
+    [
+      4096,
+      0,
+      500
+    ],
+    [
+      4096,
+      0,
+      600
+    ],
+    [
+      4096,
+      0,
+      700
+    ],
+    [
+      4096,
+      0,
+      800
+    ],
+    [
+      4096,
+      0,
+      900
+    ],
+    [
+      4096,
+      0,
+      1000
+    ],
+    [
+      4096,
+      1,
+      100
+    ],
+    [
+      4096,
+      1,
+      200
+    ],
+    [
+      4096,
+      1,
+      300
+    ],
+    [
+      4096,
+      1,
+      400
+    ],
+    [
+      4096,
+      1,
+      500
+    ],
+    [
+      4096,
+      1,
+      600
+    ],
+    [
+      4096,
+      1,
+      700
+    ],
+    [
+      4096,
+      1,
+      800
+    ],
+    [
+      4096,
+      1,
+      900
+    ],
+    [
+      4096,
+      1,
+      1000
+    ],
+    [
+      4096,
+      2,
+      100
+    ],
+    [
+      4096,
+      2,
+      200
+    ],
+    [
+      4096,
+      2,
+      300
+    ],
+    [
+      4096,
+      2,
+      400
+    ],
+    [
+      4096,
+      2,
+      500
+    ],
+    [
+      4096,
+      2,
+      600
+    ],
+    [
+      4096,
+      2,
+      700
+    ],
+    [
+      4096,
+      2,
+      800
+    ],
+    [
+      4096,
+      2,
+      900
+    ],
+    [
+      4096,
+      2,
+      1000
+    ]
+  ],
+  "mode": "sequential",
+  "prereg": "experiments/scaffold-timing/PREREG.md",
+  "prereg_commit": "167d650",
+  "primary_arm": 64,
+  "probe_documents": [
+    0,
+    64
+  ],
+  "python": "3.12.13",
+  "question": "In the corpus-size curve's N = 64 arm, does memory-dependent accuracy on UNSEEN documents appear before, with, or after memorisation of the training documents?",
+  "reference_git_sha": "ec9332dc46cdab46661919f7ef97318f4ec28685",
+  "reference_ledger": "runs/corpus-size-curve/ledger.json",
+  "reference_ledger_sha256": "68fbb8b869f9084dd4b280950b441a32414a03b78e727d94effdbf3abd19c4e4",
+  "reproduction_tolerance": 1e-06,
+  "secondary_arms": [
+    512,
+    4096
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "source_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/corpus-curve/runs/corpus-size-curve",
+  "torch": "2.14.0",
+  "torch_threads": 12
+}

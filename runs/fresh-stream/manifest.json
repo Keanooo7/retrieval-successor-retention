@@ -1,0 +1,92 @@
+{
+  "arm_B_start_checkpoint_sha256": {
+    "seed0": "b902fa2475e3cdbf0436e1ac6916841b23506e13ba81fe7b80f1dac131280534",
+    "seed1": "d46a498188305f51d8b05ea237f325a4860421f1a1882e073b3308e0ebc208db",
+    "seed2": "8356364f504d386e776f0c7b0c95dd334eda3b1ca6bf5fc17606e30463796890"
+  },
+  "arms": [
+    "A",
+    "B"
+  ],
+  "arms_in_parallel": false,
+  "batch": 16,
+  "brier_margin": 0.05,
+  "c_threshold": 0.8875,
+  "checkpoints": {
+    "A": [
+      300,
+      1000,
+      1500,
+      2000,
+      2500,
+      3000
+    ],
+    "B": [
+      1500,
+      2000,
+      2500,
+      3000
+    ]
+  },
+  "ckpt_every": 100,
+  "control_1": "experiments/corpus-size-curve/run.py --single --n-documents 64 --iters 100 (train() without the stream), ckpt 100 vs runs/scaffold-timing/ledger.json n64.ckpt100.* statistic keys",
+  "corpus": "synthetic S0-03, SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+  "d": 128,
+  "deadline": "2026-09-26T06:00:00-07:00",
+  "decision_rule": "A failed or incomplete reproduction control, a measurement that raised, or ckpt 3000 missing for any seed of either arm makes the result inconclusive (exit 3). Otherwise read R3000 per arm (R at ckpt 3000 on every seed): A and B -> DATA_SUFFICES; B only -> SCAFFOLD; A only -> TRAP; neither -> NEITHER.",
+  "delta": 0.03,
+  "device": "cpu",
+  "expected": "- Arm A: the stream answer loss leaves the 2.78 plateau on at least one seed by step 3000 \u2014 N = 512 seed 2 began moving near step 900 with repetition \u2014 but R3000(A) holds on every seed somewhat less often than not (\u2248 40 %). - Arm B: R survives (\u2248 70 %) and does not grow much; held-out Brier improves from ~1.4 toward but not below 0.8875 as the memorised-document overconfidence washes out (C3000(B) \u2248 30 %). Probe accuracy falls from 1.0. - Most likely classification: **SCAFFOLD**. Next most likely: DATA_SUFFICES.",
+  "heldout_documents": [
+    4096,
+    4160
+  ],
+  "instrument": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported, identity), n=64",
+  "iters": 3000,
+  "lr": 0.001,
+  "masked_loss": true,
+  "max_tokens": 64,
+  "measure_heldout": "generate(SyntheticConfig(n_documents=128, seed=<seed>))[64:]",
+  "measure_train": "generate(SyntheticConfig(seed=<seed>))  # docs 0..63",
+  "memory_slots": 16,
+  "parent_torch_num_threads": 12,
+  "policy": "fifo",
+  "prereg": "experiments/fresh-stream/PREREG.md",
+  "prereg_commit": "83128ee",
+  "probe_documents": [
+    0,
+    64
+  ],
+  "python": "3.12.13",
+  "question": "With no training document ever repeated, does TG's working memory come to carry answer information on unseen documents -- from scratch (arm A), and when started from a model that already acquired it by memorising 64 documents (arm B)?",
+  "reference_ledger": "runs/scaffold-timing/ledger.json",
+  "reference_ledger_sha256": "fd774e87a746eadb8ed5b4f335519ee01209e5ed2049df0c37ddb9f9c7e75e00",
+  "reproduction_tolerance": 1e-06,
+  "resume_step": 1000,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seeds_trained_in_parallel": true,
+  "source_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/corpus-curve/runs/corpus-size-curve",
+  "srep_norm_reg_weight": 0.0,
+  "steps_per_stream": 48,
+  "stream": {
+    "offset": 4160,
+    "stride": 16,
+    "vocab_documents": 64
+  },
+  "stream_documents": [
+    4160,
+    52160
+  ],
+  "stream_loss_threshold": 2.672588722239781,
+  "threads_per_seed": 5,
+  "torch": "2.14.0",
+  "vocab": "derived from the corpus",
+  "vocab_documents": [
+    0,
+    64
+  ]
+}

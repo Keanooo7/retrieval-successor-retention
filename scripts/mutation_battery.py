@@ -114,6 +114,20 @@ _C0_S003_WORKLOAD_COUPLING = (
     "core workload twice; a corpus with no in-stream answer token cannot train."
 )
 
+#: scaffold-dose tests that assert a classification reached through k* and the
+#: table, end to end: a mutation of either reddens them by design.
+_SCAFFOLD_DOSE_CLASSIFIED = (
+    "test_U_needs_every_seed",
+    "test_k_star_is_the_smallest",
+    "test_monotonicity_is_reported",
+    "test_render_results_passes_the_audit",
+    "test_run_all_order_and_classification",
+    "test_verdict_every_row_from_tables[unlocked2-AT_MEMORISATION]",
+    "test_verdict_every_row_from_tables[unlocked3-AT_MEMORISATION]",
+    "test_verdict_every_row_from_tables[unlocked4-EARLY]",
+    "test_verdict_every_row_from_tables[unlocked5-EARLY]",
+)
+
 _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
@@ -1996,6 +2010,334 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "it also transcribes REPRO_TOL from the PREREG front matter.",
             ),
         ),
+    ),
+    # --- scaffold-timing (experiments/scaffold-timing/PREREG.md, 167d650) ---
+    Mutation(
+        "scaffold-timing: the sustained requirement dropped (first crossing = onset)",
+        "test_single_noisy_crossing_that_lapses_is_not_an_onset",
+        "experiments/scaffold-timing/run.py",
+        "        if not flags[c]:\n            break\n",
+        "        if not flags[c]:\n            continue\n",
+        "scaffold-timing PREREG 'Primary readout': onset is the earliest checkpoint "
+        "from which R (or M) holds at that and EVERY later checkpoint -- a single "
+        "noisy crossing does not count.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_timing.py::{t}",
+                "it reads an onset off flags that lapse after an early crossing.",
+            )
+            for t in (
+                "test_onset_absent_when_the_last_checkpoint_fails",
+                "test_R_and_M_need_every_seed",
+                "test_noisy_crossing_in_tables_does_not_move_the_onset",
+            )
+        ),
+    ),
+    Mutation(
+        "scaffold-timing: the reproduction control's tolerance widened",
+        "test_reproduction_control_fails_at_2e_6",
+        "experiments/scaffold-timing/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-5\n",
+        "scaffold-timing PREREG 'The reproduction control': every ledger key within "
+        "1e-6 absolute; a 2e-6 difference must fail.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_timing.py::{t}",
+                "it transcribes or exercises the same tolerance.",
+            )
+            for t in (
+                "test_thresholds_are_the_preregs",
+                "test_reproduction_control_exact_passes",
+                "test_run_measures_the_control_first_and_stops_on_failure",
+                "test_render_results_after_a_failed_control_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "scaffold-timing: the onset comparison swapped (BEFORE <-> AFTER)",
+        "test_classify_table",
+        "experiments/scaffold-timing/run.py",
+        "    if onset_r < onset_m:\n",
+        "    if onset_r > onset_m:\n",
+        "scaffold-timing PREREG decision table: BEFORE iff onset_R < onset_M, AFTER "
+        "iff onset_R > onset_M.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_timing.py::{t}",
+                "it asserts a BEFORE or AFTER classification end to end.",
+            )
+            for t in (
+                "test_R_and_M_need_every_seed",
+                "test_after_and_before_from_tables",
+                "test_noisy_crossing_in_tables_does_not_move_the_onset",
+                "test_verdict_reads_the_n64_arm_only",
+                "test_run_passes_the_control_then_measures_everything",
+                "test_render_results_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "scaffold-timing: R and M hold on ANY seed instead of every seed",
+        "test_R_and_M_need_every_seed",
+        "experiments/scaffold-timing/run.py",
+        "all(v >= DELTA for v in values)",
+        "any(v >= DELTA for v in values)",
+        "scaffold-timing PREREG 'Primary readout': R(c) and M(c) hold only when the "
+        "quantity is >= DELTA on every seed.",
+    ),
+    Mutation(
+        "scaffold-timing: the measurement retyped as a local wrapper, not imported",
+        "test_measurement_is_the_corpus_size_function",
+        "experiments/scaffold-timing/run.py",
+        "measure_checkpoint = CSC.measure_checkpoint\n",
+        "def measure_checkpoint(seed_dir, seed, label, n):\n"
+        "    return CSC.measure_checkpoint(seed_dir, seed, label, n)\n",
+        "scaffold-timing PREREG 'instrument': the corpus-size curve's measurement path, "
+        "imported -- the object called must be that function, not a copy.",
+    ),
+    # --- fresh-stream (experiments/fresh-stream/PREREG.md, 83128ee) ---
+    Mutation(
+        "fresh-stream: the stream stamped on the default path",
+        "test_default_path_config_is_unchanged",
+        "src/rsr/train/loop.py",
+        "    if stream is not None:\n"
+        "        # Stamped only when set, like n_documents: the default path's "
+        "config_hash\n"
+        "        # is unchanged and a stream run can never share it.\n"
+        '        frozen["stream"] = asdict(stream)\n',
+        '    frozen["stream"] = None if stream is None else asdict(stream)\n',
+        "fresh-stream PREREG 'Condition': the stream argument's default (None) is "
+        "today's path, byte for byte -- nothing stamped, S0-03's config_hash.",
+        off_gate_allowed=(
+            (
+                "tests/test_corpus_size_curve.py::test_default_path_config_hash_is_s003s",
+                "it checks the same default-path config_hash against S0-03's ledger.",
+            ),
+        ),
+    ),
+    Mutation(
+        "fresh-stream: a global-RNG draw before model init in stream mode",
+        "test_initial_parameters_identical_with_and_without_the_stream",
+        "src/rsr/train/loop.py",
+        '        corpus_kw = {"n_documents": stream.vocab_documents}\n',
+        '        corpus_kw = {"n_documents": stream.vocab_documents}\n'
+        "        torch.rand(1)  # a draw from the global RNG before model init\n",
+        "fresh-stream PREREG 'Arm A': the same initialisation as the corpus-size "
+        "N = 64 arm of that seed -- anything drawn from the global RNG before model "
+        "init shifts it (CLAUDE.md, test_reduction.py's RNG-ordering note).",
+    ),
+    Mutation(
+        "fresh-stream: a resumed run restarts the stream at its first window",
+        "test_resume_continues_the_stream_at_the_resumed_step",
+        "src/rsr/train/loop.py",
+        "                sdocs = stream_documents(stream, it, batch, stream_cfg)\n",
+        "                sdocs = stream_documents(\n"
+        "                    stream, it - start, batch, stream_cfg\n"
+        "                )\n",
+        "fresh-stream PREREG 'stream': A and B see identical documents at every step "
+        "t in [1000, 3000) -- arm B, resumed at 1000, must read window 1000, not 0.",
+    ),
+    Mutation(
+        "fresh-stream: SCAFFOLD and TRAP swapped",
+        "test_classify_table",
+        "experiments/fresh-stream/run.py",
+        '    if r_b:\n        return "SCAFFOLD"\n    if r_a:\n        return "TRAP"\n',
+        '    if r_a:\n        return "SCAFFOLD"\n    if r_b:\n        return "TRAP"\n',
+        "fresh-stream PREREG classification table: R3000(B) only is SCAFFOLD, "
+        "R3000(A) only is TRAP.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_stream.py::{t}",
+                "it asserts a SCAFFOLD or TRAP classification end to end.",
+            )
+            for t in (
+                "test_render_results_passes_the_audit",
+                "test_run_all_happy_path_order_and_scaffold",
+                "test_verdict_all_four_cells_from_tables[0.015625-0.0625-SCAFFOLD]",
+                "test_verdict_all_four_cells_from_tables[0.0625-0.015625-TRAP]",
+                "test_verdict_reads_ckpt3000_only",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-stream: control 1's tolerance widened",
+        "test_control_1_fails_at_2e_6",
+        "experiments/fresh-stream/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-5\n",
+        "fresh-stream PREREG control 1: every n64.ckpt100 statistic key within 1e-6 "
+        "absolute; a 2e-6 difference must fail.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_stream.py::{t}",
+                "it transcribes or exercises the same tolerance.",
+            )
+            for t in (
+                "test_thresholds_are_the_preregs",
+                "test_control_1_failure_stops_before_any_arm",
+                "test_render_results_after_a_failed_control_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-stream: the vocabulary closure disabled",
+        "test_vocabulary_closure_raises_on_an_out_of_vocab_word",
+        "src/rsr/train/loop.py",
+        "                if w not in vocab:\n",
+        "                if w not in vocab and False:\n",
+        "fresh-stream PREREG 'Vocabulary': a word outside the [0, 64) map must be "
+        "refused before any step, not met as a KeyError mid-run.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::test_preflight_reports_a_closure_failure",
+                "the run's preflight proves the closure with the same function.",
+            ),
+        ),
+    ),
+    Mutation(
+        "fresh-stream: control 3 drops the held-out overlap",
+        "test_disjointness_catches_overlap",
+        "experiments/fresh-stream/run.py",
+        '"ok": bool(ids) and not (in_probe or in_vocab or in_heldout or repeats),',
+        '"ok": bool(ids) and not (in_probe or in_vocab or repeats),',
+        "fresh-stream PREREG control 3: no stream id in [0, 64) or [4096, 4160), and "
+        "no id repeats.",
+    ),
+    Mutation(
+        "fresh-stream: C holds on ANY seed instead of every seed",
+        "test_C_needs_every_seed",
+        "experiments/fresh-stream/run.py",
+        "all(v <= C_THRESHOLD for v in values)",
+        "any(v <= C_THRESHOLD for v in values)",
+        "fresh-stream PREREG 'Primary readout': C(c) holds only when Brier16(live) "
+        "<= 0.8875 on every seed.",
+    ),
+    Mutation(
+        "fresh-stream: the measurement retyped as a local wrapper, not imported",
+        "test_measurement_is_the_corpus_size_function",
+        "experiments/fresh-stream/run.py",
+        "measure_checkpoint = CSC.measure_checkpoint\n",
+        "def measure_checkpoint(seed_dir, seed, label, n):\n"
+        "    return CSC.measure_checkpoint(seed_dir, seed, label, n)\n",
+        "fresh-stream PREREG 'Instrument': the corpus-size curve's measure_checkpoint, "
+        "imported -- the object called must be that function, not a copy.",
+    ),
+    Mutation(
+        "fresh-stream: control 2 made approximate",
+        "test_resume_check_is_exact",
+        "experiments/fresh-stream/run.py",
+        "            and torch.equal(a, b)\n",
+        "            and torch.allclose(a.double(), b.double(), atol=1e-3)\n",
+        "fresh-stream PREREG control 2: arm B's model and optimizer state after load "
+        "must equal ckpt-001000.pt exactly.",
+    ),
+    # --- scaffold-dose (experiments/scaffold-dose/PREREG.md, 4249567) ---
+    Mutation(
+        "scaffold-dose: AT_MEMORISATION and EARLY swapped",
+        "test_classification_table",
+        "experiments/scaffold-dose/run.py",
+        '    if kstar in MEMORISATION_K:\n        return "AT_MEMORISATION"\n'
+        '    if kstar in EARLY_K:\n        return "EARLY"\n',
+        '    if kstar in MEMORISATION_K:\n        return "EARLY"\n'
+        '    if kstar in EARLY_K:\n        return "AT_MEMORISATION"\n',
+        "scaffold-dose PREREG classification table: k* in {300, 400} is "
+        "AT_MEMORISATION, k* in {100, 200} is EARLY.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_dose.py::{t}",
+                "it asserts an AT_MEMORISATION or EARLY classification end to end.",
+            )
+            for t in _SCAFFOLD_DOSE_CLASSIFIED
+        ),
+    ),
+    Mutation(
+        "scaffold-dose: k* the largest k with U(k)",
+        "test_k_star_is_the_smallest",
+        "experiments/scaffold-dose/run.py",
+        "    return min(hits) if hits else None\n",
+        "    return max(hits) if hits else None\n",
+        "scaffold-dose PREREG decision rule: k* is the SMALLEST k in the sweep with "
+        "U(k), also when U is not monotone in k.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_dose.py::{t}",
+                "it asserts the classification that follows from k*, end to end.",
+            )
+            for t in _SCAFFOLD_DOSE_CLASSIFIED
+        ),
+    ),
+    Mutation(
+        "scaffold-dose: U(k) on ANY seed instead of every seed",
+        "test_U_needs_every_seed",
+        "experiments/scaffold-dose/run.py",
+        '        "U": ro["R"] if (ro and not why) else None,\n',
+        '        "U": any(v >= DELTA for v in ro["R_quantity"]) '
+        "if (ro and not why) else None,\n",
+        "scaffold-dose PREREG decision rule: U(k) holds when R holds at ckpt k + 500 "
+        "on EVERY seed.",
+    ),
+    Mutation(
+        "scaffold-dose: control 2's tolerance widened",
+        "test_control_2_fails_at_2e_6",
+        "experiments/scaffold-dose/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-5\n",
+        "scaffold-dose PREREG control 2: every n64.ckpt600 statistic key within 1e-6 "
+        "of the scaffold-timing ledger; a 2e-6 difference must fail.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_scaffold_dose.py::{t}",
+                "it transcribes or exercises the same tolerance.",
+            )
+            for t in (
+                "test_thresholds_are_the_preregs",
+                "test_render_results_after_a_failed_control_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "scaffold-dose: control 3 drops the held-out overlap",
+        "test_arm_disjointness_catches_overlap",
+        "experiments/scaffold-dose/run.py",
+        '"ok": bool(ids) and not (in_probe or in_vocab or in_heldout or repeats),',
+        '"ok": bool(ids) and not (in_probe or in_vocab or repeats),',
+        "scaffold-dose PREREG control 3: no id of [4160 + 16 k, 4160 + 16 (k + 500)) "
+        "in [0, 64) or [4096, 4160), and no id repeats.",
+    ),
+    Mutation(
+        "scaffold-dose: the start-checkpoint sha256 comparison dropped",
+        "test_start_checkpoint_sha_mismatch_refuses",
+        "experiments/scaffold-dose/run.py",
+        "            if recorded.get(rel) != sha:\n",
+        "            if False and recorded.get(rel) != sha:\n",
+        "scaffold-dose PREREG 'Condition': the start checkpoints' sha256 must match "
+        "runs/scaffold-timing/manifest.json, or the run is refused.",
+    ),
+    Mutation(
+        "scaffold-dose: a monotonicity violation not named",
+        "test_monotonicity_is_reported",
+        "experiments/scaffold-dose/run.py",
+        "if k1 < k2 and u[k1] and not u[k2]",
+        "if k1 < k2 and u[k1] and not u[k2] and False",
+        "scaffold-dose PREREG 'Monotonicity is reported, not assumed': U(k) at some k "
+        "and not at a larger k is named.",
+        off_gate_allowed=(
+            (
+                "tests/test_scaffold_dose.py::test_render_results_passes_the_audit",
+                "it asserts the monotonicity rows the ledger writes.",
+            ),
+        ),
+    ),
+    Mutation(
+        "scaffold-dose: the measurement retyped as a local wrapper, not imported",
+        "test_measurement_is_the_corpus_size_function",
+        "experiments/scaffold-dose/run.py",
+        "measure_checkpoint = FS.measure_checkpoint\n",
+        "def measure_checkpoint(seed_dir, seed, label, n):\n"
+        "    return FS.measure_checkpoint(seed_dir, seed, label, n)\n",
+        "scaffold-dose PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
+        "imported -- the object called must be that function, not a copy.",
     ),
 )
 
