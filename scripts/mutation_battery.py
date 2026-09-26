@@ -102,6 +102,33 @@ _S003_REFUSAL_COUPLING = (
     "pre-S0-03 one. The refusal is the design: an empty mask would make every "
     "answer-token loss a mean over nothing and pass silently."
 )
+_FRESH_STREAM_S003_COUPLING = (
+    "fresh-stream trains and hashes on the S0-03 corpus: its default-path bit "
+    "identity, its init and resume exactness, and its vocabulary-closure preflight "
+    "all build documents through the generator this mutation reverts. They fail "
+    "for the corpus change, not for a defect of their own."
+)
+_FRESH_STREAM_AUDIT_COUPLING = (
+    "fresh-stream's RESULTS renderer backs each small integer by naming its key in "
+    "the same sentence -- the rule this mutation removes -- so its failed-control "
+    "page fails the audit: the same rule seen from fresh-stream, as from C0."
+)
+_DEFAULT_PATH_HASH_COUPLING = (
+    "fresh-stream's control 1 asserts the default path's config is S0-03's, byte "
+    "for byte. Stamping n_documents on the default path moves that hash: bar (1) "
+    "read from the experiment that reproduces it."
+)
+_N64_CALL_COUPLING = (
+    "fresh-stream arm B and scaffold-dose's single run are defined as the "
+    "corpus-size N=64 call. If the control arm passes n_documents, that call leaves "
+    "train()'s default path, so both identity tests fail: bar (1) seen from its two "
+    "consumers."
+)
+_EVERY_SEED_COUPLING = (
+    "fresh-stream's verdict and scaffold-dose's U call scaffold-timing's `holds` "
+    "(imported: experiments/fresh-stream/run.py `ST.holds`), so weakening it to "
+    "any-seed weakens their every-seed readouts too: one rule, three readers."
+)
 _S003_CORPUS_COUPLING = (
     "S0-03: the test reads a property of the in-stream answer token itself (its "
     "position, its id under the supervision mask, the vocabulary it adds), so it "
@@ -1128,6 +1155,42 @@ MUTATIONS: tuple[Mutation, ...] = (
         "redden; the rest are the declared consequences of the refusal.",
         off_gate_allowed=(
             (
+                "tests/test_fresh_stream.py::test_default_path_config_is_unchanged",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::"
+                "test_initial_parameters_identical_with_and_without_the_stream[0]",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::"
+                "test_initial_parameters_identical_with_and_without_the_stream[2]",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::test_preflight_reports_a_closure_failure",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::test_resume_check_is_exact",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::test_resume_check_passes_on_a_real_resume",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::"
+                "test_resume_continues_the_stream_at_the_resumed_step",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_fresh_stream.py::"
+                "test_train_default_path_is_bit_identical_with_explicit_none",
+                _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
                 "tests/test_synthetic.py::"
                 "test_the_answer_is_the_only_difference_between_the_two_corpora",
                 _S003_CORPUS_COUPLING,
@@ -1657,6 +1720,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the hole itself.",
         off_gate_allowed=(
             (
+                "tests/test_fresh_stream.py::"
+                "test_render_results_after_a_failed_control_passes_the_audit",
+                _FRESH_STREAM_AUDIT_COUPLING,
+            ),
+            (
                 "tests/test_capacity_c0.py::test_rendered_results_pass_the_prose_audit",
                 "C0's RESULTS renderer backs each small integer by naming its key in "
                 "the same sentence -- the rule this mutation removes. Under the old "
@@ -1980,6 +2048,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "corpus-size-curve brief bar (1). The default path must stay byte for byte "
         "S0-03's: a config_hash that moves on the default call means the N=64 arm "
         "is not the configuration its reproduction control compares against.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::test_default_path_config_is_unchanged",
+                _DEFAULT_PATH_HASH_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "corpus-size-curve: held-out drawn from S0-03's docs 64..127",
@@ -2044,6 +2118,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    kw = {"n_documents": n}\n',
         "corpus-size-curve brief bar (1), the call-site half: the N=64 arm must take "
         "train()'s default path, or its config_hash is not S0-03's.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::test_arms_are_the_n64_call_plus_the_stream",
+                _N64_CALL_COUPLING,
+            ),
+            (
+                "tests/test_scaffold_dose.py::"
+                "test_single_is_fresh_streams_arm_B_from_ckpt_k",
+                _N64_CALL_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "corpus-size-curve: the reproduction control's tolerance widened",
@@ -2134,6 +2219,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "any(v >= DELTA for v in values)",
         "scaffold-timing PREREG 'Primary readout': R(c) and M(c) hold only when the "
         "quantity is >= DELTA on every seed.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::test_verdict_reads_ckpt3000_only",
+                _EVERY_SEED_COUPLING,
+            ),
+            (
+                "tests/test_scaffold_dose.py::test_U_needs_every_seed",
+                _EVERY_SEED_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "scaffold-timing: the measurement retyped as a local wrapper, not imported",
