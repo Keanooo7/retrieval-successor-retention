@@ -2419,6 +2419,94 @@ MUTATIONS: tuple[Mutation, ...] = (
         "answer_readout(cond='live') bit-exactly, or its deltas are against a "
         "different readout.",
     ),
+    # -- W5: experiments/carry-forward (PREREG + amendment 1) --
+    Mutation(
+        "carry-forward: the bootstrap resamples targets, not documents",
+        "test_cluster_bootstrap_resamples_documents_not_targets",
+        "experiments/carry-forward/run.py",
+        "uniq, inv = torch.unique(doc, return_inverse=True)",
+        "uniq, inv = torch.arange(doc.numel()), torch.arange(doc.numel())",
+        "carry-forward PREREG 'bootstrap': per-document cluster bootstrap; targets "
+        "of one document are correlated, and resampling them narrows every CI.",
+        off_gate_allowed=(
+            (
+                "tests/test_carry_forward.py::test_cluster_bootstrap_point_is_the_"
+                "ratio_of_sums",
+                "the same function's n_docs field counts clusters; with targets as "
+                "clusters it counts targets.",
+            ),
+        ),
+    ),
+    Mutation(
+        "carry-forward: CARRY ignores the CI lower bound",
+        "test_carry_needs_the_ci_lower_bound_above_zero",
+        "experiments/carry-forward/run.py",
+        'return bool(ci["point"] >= REACH_DELTA and ci["lo"] == ci["lo"] '
+        'and ci["lo"] > 0)',
+        'return bool(ci["point"] >= REACH_DELTA)',
+        "carry-forward PREREG decision rule: CARRY needs excess >= 0.03 AND its 95% "
+        "CI lower bound > 0.",
+    ),
+    Mutation(
+        "carry-forward: MIXED needs two carrying seeds, not one",
+        "test_classification_table",
+        "experiments/carry-forward/run.py",
+        "    elif carriers:\n",
+        "    elif len(carriers) >= 2:\n",
+        "carry-forward PREREG table: CARRY on one or two seeds is MIXED.",
+    ),
+    Mutation(
+        "carry-forward: EXT disjointness forgets the fresh-escape stream",
+        "test_disjointness_catches_the_fresh_escape_stream",
+        "experiments/carry-forward/run.py",
+        '    "fresh_escape": (52160, 148160),\n',
+        "",
+        "carry-forward PREREG control 4: EXT is disjoint from fresh-escape's "
+        "continuation of the stream [52160, 148160).",
+    ),
+    Mutation(
+        "carry-forward: the reproduction tolerance widened tenfold",
+        "test_reproduction_fails_at_2e_6",
+        "experiments/carry-forward/run.py",
+        "                max_diff = max(max_diff, d)\n                if d > tol:",
+        "                max_diff = max(max_diff, d)\n                if d > 10 * tol:",
+        "carry-forward PREREG control 2: within 1e-6 absolute.",
+    ),
+    Mutation(
+        "carry-forward: the bit-exact control accepts allclose",
+        "test_bitexact_control_refuses_a_one_ulp_difference",
+        "experiments/carry-forward/run.py",
+        "torch.equal(a.cpu(), b.cpu())",
+        "torch.allclose(a.cpu(), b.cpu())",
+        "carry-forward PREREG control 3: loo live == answer_readout live under "
+        "torch.equal, not a tolerance.",
+    ),
+    Mutation(
+        "carry-forward: L's window includes gap 1",
+        "test_l_population_is_gap_2_to_M",
+        "experiments/carry-forward/run.py",
+        "return (g >= 2) & (g <= M)",
+        "return (g >= 1) & (g <= M)",
+        "PR #48 review M2 / amendment 1 A2: at gap 1 the bos-copy context is the "
+        "assert's own gestalt, so L is read on gap 2..M only.",
+    ),
+    Mutation(
+        "carry-forward: L's denominator is all_slots_zeroed again",
+        "test_l_uses_the_like_for_like_denominator",
+        "experiments/carry-forward/run.py",
+        'out[f"L.{m}"] = ratio_ci(rec, pop, "own_resample", "all_slots_resample", m)',
+        'out[f"L.{m}"] = ratio_ci(rec, pop, "own_resample", "all_slots_zeroed", m)',
+        "PR #48 review M1 / amendment 1 A1: own_resample pairs with "
+        "all_slots_resample, like for like.",
+    ),
+    Mutation(
+        "carry-forward: the reach baseline is all_slots_zeroed again",
+        "test_reach_baseline_is_all_slots_resample_on_evicted_targets",
+        "experiments/carry-forward/run.py",
+        'b["excess.acc"] = drop_ci(rec, pop, "all_slots_resample", "acc")',
+        'b["excess.acc"] = drop_ci(rec, pop, "all_slots_zeroed", "acc")',
+        "amendment 1 A4: reach is read over all_slots_resample (in distribution).",
+    ),
 )
 
 
