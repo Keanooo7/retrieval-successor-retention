@@ -98,8 +98,14 @@ def test_train_does_not_stamp_a_policy_it_did_not_build(tmp_path):
 
     Before the fix this returned normally and `r["run_id"].startswith("rsr-")` was
     True while `FIFOPolicy` had evicted every slot.
+
+    It refuses at correction 31's epoch check (`build_policy` with
+    `steps_per_epoch=None`) -- before 2026-09-26 it refused at the registry's
+    `UnmeasuredConstant`, one line later, having been handed `steps_per_epoch=iters`,
+    which made the warmup the whole run. Either refusal proves the policy was built
+    from the name; matching the correction-31 message also proves `iters` is gone.
     """
-    with pytest.raises(C.UnmeasuredConstant):
+    with pytest.raises(ValueError, match="correction 31"):
         train(policy_name="rsr", out_dir=tmp_path / "rsr", **TINY)
 
 
