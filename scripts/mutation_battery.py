@@ -2716,6 +2716,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    elif carriers:\n",
         "    elif len(carriers) >= 2:\n",
         "carry-forward PREREG table: CARRY on one or two seeds is MIXED.",
+        off_gate_allowed=(
+            (
+                "tests/test_carry_forward.py::test_inconclusive_l_without_carry_is_"
+                "inconclusive_exit_3",
+                "its second case asserts that ONE carrying seed with an "
+                "L_INCONCLUSIVE seed is still MIXED (amendment 2: MIXED does not "
+                "rest on L) -- the same one-seed MIXED row of the table.",
+            ),
+        ),
     ),
     Mutation(
         "carry-forward: EXT disjointness forgets the fresh-escape stream",
