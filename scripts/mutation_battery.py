@@ -141,11 +141,15 @@ _FRESH_ESCAPE_CLASSIFIED = (
     "test_verdict_every_row_from_tables[stirring]",
     "test_verdict_every_row_from_tables[stirring_R_before_P]",
     "test_verdict_every_row_from_tables[none]",
+    "test_post_deadline_measurement_is_excluded_from_P",
 )
 #: fresh-escape tests that read P = 9000 (or 6000 / 7000) from a full or partial
 #: run: P the smallest checkpoint makes every one of them read P = 4000.
 _FRESH_ESCAPE_READS_P = (
     "test_P_below_6000_is_inconclusive",
+    "test_P_below_6000_under_the_deadline_filter",
+    "test_post_deadline_measurement_is_excluded_from_P",
+    "test_run_all_under_the_stamped_deadline",
     "test_R_needs_every_seed_and_reads_P_only",
     "test_deadline_before_6000_is_inconclusive",
     "test_deadline_stops_the_children_and_P_is_what_exists",
@@ -2434,6 +2438,7 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_classification_table[4000-True-True-inconclusive]",
                 "test_classification_table[5000-True-False-inconclusive]",
                 "test_deadline_before_6000_is_inconclusive",
+                "test_P_below_6000_under_the_deadline_filter",
                 "test_manifest_records_the_start_checkpoints",
                 "test_thresholds_are_the_preregs",
             )
@@ -2484,6 +2489,31 @@ MUTATIONS: tuple[Mutation, ...] = (
         "if int(w0) <= p}",
         "fresh-escape PREREG decision rule: STIRRING needs a 100-step window below "
         "2.6726 AT OR BEFORE P; ckpt-P holds steps [0, P), so [P, P + 100) is after.",
+    ),
+    Mutation(
+        "fresh-escape: post-deadline measurements counted toward P",
+        "test_post_deadline_measurement_is_excluded_from_P",
+        "experiments/fresh-escape/run.py",
+        '    if "s003" not in rec or rec.get("post_deadline"):\n'
+        "        return False\n"
+        '    at = rec.get("measured_at")\n'
+        "    return at is None or _dt.datetime.fromisoformat(at).timestamp() <= "
+        "deadline\n",
+        '    return "s003" in rec\n',
+        "fresh-escape PREREG decision rule: P is the largest listed checkpoint "
+        "measured on every seed BEFORE the deadline, which is absolute; a measurement "
+        "completed after 08:30 is secondary and never feeds P.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it exercises the same deadline filter end to end.",
+            )
+            for t in (
+                "test_P_below_6000_under_the_deadline_filter",
+                "test_deadline_stamped_stamps_and_refuses_to_start_after_the_deadline",
+                "test_run_all_under_the_stamped_deadline",
+            )
+        ),
     ),
     Mutation(
         "fresh-escape: the measurement retyped as a local wrapper, not imported",
