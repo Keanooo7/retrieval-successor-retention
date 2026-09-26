@@ -78,6 +78,12 @@ _REDUCTION_TABLE_COUPLING = (
     "entry makes every reduction test fail to construct a config. The coupling is "
     "the design: one enumeration, not two."
 )
+_BUILD_POLICY_INJECTION_COUPLING = (
+    "correction 31's train-driven tests put their RSRPolicy into the real train() "
+    "by patching build_policy -- the one path S0-01 made the only path. A train() "
+    "that builds FIFOPolicy unconditionally never consults it, so those tests see "
+    "zero RSR evictions: the same defect, observed from the warmup side."
+)
 _T_WARM_COUPLING = (
     "correction 31 states one defect three ways -- below S (a FIFO prefix), above "
     "S (FIFO forever), and the invariant that warm never flips inside one stream. "
@@ -852,6 +858,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "defect silent and what makes the test necessary: no assertion about the "
         "loss curve could ever have caught this, because the loss curve is "
         "genuine.",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                _BUILD_POLICY_INJECTION_COUPLING,
+            ),
+            (
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                _BUILD_POLICY_INJECTION_COUPLING,
+            ),
+        ),
     ),
     # Correction 31: T_warm counts optimizer steps, not sentences.
     Mutation(
