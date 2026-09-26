@@ -128,6 +128,51 @@ _SCAFFOLD_DOSE_CLASSIFIED = (
     "test_verdict_every_row_from_tables[unlocked5-EARLY]",
 )
 
+#: fresh-escape tests that assert a classification reached through P, R(P), the
+#: stream-loss windows and the table, end to end: a mutation of the table reddens
+#: them by design.
+_FRESH_ESCAPE_CLASSIFIED = (
+    "test_P_is_the_largest_checkpoint_on_every_seed",
+    "test_R_needs_every_seed_and_reads_P_only",
+    "test_deadline_stops_the_children_and_P_is_what_exists",
+    "test_render_results_passes_the_audit",
+    "test_run_all_stirring_from_the_heartbeats",
+    "test_stirring_window_must_end_at_or_before_P",
+    "test_verdict_every_row_from_tables[stirring]",
+    "test_verdict_every_row_from_tables[stirring_R_before_P]",
+    "test_verdict_every_row_from_tables[none]",
+)
+#: fresh-escape tests that read P = 9000 (or 6000 / 7000) from a full or partial
+#: run: P the smallest checkpoint makes every one of them read P = 4000.
+_FRESH_ESCAPE_READS_P = (
+    "test_P_below_6000_is_inconclusive",
+    "test_R_needs_every_seed_and_reads_P_only",
+    "test_deadline_before_6000_is_inconclusive",
+    "test_deadline_stops_the_children_and_P_is_what_exists",
+    *(
+        f"test_failed_controls_are_inconclusive[{c}]"
+        for c in (
+            "control_1_absent",
+            "control_1_failed",
+            "control_1_raised",
+            "measurement_raised",
+            "preflight_absent",
+            "preflight_failed",
+            "resume_failed",
+            "resume_missing",
+        )
+    ),
+    "test_render_results_passes_the_audit",
+    "test_run_all_order_and_classification",
+    "test_run_all_stirring_from_the_heartbeats",
+    "test_stirring_window_must_end_at_or_before_P",
+    "test_verdict_every_row_from_tables[escapes]",
+    "test_verdict_every_row_from_tables[escapes_also_stirring]",
+    "test_verdict_every_row_from_tables[stirring]",
+    "test_verdict_every_row_from_tables[stirring_R_before_P]",
+    "test_verdict_every_row_from_tables[none]",
+)
+
 _DISPLACEMENT_COUPLING = (
     "the displacement statistic is asserted in test_instrumentation.py and in "
     "test_reduction.py because it is both a property of the metric and a property "
@@ -2337,6 +2382,117 @@ MUTATIONS: tuple[Mutation, ...] = (
         "def measure_checkpoint(seed_dir, seed, label, n):\n"
         "    return FS.measure_checkpoint(seed_dir, seed, label, n)\n",
         "scaffold-dose PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
+        "imported -- the object called must be that function, not a copy.",
+    ),
+    # --- fresh-escape (experiments/fresh-escape/PREREG.md, d5b9a23) ---
+    Mutation(
+        "fresh-escape: STIRRING and NO_ESCAPE swapped",
+        "test_classification_table",
+        "experiments/fresh-escape/run.py",
+        '        return "STIRRING"\n    return "NO_ESCAPE"\n',
+        '        return "NO_ESCAPE"\n    return "STIRRING"\n',
+        "fresh-escape PREREG classification table: not R(P) with a stream-loss window "
+        "below 2.6726 at or before P is STIRRING; neither is NO_ESCAPE by P.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it asserts a STIRRING or NO_ESCAPE classification end to end.",
+            )
+            for t in _FRESH_ESCAPE_CLASSIFIED
+        ),
+    ),
+    Mutation(
+        "fresh-escape: P the smallest checkpoint measured on every seed",
+        "test_P_is_the_largest_checkpoint_on_every_seed",
+        "experiments/fresh-escape/run.py",
+        "    return max(done) if done else None\n",
+        "    return min(done) if done else None\n",
+        "fresh-escape PREREG decision rule: P is the LARGEST listed checkpoint "
+        "measured on every seed before the deadline.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it reads the classification or P of a run that reached ckpt >= 6000.",
+            )
+            for t in _FRESH_ESCAPE_READS_P
+            if t != "test_P_is_the_largest_checkpoint_on_every_seed"
+        ),
+    ),
+    Mutation(
+        "fresh-escape: the 6000 minimum on P lowered",
+        "test_P_below_6000_is_inconclusive",
+        "experiments/fresh-escape/run.py",
+        "MIN_PRIMARY_CKPT = 6000\n",
+        "MIN_PRIMARY_CKPT = 4000\n",
+        "fresh-escape PREREG decision rule: if P < 6000 the result is inconclusive.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it transcribes or exercises the same minimum.",
+            )
+            for t in (
+                "test_classification_table[4000-True-True-inconclusive]",
+                "test_classification_table[5000-True-False-inconclusive]",
+                "test_deadline_before_6000_is_inconclusive",
+                "test_manifest_records_the_start_checkpoints",
+                "test_thresholds_are_the_preregs",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-escape: control 1's tolerance widened",
+        "test_control_1_fails_at_2e_6",
+        "experiments/fresh-escape/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-5\n",
+        "fresh-escape PREREG control 1: every A.ckpt3000 statistic key within 1e-6 "
+        "of runs/fresh-stream/ledger.json; a 2e-6 difference must fail.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_fresh_escape.py::{t}",
+                "it transcribes or exercises the same tolerance.",
+            )
+            for t in (
+                "test_thresholds_are_the_preregs",
+                "test_render_results_after_a_failed_control_passes_the_audit",
+            )
+        ),
+    ),
+    Mutation(
+        "fresh-escape: control 3 drops the held-out overlap",
+        "test_stream_disjointness_catches_overlap",
+        "experiments/fresh-escape/run.py",
+        '"ok": bool(ids) and not (in_probe or in_vocab or in_heldout or repeats),',
+        '"ok": bool(ids) and not (in_probe or in_vocab or repeats),',
+        "fresh-escape PREREG control 3: no id of [4160 + 16*3000, 4160 + 16*9000) in "
+        "[0, 64) or [4096, 4160), and no id repeats.",
+    ),
+    Mutation(
+        "fresh-escape: the start-checkpoint sha256 comparison dropped",
+        "test_start_checkpoint_sha_mismatch_refuses",
+        "experiments/fresh-escape/run.py",
+        "        if sha != START_SHA256[s]:\n",
+        "        if False and sha != START_SHA256[s]:\n",
+        "fresh-escape PREREG control 3: the sha256 of each start checkpoint equals "
+        "the front matter, or the run is refused.",
+    ),
+    Mutation(
+        "fresh-escape: stream-loss windows after P counted",
+        "test_stirring_window_must_end_at_or_before_P",
+        "experiments/fresh-escape/run.py",
+        "if int(w0) + STREAM_LOSS_WINDOW <= p}",
+        "if int(w0) <= p}",
+        "fresh-escape PREREG decision rule: STIRRING needs a 100-step window below "
+        "2.6726 AT OR BEFORE P; ckpt-P holds steps [0, P), so [P, P + 100) is after.",
+    ),
+    Mutation(
+        "fresh-escape: the measurement retyped as a local wrapper, not imported",
+        "test_measurement_is_the_corpus_size_function",
+        "experiments/fresh-escape/run.py",
+        "measure_checkpoint = FS.measure_checkpoint\n",
+        "def measure_checkpoint(seed_dir, seed, label, n):\n"
+        "    return FS.measure_checkpoint(seed_dir, seed, label, n)\n",
+        "fresh-escape PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
         "imported -- the object called must be that function, not a copy.",
     ),
 )

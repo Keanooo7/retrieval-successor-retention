@@ -245,6 +245,7 @@ def test_P_below_6000_is_inconclusive():
         ({8000: YES}, {2: {3000: LOW}}, "STIRRING", "STIRRING"),
         ({}, None, "NO_ESCAPE", "NO_ESCAPE by 9000"),
     ],
+    ids=["escapes", "escapes_also_stirring", "stirring", "stirring_R_before_P", "none"],
 )
 def test_verdict_every_row_from_tables(r_at, windows, want, reported):
     wins = {s: {3000: FLAT, **((windows or {}).get(s) or {})} for s in SEEDS}
