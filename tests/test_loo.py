@@ -60,7 +60,9 @@ def _docs(n=8, seed=0):
 
 def _world(n=8, seed=0, model_seed=0):
     docs = _docs(n, seed)
-    vmap = build_vocab(docs)
+    # The vocab is built over a larger prefix so every answer symbol has an id
+    # whatever n is (the 16-way renormalisation needs all 16).
+    vmap = build_vocab(_docs(64, seed))
     V = 4 + len(vmap)
     torch.manual_seed(model_seed)
     cfg = TGConfig(
@@ -219,7 +221,7 @@ def test_own_slot_is_the_slot_holding_t_minus_gap():
     spy = _Spy(model)
     r = loo.loo_readout(spy, docs, ids, mask, tmask, gap, sym, seed=0)
     for i in range(r["t"].numel()):
-        b, t, g = int(r["row"][i]), int(r["t"][i]), int(r["gap"][i])
+        t, g = int(r["t"][i]), int(r["gap"][i])
         a = t - g
         # FIFO, one write per sentence: the assert is resident iff g <= M.
         assert bool(r["own_resident"][i]) == (g <= M)
@@ -270,16 +272,32 @@ def test_pick_donor_filters_kind_doc_rank_and_key():
     seen = set()
     for s in range(40):
         d = loo.pick_donor(
-            ann, mem_step, valid, row=0, rank=1, want_kind=1, exclude_keys={7},
-            seed=s, t=2, role=0,
+            ann,
+            mem_step,
+            valid,
+            row=0,
+            rank=1,
+            want_kind=1,
+            exclude_keys={7},
+            seed=s,
+            t=2,
+            role=0,
         )
         seen.add(d)
     # row 0 is the target; row 1 rank 1 has key 7 (excluded); row 2 rank 1 is an
     # assert with key 9; row 3 is the same doc_id as row 0.
     assert seen == {(2, 1)}
     none = loo.pick_donor(
-        ann, mem_step, valid, row=0, rank=0, want_kind=0, exclude_keys=set(),
-        seed=0, t=2, role=0,
+        ann,
+        mem_step,
+        valid,
+        row=0,
+        rank=0,
+        want_kind=2,
+        exclude_keys=set(),
+        seed=0,
+        t=2,
+        role=0,
     )
     assert none is None
 
@@ -306,9 +324,9 @@ def test_missing_control_is_recorded_not_substituted():
             for rk in (own - 1, own + 1):
                 if 0 <= rk < k:
                     s = t - k + rk
-                    pending = int(ann["kind"][b, s]) == 1 and int(
-                        ann["query_of"][b, s]
-                    ) > t
+                    pending = (
+                        int(ann["kind"][b, s]) == 1 and int(ann["query_of"][b, s]) > t
+                    )
                     assert not pending or int(ann["fact_key"][b, s]) == int(
                         ann["fact_key"][b, t]
                     )
@@ -360,9 +378,7 @@ def test_deterministic_under_a_seed_and_seed_moves_donors():
         loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=s)
         for s in (4, 5, 6)
     ]
-    assert any(
-        not torch.equal(a["own_donor_row"], o["own_donor_row"]) for o in others
-    )
+    assert any(not torch.equal(a["own_donor_row"], o["own_donor_row"]) for o in others)
 
 
 def test_donor_choice_does_not_depend_on_global_rng():
@@ -426,7 +442,7 @@ def test_rejects_a_model_without_memory():
 
 
 def test_loo_delta_loss_matches_a_direct_single_knockout():
-    model, docs, ids, mask, tmask, gap, sym = _world(n=3)
+    model, docs, ids, mask, *_ = _world(n=3)
     out = loo.loo_delta_loss(model, docs, ids, mask, mode="zero", seed=0)
     assert out["delta"].shape == (3, S, M)
     # Step 0 has an empty memory: every slot is NaN.
@@ -436,9 +452,7 @@ def test_loo_delta_loss_matches_a_direct_single_knockout():
     assert not torch.isnan(out["delta"][:, 2, :2]).any()
     assert torch.equal(out["slot_sentence"][0, 5], torch.tensor([1, 2, 3, 4]))
     # Recompute one cell by hand via the same knockout primitive.
-    ref = loo.loo_delta_loss(
-        model, docs, ids, mask, mode="zero", seed=0, steps=(5,)
-    )
+    ref = loo.loo_delta_loss(model, docs, ids, mask, mode="zero", seed=0, steps=(5,))
     assert torch.equal(
         ref["delta"][:, 5].nan_to_num(9.0), out["delta"][:, 5].nan_to_num(9.0)
     )
@@ -453,7 +467,7 @@ def test_loo_delta_loss_step_one_by_hand():
     from rsr.model.tg.policy_loop import write_at
     from rsr.train.loop import lm_token_losses
 
-    model, docs, ids, mask, tmask, gap, sym = _world(n=3)
+    model, docs, ids, mask, *_ = _world(n=3)
     out = loo.loo_delta_loss(model, docs, ids, mask, mode="zero", seed=0)
     model.eval()
     with torch.no_grad():
@@ -475,7 +489,7 @@ def test_loo_delta_loss_step_one_by_hand():
 
 
 def test_loo_delta_loss_resample_records_donor_or_nan():
-    model, docs, ids, mask, tmask, gap, sym = _world(n=6)
+    model, docs, ids, mask, *_ = _world(n=6)
     out = loo.loo_delta_loss(model, docs, ids, mask, mode="resample", seed=0)
     dr = out["donor_row"]
     has = dr >= 0
