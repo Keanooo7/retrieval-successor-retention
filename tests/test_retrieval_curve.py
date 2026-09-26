@@ -509,9 +509,14 @@ def test_a_child_that_dies_early_is_crashed_not_waited_for(led, tmp_path):
     assert all(world.children[s].terminated for s in (0, 1))
 
 
-def test_full_run_writes_every_key_and_renders_audited_results(led, tmp_path):
+def test_full_run_writes_every_key_and_renders_audited_results(
+    led, tmp_path, monkeypatch
+):
     import render_scoreboard
 
+    # Isolate from the repository's hand-written BRIEF-ERRORS.md: it quotes the real
+    # ledger, which this synthetic ledger cannot back. Absent, as before the run.
+    monkeypatch.setattr(run, "BRIEF_ERRORS", str(tmp_path / "BRIEF-ERRORS.md"))
     root = tmp_path / "runs" / run.RUN_ID
     world = World(root, [(300,), (1000,), (3000,)])
     measure = fake_measure(_no(1000))
