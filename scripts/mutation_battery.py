@@ -2339,6 +2339,348 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scaffold-dose PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
         "imported -- the object called must be that function, not a copy.",
     ),
+    # -- W4: rsr.metrics.loo, the LOO slot-knockout instrument (spec §3.2.1) --
+    Mutation(
+        "loo: a knockout clobbers the whole row, not one slot",
+        "test_knockout_kv_zero_changes_exactly_the_target_slot_of_the_target_row",
+        "src/rsr/metrics/loo.py",
+        "sel = sel & (slot >= 0).unsqueeze(-1)  # [B, M]",
+        "sel = (slot >= 0).unsqueeze(-1).expand(-1, M)  # [B, M]",
+        "§3.2.1 LOO ablates slot i: a knockout must change exactly the target slot "
+        "of the target row and pass every other element through bit-exactly.",
+        off_gate_allowed=(
+            (
+                "tests/test_loo.py::test_knockout_kv_replace_writes_the_replacement_"
+                "only_there",
+                "the same locality property for mode='replace': one selection mask "
+                "serves both modes.",
+            ),
+            (
+                "tests/test_loo.py::test_readout_knockout_forwards_differ_from_live_"
+                "only_at_the_target",
+                "the same property observed through loo_readout's forward passes; "
+                "knockout_kv is the one code path, so it must go red there too.",
+            ),
+            (
+                "tests/test_loo.py::test_every_condition_matches_a_hand_recomputation",
+                "it recomputes every condition by direct indexing; a whole-row "
+                "knockout is not the stated single-slot one.",
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: loo_readout runs with autograd enabled",
+        "test_every_forward_is_eval_mode_and_no_grad_and_mode_is_restored",
+        "src/rsr/metrics/loo.py",
+        "@torch.no_grad()\ndef loo_readout(",
+        "def loo_readout(",
+        "LOO is a readout, not a training path (correction 20: eval-mode "
+        "measurement); every forward runs under no_grad.",
+    ),
+    Mutation(
+        "loo: a resample donor may come from the same document",
+        "test_pick_donor_filters_kind_doc_rank_and_key",
+        "src/rsr/metrics/loo.py",
+        "if b == row or int(doc_id[b]) == me or not bool(valid[b, rank]):",
+        "if b == row or not bool(valid[b, rank]):",
+        "W4 resample semantics: the donor gestalt comes from a DIFFERENT document, "
+        "or the 'knockout' can re-insert the target document's own content.",
+    ),
+    Mutation(
+        "loo: a resample donor's sentence kind is not checked",
+        "test_resample_donor_is_same_kind_different_doc_same_rank",
+        "src/rsr/metrics/loo.py",
+        'if int(ann["kind"][b, s]) != want_kind:',
+        "if False:",
+        "W4 resample semantics: same kind (assert vs filler) keeps the knocked-out "
+        "input in-distribution; a filler donor for an assert is a different "
+        "intervention.",
+        off_gate_allowed=(
+            (
+                "tests/test_loo.py::test_pick_donor_filters_kind_doc_rank_and_key",
+                "the unit test of the same filter: its no-candidate case (a kind no "
+                "row holds) returns a donor once kind is unchecked.",
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: a missing control is substituted by any pending assert",
+        "test_missing_control_is_recorded_not_substituted",
+        "src/rsr/metrics/loo.py",
+        "for rk in (r - 1, r + 1):",
+        "for rk in range(M):",
+        "W4 control target: an ADJACENT-rank pending assert or recorded missing -- "
+        "never silently another slot.",
+    ),
+    Mutation(
+        "loo: the live forward drops the bos-copy context",
+        "test_live_path_is_bit_exact_to_answer_readout",
+        "src/rsr/metrics/loo.py",
+        "out = model(ids_t, mask_t, mem.kv, mem.valid, bos_ctx, bos_valid)\n"
+        "            am = tmask",
+        "out = model(ids_t, mask_t, mem.kv, mem.valid, bos_ctx, bos_valid & False)\n"
+        "            am = tmask",
+        "The exactness control: with no knockout, loo_readout must reproduce S0-03's "
+        "answer_readout(cond='live') bit-exactly, or its deltas are against a "
+        "different readout.",
+        off_gate_allowed=tuple(
+            (
+                "tests/test_loo.py::" + node,
+                "it compares a condition's bos flag or the live trajectory with the "
+                "honest loop's, which this mutation changes.",
+            )
+            for node in (
+                "test_memory_off_masks_every_slot_for_the_query_forward_only",
+                "test_bos_off_variants_drop_only_the_bos_context",
+                "test_no_knockout_is_written_back",
+                "test_every_condition_matches_a_hand_recomputation",
+            )
+        ),
+    ),
+    # -- W4-fix: PR #48 review (rsr.metrics.loo, spec §3.2.1) --
+    Mutation(
+        "loo: the whole-memory donor may ask the queried question",
+        "test_all_slots_resample_donor_excludes_the_queried_key",
+        "src/rsr/metrics/loo.py",
+        'and int(ann["fact_key"][b, s]) == exclude_key',
+        "and False",
+        (
+            "PR #48 M1: an all_slots_resample donor memory holding an ass"
+            "ert of the queried key can answer the query itself."
+        ),
+    ),
+    Mutation(
+        "loo: all_slots_resample keeps the row's own memory",
+        ("test_all_slots_resample_swaps_whole_rows_for_a_different_documents_memory"),
+        "src/rsr/metrics/loo.py",
+        "            all_kv[b] = mem.kv[d]\n",
+        "            all_kv[b] = mem.kv[b]\n",
+        (
+            "PR #48 M1: all_slots_resample replaces the row's whole memor"
+            "y with the donor's."
+        ),
+        off_gate_allowed=(
+            (
+                ("tests/test_loo.py::test_every_condition_matches_a_hand_recomputation"),
+                (
+                    "it recomputes every condition by direct indexing of the live"
+                    " memory, so it goes red for any condition's plumbing defect "
+                    "by design."
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: memory_off leaves the memory valid",
+        "test_memory_off_masks_every_slot_for_the_query_forward_only",
+        "src/rsr/metrics/loo.py",
+        '"memory_off": (mem.kv, no_mem, everyone),',
+        '"memory_off": (mem.kv, mem.valid, everyone),',
+        (
+            "PR #48 M1: memory_off is valid=False for every slot, for the"
+            " query forward only."
+        ),
+        off_gate_allowed=(
+            (
+                ("tests/test_loo.py::test_every_condition_matches_a_hand_recomputation"),
+                (
+                    "it recomputes every condition by direct indexing of the live"
+                    " memory, so it goes red for any condition's plumbing defect "
+                    "by design."
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: a bos_off condition keeps the bos-copy context",
+        "test_bos_off_variants_drop_only_the_bos_context",
+        "src/rsr/metrics/loo.py",
+        'bv = bos_off if cond.endswith("_bos_off") else bos_valid',
+        "bv = bos_valid",
+        (
+            "PR #48 M2: at gap 1 the bos-copy context is the assert's ges"
+            "talt; *_bos_off must switch it off."
+        ),
+        off_gate_allowed=(
+            (
+                ("tests/test_loo.py::test_every_condition_matches_a_hand_recomputation"),
+                (
+                    "it recomputes every condition by direct indexing of the live"
+                    " memory, so it goes red for any condition's plumbing defect "
+                    "by design."
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: own donors may carry the answer object",
+        "test_pick_donor_is_called_with_the_required_exclusions",
+        "src/rsr/metrics/loo.py",
+        (
+            "            exclude_objects={qobj},\n            seed=seed,\n "
+            "           t=t,\n            role=_ROLE_OWN,"
+        ),
+        ("            seed=seed,\n            t=t,\n            role=_ROLE_OWN,"),
+        (
+            "PR #48 M3: a donor carrying the queried answer object re-sup"
+            "plies the answer the knockout removed."
+        ),
+        off_gate_allowed=(
+            (
+                ("tests/test_loo.py::test_object_flags_and_the_donor_object_exclusion"),
+                (
+                    "it checks that no donor carries the answer object: the same "
+                    "exclusion, read from the records."
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: own donors may ask the queried question",
+        "test_own_donor_excludes_the_queried_key",
+        "src/rsr/metrics/loo.py",
+        ("            exclude_keys={qkey},\n            exclude_objects={qobj},"),
+        ("            exclude_keys=set(),\n            exclude_objects={qobj},"),
+        (
+            "PR #48 minor: the own donor must not ask the queried questio"
+            "n (it survived at :411 before)."
+        ),
+        off_gate_allowed=(
+            (
+                (
+                    "tests/test_loo.py::test_pick_donor_is_called_with_the_requir"
+                    "ed_exclusions"
+                ),
+                "it checks the same exclusion at the pick_donor call site.",
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: control donors may ask the control's question",
+        "test_pick_donor_is_called_with_the_required_exclusions",
+        "src/rsr/metrics/loo.py",
+        "exclude_keys={qkey, int(key[b, s])},",
+        "exclude_keys={qkey},",
+        (
+            "A control donor asking the control's question re-supplies th"
+            "e knocked-out fact."
+        ),
+    ),
+    Mutation(
+        "loo: the control may ask the queried question",
+        "test_control_is_never_of_the_queried_key",
+        "src/rsr/metrics/loo.py",
+        "if pending and int(key[b, s]) != qkey:",
+        "if pending:",
+        (
+            "PR #48 minor: a control of the queried key is not a control "
+            "-- it can answer the query."
+        ),
+    ),
+    Mutation(
+        "loo: a knockout is written back into the live memory",
+        "test_no_knockout_is_written_back",
+        "src/rsr/metrics/loo.py",
+        "    for k, v in flags.items():\n        put(k, v[idx])\n",
+        (
+            "    for k, v in flags.items():\n        put(k, v[idx])\n    me"
+            'm.kv.copy_(inputs["own_zero"][0])\n'
+        ),
+        (
+            "Single-step interventions: no knockout may reach the memory "
+            "later steps attend over."
+        ),
+        off_gate_allowed=(
+            (
+                ("tests/test_loo.py::test_live_path_is_bit_exact_to_answer_readout"),
+                (
+                    "a write-back changes the live memory of every later step, so"
+                    " the live answers stop matching answer_readout."
+                ),
+            ),
+            (
+                ("tests/test_loo.py::test_every_condition_matches_a_hand_recomputation"),
+                (
+                    "it recomputes every condition by direct indexing of the live"
+                    " memory, so it goes red for any condition's plumbing defect "
+                    "by design."
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        ("loo: delta-loss resample donors may ask the slot's own question"),
+        "test_loo_delta_loss_resample_excludes_the_slots_own_key",
+        "src/rsr/metrics/loo.py",
+        "exclude_keys={own_key} if own_key >= 0 else set(),",
+        "exclude_keys=set(),",
+        (
+            "PR #48 minor: an E0d resample donor asking the displaced sen"
+            "tence's question is not a knockout of it."
+        ),
+    ),
+    Mutation(
+        "loo: a padding step scores 0.0 instead of NaN",
+        "test_loo_delta_loss_padding_step_is_nan_not_zero",
+        "src/rsr/metrics/loo.py",
+        'return torch.where(n > 0, mean, float("nan")).cpu()',
+        "return mean.cpu()",
+        (
+            "PR #48 minor: a sentence with no real target has no loss; 0."
+            "0 would enter E0d's correlation as data."
+        ),
+    ),
+    Mutation(
+        "loo: zero-mode delta loss requires synthetic annotations",
+        "test_loo_delta_loss_zero_mode_needs_no_annotations",
+        "src/rsr/metrics/loo.py",
+        ('ann = stream_annotations(docs, steps=S) if mode == "resample" else None'),
+        "ann = stream_annotations(docs, steps=S)",
+        ("PR #48 minor: E0d's zero mode must run on non-synthetic text."),
+    ),
+    Mutation(
+        "loo: never-written asserts reported as evicted",
+        "test_own_status_distinguishes_evicted_from_never_written",
+        "src/rsr/metrics/loo.py",
+        ("own_status[b] = OWN_EVICTED if bool(written[b, a]) else OWN_NEVER_WRITTEN"),
+        "own_status[b] = OWN_EVICTED",
+        ("PR #48 minor: an assert that never entered memory was not evicted."),
+    ),
+    Mutation(
+        "loo: the seed mix collides at role >= 131 again",
+        "test_seed_mix_has_no_role_collision",
+        "src/rsr/metrics/loo.py",
+        '    return int.from_bytes(h[:8], "little") % (2**63)',
+        ("    return (((seed * 1_000_003 + doc_id) * 8_191 + t) * 131 + role) % (2**63)"),
+        ("PR #48 minor: (seed, doc, t, role) must not alias; E0d's roles are 16 + rank."),
+    ),
+    Mutation(
+        "loo: a duplicate key in a document is not flagged",
+        "test_duplicate_key_in_document_is_flagged",
+        "src/rsr/metrics/loo.py",
+        "dup_key[di, q] = n_asking[per_doc[di][q]] > 1",
+        "dup_key[di, q] = n_asking[per_doc[di][q]] > 2",
+        ("PR #48 minor: record documents where two asserts ask the queried question."),
+    ),
+    Mutation(
+        "loo: ctrl_same_object never fires",
+        "test_object_flags_and_the_donor_object_exclusion",
+        "src/rsr/metrics/loo.py",
+        'flags["ctrl_same_object"][b] = int(obj[b, s]) == qobj',
+        'flags["ctrl_same_object"][b] = False',
+        (
+            "PR #48 M3: a control carrying the answer object must be flag"
+            "ged for W5 to stratify."
+        ),
+    ),
+    Mutation(
+        "loo: all_donor_has_object never fires",
+        "test_object_flags_and_the_donor_object_exclusion",
+        "src/rsr/metrics/loo.py",
+        'int(kind[d, s]) == KIND["assert"] and int(obj[d, s]) == qobj',
+        "False",
+        ("PR #48 M3: a whole-memory donor holding the answer object must be flagged."),
+    ),
 )
 
 
