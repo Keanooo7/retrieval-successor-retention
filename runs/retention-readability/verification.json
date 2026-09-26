@@ -1,0 +1,28 @@
+{
+  "status": "ok",
+  "seed": "6407a9d76f224a1aaacda34ed4acb73b3183bc8fd89fcceb49151c1bfcb65e37",
+  "claims": [
+    {
+      "claim": "B.ckpt3000 rank penalty RP point per seed",
+      "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print([round(x,4) for x in r['B.ckpt3000.U.RP.point']['samples']], [round(x,4) for x in r['B.ckpt3000.U.RP.hi']['samples']])\"",
+      "expected": "[0.0016, 0.0033, 0.0084] [0.0032, 0.0051, 0.0106]",
+      "observed": "[0.0016, 0.0033, 0.0084] [0.0032, 0.0051, 0.0106]  (literal command, rc=0). Different path: raw/B-ckpt3000-seed{0,1,2}.json.gz re-aggregated in numpy without run.py, PREREG bootstrap (torch.Generator 20260926+seed, 2000 per-document resamples of U), printed [0.0016, 0.0033, 0.0084] [0.0032, 0.0051, 0.0106]; max |recomputed - ledger| over RP/D_ref/D_floor/H_model x point/lo/hi x U/P/E x all 9 children = 0.0",
+      "match": true
+    },
+    {
+      "claim": "re-executing child B ckpt3000 seed2 reproduces its ledger readouts exactly (about 12 minutes, CPU)",
+      "command": "uv run python experiments/retention-readability/run.py --single --arm B --checkpoint 3000 --seed 2 --out /tmp/rr-verify/B-3000-2.json.gz; echo rc=$?; uv run python -c \"import gzip,json,importlib.util,sys; s=importlib.util.spec_from_file_location('rr','experiments/retention-readability/run.py'); m=importlib.util.module_from_spec(s); sys.modules['rr']=m; s.loader.exec_module(m); p=json.load(gzip.open('/tmp/rr-verify/B-3000-2.json.gz','rt')); o=m.summarise_child(p)['U']['readouts']; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print(all(o[n][f]==r[f'B.ckpt3000.U.{n}.{f}']['samples'][2] for n in ('RP','D_ref','D_floor','H_model') for f in ('point','lo','hi')), p['control1']['ok'], p['control2']['ok'], p['control4']['ok'])\"",
+      "expected": "rc=0 then: True True True True",
+      "observed": "rc=0 then: True True True True  (run.py at a6ec148 in a detached worktree, under slot cpu-det x1; --out moved to /private/tmp/claude-501/verify-w6/B-3000-2.json.gz; checkpoint sha256 b507ebc5... = manifest). Different path: every per-answer record (doc,q,a,gap,resident,rank,n_live,ok,nll,nll16,brier16) of all 3 arms identical to committed raw/B-ckpt3000-seed2.json.gz (NLL max|diff| 0.0); control1 max_abs_nll_diff 0.0, control2 max_abs_diff 1.4769292455696359e-08, control4 mismatches 0 -- equal to committed",
+      "match": true
+    },
+    {
+      "claim": "model-free headroom on P reproduces the red team's held-out numbers",
+      "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/retention-readability/ledger.json'))['rows']}; print([round(x,4) for x in r['B.ckpt3000.P.H_free']['samples']])\"",
+      "expected": "[0.1852, 0.1739, 0.1896]",
+      "observed": "[0.1852, 0.1739, 0.1896]  (literal command, rc=0). Different path: rsr.metrics.headroom.simulate on doc_sets(seed,64)['heldout'] (ids 4096..4159) with fresh FIFOPolicy / OraclePolicy(discounted_demand(doc,0.97)), M=16, no model, no run.py: FIFO 0.8148148148148148/0.8260504201680672/0.8104026845637584, oracle 1.0 x3, printed [0.1852, 0.1739, 0.1896]",
+      "match": true
+    }
+  ],
+  "verifier_sha": "a6ec1487cf2847cd6260cfe008ac72f9243b5bc8"
+}
