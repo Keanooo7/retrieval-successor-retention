@@ -48,3 +48,10 @@ where the implementation had to choose something the PREREG does not spell out.
   to `runs/fresh-stream.parent.log`, and `run.sh` writes `runs/fresh-stream/run.rc` after
   the parent exits. If the parent refused before creating the directory, `run.sh` still
   creates it to hold `run.rc`, and it must be moved aside before a retry.
+
+## Post-run (written 2026-09-25 ~17:55 PDT by the session that wrote the PREREG, after reading the ledger)
+
+- The author's expectation was wrong in the favourable direction for arm B: it predicted R would survive without growing and C3000(B) to fail more often than not. The ledger has `B.growth_R_quantity` and `B.C3000` true; see those keys.
+- Leak check read before this note: in the held-out `gap_gt_M` bucket, which FIFO has evicted, arm B's live accuracy stays near chance (`B.ckpt3000.heldout.live.gap_gt_M.answer_acc`), and `slots_zeroed` returns every bucket to chance (`B.ckpt3000.heldout.slots_zeroed.gap_2_to_M.answer_acc`).
+- Arm A never left the plateau: `A.stream_answer_loss_first_window_below` is null on every seed.
+- The author saw the arm-B heartbeats (stream answer loss) shortly before the run ended, before reading any measured key.
