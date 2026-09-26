@@ -1187,7 +1187,11 @@ def write_rows(led, summaries: dict, dec: dict) -> None:
         for k in ("C3_sum_worst", "C4_identity_worst"):
             led.stat(f"{pre}.{k}", [x["controls"][k] for x in sm], how=how)
         for f in ("max_abs_acc_diff", "max_abs_nll_diff"):
-            led.stat(f"{pre}.C1.{f}", [x["controls"]["C1"].get(f, float("nan")) for x in sm], how=how)
+            led.stat(
+                f"{pre}.C1.{f}",
+                [x["controls"]["C1"].get(f, float("nan")) for x in sm],
+                how=how,
+            )
         led.stat(f"{pre}.seconds", [x["seconds"] for x in sm], how="child wall clock")
         led.stat(f"{pre}.n_probe_rows", [x["n_probe_rows"] for x in sm], how=how)
     for k, x in sorted(summaries.items()):
