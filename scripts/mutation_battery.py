@@ -2769,6 +2769,33 @@ MUTATIONS: tuple[Mutation, ...] = (
         'b["excess.acc"] = drop_ci(rec, pop, "all_slots_zeroed", "acc")',
         "amendment 1 A4: reach is read over all_slots_resample (in distribution).",
     ),
+    Mutation(
+        "carry-forward: a sensitivity label change is not a disagreement",
+        "test_sensitivity_disagreement_threshold",
+        "experiments/carry-forward/run.py",
+        "return bool(lab_p != lab_s or d != d or d > L_SENSITIVITY_MAX_DIFF)",
+        "return bool(d != d or d > L_SENSITIVITY_MAX_DIFF)",
+        "carry-forward amendment 2 ruling 3: a label change between primary and "
+        "sensitivity L is a material disagreement.",
+        off_gate_allowed=(
+            (
+                "tests/test_carry_forward.py::test_l_full_marks_a_disagreeing_"
+                "sensitivity_inconclusive",
+                "the same rule observed through l_full: its disagreement is a label "
+                "change with the points 1.0 apart only on a subset.",
+            ),
+        ),
+    ),
+    Mutation(
+        "carry-forward: an inconclusive L no longer blocks a no-carry outcome",
+        "test_inconclusive_l_without_carry_is_inconclusive_exit_3",
+        "experiments/carry-forward/run.py",
+        "if not carriers and any("
+        'per_seed[s]["L_label"] == "L_INCONCLUSIVE" for s in SEEDS):',
+        'if False and any(per_seed[s]["L_label"] == "L_INCONCLUSIVE" for s in SEEDS):',
+        "carry-forward amendment 2 ruling 3: with no seed carrying, an "
+        "L_INCONCLUSIVE seed makes the classification inconclusive (exit 3).",
+    ),
 )
 
 

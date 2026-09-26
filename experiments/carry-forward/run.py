@@ -46,6 +46,7 @@ RUN_ID = "carry-forward"
 PREREG = "experiments/carry-forward/PREREG.md"
 PREREG_COMMIT = "ca34aa7"
 AMENDMENT_COMMIT = "f4e1c87"
+AMENDMENT2_COMMIT = "e3cfcc2"
 
 
 def _load(name: str, rel: str):
@@ -90,6 +91,9 @@ S_NOT_SPECIFIC_LO = 0.25
 S_MIN_COVERAGE = 0.20
 REACH_DELTA = 0.03
 RESAMPLE_MIN_COVERAGE = 0.80
+#: Amendment 2 ruling 3: |L - L_sensitivity| above this, or a label change, is a
+#: material disagreement -> L_INCONCLUSIVE.
+L_SENSITIVITY_MAX_DIFF = 0.15
 REPRO_TOL = 1e-6
 BOOT_R = 2000
 BOOT_SEED = 20260926
@@ -516,6 +520,56 @@ def l_readout(rec: dict, pop: torch.Tensor | None = None) -> dict:
     return out
 
 
+def gap1_population(rec: dict) -> torch.Tensor:
+    """Amendment 2 ruling 2: gap 1, own resident, both bos-off resamples applied,
+    not dup_key_in_doc."""
+    return (
+        (rec["gap"] == 1)
+        & (rec["own_status"] == _loo().OWN_RESIDENT)
+        & _applied(rec["own_resample_bos_off_ok"])
+        & _applied(rec["all_slots_resample_bos_off_ok"])
+        & ~_flag(rec, "dup_key_in_doc")
+    )
+
+
+def l_full(rec: dict) -> dict:
+    """l_readout on the L population, plus Amendment 2: the gap-1 bos-off L
+    (secondary, unlabelled) and the sensitivity L on `all_donor_has_object ==
+    False`, whose material disagreement turns the label into L_INCONCLUSIVE."""
+    out = l_readout(rec)
+    pop = l_population(rec)
+    sens_pop = pop & ~_flag(rec, "all_donor_has_object")
+    sens = l_readout(rec, sens_pop)
+    out["n_donor_has_object"] = int((pop & _flag(rec, "all_donor_has_object")).sum())
+    out["L_sensitivity.acc"] = sens["L.acc"]
+    out["denominator_sensitivity.acc"] = sens["denominator.acc"]
+    out["label_primary"] = out["label"]
+    out["label_sensitivity"] = sens["label"]
+    out["sensitivity_disagrees"] = sensitivity_disagrees(
+        out["L.acc"], sens["L.acc"], out["label"], sens["label"]
+    )
+    if out["sensitivity_disagrees"]:
+        out["label"] = "L_INCONCLUSIVE"
+    g1 = gap1_population(rec)
+    out["n_gap1"] = int(g1.sum())
+    out["L_gap1_bos_off.acc"] = ratio_ci(
+        rec,
+        g1,
+        "own_resample_bos_off",
+        "all_slots_resample_bos_off",
+        "acc",
+        live="live_bos_off",
+    )
+    return out
+
+
+def sensitivity_disagrees(primary: dict, sens: dict, lab_p: str, lab_s: str) -> bool:
+    """Amendment 2 ruling 3: a label change, or |point diff| > 0.15 (NaN counts
+    as a disagreement: the sensitivity L could not be read)."""
+    d = abs(primary["point"] - sens["point"])
+    return bool(lab_p != lab_s or d != d or d > L_SENSITIVITY_MAX_DIFF)
+
+
 def l_label(ci: dict, denominator: dict | None = None) -> str:
     """A1 guard first: a denominator whose CI lower bound is <= 0 -> INDETERMINATE."""
     if denominator is not None:
@@ -636,6 +690,9 @@ def reach_readout(rec: dict, traj_zeroed: dict | None = None) -> dict:
         b["excess.nll16"] = drop_ci(rec, pop, "all_slots_resample", "nll16")
         for name, (knock, live) in REACH_SECONDARY.items():
             b[f"{name}.acc"] = drop_ci(rec, pop, knock, "acc", live=live)
+        b["excess_no_donor_object.acc"] = drop_ci(
+            rec, pop & ~_flag(rec, "all_donor_has_object"), "all_slots_resample", "acc"
+        )
         if traj_zeroed is not None:
             n = torch.ones(int(pop.sum()), dtype=torch.float64)
             tz = {
@@ -667,6 +724,13 @@ def classify(per_seed: dict[int, dict], controls_ok: bool) -> dict:
             "carry_seeds": [],
         }
     carriers = [s for s in SEEDS if per_seed[s]["carry"]]
+    if not carriers and any(per_seed[s]["L_label"] == "L_INCONCLUSIVE" for s in SEEDS):
+        # Amendment 2 ruling 3: the outcome would rest on an L that is inconclusive
+        return {
+            "outcome": "inconclusive",
+            "exit": int(Exit.DID_NOT_RUN),
+            "carry_seeds": [],
+        }
     if len(carriers) == len(SEEDS):
         outcome = "CARRIED"
     elif carriers:
@@ -743,9 +807,9 @@ def measure_one(
     e = _concat(ext_recs)
     e_traj = {"ok": torch.cat(ext_traj)}
     out["controls"]["residency"] = {"H64": residency(h), "EXT": residency(e)}
-    Lh = l_readout(h)
+    Lh = l_full(h)
     out["H64"] = {"L": Lh, "S": s_readout(h), "reach": reach_readout(h, h_traj)}
-    out["EXT"] = {"L": l_readout(e), "S": s_readout(e), "reach": reach_readout(e, e_traj)}
+    out["EXT"] = {"L": l_full(e), "S": s_readout(e), "reach": reach_readout(e, e_traj)}
     out["controls"]["resample_coverage"] = {
         "ok": Lh["resample_coverage"] >= RESAMPLE_MIN_COVERAGE,
         "value": Lh["resample_coverage"],
@@ -802,7 +866,7 @@ def write_rows(led, per: dict[int, dict[int, dict]]) -> None:
                         if _is_ci(v):
                             led.note(key, _ci_value(v), how=how)
                             across.setdefault(key.split(".", 1)[1], {})[seed] = v["point"]
-                        elif k != "label":
+                        elif not k.startswith("label"):
                             scal[k] = v
                     led.note(
                         f"s{seed}.ckpt{ckpt}.{set_}.{name}.population", scal, how=how
@@ -811,6 +875,8 @@ def write_rows(led, per: dict[int, dict[int, dict]]) -> None:
                     f"s{seed}.ckpt{ckpt}.{set_}.labels",
                     {
                         "L": r[set_]["L"]["label"],
+                        "L_primary": r[set_]["L"]["label_primary"],
+                        "L_sensitivity": r[set_]["L"]["label_sensitivity"],
                         "S": r[set_]["S"]["label"],
                         "carry": r[set_]["reach"]["carry"],
                         "decidable": r[set_]["reach"]["decidable"],
@@ -837,6 +903,8 @@ def manifest(source: Path, shas: dict) -> dict:
         "prereg": PREREG,
         "prereg_commit": PREREG_COMMIT,
         "amendment_commit": AMENDMENT_COMMIT,
+        "amendment2_commit": AMENDMENT2_COMMIT,
+        "L_SENSITIVITY_MAX_DIFF": L_SENSITIVITY_MAX_DIFF,
         "question": QUESTION,
         "falsifier": FALSIFIER,
         "expected": EXPECTED,
@@ -1074,8 +1142,9 @@ def render_results(doc: dict) -> str:
         "",
         "# carry-forward — RESULTS",
         "",
-        f"- PREREG: `{PREREG}` (commit {PREREG_COMMIT}, Amendment 1 appended before "
-        f"any readout). Run SHA: `{prov.get('git_sha')}`, dirty {prov.get('dirty')}. "
+        f"- PREREG: `{PREREG}` (commit {PREREG_COMMIT}; Amendments 1 "
+        f"{AMENDMENT_COMMIT} and 2 {AMENDMENT2_COMMIT} appended before any "
+        f"readout). Run SHA: `{prov.get('git_sha')}`, dirty {prov.get('dirty')}. "
         f"Hardware: {prov.get('platform')}, device {doc['device']}, torch threads "
         "per the manifest.",
         f"- Command: `{doc['commands'][0]['argv']}`. Status `{doc['status']}`. "
@@ -1094,10 +1163,11 @@ def render_results(doc: dict) -> str:
         out += [
             f"## {set_}: localisation and specificity",
             "",
-            "| prefix | L.L.acc | L.denominator.acc | L.L_zero.acc (OOD) | "
-            "L.L_bos_off.acc | L.memory_off_drop.acc | S.ratio.acc | "
+            "| prefix | L.L.acc | L.denominator.acc | L.L_sensitivity.acc | "
+            "L.L_zero.acc (OOD) | L.L_bos_off.acc | L.L_gap1_bos_off.acc | "
+            "L.memory_off_drop.acc | S.ratio.acc | "
             "S.drop_own.acc | S.drop_ctrl.acc | S.L_on_S | labels |",
-            "|---|---|---|---|---|---|---|---|---|---|---|",
+            "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
         ]
         for c in cells:
             p = f"{c}.{set_}"
@@ -1106,7 +1176,9 @@ def render_results(doc: dict) -> str:
                 continue
             out.append(
                 f"| `{p}` | {ci(p + '.L.L.acc')} | {ci(p + '.L.denominator.acc')} | "
+                f"{ci(p + '.L.L_sensitivity.acc')} | "
                 f"{ci(p + '.L.L_zero.acc')} | {ci(p + '.L.L_bos_off.acc')} | "
+                f"{ci(p + '.L.L_gap1_bos_off.acc')} | "
                 f"{ci(p + '.L.memory_off_drop.acc')} | {ci(p + '.S.ratio.acc')} | "
                 f"{ci(p + '.S.drop_own.acc')} | {ci(p + '.S.drop_ctrl.acc')} | "
                 f"{ci(p + '.S.L_on_S')} | L {lab['L']}, S {lab['S']} |"
@@ -1149,8 +1221,9 @@ def render_results(doc: dict) -> str:
             "Secondary reach baselines, pooled band 17_40 (not classified):",
             "",
             "| prefix | excess_zeroed.acc | excess_memory_off.acc | "
-            "excess_bos_off.acc | excess_traj.acc | excess.nll16 |",
-            "|---|---|---|---|---|---|",
+            "excess_bos_off.acc | excess_traj.acc | excess_no_donor_object.acc | "
+            "excess.nll16 |",
+            "|---|---|---|---|---|---|---|",
         ]
         for c in cells:
             p = f"{c}.{set_}.reach.17_40"
@@ -1159,7 +1232,8 @@ def render_results(doc: dict) -> str:
             out.append(
                 f"| `{p}` | {ci(p + '.excess_zeroed.acc')} | "
                 f"{ci(p + '.excess_memory_off.acc')} | {ci(p + '.excess_bos_off.acc')} "
-                f"| {ci(p + '.excess_traj.acc')} | {ci(p + '.excess.nll16')} |"
+                f"| {ci(p + '.excess_traj.acc')} | "
+                f"{ci(p + '.excess_no_donor_object.acc')} | {ci(p + '.excess.nll16')} |"
             )
         out.append("")
     out += [

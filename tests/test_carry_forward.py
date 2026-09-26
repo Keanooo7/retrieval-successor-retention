@@ -398,6 +398,51 @@ def test_reach_coverage_below_0_8_is_not_decidable():
     assert not run.reach_readout(rec)["decidable"]
 
 
+def test_sensitivity_disagreement_threshold():
+    a = {"point": 0.80, "lo": 0.7, "hi": 0.9}
+    assert not run.sensitivity_disagrees(a, {"point": 0.66}, "LOCALISED", "LOCALISED")
+    assert run.sensitivity_disagrees(a, {"point": 0.64}, "LOCALISED", "LOCALISED")
+    assert run.sensitivity_disagrees(a, {"point": 0.80}, "LOCALISED", "INDETERMINATE")
+    assert run.sensitivity_disagrees(a, {"point": float("nan")}, "LOCALISED", "LOCALISED")
+
+
+def test_l_full_marks_a_disagreeing_sensitivity_inconclusive():
+    rec = _records(n_docs=200)
+    pop = run.l_population(rec)
+    rec["live_ok"][pop] = 1.0
+    rec["all_slots_resample_ok"][pop] = 0.0
+    rec["own_resample_ok"][pop] = 0.0  # L = 1 on the whole population
+    idx = pop.nonzero().flatten()
+    half = idx[: len(idx) // 2]
+    rec["all_donor_has_object"][idx[len(idx) // 2 :]] = True
+    assert run.l_full(rec)["label"] == "LOCALISED"
+    rec["own_resample_ok"][half] = 1.0  # on the no-object rows L = 0
+    r = run.l_full(rec)
+    assert r["sensitivity_disagrees"] and r["label"] == "L_INCONCLUSIVE"
+    assert r["label_primary"] in ("DIFFUSE", "INDETERMINATE", "LOCALISED")
+
+
+def test_gap1_is_read_from_the_bos_off_columns():
+    rec = _records()
+    g1 = run.gap1_population(rec)
+    assert g1.any() and bool((rec["gap"][g1] == 1).all())
+    rec["live_bos_off_ok"][g1] = 1.0
+    rec["own_resample_bos_off_ok"][g1] = 0.25
+    rec["all_slots_resample_bos_off_ok"][g1] = 0.0
+    assert run.l_full(rec)["L_gap1_bos_off.acc"]["point"] == pytest.approx(0.75)
+
+
+def test_inconclusive_l_without_carry_is_inconclusive_exit_3():
+    r = run.classify(
+        {0: _seed(False), 1: _seed(False, L="L_INCONCLUSIVE"), 2: _seed(False)}, True
+    )
+    assert r["outcome"] == "inconclusive" and r["exit"] == 3
+    r = run.classify(
+        {0: _seed(False), 1: _seed(False, L="L_INCONCLUSIVE"), 2: _seed(True)}, True
+    )
+    assert r["outcome"] == "MIXED"
+
+
 # --------------------------------------------------------------------------- #
 # end to end, a tiny random model through the real loo_readout
 # --------------------------------------------------------------------------- #
@@ -458,3 +503,5 @@ def test_measure_one_end_to_end_on_a_tiny_model():
     run.write_rows(_Led(), {0: {3000: r}})
     assert "s0.ckpt3000.EXT.reach.17_40.excess.acc" in led_rows
     assert "s0.ckpt3000.H64.L.L.acc" in led_rows
+    assert "s0.ckpt3000.EXT.L.L_sensitivity.acc" in led_rows
+    assert "s0.ckpt3000.EXT.L.L_gap1_bos_off.acc" in led_rows
