@@ -1,0 +1,61 @@
+{
+  "M": 16,
+  "S": 48,
+  "arms": [
+    "fifo",
+    "oracle",
+    "factfiller"
+  ],
+  "checkpoint_sha256": {
+    "A.ckpt3000.seed0": "f8adcebeb730d160d62ce3d46de0e173a82fe25efd4730a32bf733bf607a2e64",
+    "A.ckpt3000.seed1": "9763cbc61f06496919058036113583b5f57a2aa923ab7d5e80b1b35882d4bb98",
+    "A.ckpt3000.seed2": "f79c006f1a23f9d72cd9d8ba72299071ac2e738997d5a7965e1f42f6c76545fb",
+    "B.ckpt2500.seed0": "26c4162e7dc6ef1f80dffa451e4ee75c56360bc94227533b38a45b62003e3176",
+    "B.ckpt2500.seed1": "327c3facde61ef9a7f4b9fcaeb31efcf40ab36d65a5d584ec97637db334bdadd",
+    "B.ckpt2500.seed2": "74b026f1dd3fe59eb473e501c37ed9bb7d836276270ec875939e5654d8e86ddd",
+    "B.ckpt3000.seed0": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+    "B.ckpt3000.seed1": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+    "B.ckpt3000.seed2": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8"
+  },
+  "checkpoints": [
+    "B.ckpt2500",
+    "B.ckpt3000",
+    "A.ckpt3000"
+  ],
+  "device": "cpu",
+  "expected": "Pre-registered expectation: (a) NO_PENALTY at ckpt3000 about 60 percent; (b) READABLE about 60 percent; headline READABLE_AT_SHIFTED_RANK about 45 percent, MIXED about 40 percent, RANK_BOUND about 15 percent; the arm A null holds.",
+  "falsifier": "none of spec section 2's; a D2 input. Claim tested: arm B, as trained, can read facts kept at shifted ranks (ADR-0006: memory keys are rank-indexed). READABLE_AT_SHIFTED_RANK -> survived, RANK_BOUND -> falsified, MIXED -> inconclusive.",
+  "gamma": 0.97,
+  "prereg": "experiments/retention-readability/PREREG.md",
+  "prereg_commit": "ab7cbd2",
+  "question": "Can fresh-stream arm B, trained only under FIFO eviction, read a fact that a different eviction rule kept in memory at a rank FIFO never put it at?",
+  "run_id": "retention-readability",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "sets": {
+    "E": [
+      64,
+      1088
+    ],
+    "P": [
+      4096,
+      4160
+    ],
+    "U": "E then P"
+  },
+  "source": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream",
+  "source_ledger_sha256": "56d065caa8b22a48fccf4a3e1124d26ffd2d92e17c6bab588218f1da6ad93782",
+  "threads_per_child": 1,
+  "thresholds": {
+    "A_NULL": 0.03,
+    "BOOT_SEED_BASE": 20260926,
+    "CONTROL1_TOL": 0.0,
+    "N_BOOT": 2000,
+    "READ_MARGIN": 0.1,
+    "REPRO_TOL": 1e-06,
+    "RP_MAX": 0.03
+  }
+}
