@@ -126,8 +126,8 @@ def test_measurement_is_the_corpus_size_function():
     src = (ROOT / "experiments" / "fresh-escape" / "run.py").read_text()
     assert "def measure(" not in src and "def measure_checkpoint(" not in src
     assert "def doc_sets(" not in src and "def run_arm(" not in src
-    assert "measure_fn=measure_checkpoint" in src
-    assert "control_1(reference, a.source_root, measure_checkpoint)" in src
+    assert "measure_fn=deadline_stamped(measure_checkpoint, deadline_epoch())" in src
+    assert "reference, a.source_root, measure_checkpoint, log=timestamped_log" in src
 
 
 # --------------------------------------------------------------------------- #
@@ -316,6 +316,116 @@ def test_failed_controls_are_inconclusive(case):
     v = run.verdict(res)
     assert (v["classification"], v["exit"]) == ("inconclusive", Exit.DID_NOT_RUN)
     assert v["P"] == 9000  # every reason is named, not only the P rule
+
+
+# --------------------------------------------------------------------------- #
+# the deadline, literally: P counts measurements COMPLETED by 08:30 only
+# --------------------------------------------------------------------------- #
+
+
+def _at(offset_s: float) -> str:
+    """An ISO time ``offset_s`` seconds from the PREREG deadline."""
+    t = run.deadline_epoch() + offset_s
+    return dt.datetime.fromtimestamp(t, ZoneInfo("America/Los_Angeles")).isoformat()
+
+
+def test_post_deadline_measurement_is_excluded_from_P():
+    per = per_for(9000, r_at={9000: YES})
+    for s in SEEDS:
+        for c in CKPTS:
+            per[s][c]["measured_at"] = _at(-3600 + c / 1000)
+    per[1][9000]["measured_at"] = _at(+1)  # completed one second after 08:30
+    v = run.verdict(res_for(per))
+    assert v["P"] == 8000 and v["classification"] == "NO_ESCAPE"
+    assert v["reported_as"] == "NO_ESCAPE by 8000"
+    per[1][9000]["measured_at"] = _at(0)  # completed exactly at 08:30: counts
+    v = run.verdict(res_for(per))
+    assert (v["P"], v["classification"]) == (9000, "ESCAPES")
+    per[1][9000]["post_deadline"] = True  # the wrapper's flag also excludes
+    assert run.verdict(res_for(per))["P"] == 8000
+    del per[1][9000]["s003"]  # not measured before the deadline: no table
+    per[1][9000]["post_deadline"] = False
+    assert run.verdict(res_for(per))["P"] == 8000
+
+
+def test_P_below_6000_under_the_deadline_filter():
+    per = per_for(6000, r_at={6000: YES})
+    per[0][6000]["measured_at"] = _at(+60)
+    v = run.verdict(res_for(per))
+    assert (v["P"], v["classification"], v["exit"]) == (
+        5000,
+        "inconclusive",
+        Exit.DID_NOT_RUN,
+    )
+    per[0][6000]["measured_at"] = _at(-60)
+    v = run.verdict(res_for(per))
+    assert (v["P"], v["classification"]) == (6000, "ESCAPES")
+
+
+def test_deadline_stamped_stamps_and_refuses_to_start_after_the_deadline():
+    t = {"now": 0.0}
+    calls = []
+
+    def clock():
+        return t["now"]
+
+    def measure(seed_dir, seed, label, n):
+        calls.append(label)
+        t["now"] += 5.0  # the measurement takes 5 s
+        return {"stored_step": label, "s003": table()}
+
+    logs = []
+    m = run.deadline_stamped(measure, 10.0, clock=clock, log=logs.append)
+    a = m(Path("d"), 0, 4000, 64)  # 0 -> 5: before
+    assert a["post_deadline"] is False and a["measured_at"] and a["s003"]
+    assert dt.datetime.fromisoformat(a["measured_at"]).tzinfo is not None
+    t["now"] = 8.0
+    b = m(Path("d"), 0, 5000, 64)  # 8 -> 13: completed after
+    assert b["post_deadline"] is True and "s003" in b
+    t["now"] = 10.5
+    c = m(Path("d"), 0, 6000, 64)  # starts after: refused, never measured
+    assert calls == [4000, 5000] and "s003" not in c
+    assert c["not_measured"] == "not measured before deadline" and c["post_deadline"]
+    assert "not measured before deadline" in logs[0]
+    per = {0: {4000: a, 5000: b, 6000: c}, 1: {}, 2: {}}
+    assert run.counted_before_deadline(per)[0] == {4000: a}
+    assert run.post_deadline(per)[0] == {5000: b, 6000: c}
+
+
+def test_run_all_under_the_stamped_deadline(tmp_path):
+    """Each measurement takes two clock ticks; with the deadline at tick 30 the 14th
+    completes after it and later ones are never started: P = 7000, and the late
+    measurements are secondary ledger rows."""
+    clock = _ticking()
+    m, _ = fake_measure({c: YES for c in CKPTS})
+    kw, _, _ = _kw(m, clock=clock)
+    kw["measure_fn"] = run.deadline_stamped(m, 30.0, clock=clock, log=lambda s: None)
+    kw["deadline"] = 30.0
+    res = run.run_all(tmp_path / "r", **kw)
+    v = run.verdict(res)
+    assert (v["P"], v["classification"]) == (7000, "ESCAPES")
+    assert res["arm"]["per"][0][8000]["post_deadline"] is False
+    assert res["arm"]["per"][1][8000]["post_deadline"] is True
+    assert res["arm"]["per"][2][9000]["not_measured"] == "not measured before deadline"
+    doc = _ledger_doc(tmp_path, res)
+    rows = {r["key"]: r for r in doc["rows"]}
+    late = rows["post_deadline_measurements"]["value"]
+    assert late["seed1"]["8000"]["post_deadline"] is True
+    assert late["seed1"]["8000"]["R_quantity"] == YES
+    assert late["seed2"]["9000"]["not_measured"] == "not measured before deadline"
+    assert rows["A.ckpt8000.seeds_measured"]["value"] == [0]  # seed 1 is late
+    assert "A.ckpt9000.seeds_measured" not in rows  # never a primary row
+    assert rows["P"]["value"] == 7000
+    assert rows["measured_at"]["value"]["seed0"]["4000"] is not None
+
+
+def test_the_parent_log_is_timestamped(capsys):
+    run.timestamped_log("hello")
+    line = capsys.readouterr().out.strip()
+    stamp, rest = line.split(" ", 1)
+    assert rest == "hello" and dt.datetime.fromisoformat(stamp).tzinfo is not None
+    src = (ROOT / "experiments" / "fresh-escape" / "run.py").read_text()
+    assert "log=timestamped_log," in src
 
 
 # --------------------------------------------------------------------------- #

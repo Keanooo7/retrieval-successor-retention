@@ -31,13 +31,17 @@ Order (PREREG "Controls"; each failure overrides everything after it):
    4000 ... 9000 (n = 64) as they appear.
 4. The rule: P, R(P), the stream-loss windows at or before P, the classification.
 
-The parent enforces the absolute ``DEADLINE``: at it the children are stopped and
-whatever listed checkpoints exist are measured (fresh-stream's ``run_arm``). Reading
-of "measured on every seed before the deadline": a checkpoint written before the
-children were stopped counts for P even if its measurement finishes after the
-deadline. STIRRING reads this run's heartbeats (steps 3000 onward); fresh-stream's
-own windows over steps 0-2999 were below the threshold on no seed
-(``A.stream_answer_loss_first_window_below`` null on every seed).
+The parent enforces the absolute ``DEADLINE`` (fresh-stream's ``run_arm``: at it the
+children are stopped). The PREREG's "P is the largest listed checkpoint measured on
+every seed before the deadline" is read LITERALLY: every checkpoint measurement goes
+through ``deadline_stamped`` (at the call site in ``_run``), which stamps
+``measured_at`` (ISO, tz-aware, when the measurement COMPLETED) and refuses to START
+a measurement after the deadline ("not measured before deadline"). P counts only
+measurements that completed at or before the deadline on every seed
+(``counted_before_deadline``). A measurement that started before the deadline and
+completed after it stays in the ledger as a secondary ``post_deadline`` row and
+never feeds P or the classification. STIRRING reads this run's heartbeats (steps
+3000 onward); see IMPLEMENTATION-NOTES.md.
 
 Usage::
 
@@ -181,6 +185,16 @@ POLL_S = FS.POLL_S
 STOP_GRACE_S = FS.STOP_GRACE_S
 #: Prediction for --dry-run only; no rule reads it (PREREG: "about 3.33 s per step").
 PRED_S_PER_STEP = 3.33
+
+
+def now_iso() -> str:
+    """Wall-clock time, ISO 8601, tz-aware (local zone)."""
+    return _dt.datetime.now().astimezone().isoformat()
+
+
+def timestamped_log(s: str) -> None:
+    """The parent's log: every line prefixed with a tz-aware ISO timestamp."""
+    print(f"{now_iso()} {s}", flush=True)
 
 
 class StartCheckpointRefused(RuntimeError):
@@ -494,6 +508,73 @@ def run_all(
 # --------------------------------------------------------------------------- #
 
 
+def deadline_stamped(
+    measure_fn: Callable[[Path, int, int, int], dict],
+    deadline: float,
+    *,
+    clock: Callable[[], float] = time.time,
+    log: Callable[[str], None] = timestamped_log,
+) -> Callable[[Path, int, int, int], dict]:
+    """``measure_fn`` (the imported ``measure_checkpoint``, unchanged) with the
+    deadline applied at the call site: a measurement is not STARTED after the
+    deadline (the record says "not measured before deadline" and has no table);
+    every measurement that runs is stamped with ``started_at`` / ``measured_at``
+    (completion) and ``post_deadline`` (completed after the deadline)."""
+
+    def iso(t: float) -> str:
+        return _dt.datetime.fromtimestamp(t).astimezone().isoformat()
+
+    def m(seed_dir: Path, seed: int, label: int, n: int) -> dict:
+        t0 = clock()
+        if t0 > deadline:
+            log(f"  seed {seed} ckpt{label}: not measured before deadline")
+            return {
+                "stored_step": None,
+                "not_measured": "not measured before deadline",
+                "started_at": iso(t0),
+                "measured_at": None,
+                "post_deadline": True,
+            }
+        out = dict(measure_fn(seed_dir, seed, label, n))
+        t1 = clock()
+        out.update(started_at=iso(t0), measured_at=iso(t1), post_deadline=t1 > deadline)
+        return out
+
+    return m
+
+
+def completed_before_deadline(rec: dict, deadline: float | None = None) -> bool:
+    """A measurement counts for P when it has a table and it COMPLETED at or before
+    the deadline: ``post_deadline`` not set and ``measured_at`` <= the deadline."""
+    deadline = deadline_epoch() if deadline is None else deadline
+    if "s003" not in rec or rec.get("post_deadline"):
+        return False
+    at = rec.get("measured_at")
+    return at is None or _dt.datetime.fromisoformat(at).timestamp() <= deadline
+
+
+def counted_before_deadline(
+    per: dict[int, dict[int, dict]],
+) -> dict[int, dict[int, dict]]:
+    """``per`` with every measurement that did not complete by the deadline removed."""
+    return {
+        s: {c: r for c, r in (per.get(s) or {}).items() if completed_before_deadline(r)}
+        for s in SEEDS
+    }
+
+
+def post_deadline(per: dict[int, dict[int, dict]]) -> dict[int, dict[int, dict]]:
+    """The measurements ``counted_before_deadline`` removed (secondary only)."""
+    return {
+        s: {
+            c: r
+            for c, r in (per.get(s) or {}).items()
+            if not completed_before_deadline(r)
+        }
+        for s in SEEDS
+    }
+
+
 def primary_checkpoint(per: dict[int, dict[int, dict]]) -> int | None:
     """P: the LARGEST listed checkpoint measured on every seed; None if none."""
     done = [c for c in CHECKPOINTS if all(c in per.get(s, {}) for s in SEEDS)]
@@ -535,7 +616,7 @@ def classify(p: int | None, r_at_p: bool | None, stirs: bool) -> str:
 def verdict(res: dict) -> dict:
     """PREREG classification table, row for row. Every reason for inconclusive is
     listed, not only the first."""
-    per = (res.get("arm") or {}).get("per") or {}
+    per = counted_before_deadline((res.get("arm") or {}).get("per") or {})
     readout = FS.arm_readout(per, CHECKPOINTS)
     p = primary_checkpoint(per)
     ro = readout.get(p) if p is not None else None
@@ -606,8 +687,39 @@ def write_rows(led, res: dict, v: dict) -> None:
     if arm is not None:
         # fresh-stream's own rows (every set / condition / bucket / readout, memory
         # gates, R, M, C, probe R), at this run's listed checkpoints.
+        # Only measurements completed by the deadline: they are what P reads.
         with fresh_stream_with(CHECKPOINTS={ARM: CHECKPOINTS}):
-            FS.arm_rows(led, ARM, arm["per"])
+            FS.arm_rows(led, ARM, counted_before_deadline(arm["per"]))
+    allper = (arm or {}).get("per") or {}
+    led.note(
+        "measured_at",
+        {
+            f"seed{s}": {str(c): r.get("measured_at") for c, r in sorted(d.items())}
+            for s, d in allper.items()
+        },
+        how="per seed and checkpoint: when the measurement COMPLETED (ISO, tz-aware); "
+        "None if not started because the deadline had passed",
+    )
+    late = post_deadline(allper)
+    led.note(
+        "post_deadline_measurements",
+        {
+            f"seed{s}": {
+                str(c): {
+                    "post_deadline": True,
+                    "measured_at": r.get("measured_at"),
+                    "not_measured": r.get("not_measured"),
+                    "R_quantity": FS.r_quantity(r["s003"]) if "s003" in r else None,
+                    "C_quantity": FS.c_quantity(r["s003"]) if "s003" in r else None,
+                }
+                for c, r in sorted(d.items())
+            }
+            for s, d in late.items()
+            if d
+        },
+        how="secondary only, never P or the classification: measurements that "
+        "completed after the deadline, or were not started because it had passed",
+    )
     wins = res.get("stream_windows") or {}
     led.note(
         "stream_answer_loss_window_means",
@@ -820,7 +932,7 @@ def execute(led, root: Path, *, results_path: Path | None, **kw) -> Exit:
                     how="the child's result.json (train() return + torch threads)",
                 )
     v = verdict(res)
-    per = (arm or {}).get("per") or {}
+    per = counted_before_deadline((arm or {}).get("per") or {})
     measured = sorted(s for s in SEEDS if per.get(s))
     led.run_meta(
         device=DEVICE,
@@ -1111,11 +1223,16 @@ def _run(a, root: Path, results: Path) -> Exit:
         led,
         root,
         results_path=results,
-        control_fn=lambda: control_1(reference, a.source_root, measure_checkpoint),
+        control_fn=lambda: control_1(
+            reference, a.source_root, measure_checkpoint, log=timestamped_log
+        ),
         preflight_fn=preflight,
         spawn=lambda s, d: Child(s, d, a.source_root),
-        measure_fn=measure_checkpoint,
+        # The literal deadline rule, applied at the call site; the function measured
+        # with is still the imported measure_checkpoint (identity tested).
+        measure_fn=deadline_stamped(measure_checkpoint, deadline_epoch()),
         deadline=deadline_epoch(),
+        log=timestamped_log,
     )
 
 
