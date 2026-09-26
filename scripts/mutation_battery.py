@@ -233,6 +233,11 @@ _DISPLACEMENT_COUPLING = (
 )
 
 #: liveness-wiring: tests that read the measurement a real train() run wrote.
+_E0E_READS_R_COUPLING = (
+    "E0e reads r_i through reward.retrieval_demand (gated, rescaled), imported, not "
+    "retyped; its hand-built gated/underfull trace reddens with the target's own "
+    "tests. One target, two readers."
+)
 _LIVENESS_HOOK_READERS = (
     "test_the_controls_read_what_they_must_on_a_real_run",
     "test_the_decoy_is_the_untrained_model_at_the_same_seed",
@@ -527,6 +532,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_captured_gate_is_the_models_memory_gate",
                 _CAPTURE_BRIDGE_COUPLING,
             ),
+            (
+                "tests/test_e0e.py::test_r_i_is_the_gated_rescaled_target",
+                _E0E_READS_R_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -585,6 +594,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_capture_bridge.py::"
                 "test_retrieval_demand_runs_on_a_real_forward_pass",
                 _CAPTURE_BRIDGE_COUPLING,
+            ),
+            (
+                "tests/test_e0e.py::test_r_i_is_the_gated_rescaled_target",
+                _E0E_READS_R_COUPLING,
             ),
         ),
     ),
@@ -964,6 +977,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "before this cycle: `reward.py` had 160 lines and 11 passing tests and no "
         "path from a forward pass to any of it. A call site with no test that "
         "notices its removal is the same condition with an extra line of code.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0e.py::"
+                "test_fifo_lifetimes_on_a_tiny_live_model_are_the_analytic_ones",
+                "E0e's recorder counts lifetimes through FIFOPolicy.observe; with "
+                "observe never reached no sentence is seen live and every lifetime "
+                "reads 0: the same call site, seen from E0e.",
+            ),
+        ),
     ),
     # ----------------------------------------------------------------------- #
     # S0-01 -- the training-loop defects. One mutation per fix, each reverting
