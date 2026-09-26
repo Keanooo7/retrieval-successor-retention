@@ -530,7 +530,7 @@ def main(argv: list[str] | None = None) -> Exit:
     print(f"ledger: {out}; problems: {problems}")
     if tau_nan:
         return did_not_run("tau is NaN")
-    return code
+    return Exit.FAIL if problems else Exit.OK
 
 
 if __name__ == "__main__":
