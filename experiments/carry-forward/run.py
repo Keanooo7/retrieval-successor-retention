@@ -300,13 +300,14 @@ def compare_ledger_samples(ledger: dict, seed: int, got: dict[str, dict]) -> dic
     return {"ok": ok, "n_checked": n_checked, "max_abs_diff": max_diff, "mismatches": bad}
 
 
-def bitexact_live(loo_res: dict, ar: dict) -> dict:
-    """Control 3: loo_readout's live columns equal answer_readout(live)'s, torch.equal."""
+def bitexact_live(loo_res: dict, ar: dict, prefix: str = "live") -> dict:
+    """Control 3: loo_readout's `<prefix>` columns equal answer_readout(cond=prefix)'s,
+    torch.equal, target for target (`prefix` "live" or "live_bos_off", A5)."""
     pairs = {
-        "nll": (loo_res["live_nll"], ar["nll"].double()),
-        "ok": (loo_res["live_ok"], ar["ok"].double()),
-        "nll16": (loo_res["live_nll16"], ar["nll16"].double()),
-        "brier16": (loo_res["live_brier16"], ar["brier16"].double()),
+        "nll": (loo_res[f"{prefix}_nll"], ar["nll"].double()),
+        "ok": (loo_res[f"{prefix}_ok"], ar["ok"].double()),
+        "nll16": (loo_res[f"{prefix}_nll16"], ar["nll16"].double()),
+        "brier16": (loo_res[f"{prefix}_brier16"], ar["brier16"].double()),
         "gap": (loo_res["gap"].long(), ar["gap"].long()),
     }
     eq = {
@@ -320,11 +321,27 @@ def bitexact_live(loo_res: dict, ar: dict) -> dict:
     return {"ok": all(eq.values()), "equal": eq, "max_abs_diff": diff}
 
 
+def _loo():
+    from rsr.metrics import loo
+
+    return loo
+
+
 def residency(rec: dict) -> dict:
-    """Control 5: under FIFO, own_resident == (gap <= M) for every target."""
+    """Control 5 (A5): among targets whose assert was written, own_status is
+    resident iff gap <= M (FIFO); a never-written assert is counted, not tested."""
+    L = _loo()
+    st = rec["own_status"]
+    written = st != L.OWN_NEVER_WRITTEN
     want = rec["gap"] <= M
-    bad = int((rec["own_resident"].bool() != want).sum())
-    return {"ok": bad == 0, "n_targets": int(rec["gap"].numel()), "n_violations": bad}
+    bad = int(((st == L.OWN_RESIDENT) != want)[written].sum())
+    also = int((rec["own_resident"].bool() != (st == L.OWN_RESIDENT)).sum())
+    return {
+        "ok": bad == 0 and also == 0,
+        "n_targets": int(rec["gap"].numel()),
+        "n_never_written": int((~written).sum()),
+        "n_violations": bad + also,
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -381,7 +398,7 @@ def cluster_boot(
 
 
 # --------------------------------------------------------------------------- #
-# readouts
+# readouts (PREREG + Amendment 1)
 # --------------------------------------------------------------------------- #
 
 
@@ -389,67 +406,121 @@ def _applied(x: torch.Tensor) -> torch.Tensor:
     return ~torch.isnan(x)
 
 
-def l_population(rec: dict) -> torch.Tensor:
+def _flag(rec: dict, k: str) -> torch.Tensor:
+    return rec[k].bool()
+
+
+def window(rec: dict) -> torch.Tensor:
     g = rec["gap"]
+    return (g >= 2) & (g <= M)
+
+
+def l_population(rec: dict) -> torch.Tensor:
+    """A1/A3: gap 2..M, own resident, own_resample AND all_slots_resample applied,
+    not dup_key_in_doc."""
     return (
-        (g >= 2)
-        & (g <= M)
-        & rec["own_resident"].bool()
+        window(rec)
+        & (rec["own_status"] == _loo().OWN_RESIDENT)
         & _applied(rec["own_resample_ok"])
+        & _applied(rec["all_slots_resample_ok"])
+        & ~_flag(rec, "dup_key_in_doc")
     )
 
 
 def s_population(rec: dict) -> torch.Tensor:
+    """A3: the L population, ctrl present and resampled, no object leak anywhere."""
     return (
-        l_population(rec) & (rec["ctrl_status"] == 0) & _applied(rec["ctrl_resample_ok"])
+        l_population(rec)
+        & (rec["ctrl_status"] == 0)
+        & _applied(rec["ctrl_resample_ok"])
+        & ~_flag(rec, "ctrl_same_object")
+        & ~_flag(rec, "own_donor_same_object")
+        & ~_flag(rec, "ctrl_donor_same_object")
     )
 
 
-def _ratio_acc(num_knock: str) -> Callable:
-    # (live - knock) / (live - zero), sums of correct-indicators
-    return lambda s: (s["live"] - s[num_knock]) / (s["live"] - s["zero"])
+def _col(metric: str) -> str:
+    return "ok" if metric == "acc" else "nll16"
 
 
-def _ratio_nll(num_knock: str) -> Callable:
-    # (knock - live) / (zero - live), sums of nll16: 1 = as bad as all slots zeroed
-    return lambda s: (s[num_knock] - s["live"]) / (s["zero"] - s["live"])
+def ratio_ci(rec, pop, knock: str, base: str, metric: str, live: str = "live") -> dict:
+    """(live - knock) / (live - base) as a ratio of sums (acc); for nll16 the signs
+    flip so that 1 = the knockout costs as much as the baseline."""
+    c = _col(metric)
+    cols = {
+        "live": rec[f"{live}_{c}"][pop],
+        "k": rec[f"{knock}_{c}"][pop],
+        "b": rec[f"{base}_{c}"][pop],
+    }
+    return cluster_boot(
+        rec["doc_id"][pop], cols, lambda s: (s["live"] - s["k"]) / (s["live"] - s["b"])
+    )
+
+
+def drop_ci(rec, pop, knock: str, metric: str, live: str = "live") -> dict:
+    """Paired mean drop: mean(live_ok - knock_ok); nll16: mean(knock - live)."""
+    c = _col(metric)
+    sign = 1.0 if metric == "acc" else -1.0
+    cols = {
+        "live": rec[f"{live}_{c}"][pop],
+        "k": rec[f"{knock}_{c}"][pop],
+        "n": torch.ones(int(pop.sum()), dtype=torch.float64),
+    }
+    return cluster_boot(
+        rec["doc_id"][pop], cols, lambda s: sign * (s["live"] - s["k"]) / s["n"]
+    )
 
 
 def l_readout(rec: dict, pop: torch.Tensor | None = None) -> dict:
-    """L and L_zero (acc, primary; nll16, secondary) on `pop` (default the L
-    population). Returns also the L population's coverage of gap 2..M."""
-    g = rec["gap"]
-    window = (g >= 2) & (g <= M)
+    """A1: L (own_resample / all_slots_resample), L_zero (own_zero /
+    all_slots_zeroed, OOD), their bos-off twins (A2), the denominator guard and
+    the in-window memory contribution (live - memory_off)."""
+    w = window(rec)
+    base_pop = w & ~_flag(rec, "dup_key_in_doc")
     if pop is None:
         pop = l_population(rec)
-    doc = rec["doc_id"][pop]
+    resident = base_pop & (rec["own_status"] == _loo().OWN_RESIDENT)
     out: dict[str, Any] = {
-        "n_window": int(window.sum()),
+        "n_window": int(w.sum()),
+        "n_dup_key_excluded": int((w & _flag(rec, "dup_key_in_doc")).sum()),
+        "n_resident": int(resident.sum()),
         "n_pop": int(pop.sum()),
-        "resample_coverage": float(pop.sum()) / max(int(window.sum()), 1),
+        "resample_coverage": int(pop.sum()) / max(int(resident.sum()), 1),
     }
-    for metric, fn in (("acc", _ratio_acc), ("nll16", _ratio_nll)):
-        col = "ok" if metric == "acc" else "nll16"
-        base = {
-            "live": rec[f"live_{col}"][pop],
-            "zero": rec[f"all_slots_zeroed_{col}"][pop],
-        }
-        out[f"L.{metric}"] = cluster_boot(
-            doc, {**base, "own": rec[f"own_resample_{col}"][pop]}, fn("own")
+    for m in ("acc", "nll16"):
+        out[f"L.{m}"] = ratio_ci(rec, pop, "own_resample", "all_slots_resample", m)
+        out[f"L_zero.{m}"] = ratio_ci(rec, pop, "own_zero", "all_slots_zeroed", m)
+        out[f"denominator.{m}"] = drop_ci(rec, pop, "all_slots_resample", m)
+        out[f"memory_off_drop.{m}"] = drop_ci(rec, pop, "memory_off", m)
+    out["L_bos_off.acc"] = ratio_ci(
+        rec,
+        pop,
+        "own_resample_bos_off",
+        "all_slots_resample_bos_off",
+        "acc",
+        live="live_bos_off",
+    )
+    for cond in (
+        "live",
+        "own_resample",
+        "own_zero",
+        "all_slots_resample",
+        "all_slots_zeroed",
+        "memory_off",
+    ):
+        out[f"mean.{cond}.acc"] = (
+            float(rec[f"{cond}_ok"][pop].mean()) if int(pop.sum()) else None
         )
-        out[f"L_zero.{metric}"] = cluster_boot(
-            doc, {**base, "own": rec[f"own_zero_{col}"][pop]}, fn("own")
-        )
-    for metric, col in (("acc", "ok"), ("nll16", "nll16")):
-        for cond in ("live", "own_resample", "own_zero", "all_slots_zeroed"):
-            out[f"mean.{cond}.{metric}"] = (
-                float(rec[f"{cond}_{col}"][pop].mean()) if int(pop.sum()) else None
-            )
-    out["label"] = l_label(out["L.acc"])
+    out["label"] = l_label(out["L.acc"], out["denominator.acc"])
     return out
 
 
-def l_label(ci: dict) -> str:
+def l_label(ci: dict, denominator: dict | None = None) -> str:
+    """A1 guard first: a denominator whose CI lower bound is <= 0 -> INDETERMINATE."""
+    if denominator is not None:
+        d = denominator["lo"]
+        if not (d == d and d > 0):
+            return "INDETERMINATE"
     lo, hi = ci["lo"], ci["hi"]
     if lo == lo and lo >= L_LOCALISED_LO:
         return "LOCALISED"
@@ -459,10 +530,10 @@ def l_label(ci: dict) -> str:
 
 
 def s_readout(rec: dict) -> dict:
-    """drop_own, drop_ctrl, their difference and ratio on the S population."""
+    """drop_own, drop_ctrl, their difference and ratio, paired on the S rows."""
     lpop, spop = l_population(rec), s_population(rec)
-    doc = rec["doc_id"][spop]
     n_l = int(lpop.sum())
+    ctrl_ok = lpop & (rec["ctrl_status"] == 0) & _applied(rec["ctrl_resample_ok"])
     out: dict[str, Any] = {
         "n_L": n_l,
         "n_S": int(spop.sum()),
@@ -470,28 +541,46 @@ def s_readout(rec: dict) -> dict:
         "ctrl_status_counts_in_L": [
             int(((rec["ctrl_status"] == k) & lpop).sum()) for k in (0, 1, 2)
         ],
+        "excluded_in_L_with_ctrl": {
+            k: int((ctrl_ok & _flag(rec, k)).sum())
+            for k in (
+                "ctrl_same_object",
+                "own_donor_same_object",
+                "ctrl_donor_same_object",
+            )
+        },
     }
-    for metric, col, sign in (("acc", "ok", 1.0), ("nll16", "nll16", -1.0)):
-        # sign: a drop in accuracy is live - knock; in nll16 it is knock - live
+    for m in ("acc", "nll16"):
+        c = _col(m)
+        sign = 1.0 if m == "acc" else -1.0
         cols = {
-            "live": rec[f"live_{col}"][spop],
-            "own": rec[f"own_resample_{col}"][spop],
-            "ctrl": rec[f"ctrl_resample_{col}"][spop],
+            "live": rec[f"live_{c}"][spop],
+            "own": rec[f"own_resample_{c}"][spop],
+            "ctrl": rec[f"ctrl_resample_{c}"][spop],
             "n": torch.ones(int(spop.sum()), dtype=torch.float64),
         }
-        out[f"drop_own.{metric}"] = cluster_boot(
+        doc = rec["doc_id"][spop]
+        out[f"drop_own.{m}"] = cluster_boot(
             doc, cols, lambda s, k=sign: k * (s["live"] - s["own"]) / s["n"]
         )
-        out[f"drop_ctrl.{metric}"] = cluster_boot(
+        out[f"drop_ctrl.{m}"] = cluster_boot(
             doc, cols, lambda s, k=sign: k * (s["live"] - s["ctrl"]) / s["n"]
         )
-        out[f"drop_diff.{metric}"] = cluster_boot(
+        out[f"drop_diff.{m}"] = cluster_boot(
             doc, cols, lambda s, k=sign: k * (s["ctrl"] - s["own"]) / s["n"]
         )
-        out[f"ratio.{metric}"] = cluster_boot(
+        out[f"ratio.{m}"] = cluster_boot(
             doc, cols, lambda s: (s["live"] - s["ctrl"]) / (s["live"] - s["own"])
         )
-    out["L_on_S"] = l_readout(rec, spop)["L.acc"]
+    out["ratio_bos_off.acc"] = ratio_ci(
+        rec,
+        spop,
+        "ctrl_resample_bos_off",
+        "own_resample_bos_off",
+        "acc",
+        live="live_bos_off",
+    )
+    out["L_on_S"] = ratio_ci(rec, spop, "own_resample", "all_slots_resample", "acc")
     out["label"] = s_label(out["coverage"], out["ratio.acc"])
     return out
 
@@ -507,48 +596,59 @@ def s_label(coverage: float, ratio: dict) -> str:
     return "INDETERMINATE"
 
 
+#: A4 secondaries: name -> (knock column prefix, live column prefix)
+REACH_SECONDARY = {
+    "excess_zeroed": ("all_slots_zeroed", "live"),
+    "excess_memory_off": ("memory_off", "live"),
+    "excess_bos_off": ("all_slots_resample_bos_off", "live_bos_off"),
+}
+
+
 def reach_readout(rec: dict, traj_zeroed: dict | None = None) -> dict:
-    """Per band: excess = mean(live_ok) - mean(all_slots_zeroed_ok), paired, and the
-    nll16 analogue (mean(base - live)); the trajectory-wide slots_zeroed excess
-    (secondary) when `traj_zeroed` (answer_readout, target-aligned) is given."""
+    """A4, per band: excess = mean(live_ok - all_slots_resample_ok), paired, on
+    evicted targets with the baseline applied and no duplicated key; the
+    secondaries; the baseline coverage and the donor-has-object rate."""
     out: dict[str, Any] = {}
     g = rec["gap"]
+    evicted = (rec["own_status"] == _loo().OWN_EVICTED) & ~_flag(rec, "dup_key_in_doc")
+    applied = _applied(rec["all_slots_resample_ok"])
     for band, (lo, hi) in BANDS.items():
-        pop = (g >= lo) & (g <= hi)
-        doc = rec["doc_id"][pop]
-        n = torch.ones(int(pop.sum()), dtype=torch.float64)
-        b: dict[str, Any] = {"n": int(pop.sum())}
-        cols = {
-            "live": rec["live_ok"][pop],
-            "base": rec["all_slots_zeroed_ok"][pop],
-            "n": n,
+        inband = (g >= lo) & (g <= hi) & evicted
+        pop = inband & applied
+        b: dict[str, Any] = {
+            "n": int(pop.sum()),
+            "n_evicted": int(inband.sum()),
+            "coverage": int(pop.sum()) / max(int(inband.sum()), 1),
+            "donor_has_object_rate": (
+                float(_flag(rec, "all_donor_has_object")[pop].float().mean())
+                if int(pop.sum())
+                else None
+            ),
+            "live.acc": float(rec["live_ok"][pop].mean()) if int(pop.sum()) else None,
+            "base.acc": (
+                float(rec["all_slots_resample_ok"][pop].mean())
+                if int(pop.sum())
+                else None
+            ),
         }
-        b["excess.acc"] = cluster_boot(
-            doc, cols, lambda s: (s["live"] - s["base"]) / s["n"]
-        )
-        b["live.acc"] = float(cols["live"].mean()) if b["n"] else None
-        b["base.acc"] = float(cols["base"].mean()) if b["n"] else None
-        cols16 = {
-            "live": rec["live_nll16"][pop],
-            "base": rec["all_slots_zeroed_nll16"][pop],
-            "n": n,
-        }
-        b["excess.nll16"] = cluster_boot(
-            doc, cols16, lambda s: (s["base"] - s["live"]) / s["n"]
-        )
+        b["excess.acc"] = drop_ci(rec, pop, "all_slots_resample", "acc")
+        b["excess.nll16"] = drop_ci(rec, pop, "all_slots_resample", "nll16")
+        for name, (knock, live) in REACH_SECONDARY.items():
+            b[f"{name}.acc"] = drop_ci(rec, pop, knock, "acc", live=live)
         if traj_zeroed is not None:
+            n = torch.ones(int(pop.sum()), dtype=torch.float64)
             tz = {
                 "live": rec["live_ok"][pop],
                 "base": traj_zeroed["ok"].double()[pop],
                 "n": n,
             }
             b["excess_traj.acc"] = cluster_boot(
-                doc, tz, lambda s: (s["live"] - s["base"]) / s["n"]
+                rec["doc_id"][pop], tz, lambda s: (s["live"] - s["base"]) / s["n"]
             )
-            b["traj_base.acc"] = float(tz["base"].mean()) if b["n"] else None
         out[band] = b
-    d = out[DECISION_BAND]["excess.acc"]
-    out["carry"] = carry(d)
+    d = out[DECISION_BAND]
+    out["decidable"] = d["coverage"] >= RESAMPLE_MIN_COVERAGE
+    out["carry"] = carry(d["excess.acc"])
     return out
 
 
@@ -589,56 +689,74 @@ def _concat(recs: list[dict]) -> dict:
     return {k: torch.cat([r[k] for r in recs]) for k in keys}
 
 
+def _bitexact_both(r, a_live, a_bos, set_name):
+    return [
+        dict(set=set_name, cond="live", **bitexact_live(r, a_live)),
+        dict(
+            set=set_name, cond="live_bos_off", **bitexact_live(r, a_bos, "live_bos_off")
+        ),
+    ]
+
+
 def measure_one(
     model, sets: dict, seed: int, ref_summary: dict, loo_readout=None, answer_readout=None
 ) -> dict:
     """Every control and readout for one (seed, checkpoint)."""
     if loo_readout is None:
-        from rsr.metrics.loo import loo_readout
+        loo_readout = _loo().loo_readout
     if answer_readout is None:
         answer_readout = S003.answer_readout
     vmap = sets["vmap"]
     sym = sym_ids_of(vmap)
-    out: dict[str, Any] = {"controls": {}, "calls": []}
+    out: dict[str, Any] = {"controls": {}}
+
+    def ar(ids, mask, tmask, gap, cond):
+        return answer_readout(model, ids, mask, tmask, gap, sym, cond=cond)
+
     # H64: reproduction + LOO
     ids, mask, tmask, gap = encode_set(sets["H64"], vmap)
-    ar_live = answer_readout(model, ids, mask, tmask, gap, sym, cond="live")
-    ar_zero = answer_readout(model, ids, mask, tmask, gap, sym, cond="slots_zeroed")
+    ar_live, ar_zero = (
+        ar(ids, mask, tmask, gap, "live"),
+        ar(ids, mask, tmask, gap, "slots_zeroed"),
+    )
     summ = {"live": S003._summarise(ar_live), "slots_zeroed": S003._summarise(ar_zero)}
     out["h64_summary"] = summ
     out["controls"]["reproduction"] = {
         c: compare_summary(ref_summary[c], summ[c]) for c in summ
     }
     h = loo_readout(model, sets["H64"], ids, mask, tmask, gap, sym, seed=seed)
-    out["controls"]["bitexact"] = [dict(set="H64", **bitexact_live(h, ar_live))]
+    out["controls"]["bitexact"] = _bitexact_both(
+        h, ar_live, ar(ids, mask, tmask, gap, "live_bos_off"), "H64"
+    )
     h_traj = {"ok": ar_zero["ok"]}
-    # EXT: four calls of EXT_CHUNK consecutive ids
+    # EXT: four calls of EXT_CHUNK consecutive ids; donors come from the call
     ext_recs, ext_traj = [], []
-    for chunk_docs in [
-        sets["EXT"][k : k + EXT_CHUNK] for k in range(0, len(sets["EXT"]), EXT_CHUNK)
-    ]:
-        ids, mask, tmask, gap = encode_set(chunk_docs, vmap)
-        a_live = answer_readout(model, ids, mask, tmask, gap, sym, cond="live")
-        a_zero = answer_readout(model, ids, mask, tmask, gap, sym, cond="slots_zeroed")
-        r = loo_readout(model, chunk_docs, ids, mask, tmask, gap, sym, seed=seed)
-        out["controls"]["bitexact"].append(
-            dict(
-                set=f"EXT[{chunk_docs[0].doc_id},{chunk_docs[-1].doc_id + 1})",
-                **bitexact_live(r, a_live),
-            )
+    for k in range(0, len(sets["EXT"]), EXT_CHUNK):
+        chunk = sets["EXT"][k : k + EXT_CHUNK]
+        ids, mask, tmask, gap = encode_set(chunk, vmap)
+        r = loo_readout(model, chunk, ids, mask, tmask, gap, sym, seed=seed)
+        out["controls"]["bitexact"] += _bitexact_both(
+            r,
+            ar(ids, mask, tmask, gap, "live"),
+            ar(ids, mask, tmask, gap, "live_bos_off"),
+            f"EXT[{chunk[0].doc_id},{chunk[-1].doc_id + 1})",
         )
         ext_recs.append(r)
-        ext_traj.append(a_zero["ok"])
+        ext_traj.append(ar(ids, mask, tmask, gap, "slots_zeroed")["ok"])
     e = _concat(ext_recs)
     e_traj = {"ok": torch.cat(ext_traj)}
     out["controls"]["residency"] = {"H64": residency(h), "EXT": residency(e)}
     Lh = l_readout(h)
+    out["H64"] = {"L": Lh, "S": s_readout(h), "reach": reach_readout(h, h_traj)}
+    out["EXT"] = {"L": l_readout(e), "S": s_readout(e), "reach": reach_readout(e, e_traj)}
     out["controls"]["resample_coverage"] = {
         "ok": Lh["resample_coverage"] >= RESAMPLE_MIN_COVERAGE,
         "value": Lh["resample_coverage"],
     }
-    out["H64"] = {"L": Lh, "S": s_readout(h), "reach": reach_readout(h, h_traj)}
-    out["EXT"] = {"L": l_readout(e), "S": s_readout(e), "reach": reach_readout(e, e_traj)}
+    out["controls"]["reach_coverage"] = {
+        "ok": bool(out["EXT"]["reach"]["decidable"]),
+        "value": out["EXT"]["reach"][DECISION_BAND]["coverage"],
+    }
     out["records"] = {"H64": h, "EXT": e}
     out["controls_ok"] = controls_ok(out["controls"])
     return out
@@ -650,6 +768,7 @@ def controls_ok(c: dict) -> bool:
         and all(b["ok"] for b in c["bitexact"])
         and all(v["ok"] for v in c["residency"].values())
         and c["resample_coverage"]["ok"]
+        and c["reach_coverage"]["ok"]
         and c.get("ledger_samples", {"ok": True})["ok"]
     )
 
@@ -663,63 +782,44 @@ def _ci_value(ci: dict) -> dict:
     return {k: ci[k] for k in ("point", "lo", "hi", "n", "n_docs", "nonfinite")}
 
 
+def _is_ci(v) -> bool:
+    return isinstance(v, dict) and "point" in v and "lo" in v
+
+
 def write_rows(led, per: dict[int, dict[int, dict]]) -> None:
-    """Per seed x ckpt: one observation per CI'd readout; across seeds, a statistic
-    of the point values (>= 2 seeds)."""
+    """Per seed x ckpt x set x readout: one observation per CI'd quantity
+    (`s<seed>.ckpt<c>.<set>.<L|S|reach[.band]>.<name>`), one `.population` row of
+    the scalars, one `.labels` row; across seeds, a statistic of the point values."""
     across: dict[str, dict[int, float]] = {}
-
-    def note(seed, ckpt, key, ci, how):
-        k = f"s{seed}.ckpt{ckpt}.{key}"
-        led.note(k, _ci_value(ci), how=how)
-        across.setdefault(f"ckpt{ckpt}.{key}", {})[seed] = ci["point"]
-
     for seed, by_ckpt in per.items():
         for ckpt, r in by_ckpt.items():
-            how = f"{EXPERIMENT} seed {seed} ckpt {ckpt}; loo_readout (W4)"
+            how = f"{EXPERIMENT} seed {seed} ckpt {ckpt}; loo_readout (eng/loo)"
             for set_ in ("H64", "EXT"):
-                L, S, R = r[set_]["L"], r[set_]["S"], r[set_]["reach"]
-                for m in ("acc", "nll16"):
-                    note(seed, ckpt, f"{set_}.L.{m}", L[f"L.{m}"], how)
-                    note(seed, ckpt, f"{set_}.L_zero.{m}", L[f"L_zero.{m}"], how)
-                    for q in ("drop_own", "drop_ctrl", "drop_diff", "ratio"):
-                        note(seed, ckpt, f"{set_}.S.{q}.{m}", S[f"{q}.{m}"], how)
-                note(seed, ckpt, f"{set_}.S.L_on_S.acc", S["L_on_S"], how)
+                parts = {"L": r[set_]["L"], "S": r[set_]["S"]}
+                for band in BANDS:
+                    parts[f"reach.{band}"] = r[set_]["reach"][band]
+                for name, d in parts.items():
+                    scal = {}
+                    for k, v in d.items():
+                        key = f"s{seed}.ckpt{ckpt}.{set_}.{name}.{k}"
+                        if _is_ci(v):
+                            led.note(key, _ci_value(v), how=how)
+                            across.setdefault(key.split(".", 1)[1], {})[seed] = v["point"]
+                        elif k != "label":
+                            scal[k] = v
+                    led.note(
+                        f"s{seed}.ckpt{ckpt}.{set_}.{name}.population", scal, how=how
+                    )
                 led.note(
-                    f"s{seed}.ckpt{ckpt}.{set_}.L.population",
-                    {k: L[k] for k in ("n_window", "n_pop", "resample_coverage")},
-                    how=how,
-                )
-                led.note(
-                    f"s{seed}.ckpt{ckpt}.{set_}.L.means",
-                    {k: v for k, v in L.items() if k.startswith("mean.")},
-                    how=how,
-                )
-                led.note(
-                    f"s{seed}.ckpt{ckpt}.{set_}.S.population",
+                    f"s{seed}.ckpt{ckpt}.{set_}.labels",
                     {
-                        k: S[k]
-                        for k in ("n_L", "n_S", "coverage", "ctrl_status_counts_in_L")
+                        "L": r[set_]["L"]["label"],
+                        "S": r[set_]["S"]["label"],
+                        "carry": r[set_]["reach"]["carry"],
+                        "decidable": r[set_]["reach"]["decidable"],
                     },
                     how=how,
                 )
-                led.note(
-                    f"s{seed}.ckpt{ckpt}.{set_}.labels",
-                    {"L": L["label"], "S": S["label"], "carry": R["carry"]},
-                    how=how,
-                )
-                for band in BANDS:
-                    b = R[band]
-                    for m in ("excess.acc", "excess.nll16", "excess_traj.acc"):
-                        if m in b:
-                            note(seed, ckpt, f"{set_}.reach.{band}.{m}", b[m], how)
-                    led.note(
-                        f"s{seed}.ckpt{ckpt}.{set_}.reach.{band}.means",
-                        {
-                            k: b.get(k)
-                            for k in ("n", "live.acc", "base.acc", "traj_base.acc")
-                        },
-                        how=how,
-                    )
     for key, by_seed in across.items():
         if len(by_seed) >= 2:
             led.stat(
@@ -864,8 +964,6 @@ def main(argv: list[str] | None = None) -> int:
             led.note(f"control.closure.seed{s}", sets["closure"], how="seed_sets()")
             for c in CHECKPOINTS:
                 f = ckpt_path(source, s, c)
-                from rsr.train import checkpoint as ck  # noqa: F401
-
                 stored = CSC.RC.stored_step(f)
                 if stored != c:
                     raise ValueError(f"{f} stores step {stored}, measured as {c}")
@@ -964,7 +1062,11 @@ def render_results(doc: dict) -> str:
     rows = {r["key"]: r for r in doc["rows"]}
 
     def val(k):
-        return rows[k]["value"]
+        return rows[k]["value"] if k in rows else None
+
+    def ci(k):
+        v = val(k)
+        return _ci(v) if v else "—"
 
     cls = val("classification")
     prov = doc["provenance"]
@@ -974,9 +1076,9 @@ def render_results(doc: dict) -> str:
         "",
         "# carry-forward — RESULTS",
         "",
-        f"- PREREG: `{PREREG}` (commit {PREREG_COMMIT}). Run SHA: "
-        f"`{prov.get('git_sha')}`, dirty {prov.get('dirty')}. Hardware: "
-        f"{prov.get('platform')}, device {doc['device']}, torch threads "
+        f"- PREREG: `{PREREG}` (commit {PREREG_COMMIT}, Amendment 1 appended before "
+        f"any readout). Run SHA: `{prov.get('git_sha')}`, dirty {prov.get('dirty')}. "
+        f"Hardware: {prov.get('platform')}, device {doc['device']}, torch threads "
         "per the manifest.",
         f"- Command: `{doc['commands'][0]['argv']}`. Status `{doc['status']}`. "
         f"Config hash `{doc['config_hash']}`.",
@@ -985,73 +1087,86 @@ def render_results(doc: dict) -> str:
         f"Verdict `{doc['verdict']['outcome']}`.",
         f"- `controls_ok`: {val('controls_ok')}. `elapsed_s` {val('elapsed_s')}.",
         "",
-        "Cells are point [95% per-document bootstrap CI]. Accuracy is primary.",
+        "Cells are point [95% per-document bootstrap CI]. Accuracy is primary. Key "
+        "prefix `s<seed>.ckpt<c>.<set>`; every cell is the named ledger key under it.",
         "",
     ]
+    cells = [p for p in (f"s{s}.ckpt{c}" for s in SEEDS for c in CHECKPOINTS)]
     for set_ in ("H64", "EXT"):
         out += [
-            f"## {set_}: L, L_zero (OOD), S",
+            f"## {set_}: localisation and specificity",
             "",
-            "| key prefix | L.acc | L_zero.acc | L.nll16 | S.ratio.acc | "
-            "S.drop_own.acc | S.drop_ctrl.acc | S.L_on_S.acc | labels |",
-            "|---|---|---|---|---|---|---|---|---|",
+            "| prefix | L.L.acc | L.denominator.acc | L.L_zero.acc (OOD) | "
+            "L.L_bos_off.acc | L.memory_off_drop.acc | S.ratio.acc | "
+            "S.drop_own.acc | S.drop_ctrl.acc | S.L_on_S | labels |",
+            "|---|---|---|---|---|---|---|---|---|---|---|",
         ]
-        for s in SEEDS:
-            for c in CHECKPOINTS:
-                p = f"s{s}.ckpt{c}.{set_}"
-                if f"{p}.L.acc" not in rows:
-                    continue
-                lab = val(f"{p}.labels")
-                out.append(
-                    f"| `{p}` | {_ci(val(f'{p}.L.acc'))} | {_ci(val(f'{p}.L_zero.acc'))} "
-                    f"| {_ci(val(f'{p}.L.nll16'))} | {_ci(val(f'{p}.S.ratio.acc'))} | "
-                    f"{_ci(val(f'{p}.S.drop_own.acc'))} | "
-                    f"{_ci(val(f'{p}.S.drop_ctrl.acc'))} | "
-                    f"{_ci(val(f'{p}.S.L_on_S.acc'))} | "
-                    f"L {lab['L']}, S {lab['S']} |"
-                )
+        for c in cells:
+            p = f"{c}.{set_}"
+            lab = val(f"{p}.labels")
+            if lab is None:
+                continue
+            out.append(
+                f"| `{p}` | {ci(p + '.L.L.acc')} | {ci(p + '.L.denominator.acc')} | "
+                f"{ci(p + '.L.L_zero.acc')} | {ci(p + '.L.L_bos_off.acc')} | "
+                f"{ci(p + '.L.memory_off_drop.acc')} | {ci(p + '.S.ratio.acc')} | "
+                f"{ci(p + '.S.drop_own.acc')} | {ci(p + '.S.drop_ctrl.acc')} | "
+                f"{ci(p + '.S.L_on_S')} | L {lab['L']}, S {lab['S']} |"
+            )
         out += [
             "",
-            "Populations (`<prefix>.L.population`, `<prefix>.S.population`):",
-            "",
-            "| key prefix | L resample_coverage | S coverage |",
+            "| prefix | L.population.resample_coverage | S.population.coverage |",
             "|---|---|---|",
         ]
-        for s in SEEDS:
-            for c in CHECKPOINTS:
-                p = f"s{s}.ckpt{c}.{set_}"
-                if f"{p}.L.population" not in rows:
-                    continue
-                lp, sp = val(f"{p}.L.population"), val(f"{p}.S.population")
-                out.append(
-                    f"| `{p}` | {_f(lp['resample_coverage'])} | {_f(sp['coverage'])} |"
-                )
+        for c in cells:
+            p = f"{c}.{set_}"
+            lp, sp = val(f"{p}.L.population"), val(f"{p}.S.population")
+            if lp is None:
+                continue
+            out.append(
+                f"| `{p}` | {_f(lp['resample_coverage'])} | {_f(sp['coverage'])} |"
+            )
         out += [
             "",
-            f"## {set_}: reach (evicted, gap > M)",
+            f"## {set_}: reach (evicted; excess over all_slots_resample)",
             "",
-            "| key prefix | "
-            + " | ".join(f"{b} excess.acc" for b in BANDS)
-            + " | 17_40 excess_traj.acc | CARRY |",
+            "| prefix | "
+            + " | ".join(f"reach.{b}.excess.acc" for b in BANDS)
+            + " | reach.17_40.coverage | CARRY |",
             "|---|" + "---|" * (len(BANDS) + 2),
         ]
-        for s in SEEDS:
-            for c in CHECKPOINTS:
-                p = f"s{s}.ckpt{c}.{set_}"
-                if f"{p}.reach.17_40.excess.acc" not in rows:
-                    continue
-                cells = [_ci(val(f"{p}.reach.{b}.excess.acc")) for b in BANDS]
-                tr = rows.get(f"{p}.reach.17_40.excess_traj.acc")
-                out.append(
-                    f"| `{p}` | "
-                    + " | ".join(cells)
-                    + f" | {_ci(tr['value']) if tr else '—'} | "
-                    f"{val(f'{p}.labels')['carry']} |"
-                )
+        for c in cells:
+            p = f"{c}.{set_}"
+            lab = val(f"{p}.labels")
+            if lab is None:
+                continue
+            cov = val(f"{p}.reach.17_40.population")["coverage"]
+            out.append(
+                f"| `{p}` | "
+                + " | ".join(ci(f"{p}.reach.{b}.excess.acc") for b in BANDS)
+                + f" | {_f(cov)} | {lab['carry']} |"
+            )
+        out += [
+            "",
+            "Secondary reach baselines, pooled band 17_40 (not classified):",
+            "",
+            "| prefix | excess_zeroed.acc | excess_memory_off.acc | "
+            "excess_bos_off.acc | excess_traj.acc | excess.nll16 |",
+            "|---|---|---|---|---|---|",
+        ]
+        for c in cells:
+            p = f"{c}.{set_}.reach.17_40"
+            if val(f"{p}.excess.acc") is None:
+                continue
+            out.append(
+                f"| `{p}` | {ci(p + '.excess_zeroed.acc')} | "
+                f"{ci(p + '.excess_memory_off.acc')} | {ci(p + '.excess_bos_off.acc')} "
+                f"| {ci(p + '.excess_traj.acc')} | {ci(p + '.excess.nll16')} |"
+            )
         out.append("")
     out += [
         "Band CIs are uncorrected across the 4 x 3 cells; the decision is the pooled "
-        "17_40 band only (PREREG). Wrong-looking numbers are printed as measured.",
+        "17_40 EXT band only (PREREG). Wrong-looking numbers are printed as measured.",
         "",
     ]
     return "\n".join(out)
