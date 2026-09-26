@@ -1,0 +1,37 @@
+{
+ "status": "ok",
+ "seed": "310f54550ed89a7ac07fe4b079407139db7c6a9b3da99af0ee628f60082f26ca",
+ "claims": [
+  {
+   "claim": "all three seeds are live (Amendment 1 band), no consistency problems",
+   "command": "uv run python -c \"import json;d=json.load(open('runs/e0e/ledger.json'));r={x['key']:x for x in d['rows']};print(r['live_seeds']['value'], r['consistency_problems']['value'])\"",
+   "expected": "[0, 1, 2] []",
+   "observed": "[0, 1, 2] []",
+   "match": true
+  },
+  {
+   "claim": "the run never calls rsr.constants.record and measurements/ledger.json is unchanged by it",
+   "command": "uv run pytest -q -p no:cacheprovider tests/test_e0e.py::test_the_run_never_calls_record > /dev/null 2>&1; echo rc=$?; /opt/homebrew/bin/git log --oneline cf7a573^..HEAD -- measurements/ledger.json | wc -l | tr -d ' '",
+   "expected": "rc=0\n0",
+   "observed": "rc=0\n0",
+   "match": true
+  },
+  {
+   "claim": "the PREREG commit precedes the E0e code commit and touches only PREREG.md",
+   "command": "/opt/homebrew/bin/git show --name-only --format= cf7a573; /opt/homebrew/bin/git merge-base --is-ancestor cf7a573 fdb2411; echo rc=$?",
+   "expected": "experiments/e0e/PREREG.md\nrc=0",
+   "observed": "experiments/e0e/PREREG.md\nrc=0",
+   "match": true
+  }
+ ],
+ "verifier_sha": "fdb241167cf283e32acbf1ec44261198632dd4e1",
+ "notes": [
+  "Executed in a detached worktree at the ledger's git_sha fdb2411 (/private/tmp/claude-501/verify-e0e/wt), not at branch HEAD 1dcf8ff; PREREG.md is byte-identical at cf7a573, 1dcf8ff and the working tree (sha256 e553ae7e...).",
+  "Claim 4, independent path: full re-run of experiments/e0e/run.py at fdb2411 under the cpu-det slot as run-id e0e-verify, rc 0; live_seeds [0, 1, 2], consistency_problems []; every ledger value identical to runs/e0e (liveness ratios 55.564/98.968/96.840, tau 0.2755544238890353).",
+  "Claim 5: the named test is a static AST check of run.py only. Independent runtime check: the re-run executed with rsr.constants.record and Registry.record trapped and RSR_LEDGER pointed at a scratch sentinel: 0 record calls, sentinel not created, measurements/ledger.json absent in the main tree root, the e0e worktree and the verify worktree. measurements/ledger.json has never existed in any commit (git log --all is empty), so the '0' line of this claim cannot fail.",
+  "Claim 6, independent: cf7a573 adds exactly one file (A experiments/e0e/PREREG.md), is the direct parent of fdb2411, and PREREG.md has no later commit. A not_implemented run.py stub predates cf7a573; no E0e measurement code did.",
+  "Own recomputation from raw r_i (my own FIFO policy, recorder, EMA and numpy quantile; library used only for checkpoint load, data, the policy loop and retrieval_demand): E_lifetime 13.166666666666666 == 632/48 on every seed (lifetime histogram 0..15 x64 each, 16 x2048 per seed); half_life 3.2916666666666665; alpha 0.1898828066645991; n_obs 121344; tau(q0.75, u_bar init 1/M) 0.2755544238890353; fraction inside +/-0.25 0.7040315137130801; gamma_b = 1.0/(0.25*E) 0.3037974683544304; max |sum r - 1| at full memory 1.49e-07. All equal the ledger bit-for-bit.",
+  "Derivations follow the PREREG literally: tau = q0.75 of |M*u_bar - 1| with h = E_lifetime/4 and u_bar init 1/M; E_lifetime is FIFO's (FIFOPolicy subclass, eviction unchanged); gamma_b = b_max/(0.25*E_lifetime) with b_max read from rsr.constants (FROZEN 1.0).",
+  "Minor, not a claim mismatch: run.py sets ledger status 'ok' even on the consistency-failure path that exits 1 (not exercised here)."
+ ]
+}

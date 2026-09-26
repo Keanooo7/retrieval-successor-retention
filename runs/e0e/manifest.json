@@ -1,0 +1,31 @@
+{
+  "ckpt_name": "ckpt-003000.pt",
+  "ckpt_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B",
+  "ckpt_sha256": {
+    "0": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+    "1": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+    "2": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8"
+  },
+  "device": "cpu",
+  "expected": "E_lifetime = 632/48 = 13.1667 exactly on every seed (every sentence writes; FIFO lifetimes fixed by S=48, M=16), half-life 3.2917, gamma_b = 0.3038; u_bar heavy-tailed: fraction inside +/-25% < 0.5 and tau > 0.25 (low confidence); all three seeds live.",
+  "experiment": "experiments/e0e/run.py",
+  "falsifier": "NONE (\u00a72 sense): a Sprint-2 instrument measurement",
+  "half_life_divisor": 4.0,
+  "heldout_documents": [
+    64,
+    128
+  ],
+  "policy": "fifo",
+  "prereg": "experiments/e0e/PREREG.md",
+  "r_i": "rsr.retention.reward.retrieval_demand(gated=True), eval mode",
+  "run_id": "e0e",
+  "scope": "synthetic",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "sum_tol": 1e-05,
+  "tau_quantile": 0.75,
+  "ubar_init": "1/M"
+}

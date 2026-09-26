@@ -1,0 +1,42 @@
+[
+  {
+    "claim": "E0e re-run from this head reproduces tau = 0.27555 (pooled, q0.75) and exits 0",
+    "command": "uv run python experiments/e0e/run.py --run-id e0e-verify > /dev/null 2>&1; echo rc=$?; uv run python -c \"import json;d=json.load(open('runs/e0e-verify/ledger.json'));r={x['key']:x for x in d['rows']};print(round(r['tau']['value'],5))\"",
+    "expected": "rc=0\n0.27555"
+  },
+  {
+    "claim": "E_lifetime = 13.1667 with sd exactly 0 across the three seeds (analytic under FIFO, pre-registered)",
+    "command": "uv run python -c \"import json;d=json.load(open('runs/e0e/ledger.json'));r={x['key']:x for x in d['rows']};print(round(r['E_lifetime']['value'],4), r['per_seed.E_lifetime']['sd'])\"",
+    "expected": "13.1667 0.0"
+  },
+  {
+    "claim": "gamma_b = 0.30380 and half_life = 3.2917",
+    "command": "uv run python -c \"import json;d=json.load(open('runs/e0e/ledger.json'));r={x['key']:x for x in d['rows']};print(round(r['gamma_b']['value'],5), round(r['half_life']['value'],4))\"",
+    "expected": "0.3038 3.2917"
+  },
+  {
+    "claim": "fraction of u_bar inside the +/-0.25 band is 0.70403 (the PREREG predicted < 0.5: wrong)",
+    "command": "uv run python -c \"import json;d=json.load(open('runs/e0e/ledger.json'));r={x['key']:x for x in d['rows']};print(round(r['fraction_inside_v04_025']['value'],5))\"",
+    "expected": "0.70403"
+  },
+  {
+    "claim": "all three seeds are live (Amendment 1 band), no consistency problems",
+    "command": "uv run python -c \"import json;d=json.load(open('runs/e0e/ledger.json'));r={x['key']:x for x in d['rows']};print(r['live_seeds']['value'], r['consistency_problems']['value'])\"",
+    "expected": "[0, 1, 2] []"
+  },
+  {
+    "claim": "the run never calls rsr.constants.record and measurements/ledger.json is unchanged by it",
+    "command": "uv run pytest -q -p no:cacheprovider tests/test_e0e.py::test_the_run_never_calls_record > /dev/null 2>&1; echo rc=$?; /opt/homebrew/bin/git log --oneline cf7a573^..HEAD -- measurements/ledger.json | wc -l | tr -d ' '",
+    "expected": "rc=0\n0"
+  },
+  {
+    "claim": "the PREREG commit precedes the E0e code commit and touches only PREREG.md",
+    "command": "/opt/homebrew/bin/git show --name-only --format= cf7a573; /opt/homebrew/bin/git merge-base --is-ancestor cf7a573 fdb2411; echo rc=$?",
+    "expected": "experiments/e0e/PREREG.md\nrc=0"
+  },
+  {
+    "claim": "RESULTS.md passes the prose audit",
+    "command": "uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/e0e/RESULTS.md > /dev/null 2>&1; echo rc=$?",
+    "expected": "rc=0"
+  }
+]
