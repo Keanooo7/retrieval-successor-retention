@@ -829,8 +829,9 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    return did_not_run(f"{experiment} is not implemented yet.")',
         '    raise NotImplementedError(f"{experiment} is not implemented yet.")',
         "S0-05 bar 5: seven e0* stubs exiting 1 (real failure) for the state that "
-        "defines did-not-run. One mutation for the class: all seven go through "
-        "`not_implemented()`, and all seven parametrised cases redden.",
+        "defines did-not-run. One mutation for the class: every stub goes through "
+        "`not_implemented()`, and every parametrised case reddens (six since E0e "
+        "was implemented, 2026-09-26).",
     ),
     Mutation(
         "a checker returns a bare boolean",
@@ -2926,6 +2927,64 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "status(5) there -- the same refusal seen from the entry point.",
             ),
         ),
+    ),
+    # ----------------------------------------------------------------------- #
+    # E0e (experiments/e0e/PREREG.md, Mutation bar): the u_bar distribution and
+    # E[lifetime] on a FIFO run.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "e0e: r_i read ungated",
+        "test_r_i_is_the_gated_rescaled_target",
+        "experiments/e0e/run.py",
+        "    return retrieval_demand(trace, n_live=n_live, capacity=M, gated=True)",
+        "    return retrieval_demand(trace, n_live=n_live, capacity=M, gated=False)",
+        "correction 17 / D-E: r_i includes TG's memory gate; ungated, every tau and "
+        "u_bar is measured on a different quantity than the one b will act on.",
+    ),
+    Mutation(
+        "e0e: the half-life frozen at v0.4's 16",
+        "test_the_half_life_is_a_quarter_of_the_lifetime",
+        "experiments/e0e/run.py",
+        "    return e_lifetime / HALF_LIFE_DIVISOR",
+        "    return 16.0",
+        "§3.5 item 2: half-life E[lifetime]/4, 'not the frozen 16 of v0.4'.",
+    ),
+    Mutation(
+        "e0e: lifetime counted over evicted sentences only",
+        "test_lifetime_counts_every_written_sentence",
+        "experiments/e0e/run.py",
+        "    lt = [s.lifetime for s in sentences]\n",
+        "    lt = [s.lifetime for s in sentences if s.evicted]\n",
+        "PREREG Definitions 1: stream-end survivors are the lifetime b has to act "
+        "within (b resets at the boundary). Evicted-only reads M under FIFO, the "
+        "§12.2 audit's E[lt] = M, and moves gamma_b.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0e.py::"
+                "test_fifo_lifetimes_on_a_tiny_live_model_are_the_analytic_ones",
+                "the end-to-end test asserts the same analytic E_lifetime on a real "
+                "FIFO stream: the definition, seen from the recorder.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0e: the tau quantile moved to the median",
+        "test_tau_is_the_75th_percentile_of_the_relative_deviation",
+        "experiments/e0e/run.py",
+        "TAU_QUANTILE = 0.75\n",
+        "TAU_QUANTILE = 0.5\n",
+        "PREREG Definitions 4: the 0.75 quantile makes b fire on the 25% of steps "
+        "§3.5 item 4's gamma_b derivation assumes. Moving it after data is choosing "
+        "a threshold after seeing it.",
+    ),
+    Mutation(
+        "e0e: a non-live seed admitted to the values",
+        "test_a_seed_that_is_not_live_is_excluded",
+        "experiments/e0e/run.py",
+        '    return sorted(s for s, b in bands.items() if b == "live")',
+        '    return sorted(s for s, b in bands.items() if b != "invalid")',
+        "PREREG precondition: an inert or inconclusive memory's shares are not the "
+        "retrieval demand of a memory that retrieves.",
     ),
 )
 
