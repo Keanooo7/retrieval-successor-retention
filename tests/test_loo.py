@@ -17,10 +17,12 @@ The load-bearing ones:
 
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
 import math
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 import torch
@@ -28,7 +30,12 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from rsr.data.synthetic import ANSWER_SYMBOLS, SyntheticConfig, generate  # noqa: E402
+from rsr.data.synthetic import (  # noqa: E402
+    ANSWER_SYMBOLS,
+    SyntheticConfig,
+    answer_symbol,
+    generate,
+)
 from rsr.metrics import loo  # noqa: E402
 from rsr.model.tg import TGConfig, TGModel  # noqa: E402
 from rsr.train.loop import answer_targets, build_vocab, encode  # noqa: E402
@@ -58,12 +65,22 @@ def _docs(n=8, seed=0):
     )
 
 
-def _world(n=8, seed=0, model_seed=0):
-    docs = _docs(n, seed)
-    # The vocab is built over a larger prefix so every answer symbol has an id
-    # whatever n is (the 16-way renormalisation needs all 16).
-    vmap = build_vocab(_docs(64, seed))
-    V = 4 + len(vmap)
+def _vocab(seed=0):
+    # Built over a larger prefix so every answer symbol has an id whatever n is
+    # (the 16-way renormalisation needs all 16).
+    return build_vocab(_docs(64, seed))
+
+
+def _encode(docs, seed=0):
+    vmap = _vocab(seed)
+    ids, mask = encode(docs, vmap, max_tokens=L, steps=S)
+    tmask, gap = answer_targets(docs, vmap, max_tokens=L, steps=S)
+    sym = torch.tensor([vmap[s] for s in ANSWER_SYMBOLS])
+    return ids, mask, tmask, gap, sym
+
+
+def _model(seed=0, model_seed=0):
+    V = 4 + len(_vocab(seed))
     torch.manual_seed(model_seed)
     cfg = TGConfig(
         D=16,
@@ -79,28 +96,82 @@ def _world(n=8, seed=0, model_seed=0):
         eos_id=2,
         eod_id=3,
     )
-    model = TGModel(cfg)
-    ids, mask = encode(docs, vmap, max_tokens=L, steps=S)
-    tmask, gap = answer_targets(docs, vmap, max_tokens=L, steps=S)
-    sym = torch.tensor([vmap[s] for s in ANSWER_SYMBOLS])
-    return model, docs, ids, mask, tmask, gap, sym
+    return TGModel(cfg)
+
+
+def _world(n=8, seed=0, model_seed=0):
+    docs = _docs(n, seed)
+    return (_model(seed, model_seed), docs, *_encode(docs, seed))
+
+
+_OBJ = tuple(sym.replace("_", " ") for sym in ANSWER_SYMBOLS)
+
+
+def _key_of(doc, q):
+    return doc.sentences[q].text.split("?", 1)[0][len("What does ") :]
+
+
+def _set_fact(doc, a, q, key, obj):
+    """Rewrite fact (a, q) of ``doc`` to ask ``key`` with answer ``obj``."""
+    sents = list(doc.sentences)
+    sents[a] = dataclasses.replace(sents[a], text=f"{key} {obj}.")
+    sents[q] = dataclasses.replace(
+        sents[q], text=f"What does {key}? {answer_symbol(obj)}", answer=obj
+    )
+    return dataclasses.replace(doc, sentences=tuple(sents))
+
+
+def _twin(doc, new_id):
+    """The same document, same keys, every answer object rotated by one."""
+    for a, q in doc.pairs:
+        obj = doc.sentences[q].answer
+        doc = _set_fact(doc, a, q, _key_of(doc, q), _OBJ[(_OBJ.index(obj) + 1) % 16])
+    return dataclasses.replace(doc, doc_id=new_id)
+
+
+class _Call(NamedTuple):
+    kv: torch.Tensor
+    valid: torch.Tensor
+    bv: torch.Tensor
+    training: bool
+    grad: bool
 
 
 class _Spy(torch.nn.Module):
-    """Wraps a model and records the memory kv of every forward call."""
+    """Wraps a model and records the memory inputs of every forward call."""
 
     def __init__(self, inner):
         super().__init__()
         self.inner = inner
         self.cfg = inner.cfg
         self.embed = inner.embed
-        self.calls: list[tuple[torch.Tensor, torch.Tensor, bool, bool]] = []
+        self.calls: list[_Call] = []
 
     def forward(self, ids_t, mask_t, kv, valid, bos_ctx, bv):
         self.calls.append(
-            (kv.detach().clone(), valid.clone(), self.training, torch.is_grad_enabled())
+            _Call(
+                kv.detach().clone(),
+                valid.clone(),
+                bv.clone(),
+                self.training,
+                torch.is_grad_enabled(),
+            )
         )
         return self.inner(ids_t, mask_t, kv, valid, bos_ctx, bv)
+
+
+def _calls_by_step(spy, r):
+    """-> {t: {condition: _Call}} for steps with targets; {t: {"live": ...}} else."""
+    it = iter(spy.calls)
+    steps_with = set(r["t"].tolist())
+    out = {}
+    for t in range(S):
+        if t in steps_with:
+            out[t] = {c: next(it) for c in loo.ALL_CONDITIONS}
+        else:
+            out[t] = {"live": next(it)}
+    assert next(it, None) is None
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -173,42 +244,119 @@ def test_knockout_kv_rejects_unknown_mode_and_missing_replacement():
 
 
 def test_readout_knockout_forwards_differ_from_live_only_at_the_target():
-    """Through loo_readout itself: every knockout forward's kv equals the live kv
-    except at (row, own/ctrl rank) of rows that carry a target at that step, and
+    """Through loo_readout itself: every single-slot knockout forward's kv equals
+    the live kv except at (row, own/ctrl rank) of rows where it was applied, and
     the validity mask is never touched."""
     model, docs, ids, mask, tmask, gap, sym = _world()
     spy = _Spy(model)
     r = loo.loo_readout(spy, docs, ids, mask, tmask, gap, sym, seed=0)
-    n_cond = len(loo.CONDITIONS)
-    # Group calls by step: a step with targets makes n_cond calls, else 1.
-    steps_with = sorted(set(r["t"].tolist()))
-    calls = iter(spy.calls)
+    by = _calls_by_step(spy, r)
     checked = 0
-    for t in range(S):
-        live_kv, live_valid, *_ = next(calls)
-        if t not in steps_with:
+    for t, calls in by.items():
+        if len(calls) == 1:
             continue
-        sel = r["t"] == t
-        per = {c: next(calls) for c in loo.CONDITIONS[1:]}
-        assert len(per) == n_cond - 1
-        for cond, (kv, valid, *_rest) in per.items():
-            assert torch.equal(valid, live_valid), cond
-            diff = (kv != live_kv).any(-1)  # [B, M]
+        live = calls["live"]
+        sel = (r["t"] == t).nonzero().flatten().tolist()
+        for cond in ("own_zero", "own_resample", "ctrl_resample"):
+            c = calls[cond]
+            assert torch.equal(c.valid, live.valid), cond
+            diff = (c.kv != live.kv).any(-1)  # [B, M]
             want = torch.zeros_like(diff)
-            if cond == "all_slots_zeroed":
-                want = live_valid & (live_kv != 0).any(-1)
-                assert torch.equal(kv, torch.zeros_like(kv))
-                assert torch.equal(diff, want)
-                continue
             rank_key = "ctrl_rank" if cond == "ctrl_resample" else "own_rank"
-            for i in sel.nonzero().flatten().tolist():
-                b, rk = int(r["row"][i]), int(r[rank_key][i])
-                applied = not math.isnan(float(r[f"{cond}_nll"][i]))
-                if applied:
-                    want[b, rk] = True
+            for i in sel:
+                if not math.isnan(float(r[f"{cond}_nll"][i])):
+                    want[int(r["row"][i]), int(r[rank_key][i])] = True
             assert torch.equal(diff, want), (cond, t)
             checked += int(want.sum())
+        z = calls["all_slots_zeroed"]
+        assert torch.equal(z.kv, torch.zeros_like(z.kv))
+        assert torch.equal(z.valid, live.valid)
     assert checked > 0
+
+
+def test_all_slots_resample_swaps_whole_rows_for_a_different_documents_memory():
+    model, docs, ids, mask, tmask, gap, sym = _world()
+    spy = _Spy(model)
+    r = loo.loo_readout(spy, docs, ids, mask, tmask, gap, sym, seed=0)
+    ann = loo.stream_annotations(docs, steps=S)
+    by = _calls_by_step(spy, r)
+    n = 0
+    for i in range(r["t"].numel()):
+        b, t = int(r["row"][i]), int(r["t"][i])
+        live, c = by[t]["live"], by[t]["all_slots_resample"]
+        d = int(r["all_donor_row"][i])
+        assert torch.equal(c.valid, live.valid)
+        if d < 0:
+            assert math.isnan(float(r["all_slots_resample_nll"][i]))
+            assert torch.equal(c.kv[b], live.kv[b])
+            continue
+        n += 1
+        assert d != b and docs[d].doc_id != docs[b].doc_id
+        assert torch.equal(live.valid[d], live.valid[b])
+        assert torch.equal(c.kv[b], live.kv[d])  # the whole memory, same step
+        # the donor memory holds no assert of the queried question
+        held = range(max(0, t - M), t)  # FIFO, one write per sentence
+        qk = int(ann["fact_key"][b, t])
+        assert all(
+            not (int(ann["kind"][d, s]) == 1 and int(ann["fact_key"][d, s]) == qk)
+            for s in held
+        )
+    assert n > 0
+
+
+def test_memory_off_masks_every_slot_for_the_query_forward_only():
+    model, docs, ids, mask, tmask, gap, sym = _world()
+    spy = _Spy(model)
+    r = loo.loo_readout(spy, docs, ids, mask, tmask, gap, sym, seed=0)
+    by = _calls_by_step(spy, r)
+    for calls in by.values():
+        if len(calls) == 1:
+            continue
+        c, live = calls["memory_off"], calls["live"]
+        assert not bool(c.valid.any())
+        assert torch.equal(c.kv, live.kv)
+        assert torch.equal(c.bv, live.bv)
+    assert not torch.isnan(r["memory_off_nll"]).any()
+
+
+def test_bos_off_variants_drop_only_the_bos_context():
+    """M2: at gap 1 the bos-copy context IS the assert's gestalt, so every
+    condition has a *_bos_off twin: identical memory, bos flag off."""
+    model, docs, ids, mask, tmask, gap, sym = _world()
+    spy = _Spy(model)
+    r = loo.loo_readout(spy, docs, ids, mask, tmask, gap, sym, seed=0)
+    by = _calls_by_step(spy, r)
+    want = loo.CONDITIONS + tuple(f"{c}_bos_off" for c in loo.CONDITIONS)
+    assert want == loo.ALL_CONDITIONS
+    for calls in by.values():
+        if len(calls) == 1:
+            continue
+        live = calls["live"]
+        for c in loo.CONDITIONS:
+            on, off = calls[c], calls[f"{c}_bos_off"]
+            assert torch.equal(on.bv, live.bv), c
+            assert not bool(off.bv.any()), c
+            assert torch.equal(on.kv, off.kv) and torch.equal(on.valid, off.valid), c
+    assert bool(by[1]["live"].bv.any())  # the fixture has a live bos context
+    g1 = r["gap"] == 1
+    assert g1.any()
+    assert (r["live_bos_off_nll"][g1] != r["live_nll"][g1]).any()
+
+
+def test_no_knockout_is_written_back():
+    """The live memory trajectory under loo_readout is answer_readout's, step by
+    step: no knockout leaks into the memory later steps attend over."""
+    model, docs, ids, mask, tmask, gap, sym = _world()
+    ref_spy = _Spy(model)
+    _s003().answer_readout(ref_spy, ids, mask, tmask, gap, sym, cond="live")
+    spy = _Spy(model)
+    r = loo.loo_readout(spy, docs, ids, mask, tmask, gap, sym, seed=0)
+    by = _calls_by_step(spy, r)
+    assert len(ref_spy.calls) == S
+    for t in range(S):
+        assert torch.equal(by[t]["live"].kv, ref_spy.calls[t].kv), t
+        assert torch.equal(by[t]["live"].valid, ref_spy.calls[t].valid), t
+        assert torch.equal(by[t]["live"].bv, ref_spy.calls[t].bv), t
 
 
 # --------------------------------------------------------------------------- #
@@ -362,8 +510,8 @@ def test_every_forward_is_eval_mode_and_no_grad_and_mode_is_restored():
     spy.train()
     loo.loo_readout(spy, docs, ids, mask, tmask, gap, sym, seed=0)
     assert spy.calls
-    assert all(not training for _kv, _v, training, _g in spy.calls)
-    assert all(not grad for _kv, _v, _t, grad in spy.calls)
+    assert all(not c.training for c in spy.calls)
+    assert all(not c.grad for c in spy.calls)
     assert spy.training and model.training
 
 
@@ -417,16 +565,80 @@ def test_batched_equals_row_by_row_for_row_local_conditions():
             assert torch.allclose(x, y, atol=1e-5, equal_nan=True), (b, c)
 
 
-def test_knockouts_move_the_answer_nll_on_a_live_memory():
-    """A random-init model has g_mem = 1, so emptying the memory must move the
-    answer NLL -- a knockout that changes nothing downstream is not wired in."""
+def _live_states(model, ids, mask):
+    """The honest FIFO loop, by hand: (kv, valid, bos_ctx, bos_valid) per step."""
+    from rsr.model.tg.model import init_memory
+    from rsr.model.tg.policy_loop import write_at
+
+    B = ids.shape[0]
+    model.eval()
+    out = []
+    with torch.no_grad():
+        mem = init_memory(B, model.cfg)
+        bos = torch.zeros(B, model.cfg.D)
+        bv = torch.zeros(B, dtype=torch.bool)
+        for t in range(S):
+            out.append((mem.kv.clone(), mem.valid.clone(), bos.clone(), bv.clone()))
+            o = model(ids[:, t], mask[:, t], mem.kv, mem.valid, bos, bv)
+            mem = write_at(mem, o.srep, o.has_eos, torch.zeros(B).long(), t)
+            bos, bv = o.srep, o.has_eos & (t + 1 < S)
+    return out
+
+
+def test_every_condition_matches_a_hand_recomputation():
+    """Each condition's answer NLL equals a forward built by direct indexing of
+    the live memory (not through knockout_kv): the knockout is the stated one,
+    at the stated slot, with the stated donor -- for all 14 conditions."""
+    from rsr.train.loop import lm_token_losses
+
     model, docs, ids, mask, tmask, gap, sym = _world()
     r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    states = _live_states(model, ids, mask)
+    B = ids.shape[0]
+    applied = dict.fromkeys(loo.ALL_CONDITIONS, 0)
+    with torch.no_grad():
+        for i in range(r["t"].numel()):
+            b, t = int(r["row"][i]), int(r["t"][i])
+            kv0, valid0, bos, bv0 = states[t]
+            for cond in loo.ALL_CONDITIONS:
+                base = cond.removesuffix("_bos_off")
+                kv, valid, bv = kv0.clone(), valid0.clone(), bv0.clone()
+                if cond.endswith("_bos_off"):
+                    bv[b] = False
+                own, ctrl = int(r["own_rank"][i]), int(r["ctrl_rank"][i])
+                if base == "own_zero":
+                    if own < 0:
+                        continue
+                    kv[b, own] = 0.0
+                elif base == "own_resample":
+                    d = int(r["own_donor_row"][i])
+                    if d < 0:
+                        continue
+                    kv[b, own] = kv0[d, own]
+                elif base == "ctrl_resample":
+                    d = int(r["ctrl_donor_row"][i])
+                    if d < 0:
+                        continue
+                    kv[b, ctrl] = kv0[d, ctrl]
+                elif base == "all_slots_zeroed":
+                    kv[b] = 0.0
+                elif base == "all_slots_resample":
+                    d = int(r["all_donor_row"][i])
+                    if d < 0:
+                        continue
+                    kv[b] = kv0[d]
+                elif base == "memory_off":
+                    valid[b] = False
+                o = model(ids[:, t], mask[:, t], kv, valid, bos, bv)
+                per = lm_token_losses(o.logits, ids[:, t]).view(B, L - 1)
+                want = float(per[b][tmask[b, t, 1:]][0])
+                got = float(r[f"{cond}_nll"][i])
+                assert got == pytest.approx(want, abs=1e-5, rel=0), (cond, i)
+                applied[cond] += 1
+    assert all(n > 0 for n in applied.values()), applied
     res = r["own_resident"]
-    assert (r["all_slots_zeroed_nll"] != r["live_nll"]).any()
-    assert (r["own_zero_nll"][res] != r["live_nll"][res]).any()
-    ok = ~torch.isnan(r["own_resample_nll"])
-    assert ok.any() and (r["own_resample_nll"][ok] != r["live_nll"][ok]).any()
+    # and the knockout is not a no-op on this live memory
+    assert (r["own_zero_nll"][res] - r["live_nll"][res]).abs().max() > 1e-4
 
 
 def test_rejects_a_model_without_memory():
@@ -498,3 +710,220 @@ def test_loo_delta_loss_resample_records_donor_or_nan():
     assert not torch.isnan(out["delta"][has]).any()
     with pytest.raises(ValueError):
         loo.loo_delta_loss(model, docs, ids, mask, mode="mean", seed=0)
+
+
+# --------------------------------------------------------------------------- #
+# W4-fix: donor exclusions, flags, statuses (review of PR #48)
+# --------------------------------------------------------------------------- #
+
+
+def test_pick_donor_is_called_with_the_required_exclusions(monkeypatch):
+    """Own donors exclude the queried key and the answer object; control donors
+    exclude the queried key, the control's own key and the answer object."""
+    model, docs, ids, mask, tmask, gap, sym = _world()
+    ann = loo.stream_annotations(docs, steps=S)
+    seen = []
+    real = loo.pick_donor
+
+    def spy(ann_, step, valid, **kw):
+        seen.append(kw)
+        return real(ann_, step, valid, **kw)
+
+    monkeypatch.setattr(loo, "pick_donor", spy)
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    rec = {(int(r["row"][i]), int(r["t"][i])): i for i in range(r["t"].numel())}
+    roles = set()
+    for kw in seen:
+        b, t = kw["row"], kw["t"]
+        i = rec[(b, t)]
+        qk, qo = int(ann["fact_key"][b, t]), int(ann["object_id"][b, t])
+        assert qk in kw["exclude_keys"] and qo in kw["exclude_objects"], kw
+        if kw["role"] == loo._ROLE_CTRL:
+            ck = int(ann["fact_key"][b, int(r["ctrl_sentence"][i])])
+            assert ck in kw["exclude_keys"], kw
+        roles.add(kw["role"])
+    assert roles == {loo._ROLE_OWN, loo._ROLE_CTRL}
+
+
+def test_own_donor_excludes_the_queried_key():
+    """[A, twin(A)]: the twin holds the same questions with other answers, so its
+    same-rank assert is the only candidate and must be refused."""
+    base = _docs(1)[0]
+    docs = (base, _twin(base, 999))
+    model = _model()
+    ids, mask, tmask, gap, sym = _encode(docs)
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    assert int(r["own_resident"].sum()) > 0
+    assert (r["own_donor_row"] == -1).all()
+    assert torch.isnan(r["own_resample_nll"]).all()
+
+
+def test_all_slots_resample_donor_excludes_the_queried_key():
+    base = _docs(1)[0]
+    docs = (base, _twin(base, 999))
+    model = _model()
+    ids, mask, tmask, gap, sym = _encode(docs)
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    res = r["own_resident"]
+    assert res.any()
+    # a resident own assert has its twin (same key) in the twin's memory
+    assert (r["all_donor_row"][res] == -1).all()
+
+
+def _ctrl_rekeyed_world():
+    """A record with a control present; every adjacent pending assert rewritten
+    to ask the query's own question. -> (model, docs, tensors..., (b, t))."""
+    model, docs, ids, mask, tmask, gap, sym = _world()
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    ann = loo.stream_annotations(docs, steps=S)
+    i = int((r["ctrl_status"] == loo.CTRL_PRESENT).nonzero()[0])
+    b, t, own = int(r["row"][i]), int(r["t"][i]), int(r["own_rank"][i])
+    k = min(t, M)
+    doc = docs[b]
+    qa = {a: q for a, q in doc.pairs}
+    n = 0
+    for rk in (own - 1, own + 1):
+        if 0 <= rk < k:
+            s = t - k + rk
+            if int(ann["kind"][b, s]) == 1 and int(ann["query_of"][b, s]) > t:
+                q = qa[s]
+                doc = _set_fact(doc, s, q, _key_of(doc, t), doc.sentences[q].answer)
+                n += 1
+    assert n > 0
+    docs = tuple(doc if j == b else d for j, d in enumerate(docs))
+    return (model, docs, *_encode(docs), (b, t))
+
+
+def test_control_is_never_of_the_queried_key():
+    model, docs, ids, mask, tmask, gap, sym, (b, t) = _ctrl_rekeyed_world()
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    i = int(((r["row"] == b) & (r["t"] == t)).nonzero()[0])
+    assert int(r["ctrl_status"][i]) == loo.CTRL_NO_PENDING_ADJACENT
+    ann = loo.stream_annotations(docs, steps=S)
+    for j in (r["ctrl_status"] == loo.CTRL_PRESENT).nonzero().flatten().tolist():
+        bj, tj = int(r["row"][j]), int(r["t"][j])
+        cs = int(r["ctrl_sentence"][j])
+        assert int(ann["fact_key"][bj, cs]) != int(ann["fact_key"][bj, tj])
+
+
+def test_duplicate_key_in_document_is_flagged():
+    model, docs, ids, mask, tmask, gap, sym, (b, t) = _ctrl_rekeyed_world()
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    i = int(((r["row"] == b) & (r["t"] == t)).nonzero()[0])
+    assert bool(r["dup_key_in_doc"][i])
+    m0, d0, *rest = _world()
+    r0 = loo.loo_readout(m0, d0, *rest, seed=0)
+    ann = loo.stream_annotations(d0, steps=S)
+    for j in range(r0["t"].numel()):
+        bj, tj = int(r0["row"][j]), int(r0["t"][j])
+        key = _key_of(d0[bj], tj)
+        n = sum(1 for a, q in d0[bj].pairs if _key_of(d0[bj], q) == key)
+        assert bool(r0["dup_key_in_doc"][j]) == (n > 1)
+    assert int(ann["fact_key"][b, t]) >= 0
+
+
+def test_object_flags_and_the_donor_object_exclusion():
+    model, docs, ids, mask, tmask, gap, sym = _world()
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    ann = loo.stream_annotations(docs, steps=S)
+    obj = ann["object_id"]
+    n_ctrl_same = 0
+    for i in range(r["t"].numel()):
+        b, t = int(r["row"][i]), int(r["t"][i])
+        ans = int(obj[b, t])
+        assert int(r["answer_object"][i]) == ans
+        for who in ("own", "ctrl"):
+            d = int(r[f"{who}_donor_row"][i])
+            flag = bool(r[f"{who}_donor_same_object"][i])
+            if d < 0:
+                assert not flag
+                continue
+            ds = int(r[f"{who}_donor_sentence"][i])
+            assert int(obj[d, ds]) != ans  # excluded
+            assert not flag
+        cs = int(r["ctrl_sentence"][i])
+        same = cs >= 0 and int(obj[b, cs]) == ans
+        assert bool(r["ctrl_same_object"][i]) == same
+        n_ctrl_same += same
+        d = int(r["all_donor_row"][i])
+        held = range(max(0, t - M), t)
+        has = d >= 0 and any(
+            int(ann["kind"][d, s]) == 1 and int(obj[d, s]) == ans for s in held
+        )
+        assert bool(r["all_donor_has_object"][i]) == has
+    assert n_ctrl_same > 0  # the fixture exercises the flag
+
+
+def test_own_status_distinguishes_evicted_from_never_written():
+    model, docs, ids, mask, tmask, gap, sym = _world()
+    r0 = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    i = int(r0["own_resident"].nonzero()[0])
+    b, t, g = int(r0["row"][i]), int(r0["t"][i]), int(r0["gap"][i])
+    ids, mask = ids.clone(), mask.clone()
+    ids[b, t - g] = 0  # the assert sentence becomes padding: no EOS, no write
+    mask[b, t - g] = False
+    r = loo.loo_readout(model, docs, ids, mask, tmask, gap, sym, seed=0)
+    j = int(((r["row"] == b) & (r["t"] == t)).nonzero()[0])
+    assert int(r["own_status"][j]) == loo.OWN_NEVER_WRITTEN
+    assert not bool(r["own_resident"][j])
+    for k in range(r0["t"].numel()):
+        st = int(r0["own_status"][k])
+        if bool(r0["own_resident"][k]):
+            assert st == loo.OWN_RESIDENT
+        else:
+            assert st == loo.OWN_EVICTED and int(r0["gap"][k]) > M
+
+
+def test_seed_mix_has_no_role_collision():
+    assert loo._mix(0, 0, 1, 0) != loo._mix(0, 0, 0, 131)
+    vals = {
+        loo._mix(s, d, t, role)
+        for s in range(2)
+        for d in range(3)
+        for t in range(4)
+        for role in (0, 1, 2, 131, 147, 400)
+    }
+    assert len(vals) == 2 * 3 * 4 * 6
+
+
+def test_loo_delta_loss_zero_mode_needs_no_annotations():
+    model, docs, ids, mask, *_ = _world(n=3)
+    a = loo.loo_delta_loss(model, docs, ids, mask, mode="zero", seed=0)
+    b = loo.loo_delta_loss(model, None, ids, mask, mode="zero", seed=0)
+    assert torch.equal(a["delta"].nan_to_num(9.0), b["delta"].nan_to_num(9.0))
+    with pytest.raises(ValueError):
+        loo.loo_delta_loss(model, None, ids, mask, mode="resample", seed=0)
+
+
+def test_loo_delta_loss_padding_step_is_nan_not_zero():
+    model, docs, ids, mask, *_ = _world(n=3)
+    ids, mask = ids.clone(), mask.clone()
+    ids[0, 5] = 0
+    mask[0, 5] = False
+    out = loo.loo_delta_loss(model, docs, ids, mask, mode="zero", seed=0)
+    assert math.isnan(float(out["live_loss"][0, 5]))
+    assert torch.isnan(out["delta"][0, 5]).all()
+    assert not math.isnan(float(out["live_loss"][1, 5]))
+
+
+def test_loo_delta_loss_resample_excludes_the_slots_own_key():
+    """[A, twin(A)]: an assert/query slot's only donor is its twin (same key), so
+    it gets none; a filler slot (no key) still gets one."""
+    base = _docs(1)[0]
+    docs = (base, _twin(base, 999))
+    model = _model()
+    ids, mask, *_ = _encode(docs)
+    out = loo.loo_delta_loss(model, docs, ids, mask, mode="resample", seed=0)
+    ann = loo.stream_annotations(docs, steps=S)
+    ss = out["slot_sentence"]
+    n_fill = 0
+    for b in range(2):
+        for t in range(S):
+            for i in range(M):
+                s = int(ss[b, t, i])
+                if s < 0:
+                    continue
+                keyed = int(ann["fact_key"][b, s]) >= 0
+                assert (int(out["donor_row"][b, t, i]) >= 0) == (not keyed)
+                n_fill += not keyed
+    assert n_fill > 0
