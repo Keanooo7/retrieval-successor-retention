@@ -51,14 +51,16 @@ PY = sys.executable
 # --------------------------------------------------------------------------- #
 
 
-def test_the_enum_is_the_five_code_protocol():
-    """Five, not four: `canary.py`'s docstring listed four and dropped `4`."""
+def test_the_enum_is_the_six_code_protocol():
+    """Six: `canary.py`'s docstring listed four and dropped `4`, and `5 INERT` was
+    added by `R-2026-09-22-inert-exit-5` (liveness-wiring)."""
     assert {e.name: int(e) for e in Exit} == {
         "OK": 0,
         "FAIL": 1,
         "UNKNOWN": 2,
         "DID_NOT_RUN": 3,
         "UNBANKED_RISE": 4,
+        "INERT": 5,
     }
     # `floors.py`'s name on macbook-local-2026-09-18, so the port can reuse this.
     assert Exit.DROP is Exit.FAIL
@@ -76,10 +78,17 @@ def test_status_refuses_none_and_codes_outside_the_protocol():
     """`sys.exit(None)` is 0: a `main()` that falls off its end reads as a pass."""
     with pytest.raises(TypeError, match="None"):
         status(None)
-    for bad in (-1, 5, 127):
+    for bad in (-1, 6, 127):
         with pytest.raises(ValueError, match="outside the protocol"):
             status(bad)
     assert status(3) is Exit.DID_NOT_RUN
+
+
+def test_status_accepts_5_as_inert():
+    """`R-2026-09-22-inert-exit-5`: "ran, and memory is inert" is its own code.
+    A `status()` that refused 5 would turn every INERT run into a crash."""
+    assert status(5) is Exit.INERT
+    assert status(Exit.INERT) is Exit.INERT
 
 
 # --------------------------------------------------------------------------- #
@@ -267,14 +276,14 @@ _EXIT_HELPERS = {"did_not_run", "not_implemented", "status"}
 
 def _is_protocol_value(node: ast.AST | None) -> bool:
     """An expression that is statically a protocol code: `Exit.X`, an int literal
-    0-4, a helper call, or a conditional between two of those. A bare name is NOT
+    0-5, a helper call, or a conditional between two of those. A bare name is NOT
     -- `return ok` is exactly how a bool reaches `sys.exit`."""
     if node is None:
         return False  # bare `return` -> None -> exit 0
     if isinstance(node, ast.Attribute):
         return isinstance(node.value, ast.Name) and node.value.id == "Exit"
     if isinstance(node, ast.Constant):
-        return type(node.value) is int and 0 <= node.value <= 4
+        return type(node.value) is int and 0 <= node.value <= 5
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
         return node.func.id in _EXIT_HELPERS
     if isinstance(node, ast.IfExp):
@@ -305,7 +314,6 @@ def test_no_checker_returns_a_bare_boolean():
 #: Entry points S0-05 did not convert, each with the reason. The test below
 #: refuses a stale entry, so a converted or deleted file cannot stay exempt.
 NOT_CONVERTED = {
-    "src/rsr/train/loop.py": "S0-05 brief: do not touch; S0-03 is editing it",
     "src/rsr/cli.py": (
         "not in S0-05's files in scope. Reports UnmeasuredConstant as 1 where the "
         "protocol says 2 (no recorded value for this key) -- filed as a brief error"

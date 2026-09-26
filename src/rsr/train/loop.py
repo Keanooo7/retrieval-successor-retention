@@ -31,7 +31,6 @@ RAISES when
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import subprocess
@@ -50,6 +49,7 @@ from rsr.data.synthetic import (
     answer_symbol,
     generate,
 )
+from rsr.exit_codes import ArgumentParser, Exit, run_main, status
 from rsr.model.tg import TGConfig, TGModel
 from rsr.model.tg.policy_loop import run_policy_loop
 from rsr.mup.param_groups import build_param_groups
@@ -62,6 +62,8 @@ __all__ = [
     "answer_targets",
     "build_policy",
     "check_vocabulary_closure",
+    "liveness_batch",
+    "liveness_exit",
     "main",
     "stream_documents",
     "train",
@@ -408,6 +410,11 @@ def train(
         eod_id=3,
     )
     model = TGModel(cfg).to(device)
+    # liveness-wiring: the decoy is "the untrained model at the same seed and the
+    # same config" (decisive PREREG *Decoy*) -- this model's own init. Copied, not
+    # rebuilt: a second `TGModel(cfg)` would draw from the global RNG and shift
+    # every draw after it (CLAUDE.md, the E0b note).
+    init_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
     # S0-01 defect (c). `StepOutput.srep_norm_penalty` is computed at `model.py:424`
     # and was discarded: `grep -c srep_norm src/rsr/train/loop.py` returned 0.
@@ -649,7 +656,24 @@ def train(
     except BaseException as e:
         hb.crash(e)
         raise
-    hb.footer("completed", final_step=iters)
+    # liveness-wiring: every run measures its own memory's liveness before it
+    # reports (R-2026-09-22-inert-exit-5), and an INERT run's checkpoints are
+    # quarantined (R-2026-09-22-inert-checkpoint-quarantine).
+    liveness = _measure_liveness(model, init_state, cfg, frozen, device=device)
+    if liveness["band"] == "inert":
+        liveness["quarantine"] = str(
+            ck.quarantine(
+                out,
+                {
+                    "run_id": run_id,
+                    "ratio": liveness.get("ratio"),
+                    "reason": liveness.get("reason"),
+                    "ruling": "R-2026-09-22-inert-checkpoint-quarantine",
+                },
+            )
+        )
+    liveness["exit_code"] = int(liveness_exit(liveness))
+    hb.footer("completed", final_step=iters, liveness=liveness)
     return {
         "run_id": run_id,
         "heartbeat": str(out / "heartbeat.jsonl"),
@@ -664,11 +688,87 @@ def train(
         # crashed run must not be able to report the number it asked for.
         "steps_done": (last["step"] + 1) if last else start,
         "final": last,
+        "liveness": liveness,
     }
 
 
-def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="rsr-train", description=__doc__)
+#: decisive PREREG *Condition*: `measure_documents = 8`, the first documents of
+#: the seed's training corpus (#17's measurement batch).
+LIVENESS_MEASURE_DOCUMENTS = 8
+
+#: `R-2026-09-22-inert-exit-5`'s mapping, band -> exit. Anything else -- no
+#: measurement, an unknown band -- is `3`: the run did not demonstrate anything.
+LIVENESS_EXIT = {
+    "live": Exit.OK,
+    "inert": Exit.INERT,
+    "inconclusive": Exit.FAIL,
+    "invalid": Exit.DID_NOT_RUN,
+}
+
+
+def liveness_exit(liveness: dict | None) -> Exit:
+    """The run's exit code from its liveness band. Never `0` without a band."""
+    band = (liveness or {}).get("band")
+    return LIVENESS_EXIT.get(band, Exit.DID_NOT_RUN)
+
+
+def liveness_batch(config: dict) -> tuple[torch.Tensor, torch.Tensor]:
+    """-> (ids, mask) on CPU: the first `LIVENESS_MEASURE_DOCUMENTS` documents of
+    the corpus `train()` built from `config` (its frozen dict). A stream run's
+    are its vocabulary documents -- the fixed corpus it takes `V` from."""
+    kw = {}
+    if "n_documents" in config:
+        kw = {"n_documents": config["n_documents"]}
+    if "stream" in config:
+        kw = {"n_documents": config["stream"]["vocab_documents"]}
+    S = config["steps_per_stream"]
+    docs = generate(SyntheticConfig(sentences_per_document=S, seed=config["seed"], **kw))
+    return encode(
+        docs[:LIVENESS_MEASURE_DOCUMENTS],
+        build_vocab(docs),
+        max_tokens=config["tg"]["max_sentence_tokens"],
+        steps=S,
+    )
+
+
+def _measure_liveness(
+    model: TGModel, init_state: dict, cfg: TGConfig, frozen: dict, *, device: str
+) -> dict:
+    """`memory_liveness.measure_liveness` on the trained model vs its own init.
+
+    A measurement that raises is `invalid` (exit 3), never `0`, `1` or `5`: the
+    traceback is recorded, and the run reports that it did not demonstrate
+    anything. Imported here, not at module top: `memory_liveness` imports this
+    module.
+
+    Both models are fresh modules loaded from state dicts, as the decisive run
+    loads checkpoints: the in-loop model holds non-leaf tensors and cannot be
+    deep-copied, and `with_memory_disabled` deep-copies. They are built under
+    `fork_rng`, so the global RNG is exactly where training left it."""
+    import traceback
+
+    from rsr.metrics import memory_liveness as ml
+
+    try:
+        with torch.random.fork_rng(devices=[]):
+            trained, decoy = TGModel(cfg), TGModel(cfg)
+        trained.load_state_dict(model.state_dict())
+        decoy.load_state_dict(init_state)
+        trained, decoy = trained.to(device), decoy.to(device)
+        ids, mask = liveness_batch(frozen)
+        return ml.measure_liveness(
+            trained, decoy, ids.to(device), mask.to(device), seed=frozen["seed"]
+        )
+    except Exception as e:
+        return {
+            "band": "invalid",
+            "reason": f"the measurement raised {type(e).__name__}: {e}",
+            "traceback": traceback.format_exc(),
+        }
+
+
+def main(argv: list[str] | None = None) -> Exit:
+    p = ArgumentParser(prog="rsr-train", description=__doc__)
     for name, typ, dflt in (
         ("--d", int, 128),
         ("--batch", int, 16),
@@ -719,9 +819,10 @@ def main(argv: list[str] | None = None) -> int:
         resume=a.resume,
         policy_name=a.policy,
     )
-    print(json.dumps(r, indent=2))
-    return 0
+    print(json.dumps(r, indent=2, default=str))
+    # liveness-wiring: 0 live, 5 INERT, 1 inconclusive, 3 not a valid measurement.
+    return status(liveness_exit(r.get("liveness")))
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)
