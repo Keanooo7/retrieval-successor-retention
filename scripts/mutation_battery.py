@@ -78,6 +78,12 @@ _REDUCTION_TABLE_COUPLING = (
     "entry makes every reduction test fail to construct a config. The coupling is "
     "the design: one enumeration, not two."
 )
+_T_WARM_COUPLING = (
+    "correction 31 states one defect three ways -- below S (a FIFO prefix), above "
+    "S (FIFO forever), and the invariant that warm never flips inside one stream. "
+    "Restoring the sentence-index counter or dropping the loop's hand-off breaks "
+    "all of them at once, by design."
+)
 _MUP_COUPLING = (
     "the muP multipliers are checked both on the attribute and on the output, "
     "deliberately -- an attribute set correctly and never applied is precisely the "
@@ -836,9 +842,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "policy built unconditionally again",
         "test_train_does_not_stamp_a_policy_it_did_not_build",
         "src/rsr/train/loop.py",
-        "    policy = build_policy(\n"
-        "        policy_name, d_model=d, steps_per_epoch=float(iters), generator=gen\n"
-        "    )",
+        "    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, "
+        "generator=gen)",
         "    policy = FIFOPolicy()",
         "S0-01 defect (b), the original line. `policy_name` still flows into the "
         "frozen config and the `run_id`, so `train(policy_name='rsr')` completes "
@@ -847,6 +852,89 @@ MUTATIONS: tuple[Mutation, ...] = (
         "defect silent and what makes the test necessary: no assertion about the "
         "loss curve could ever have caught this, because the loss curve is "
         "genuine.",
+    ),
+    # Correction 31: T_warm counts optimizer steps, not sentences.
+    Mutation(
+        "T_warm compared against the sentence index again",
+        "test_warmup_below_S_covers_whole_training_steps",
+        "src/rsr/retention/rsr.py",
+        "        warm = self.config.t_warm > 0 and "
+        "self._train_step < self.config.t_warm\n",
+        "        warm = step < self.config.t_warm\n",
+        "Correction 31 (a), the original line. `step` is the sentence index inside "
+        "one stream, so below S the warmup becomes a FIFO prefix of every stream "
+        "from optimizer step 0, and at T_warm >= S the arm is FIFO forever -- "
+        "gauntlet 0.1 by mixed units. Nothing crashes and the attribution field "
+        "still reads plausibly, which is why it survived a registry, a correction "
+        "and two warmup tests that fed `select_eviction` the sentence index.",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                _T_WARM_COUPLING,
+            ),
+            (
+                "tests/test_t_warm_dispatch.py::test_warmup_longer_than_a_stream_ends",
+                _T_WARM_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "train() stops handing the policy its optimizer step",
+        "test_warm_status_never_flips_inside_one_stream",
+        "src/rsr/train/loop.py",
+        "                policy.set_train_step(it)\n",
+        "                pass  # MUTATED\n",
+        "Correction 31 (a), the call-site half. A policy fixed to count optimizer "
+        "steps is useless if the loop never tells it which step it is on; here the "
+        "unset-step guard is what turns that into a failure instead of a silent "
+        "FIFO arm.",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                _T_WARM_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "an unset training step defaults to 0",
+        "test_a_warmup_policy_refuses_to_guess_its_training_step",
+        "src/rsr/retention/rsr.py",
+        "        self._train_step: int | None = None\n",
+        "        self._train_step: int | None = 0\n",
+        "Correction 31 (a). The natural 'harmless' default: a policy nobody told "
+        "the step is at step 0, so it is warm, so it is FIFO -- every eval-time "
+        "use of a trained RSR policy would silently report FIFO numbers as RSR's.",
+    ),
+    Mutation(
+        "build_policy accepts rsr without an epoch",
+        "test_build_policy_refuses_rsr_without_an_epoch",
+        "src/rsr/train/loop.py",
+        "        if steps_per_epoch is None:\n",
+        "        if False:  # MUTATED\n",
+        "Correction 31 (b). With the check gone, None reaches the registry, which "
+        "then fails for a reason unrelated to the open epoch decision -- or, once "
+        "a ledger exists, not at all.",
+        off_gate_allowed=(
+            (
+                "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_not_build",
+                "train() reaches the epoch refusal through build_policy: one "
+                "refusal, two call sites, and the S0-01 test matches its message "
+                "to prove `iters` is no longer passed.",
+            ),
+        ),
+    ),
+    Mutation(
+        "train() passes iters as steps_per_epoch again",
+        "test_train_does_not_stamp_a_policy_it_did_not_build",
+        "src/rsr/train/loop.py",
+        "    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, "
+        "generator=gen)",
+        "    policy = build_policy(policy_name, d_model=d, "
+        "steps_per_epoch=float(iters), generator=gen)",
+        "Correction 31 (b), the original line. `iters` makes section 3.4's one "
+        "epoch the whole run, so the warmup never ends and a future 'rsr' run is "
+        "FIFO throughout. Today the registry would still refuse (E1 has not "
+        "logged nu/beta/gamma); the day it does not, this line is the defect.",
     ),
     Mutation(
         "--policy stops reaching train()",
