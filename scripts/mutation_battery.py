@@ -2460,7 +2460,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_disjointness_catches_the_fresh_escape_stream",
         "experiments/carry-forward/run.py",
         '    "fresh_escape": (52160, 148160),\n',
-        "",
+        "    # fresh_escape dropped\n",
         "carry-forward PREREG control 4: EXT is disjoint from fresh-escape's "
         "continuation of the stream [52160, 148160).",
     ),

@@ -24,7 +24,6 @@ Usage:
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import importlib.util
 import json
@@ -40,7 +39,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from rsr.exit_codes import Exit, run_main  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, run_main  # noqa: E402
 
 EXPERIMENT = "experiments/carry-forward/run.py"
 RUN_ID = "carry-forward"
@@ -885,7 +884,7 @@ def _json_safe(o):
 def main(argv: list[str] | None = None) -> int:
     import ledger as ledger_mod
 
-    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p = ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--source", type=Path, default=None)
     p.add_argument("--run-id", default=RUN_ID)
     p.add_argument("--render-results", action="store_true")
@@ -895,15 +894,15 @@ def main(argv: list[str] | None = None) -> int:
         path = runs / "ledger.json"
         if not path.exists():
             print(f"DID NOT RUN: {path} does not exist", file=sys.stderr)
-            return int(Exit.DID_NOT_RUN)
+            return Exit.DID_NOT_RUN
         (ROOT / "experiments" / "carry-forward" / "RESULTS.md").write_text(
             render_results(json.loads(path.read_text()))
         )
-        return int(Exit.OK)
+        return Exit.OK
     source = a.source or default_source()
     if runs.exists():
         print(f"DID NOT RUN: {runs} exists; move it aside", file=sys.stderr)
-        return int(Exit.DID_NOT_RUN)
+        return Exit.DID_NOT_RUN
     torch.set_num_threads(THREADS)
     t0 = time.time()
 
@@ -1041,7 +1040,7 @@ def main(argv: list[str] | None = None) -> int:
     (runs / "raw.json").write_text(json.dumps(_json_safe(raw), indent=2) + "\n")
     path = led.write()
     print(f"ledger: {path}; classification {cls['outcome']}; exit {cls['exit']}")
-    return cls["exit"]
+    return Exit.OK if cls["exit"] == int(Exit.OK) else Exit.DID_NOT_RUN
 
 
 # --------------------------------------------------------------------------- #
