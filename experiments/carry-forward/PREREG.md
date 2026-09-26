@@ -324,3 +324,50 @@ The revised instrument excludes donors that carry the answer object. As well as 
 only), with L LOCALISED and S SPECIFIC. The one addition to the prediction is that L_zero may
 exceed 1, as the review's smoke numbers suggest. That is expected, and it is why L_zero is not
 primary.
+
+---
+
+## Amendment 2 — 2026-09-26, before any readout of this run
+
+**What prompted it.** The manager's rulings on the questions the revised instrument left open. They
+arrived with the RESUME at `eng/loo` e390f7d (PR #48). The manager's smoke figure is that
+`all_donor_has_object` covered 36% of targets on a non-arm-B checkpoint. **No `loo_readout` output
+on any arm B checkpoint has been produced or seen.**
+
+**Rate measured, which sets the size of EXT.** One `loo_readout` call, 256 EXT documents (4724
+targets, 14 forwards per answer step), on the corpus-size n64 seed 0 ckpt 1000 checkpoint (not arm
+B), took 93.5 s at 12 threads, unloaded. The six cells come to ≈ 6 × (4 × 93.5 s + H64) ≈ 40 min,
+inside the ~1 h budget, so **EXT stays 1024 documents.**
+
+**The rulings, registered.** Amendment 1 stands where these do not change it.
+
+1. **Primary L** is (mean live − mean own_resample) / (mean live − mean all_slots_resample).
+   - Population: gap 2..M, `own_status` resident.
+   - A ratio of means with a paired per-document bootstrap, never per row.
+   - The zero pair is secondary and labelled OOD.
+   - This is Amendment 1's A1. Its denominator guard and its exclusions (both resamples applied, not
+     `dup_key_in_doc`) stay.
+2. **Gap 1 is read only from the `*_bos_off` columns, as a secondary readout.** It is L on gap = 1
+   with `own_status` resident, computed from `live_bos_off`, `own_resample_bos_off` and
+   `all_slots_resample_bos_off`. It has no label and no role in the classification.
+3. **Donors carrying the answer object are not excluded.** Primary L uses all targets.
+   - A **sensitivity L** is computed on the L population restricted to `all_donor_has_object ==
+     False`, with the same bootstrap.
+   - **Material disagreement** (threshold set now) means either of:
+     - |L_primary − L_sensitivity| > 0.15 (point estimates);
+     - the sensitivity L's label (same thresholds, same denominator guard, on its own population)
+       differs from the primary label.
+   - On a material disagreement, that seed's L label becomes **L_INCONCLUSIVE**.
+   - If any seed's L at ckpt 3000 is L_INCONCLUSIVE **and** no seed CARRIES, the classification is
+     **inconclusive** (exit 3), because the LOCALISED/UNCLASSIFIED distinction then rests on L.
+   - CARRIED and MIXED do not depend on L and are unaffected.
+   - The same restriction is reported for reach's pooled 17–40 excess as a secondary. It is not
+     classified.
+4. **S** is paired own against control on the same rows, with `ctrl_status == 0` and not
+   `ctrl_same_object`. Coverage is reported. This is Amendment 1's A3 unchanged. The
+   `*_donor_same_object` exclusions are empty by construction and are still counted.
+5. **`dup_key_in_doc` rows are excluded from L, S and reach.** The count is reported. This is
+   Amendment 1's A3/A4 unchanged.
+
+**The classification table is otherwise unchanged. So is the prediction:** MIXED on seed 2 only; L
+LOCALISED and S SPECIFIC; the sensitivity L agrees with the primary.
