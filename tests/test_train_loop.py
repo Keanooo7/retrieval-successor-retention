@@ -59,6 +59,11 @@ TINY = dict(
 )
 
 
+#: What a monkeypatched `train` returns so that `main` exits 0: since
+#: liveness-wiring, `main` exits on the run's liveness band, and a run with no
+#: measurement exits 3 (`tests/test_liveness_wiring.py`).
+_LIVE = {"run_id": "x", "liveness": {"band": "live"}}
+
 # The CLI is exercised through `main` with `train` monkeypatched, never by rebuilding
 # the flag table here -- a test that rebuilds the parser stops testing the shipped one.
 
@@ -115,7 +120,7 @@ def test_the_policy_is_selectable_from_the_command_line(monkeypatch, tmp_path):
 
     def fake_train(**kw):
         seen.update(kw)
-        return {"run_id": "x"}
+        return _LIVE
 
     monkeypatch.setattr("rsr.train.loop.train", fake_train)
     assert main(["--out-dir", str(tmp_path), "--policy", "rsr"]) == 0
@@ -245,7 +250,7 @@ def test_the_cli_vocab_default_reaches_the_derived_path(monkeypatch, tmp_path):
 
     def fake_train(**kw):
         seen.update(kw)
-        return {"run_id": "x"}
+        return _LIVE
 
     monkeypatch.setattr("rsr.train.loop.train", fake_train)
     assert main(["--out-dir", str(tmp_path)]) == 0
@@ -259,7 +264,7 @@ def test_the_cli_vocab_default_reaches_the_derived_path(monkeypatch, tmp_path):
 def test_an_explicit_vocab_still_overrides_the_derived_path(monkeypatch, tmp_path):
     seen: dict[str, object] = {}
     monkeypatch.setattr(
-        "rsr.train.loop.train", lambda **kw: seen.update(kw) or {"run_id": "x"}
+        "rsr.train.loop.train", lambda **kw: seen.update(kw) or _LIVE
     )
     assert main(["--out-dir", str(tmp_path), "--vocab", "1024"]) == 0
     assert seen["vocab"] == 1024

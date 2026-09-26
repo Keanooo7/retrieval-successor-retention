@@ -91,7 +91,16 @@ that can only improve, and it currently stands at **10**.
 2  floor UNKNOWN           — no recorded floor for this key
 3  ENVIRONMENT / DID NOT RUN   <- NOT A PASS
 4  UNBANKED RISE           — measured above the floor, floor not updated
+5  INERT                   — a training run trained, but its memory carries no
+                             row-specific content (Amendment 1 ratio <= 0.01)
 ```
+
+**`5` is not `1`** (`docs/owner/rulings/R-2026-09-22-inert-exit-5.md`): `1` means the check caught a
+failure and routes to a regression/debug item; `5` means nothing broke but no eviction rule has anything
+to act on, and routes to a model or training-config investigation. Emitted by `rsr.train.loop.main` on
+every training run (liveness-wiring), whose inconclusive band (`0.01 < ratio < 0.1`) is `1` and whose
+invalid measurement is `3`. An INERT run's checkpoints are under `<out_dir>/quarantine/` and
+`rsr.train.checkpoint.load` refuses them without `allow_quarantined=True`.
 
 **`2` and `3` are separate deliberately, and `3` is where this design can be silently defeated.**
 "The gate did not run" and "the gate found nothing" are different facts.
