@@ -263,9 +263,7 @@ def test_the_cli_vocab_default_reaches_the_derived_path(monkeypatch, tmp_path):
 
 def test_an_explicit_vocab_still_overrides_the_derived_path(monkeypatch, tmp_path):
     seen: dict[str, object] = {}
-    monkeypatch.setattr(
-        "rsr.train.loop.train", lambda **kw: seen.update(kw) or _LIVE
-    )
+    monkeypatch.setattr("rsr.train.loop.train", lambda **kw: seen.update(kw) or _LIVE)
     assert main(["--out-dir", str(tmp_path), "--vocab", "1024"]) == 0
     assert seen["vocab"] == 1024
 

@@ -232,6 +232,33 @@ _DISPLACEMENT_COUPLING = (
     "of the reduction (ADR-0006)."
 )
 
+#: liveness-wiring: tests that read the measurement a real train() run wrote.
+_LIVENESS_HOOK_READERS = (
+    "test_the_controls_read_what_they_must_on_a_real_run",
+    "test_the_decoy_is_the_untrained_model_at_the_same_seed",
+    "test_an_inert_run_quarantines_its_checkpoints",
+    "test_the_loader_refuses_a_quarantined_checkpoint",
+)
+_LIVENESS_HOOK_COUPLING = (
+    "liveness-wiring: it reads what the real train() measured (the controls, the "
+    "decoy, or the band that triggers the quarantine). With the hook skipped there "
+    "is no measurement to read: the same defect, seen from each reader."
+)
+_LIVENESS_MAPPING_COUPLING = (
+    "liveness-wiring: main() and the quarantine test read the exit through the one "
+    "band->exit table (loop.LIVENESS_EXIT), so its mapping reddens them too, by "
+    "design: one table, not two."
+)
+_LIVENESS_INSTRUMENT_COUPLING = (
+    "liveness-wiring: every train() now ends with memory_liveness's controls, and "
+    "these tests read them off a real run. Breaking the instrument breaks the "
+    "controls those tests assert: the same instrument, seen from the wiring."
+)
+_LIVENESS_TRAIN_S003_COUPLING = (
+    "liveness-wiring: the test trains a real run on the default corpus (and the "
+    "liveness batch is built from it), so a corpus answer_targets refuses cannot "
+    "train: _S003_REFUSAL_COUPLING, seen from the liveness tests."
+)
 _LANE_FLOCK_COUPLING = (
     "orchestrator: the flock is the only thing that makes a slot exclusive, and "
     "every one of these asserts that a held slot is held -- against a second "
@@ -1122,6 +1149,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "permutation the control reads exactly 0.0 on ANY model, live or dead -- "
         "the reading §10.3's null was, and the one cycle 1 was rejected for not "
         "having ruled out. Only the live-memory decoy can see it.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in (
+                "test_the_controls_read_what_they_must_on_a_real_run",
+                "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+            )
+        ),
     ),
     Mutation(
         "the shuffle control never applies its permutation",
@@ -1132,6 +1166,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the same no-op with a correct `derangement()`: the replay reaches the "
         "forward un-permuted. The derangement test stays green, so only the "
         "live-memory reading catches it.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in (
+                "test_the_controls_read_what_they_must_on_a_real_run",
+                "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+            )
+        ),
     ),
     Mutation(
         "the shuffle replay perturbs the memory it replays",
@@ -1144,6 +1185,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the live-memory decoy still moves, so neither of the other two entries "
         "sees it -- only a replay of each row's OWN memory, which must read "
         "exactly 0.0, can tell a faithful replay from a perturbed one.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        ),
     ),
     Mutation(
         "the shuffle replay hands over the bos gestalt too",
@@ -1155,6 +1200,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "delta measures memory PLUS the bos gestalt rather than memory alone. With "
         "memory disabled the kv swap is a no-op but the bos swap is not, so the "
         "disabled-memory reading stops being exactly 0.0.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        ),
     ),
     # -- decisive run (experiments/decisive-shuffle/PREREG.md, Mutation bar) -- #
     Mutation(
@@ -1214,6 +1263,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            return kv.clone() + 1e-3",
         "PREREG Secondary 2: the replacement path's own control. A path that moves "
         "tokens by itself would read as 'memory is read' on any model.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        ),
     ),
     Mutation(
         "random replacement is not norm-matched",
@@ -1377,6 +1430,18 @@ MUTATIONS: tuple[Mutation, ...] = (
                 for t in (
                     "test_default_corpus_call_is_unchanged",
                     "test_default_path_config_hash_is_s003s",
+                )
+            ),
+            *(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_TRAIN_S003_COUPLING)
+                for t in (
+                    "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+                    "test_a_live_run_is_not_quarantined",
+                    "test_an_inert_run_quarantines_its_checkpoints",
+                    "test_every_train_ends_with_the_liveness_measurement",
+                    "test_the_controls_read_what_they_must_on_a_real_run",
+                    "test_the_decoy_is_the_untrained_model_at_the_same_seed",
+                    "test_the_loader_refuses_a_quarantined_checkpoint",
                 )
             ),
         ),
@@ -2748,6 +2813,119 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    return FS.measure_checkpoint(seed_dir, seed, label, n)\n",
         "fresh-escape PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
         "imported -- the object called must be that function, not a copy.",
+    ),
+    # ----------------------------------------------------------------------- #
+    # liveness-wiring (docs/lab-notes/dispatch-liveness-wiring.md): every run
+    # measures its memory's liveness; INERT exits 5 and is quarantined.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "liveness-wiring: the liveness hook skipped",
+        "test_every_train_ends_with_the_liveness_measurement",
+        "src/rsr/train/loop.py",
+        "    liveness = _measure_liveness(model, init_state, cfg, frozen, "
+        "device=device)\n",
+        '    liveness = {"band": "live"}\n',
+        "Bar 2: the falsifier itself -- a run that never measures and reports live "
+        "exits 0 with nothing behind it, so an inert run is again indistinguishable "
+        "from a live one.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_HOOK_COUPLING)
+            for t in _LIVENESS_HOOK_READERS
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: an inert run reported as 0",
+        "test_an_inert_ratio_is_inert_and_exits_5",
+        "src/rsr/train/loop.py",
+        '    "inert": Exit.INERT,\n',
+        '    "inert": Exit.OK,\n',
+        "R-2026-09-22-inert-exit-5: an inert run exiting 0 is consumed downstream "
+        "like a live one -- the state before this brief.",
+        off_gate_allowed=tuple(
+            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_MAPPING_COUPLING)
+            for t in (
+                "test_main_exits_on_the_liveness_band[inert-5]",
+                "test_an_inert_run_quarantines_its_checkpoints",
+            )
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: the decoy pointed at the trained model",
+        "test_the_decoy_is_the_untrained_model_at_the_same_seed",
+        "src/rsr/train/loop.py",
+        "        decoy.load_state_dict(init_state)\n",
+        "        decoy.load_state_dict(model.state_dict())\n",
+        "decisive PREREG *Mutation bar* (decoy aliasing): A_decoy == A_trained, "
+        "ratio == 1.0 exactly, which the rule makes invalid (3), never 0.",
+    ),
+    Mutation(
+        "liveness-wiring: an inconclusive ratio rounded to inert",
+        "test_an_inconclusive_ratio_exits_1_never_0_or_5",
+        "src/rsr/metrics/memory_liveness.py",
+        '    return "inconclusive", f"{INERT_MAX_RATIO} < ratio',
+        '    return "inert", f"{INERT_MAX_RATIO} < ratio',
+        "decisive PREREG :45: the band between is 'reported as such, not rounded "
+        "to either outcome'. Folding it into inert is the ruling's own erratum.",
+    ),
+    Mutation(
+        "liveness-wiring: an inconclusive run exits 0",
+        "test_an_inconclusive_ratio_exits_1_never_0_or_5",
+        "src/rsr/train/loop.py",
+        '    "inconclusive": Exit.FAIL,\n',
+        '    "inconclusive": Exit.OK,\n',
+        "R-2026-09-22-inert-exit-5: inconclusive is 1, liveness not demonstrated; "
+        "0 would report an undemonstrated memory as live.",
+        off_gate_allowed=(
+            (
+                "tests/test_liveness_wiring.py::"
+                "test_main_exits_on_the_liveness_band[inconclusive-1]",
+                _LIVENESS_MAPPING_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: an inert run's checkpoints left in place",
+        "test_an_inert_run_quarantines_its_checkpoints",
+        "src/rsr/train/loop.py",
+        '    if liveness["band"] == "inert":\n',
+        "    if False:\n",
+        "R-2026-09-22-inert-checkpoint-quarantine: an inert checkpoint left beside "
+        "the live ones is read by any loader, silently.",
+        off_gate_allowed=(
+            (
+                "tests/test_liveness_wiring.py::"
+                "test_the_loader_refuses_a_quarantined_checkpoint",
+                "it loads the checkpoint the quarantine put under quarantine/; "
+                "with no quarantine there is no such file to refuse.",
+            ),
+        ),
+    ),
+    Mutation(
+        "liveness-wiring: the loader override defaults to allow",
+        "test_the_loader_refuses_a_",
+        "src/rsr/train/checkpoint.py",
+        "    allow_quarantined: bool = False,\n",
+        "    allow_quarantined: bool = True,\n",
+        "R-2026-09-22-inert-checkpoint-quarantine: 'loaders refuse a quarantined "
+        "checkpoint unless explicitly overridden'. A default of allow is no refusal.",
+    ),
+    Mutation(
+        "liveness-wiring: status() refuses 5",
+        "test_status_accepts_5_as_inert",
+        "src/rsr/exit_codes.py",
+        "    try:\n        return Exit(code)\n",
+        "    try:\n        if code == 5:\n            raise ValueError\n"
+        "        return Exit(code)\n",
+        "R-2026-09-22-inert-exit-5: a status() still bounded at 0-4 turns every "
+        "INERT run into a ValueError at run_main.",
+        off_gate_allowed=(
+            (
+                "tests/test_liveness_wiring.py::"
+                "test_main_exits_on_the_liveness_band[inert-5]",
+                "main() returns status(liveness_exit(...)); an INERT band reaches "
+                "status(5) there -- the same refusal seen from the entry point.",
+            ),
+        ),
     ),
 )
 
