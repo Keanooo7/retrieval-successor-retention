@@ -1,0 +1,47 @@
+{
+  "batch": 16,
+  "chance_ln16": 2.772588722239781,
+  "checkpoints": [
+    300,
+    1000,
+    3000
+  ],
+  "ckpt_every": 100,
+  "control_checkpoint": 300,
+  "corpus": "synthetic S0-03, SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+  "d": 128,
+  "device": "cpu",
+  "expected": "survived is at least as likely as falsified: the leading rival cause of chance-level retrieval is memorisation of the small training set rather than too little training, and longer training strengthens memorisation (PREREG 'Author's expectation', written before any data).",
+  "falsifier": "Training S0-03's configuration (arm B: masked loss, hinge off) for longer does not make the working memory help answers at 2 <= gap <= M: at no checkpoint up to 3000 iterations does every seed show slots_zeroed - live answer NLL >= MARGIN on held-out documents with bar 1 holding.",
+  "instrument": {
+    "primary": "experiments/s0-03-rewardable-corpus/run.py measure + decide",
+    "secondary": "experiments/decisive-shuffle/run.py measure, decoy_ckpt=None"
+  },
+  "iters": 3000,
+  "lr": 0.001,
+  "margin": 0.1,
+  "masked_loss": true,
+  "max_tokens": 64,
+  "measure_heldout": "generate(SyntheticConfig(n_documents=128, seed=<seed>))[64:]",
+  "measure_train": "generate(SyntheticConfig(seed=<seed>))  # docs 0..63",
+  "memory_slots": 16,
+  "parent_threads_note": "the measuring parent's thread count is not pinned, as S0-03's was not",
+  "parent_torch_num_threads": 12,
+  "policy": "fifo",
+  "prereg": "experiments/retrieval-curve/PREREG.md",
+  "python": "3.12.13",
+  "reproduction_reference": "runs/s0-03-rewardable-corpus/ledger.json rows[key=heldout.live.gap_2_to_M.answer_nll].samples",
+  "reproduction_tolerance": 1e-06,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seeds_trained_in_parallel": true,
+  "srep_norm_reg_weight": 0.0,
+  "steps_per_stream": 48,
+  "threads_per_seed": 5,
+  "torch": "2.14.0",
+  "vocab": "derived from the corpus",
+  "wall_deadline_hours": 8
+}
