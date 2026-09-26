@@ -139,7 +139,9 @@ def test_the_canary_ledger_row_records_the_exit_code_it_returns(tmp_path, monkey
 # the seven experiment stubs -- bar item 5
 # --------------------------------------------------------------------------- #
 
-STUBS = [f"experiments/e0{x}/run.py" for x in "adefghi"]
+#: `e` left on 2026-09-26: `experiments/e0e/run.py` is implemented (W7, PREREG
+#: `experiments/e0e/PREREG.md`) and its exit codes are its own tests'.
+STUBS = [f"experiments/e0{x}/run.py" for x in "adfghi"]
 
 
 @pytest.mark.parametrize("stub", STUBS)
