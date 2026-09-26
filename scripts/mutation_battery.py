@@ -1121,6 +1121,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_derived_vocabulary_is_what_the_model_is_built_with",
                 _S003_REFUSAL_COUPLING,
             ),
+            *(
+                (f"tests/test_corpus_size_curve.py::{t}", _S003_REFUSAL_COUPLING)
+                for t in (
+                    "test_default_corpus_call_is_unchanged",
+                    "test_default_path_config_hash_is_s003s",
+                )
+            ),
         ),
     ),
     # --- orchestrator: workqueue ---
@@ -1869,6 +1876,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "fails where nothing else does: a curve that silently is not S0-03's "
         "configuration (another thread count, another interpreter) would pass "
         "every other check here.",
+        off_gate_allowed=(
+            (
+                "tests/test_corpus_size_curve.py::"
+                "test_control_failure_stops_every_later_arm",
+                "corpus-size-curve imports this reproduction_control, so the "
+                "tolerance it applies is this REPRO_TOL; widened, its 1e-3 fake "
+                "miss passes and every later arm runs.",
+            ),
+        ),
     ),
     Mutation(
         "retrieval-curve: the reproduction control's comparison ledger swapped",
@@ -1890,6 +1906,96 @@ MUTATIONS: tuple[Mutation, ...] = (
         "retrieval-curve brief bar, mutation (3). Every label read off the last "
         "checkpoint turns the curve into three copies of one point; the step "
         "stored in the checkpoint must equal its label.",
+    ),
+    # --- corpus-size-curve (docs/lab-notes/dispatch-corpus-size-curve.md, Bar) ---
+    Mutation(
+        "corpus-size-curve: n_documents stamped into the default path's config",
+        "test_default_path_config_hash_is_s003s",
+        "src/rsr/train/loop.py",
+        "    if n_documents is not None:\n        # Stamped only when set",
+        "    if True:\n        # Stamped only when set",
+        "corpus-size-curve brief bar (1). The default path must stay byte for byte "
+        "S0-03's: a config_hash that moves on the default call means the N=64 arm "
+        "is not the configuration its reproduction control compares against.",
+    ),
+    Mutation(
+        "corpus-size-curve: held-out drawn from S0-03's docs 64..127",
+        "test_heldout_is_disjoint_from_every_arm",
+        "experiments/corpus-size-curve/run.py",
+        "    ho = docs[HELDOUT[0] : HELDOUT[1]]\n",
+        "    ho = docs[64:128]\n",
+        "corpus-size-curve brief bar (2). S0-03's held-out documents are training "
+        "data for every N >= 128: measured there, the large arms read memorisation "
+        "as retrieval.",
+    ),
+    Mutation(
+        "corpus-size-curve: Brier16 computed as an absolute distance",
+        "test_brier16_",
+        "experiments/s0-03-rewardable-corpus/run.py",
+        "out_b16.append((lp16.exp() - onehot).pow(2).sum(-1))",
+        "out_b16.append((lp16.exp() - onehot).abs().sum(-1))",
+        "corpus-size-curve brief bar (3). 'Squaring is what makes it proper; "
+        "absolute distance would not be' (research corpus 03_Calibration:142): the "
+        "primary readout must be the squared distance.",
+    ),
+    Mutation(
+        "corpus-size-curve: the verdict read off the N=64 arm",
+        "test_verdict_reads_the_n4096_arm_only",
+        "experiments/corpus-size-curve/run.py",
+        "    prim = arms.get(PRIMARY_ARM)\n",
+        "    prim = arms.get(CONTROL_ARM)\n",
+        "corpus-size-curve brief bar (4). The N=64 arm is the memorised one; the "
+        "question is the N=4096 arm's.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_corpus_size_curve.py::{t}",
+                "the decision-table rows are built with the N=4096 arm only; read off "
+                "another arm, every row sees no arm and reads 'stopped before "
+                "ckpt1000'.",
+            )
+            for t in (
+                "test_B_needs_every_seed",
+                "test_row_bar1_fails_where_B_would_be_read",
+                "test_row_falsified_at_any_checkpoint[1000-gaps0]",
+                "test_row_falsified_at_any_checkpoint[300-gaps1]",
+                "test_row_stopped_before_ckpt1000",
+                "test_row_survived",
+            )
+        ),
+    ),
+    Mutation(
+        "corpus-size-curve: the reproduction control read on the common held-out set",
+        "test_control_reads_s003s_own_heldout",
+        "experiments/corpus-size-curve/run.py",
+        '                    s, per[s][label]["s003_default"], reference\n',
+        '                    s, per[s][label]["s003"], reference\n',
+        "corpus-size-curve brief bar (5). S0-03's ledger was measured on its own "
+        "held-out docs 64..127; compared against the common set [4096, 4160) the "
+        "control compares two different populations.",
+    ),
+    Mutation(
+        "corpus-size-curve: the control arm passes n_documents",
+        "test_control_arm_omits_n_documents",
+        "experiments/corpus-size-curve/run.py",
+        '    kw = {} if n == CONTROL_ARM else {"n_documents": n}\n',
+        '    kw = {"n_documents": n}\n',
+        "corpus-size-curve brief bar (1), the call-site half: the N=64 arm must take "
+        "train()'s default path, or its config_hash is not S0-03's.",
+    ),
+    Mutation(
+        "corpus-size-curve: the reproduction control's tolerance widened",
+        "test_reproduction_control_tolerance",
+        "experiments/corpus-size-curve/run.py",
+        "REPRO_TOL = 1e-6\n",
+        "REPRO_TOL = 1e-3\n",
+        "corpus-size-curve brief bar (5). The run's REPRO_TOL is the PREREG's; the "
+        "control itself is the retrieval curve's, imported.",
+        off_gate_allowed=(
+            (
+                "tests/test_corpus_size_curve.py::test_thresholds_are_the_preregs",
+                "it also transcribes REPRO_TOL from the PREREG front matter.",
+            ),
+        ),
     ),
 )
 

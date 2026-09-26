@@ -194,13 +194,15 @@ def _sets(seed: int):
 @torch.no_grad()
 def answer_readout(model: TGModel, ids, mask, tmask, gap, sym_ids, *, cond: str):
     """Per answer target: NLL, argmax-correct, NLL renormalised over the 16 answer
-    symbols, and its gap. FIFO, eval mode, one pass over the stream."""
+    symbols, the Brier score over those 16 (corpus-size-curve PREREG: sum over the
+    symbols of (p_k - 1[k = answer])^2, p renormalised over the 16 exactly as the NLL
+    is), and its gap. FIFO, eval mode, one pass over the stream."""
     cfg = model.cfg
     was = model.training
     model.eval()
     B, S, L = ids.shape
     dtype = model.embed.weight.dtype
-    out_nll, out_ok, out_r16, out_gap = [], [], [], []
+    out_nll, out_ok, out_r16, out_b16, out_gap = [], [], [], [], []
     real_sum, real_n = 0.0, 0
     try:
         mem = init_memory(B, cfg, device=ids.device, dtype=dtype)
@@ -224,6 +226,8 @@ def answer_readout(model: TGModel, ids, mask, tmask, gap, sym_ids, *, cond: str)
                 lp16 = torch.log_softmax(lg[:, sym_ids], dim=-1)
                 pos = (sym_ids.unsqueeze(0) == tgt.unsqueeze(1)).float().argmax(-1)
                 out_r16.append(-lp16.gather(1, pos.unsqueeze(1)).squeeze(1))
+                onehot = torch.nn.functional.one_hot(pos, len(sym_ids)).to(lp16.dtype)
+                out_b16.append((lp16.exp() - onehot).pow(2).sum(-1))
                 out_gap.append(gap[:, t].unsqueeze(1).expand(B, L - 1)[am])
             write = out.has_eos  # every row runs the full stream, as in train()
             victim = torch.zeros(B, dtype=torch.long, device=ids.device)  # FIFO
@@ -238,6 +242,7 @@ def answer_readout(model: TGModel, ids, mask, tmask, gap, sym_ids, *, cond: str)
         "nll": torch.cat(out_nll).double(),
         "ok": torch.cat(out_ok),
         "nll16": torch.cat(out_r16).double(),
+        "brier16": torch.cat(out_b16).double(),
         "gap": torch.cat(out_gap),
         "real_token_nll": real_sum / max(real_n, 1),
     }
@@ -253,12 +258,16 @@ def _summarise(r: dict) -> dict:
             "answer_nll": float(r["nll"][m].mean()) if n else None,
             "answer_acc": float(r["ok"][m].float().mean()) if n else None,
             "answer_nll_over_16": float(r["nll16"][m].mean()) if n else None,
+            "answer_brier_over_16": float(r["brier16"][m].mean()) if n else None,
         }
     return out
 
 
-def measure(ckpt: Path, seed: int, device: str) -> dict:
-    sets, vmap, V = _sets(seed)
+def measure(ckpt: Path, seed: int, device: str, *, sets=None) -> dict:
+    """``sets`` overrides the document sets as ``_sets()``'s triple ``({name: docs},
+    vocab, V)`` (corpus-size-curve's common held-out set). ``None``, the default, is
+    S0-03's own ``_sets(seed)``, unchanged."""
+    sets, vmap, V = _sets(seed) if sets is None else sets
     trained = TGModel(_cfg(V)).to(device)
     ck.load(ckpt, model=trained, restore_rng=False)
     gated = with_memory_disabled(trained)
