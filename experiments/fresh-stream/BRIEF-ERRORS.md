@@ -55,3 +55,8 @@ where the implementation had to choose something the PREREG does not spell out.
 - Leak check read before this note: in the held-out `gap_gt_M` bucket, which FIFO has evicted, arm B's live accuracy stays near chance (`B.ckpt3000.heldout.live.gap_gt_M.answer_acc`), and `slots_zeroed` returns every bucket to chance (`B.ckpt3000.heldout.slots_zeroed.gap_2_to_M.answer_acc`).
 - Arm A never left the plateau: `A.stream_answer_loss_first_window_below` is null on every seed.
 - The author saw the arm-B heartbeats (stream answer loss) shortly before the run ended, before reading any measured key.
+
+## Correction to the post-run note (2026-09-25, after the independent verifier's report)
+
+- The leak-check bullet above is **wrong for one seed**. `B.ckpt3000.heldout.live.gap_gt_M.answer_acc` is not near chance on the last seed: it is well above chance, and it falls back toward chance with the memory zeroed (`B.ckpt3000.heldout.slots_zeroed.gap_gt_M.answer_acc`). The excess is memory-dependent. It is not a data leak: stream ids cannot overlap held-out or probe (`stream_disjointness`). A candidate mechanism, UNVERIFIED -- inference: a gestalt written while a fact is still in memory can carry that fact forward past its own eviction, so retrieval can reach beyond M. Not measured here.
+- `manifest.json`'s `measure_heldout` and `measure_train` fields are inherited unchanged from S0-03's CONFIG and describe S0-03's sets, not this run's. The sets actually measured are `heldout_documents` in the same manifest (and `doc_sets`). No number is affected.
