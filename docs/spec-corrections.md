@@ -741,3 +741,42 @@ Two notes attached to the same search:
 
 For general SR claims, cite **Carvalho, Tomov, de Cothi, Barry & Gershman (2024), Neural Computation
 36(11)** alongside Dayan; it is the current review of record.
+
+## 31 — `T_warm`'s dispatch counts optimizer steps, not sentences; and what "one epoch" is on the training loop is open
+
+**Supersedes:** correction 21's "the dispatch compares it against `t`", and §3.4's
+`t < T_warm` / `t ≥ T_warm` where `t` is read as the sentence index.
+
+**Found 2026-09-26** by the day-roadmap red team (reading), then **executed**:
+`tests/test_t_warm_dispatch.py` failed on `main` at `2fdd0a0` for the stated reason
+(the tests land with the fix, so the failing run is recorded in the PR body, verbatim).
+
+**(a) The counter — fixed.** §3.4 gives the warmup's purpose: `ψ̂` is untrained
+*early in training*, and "one epoch" is a training quantity. But `select_eviction`
+received `t`, the sentence index inside one stream (`policy_loop.py`, `for t in
+range(steps)`), and compared it with a `T_warm` expressed in optimizer steps. Two
+failures, one either side of `S`:
+
+- `T_warm ≥ S`: `t < T_warm` at every sentence of every stream → **FIFO for the arm's
+  whole life** (gauntlet 0.1's `T_warm = ∞`, by mixed units).
+- `M ≤ T_warm < S`: a FIFO prefix of every stream, then the score — from optimizer step
+  0, so no warmup at all. Measured: `T_warm = 10`, `M = 4`, `S = 48`, batch 2 — each stream
+  went 6 FIFO evictions (sentences 4–9) then 38 scored; the optimizer step's record is 12 then
+  76.
+
+The dispatch is now `k < T_warm` with `k` the optimizer step, handed to the policy by
+`train()` through `RSRPolicy.set_train_step(k)`. A policy with `T_warm > 0` that was
+never told `k` **raises** rather than defaulting (a default of 0 makes every eval-time
+use of a trained policy silently FIFO). `T_warm = 0` (§3.7 reduction, correction 16)
+needs no counter, so E0b is untouched. `EvictionRecord.train_step` records `k`.
+
+**(b) The epoch — open, for Brendan.** `train()` passed `steps_per_epoch=iters`, so
+"one epoch" was the entire run: even with (a) fixed, the warmup never ended. On
+`train()`'s loop an epoch is not defined — the fixed-corpus path samples streams
+**with replacement** (N = 64 documents at batch 16 would make an epoch 4 optimizer
+steps, and a 3000-step run about 750 epochs), and the stream path never repeats a
+document. §3.4 also requires `T_warm` be *reported as a fraction of total epochs*,
+which presumes few epochs. **An agent does not pick this.** Until it is ruled,
+`build_policy("rsr", steps_per_epoch=None)` raises naming this correction, and
+`train()` passes `None`. No run was affected: `"rsr"` already raised
+`UnmeasuredConstant` (E1 has not logged `ν`, `β`, `γ`).

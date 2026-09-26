@@ -14,8 +14,14 @@ where slots are redundant it is anti-correlated with it (falsifier 5).
 
 **Eviction warmup is required** (defect C5):
 
-    t <  T_warm : eviction is FIFO; psi_hat trains passively on realized r_i
-    t >= T_warm : eviction switches to argmin[ z(psi_hat) + b - nu * ... ]
+    k <  T_warm : eviction is FIFO; psi_hat trains passively on realized r_i
+    k >= T_warm : eviction switches to argmin[ z(psi_hat) + b - nu * ... ]
+
+`k` is the **optimizer step** -- training progress -- not the sentence index `t`
+inside a stream (correction 31). The warmup protects an untrained head early in
+*training*; compared against `t` it became either a FIFO prefix of every stream or,
+once `T_warm >= S`, FIFO forever. The training loop hands the policy `k` through
+`set_train_step()`.
 
 `psi_hat` is a function of representations that are themselves training, and [P2]
 states early sentence representations are "largely uninformative". An untrained
@@ -47,7 +53,8 @@ re-deriving this must check the target, not the presence of a bootstrap.
 
 ## Gauntlet 0.1 and 0.2 -- `T_warm = inf` made the whole apparatus decorative
 
-Dispatch is `t < T_warm -> FIFO`. `inf` makes that true forever.
+Dispatch is `k < T_warm -> FIFO` (`k` the optimizer step since correction 31; it
+read `t`, the sentence index, until then). `inf` makes that true forever.
 
 * `reduction_to_tg()` set it, so **under the section 3.7 reduction no eviction ever
   reached the score** and E0b certified FIFO against FIFO. The gate that exists to
@@ -331,6 +338,9 @@ class RSRPolicy:
             )
         self._fifo = FIFOPolicy()
         self.records: list[EvictionRecord] = []
+        # Correction 31: the warmup counter is the optimizer step, owned by the
+        # training loop. None until told -- see `select_eviction`.
+        self._train_step: int | None = None
         self.rank_shifts = RankShiftLog()
 
     # -- the eviction rule --------------------------------------------------- #
@@ -405,8 +415,29 @@ class RSRPolicy:
         best = sim.max(dim=1).values
         return torch.where(slots.live, best, torch.zeros_like(best))
 
+    def set_train_step(self, k: int) -> None:
+        """Tell the policy which optimizer step is running (§3.4; correction 31).
+
+        Survives `reset()`: it is training progress, not per-stream state. The
+        training loop calls this before every stream batch. **Eval-time callers
+        must set it too** -- e.g. a trained policy restored from a checkpoint and
+        run through `run_policy_loop` or `headroom.simulate`: pass the step it was
+        trained to (or any `k >= T_warm`) to evaluate the scored rule. Leaving it
+        unset raises rather than silently evaluating FIFO.
+        """
+        self._train_step = int(k)
+
     def select_eviction(self, slots: MemoryState, context: Tensor, step: int) -> int:
-        warm = step < self.config.t_warm
+        # `step` is the sentence index inside this stream; it is recorded, never
+        # compared against T_warm (correction 31).
+        if self.config.t_warm > 0 and self._train_step is None:
+            raise RuntimeError(
+                f"T_warm = {self.config.t_warm} optimizer steps, but no training step "
+                "was set: call policy.set_train_step(k) first. Defaulting to 0 would "
+                "make every eval-time use of a trained policy silently FIFO "
+                "(correction 31; gauntlet 0.1)."
+            )
+        warm = self.config.t_warm > 0 and self._train_step < self.config.t_warm
         if warm:
             victim = self._fifo.select_eviction(slots, context, step)
             attribution, margin = "fifo_warmup", None
@@ -432,6 +463,7 @@ class RSRPolicy:
             warm=warm,
             attribution=attribution,
             score_margin=margin,
+            train_step=self._train_step,
         )
         self.records.append(record)
         self.rank_shifts.add(record)

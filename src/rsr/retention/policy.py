@@ -218,9 +218,9 @@ class RetentionPolicy(Protocol):
 
         This is where H2O accumulates attention, where RSR computes realized
         `r_i(t)`, and where the anti-collapse loop updates `u_bar`. Called every
-        step, including steps where nothing is evicted, and including steps before
-        `T_warm` where the policy is inert but `psi_hat` still trains passively on
-        realized `r_i` (section 3.4).
+        step, including steps where nothing is evicted, and including optimizer steps
+        before `T_warm` (correction 31) where the policy is inert but `psi_hat` still
+        trains passively on realized `r_i` (section 3.4).
         """
         ...
 

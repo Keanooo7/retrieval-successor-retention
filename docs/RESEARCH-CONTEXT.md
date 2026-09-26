@@ -324,9 +324,12 @@ L      = L_NTP + β · L_MC
 i* = argmin_i [ z(ψ̂_φ(s_i, c_t)) + b_i − ν · max_{j≠i} cos(s_i, s_j) ]
 ```
 
-- **Warmup:** `t < T_warm` → FIFO, `ψ̂` trains passively; `t ≥ T_warm` → the score. `T_warm` is **a
-  float number of steps, one representation everywhere** (correction 21 / D-I); `T_warm_epochs`
-  (FROZEN 1.0) survives only for the report.
+- **Warmup:** `k < T_warm` → FIFO, `ψ̂` trains passively; `k ≥ T_warm` → the score, where **`k` is
+  the optimizer step, not the sentence index `t`** (correction 31 — until 2026-09-26 the dispatch read
+  `t`, which made an RSR arm FIFO for life once `T_warm ≥ S`). `T_warm` is **a float number of
+  optimizer steps, one representation everywhere** (correction 21 / D-I); `T_warm_epochs` (FROZEN
+  1.0) survives only for the report. `train()` refuses `"rsr"` until the owner rules what an epoch is
+  on its loop (§12 item 7).
 - 🔴 **`T_warm = 0` in `reduction_to_tg()`, not `∞`** (correction 16). At `∞` the FIFO branch is
   taken forever, so **under the §3.7 reduction no eviction ever reaches the score and E0b certifies
   FIFO against FIFO** — the gate that exists to prove RSR reduces to TG passing without executing
@@ -1041,7 +1044,7 @@ experiment ledgers' `cycle` field runs one behind the scoreboard's numbering, tw
 
 ## 12. Decisions only the owner can make — do not make them, do not work around them
 
-**Measure around them; do not resolve them.** All six are the owner's.
+**Measure around them; do not resolve them.** All seven are the owner's.
 
 1. 🔴 **The `b_max` invariant.** `b_max` is FROZEN at 1.0 and it **really is** one SD of `ψ̂`
    (measured **0.98280 ± 0.00360**, theory 0.98111). **But the argmin turns on the gap between the
@@ -1080,6 +1083,11 @@ experiment ledgers' `cycle` field runs one behind the scoreboard's numbering, tw
 6. **Confirm S-7 was actually sent.** It is the only §16 release-gate edit an unattended loop made
    (`docs/release-conditions.md` condition 4, commit `f1ea1a0`). It *tightens* rather than loosens,
    and **nothing in the repo records the authorisation beyond the loop's own prose.**
+7. **What "one epoch" is on `train()`'s loop** (correction 31 (b)). §3.4 fixes `T_warm` at one
+   epoch, reported as a fraction of total epochs. `train()` samples streams with replacement (N = 64
+   at batch 16 would make an epoch 4 optimizer steps) or runs a never-repeating stream (no epoch at
+   all). It used to pass `iters`, making the warmup the whole run. `build_policy("rsr",
+   steps_per_epoch=None)` **refuses** until this is ruled — that refusal is not a bug to route around.
 
 📌 **Also owner-only, and already flagged:** ADR-0005's sign-off on departing from the spec's ranked
 stimulus list, and pinning `c_t` before E0a runs (§4.2 — the decision is made as D-C, the

@@ -297,7 +297,7 @@ def build_policy(
     name: str,
     *,
     d_model: int,
-    steps_per_epoch: float,
+    steps_per_epoch: float | None,
     scope: str = "synthetic",
     generator: torch.Generator | None = None,
 ):
@@ -313,18 +313,29 @@ def build_policy(
     Routing both through one function is the fix: there is now no path on which the
     stamped name and the constructed policy can differ.
 
-    **`"rsr"` raises `UnmeasuredConstant` on today's ledger, and that is correct.**
+    **`"rsr"` is refused on today's tree, and that is correct.** `train()` passes
+    `steps_per_epoch=None`, which raises first (correction 31 (b), below); a caller
+    with a real epoch then meets `UnmeasuredConstant`.
     `nu`, `beta` and `gamma` are MEASURED and E1 has not run (§4.5). The registry
     refusing the read is the D-1 guard; the answer is to run E1, never to supply a
     default here.
 
-    `steps_per_epoch` feeds `T_warm`'s derivation. This loop's epoch is one
-    optimizer step over one batch of streams, so the caller passes `iters`. That is
-    a choice, not a measurement, and it is recorded as such rather than hidden.
+    `steps_per_epoch` feeds `T_warm`'s derivation (optimizer steps per epoch).
+    `train()` used to pass `iters`, which made §3.4's "one epoch" the whole run and
+    the arm FIFO throughout. What an epoch is on this loop -- a with-replacement
+    sampler, or a never-repeating stream -- is open (correction 31), so `train()`
+    passes None, and `"rsr"` is refused here until it is ruled.
     """
     if name == "fifo":
         return FIFOPolicy()
     if name == "rsr":
+        if steps_per_epoch is None:
+            raise ValueError(
+                "policy 'rsr' needs steps_per_epoch for T_warm (spec §3.4), and what "
+                "an epoch is on train()'s loop is an open owner decision "
+                "(docs/spec-corrections.md correction 31). train() used to pass "
+                "iters, which made the warmup the entire run -- FIFO throughout."
+            )
         cfg = RSRConfig.from_registry(scope, steps_per_epoch=steps_per_epoch)
         # `value_head=None` until the head is wired here; see the muP note below
         # and `tests/test_train_loop.py`'s strict xfail.
@@ -417,9 +428,11 @@ def train(
 
     # S0-01 defect (b): built FROM `policy_name`, so the name stamped below into the
     # frozen config and the run_id cannot disagree with the policy that ran.
-    policy = build_policy(
-        policy_name, d_model=d, steps_per_epoch=float(iters), generator=gen
-    )
+    # Correction 31 (b): `steps_per_epoch=None`, not `iters` -- `iters` made §3.4's
+    # "one epoch" the whole run. This loop has no epoch an agent may define (the
+    # sampler draws with replacement; a stream never repeats), so "rsr" is refused
+    # inside `build_policy` until the owner rules.
+    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, generator=gen)
 
     frozen = {
         "tg": asdict(cfg),
@@ -548,6 +561,10 @@ def train(
                 )
                 ids, mask, cur["tmask"] = ids.to(device), mask.to(device), tm.to(device)
             lengths = torch.full((batch,), steps_per_stream, device=device)
+            # Correction 31: §3.4's warmup counts optimizer steps. `it` is absolute,
+            # so a resumed run keeps its place.
+            if hasattr(policy, "set_train_step"):
+                policy.set_train_step(it)
             loss = run_policy_loop(model, ids, mask, lengths, policy, step_fn=step_fn)
             opt.zero_grad(set_to_none=True)
             loss.backward()

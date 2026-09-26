@@ -91,7 +91,8 @@ class EvictionRecord:
     n_live: int
     policy: str
     warm: bool
-    """True if `t < T_warm`, i.e. this eviction was FIFO by dispatch and **not**
+    """True if `k < T_warm` (`k` the optimizer step, correction 31), i.e. this
+    eviction was FIFO by dispatch and **not**
     attributable to the score. Section 3.4's warmup boundary is also section 7.2's
     on-policy/off-policy boundary, so it has to be on the record."""
 
@@ -104,6 +105,12 @@ class EvictionRecord:
     score_margin: float | None = None
     """`score[runner_up] - score[victim]`. A margin at or near zero means the
     decision was a tie the argmin broke arbitrarily, not a decision the score made."""
+
+    train_step: int | None = None
+    """The optimizer step `k` the warmup was judged against (correction 31). `step`
+    above is the sentence index inside the stream; the two were conflated, and that
+    is how the warmup came to be measured in sentences. None when `T_warm = 0` and
+    no loop set it (the section 3.7 reduction)."""
 
 
 @dataclass
