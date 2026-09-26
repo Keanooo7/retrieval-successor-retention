@@ -2339,6 +2339,86 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scaffold-dose PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
         "imported -- the object called must be that function, not a copy.",
     ),
+    # -- W4: rsr.metrics.loo, the LOO slot-knockout instrument (spec §3.2.1) --
+    Mutation(
+        "loo: a knockout clobbers the whole row, not one slot",
+        "test_knockout_kv_zero_changes_exactly_the_target_slot_of_the_target_row",
+        "src/rsr/metrics/loo.py",
+        "sel = sel & (slot >= 0).unsqueeze(-1)  # [B, M]",
+        "sel = (slot >= 0).unsqueeze(-1).expand(-1, M)  # [B, M]",
+        "§3.2.1 LOO ablates slot i: a knockout must change exactly the target slot "
+        "of the target row and pass every other element through bit-exactly.",
+        off_gate_allowed=(
+            (
+                "tests/test_loo.py::test_knockout_kv_replace_writes_the_replacement_"
+                "only_there",
+                "the same locality property for mode='replace': one selection mask "
+                "serves both modes.",
+            ),
+            (
+                "tests/test_loo.py::test_readout_knockout_forwards_differ_from_live_"
+                "only_at_the_target",
+                "the same property observed through loo_readout's forward passes; "
+                "knockout_kv is the one code path, so it must go red there too.",
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: loo_readout runs with autograd enabled",
+        "test_every_forward_is_eval_mode_and_no_grad_and_mode_is_restored",
+        "src/rsr/metrics/loo.py",
+        "@torch.no_grad()\ndef loo_readout(",
+        "def loo_readout(",
+        "LOO is a readout, not a training path (correction 20: eval-mode "
+        "measurement); every forward runs under no_grad.",
+    ),
+    Mutation(
+        "loo: a resample donor may come from the same document",
+        "test_pick_donor_filters_kind_doc_rank_and_key",
+        "src/rsr/metrics/loo.py",
+        "if b == row or int(doc_id[b]) == me or not bool(valid[b, rank]):",
+        "if b == row or not bool(valid[b, rank]):",
+        "W4 resample semantics: the donor gestalt comes from a DIFFERENT document, "
+        "or the 'knockout' can re-insert the target document's own content.",
+    ),
+    Mutation(
+        "loo: a resample donor's sentence kind is not checked",
+        "test_resample_donor_is_same_kind_different_doc_same_rank",
+        "src/rsr/metrics/loo.py",
+        'if int(ann["kind"][b, s]) != want_kind:',
+        "if False:",
+        "W4 resample semantics: same kind (assert vs filler) keeps the knocked-out "
+        "input in-distribution; a filler donor for an assert is a different "
+        "intervention.",
+        off_gate_allowed=(
+            (
+                "tests/test_loo.py::test_pick_donor_filters_kind_doc_rank_and_key",
+                "the unit test of the same filter: its no-candidate case (a kind no "
+                "row holds) returns a donor once kind is unchecked.",
+            ),
+        ),
+    ),
+    Mutation(
+        "loo: a missing control is substituted by any pending assert",
+        "test_missing_control_is_recorded_not_substituted",
+        "src/rsr/metrics/loo.py",
+        "for rk in (r - 1, r + 1):",
+        "for rk in range(M):",
+        "W4 control target: an ADJACENT-rank pending assert or recorded missing -- "
+        "never silently another slot.",
+    ),
+    Mutation(
+        "loo: the live forward drops the bos-copy context",
+        "test_live_path_is_bit_exact_to_answer_readout",
+        "src/rsr/metrics/loo.py",
+        "out = model(ids_t, mask_t, mem.kv, mem.valid, bos_ctx, bos_valid)\n"
+        "            am = tmask",
+        "out = model(ids_t, mask_t, mem.kv, mem.valid, bos_ctx, bos_valid & False)\n"
+        "            am = tmask",
+        "The exactness control: with no knockout, loo_readout must reproduce S0-03's "
+        "answer_readout(cond='live') bit-exactly, or its deltas are against a "
+        "different readout.",
+    ),
 )
 
 
