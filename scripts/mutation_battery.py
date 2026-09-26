@@ -264,6 +264,13 @@ _LIVENESS_TRAIN_S003_COUPLING = (
     "liveness batch is built from it), so a corpus answer_targets refuses cannot "
     "train: _S003_REFUSAL_COUPLING, seen from the liveness tests."
 )
+_T_WARM_TRAIN_S003_COUPLING = (
+    "correction 31's train-driven tests put an RSRPolicy into the real train() on "
+    "the default corpus, so a corpus answer_targets refuses cannot train: "
+    "_S003_REFUSAL_COUPLING, seen from the warmup tests. Undeclared since PR #47; "
+    "found by liveness-wiring's subset battery (2026-09-26) and confirmed on "
+    "cd41d4e with the two tests alone."
+)
 _LANE_FLOCK_COUPLING = (
     "orchestrator: the flock is the only thing that makes a slot exclusive, and "
     "every one of these asserts that a held slot is held -- against a second "
@@ -1453,6 +1460,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 for t in (
                     "test_default_corpus_call_is_unchanged",
                     "test_default_path_config_hash_is_s003s",
+                )
+            ),
+            *(
+                (f"tests/test_t_warm_dispatch.py::{t}", _T_WARM_TRAIN_S003_COUPLING)
+                for t in (
+                    "test_warm_status_never_flips_inside_one_stream",
+                    "test_warmup_below_S_covers_whole_training_steps",
                 )
             ),
             *(
@@ -2889,6 +2903,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    return "inert", f"{INERT_MAX_RATIO} < ratio',
         "decisive PREREG :45: the band between is 'reported as such, not rounded "
         "to either outcome'. Folding it into inert is the ruling's own erratum.",
+        off_gate_allowed=(
+            (
+                "tests/test_fresh_stream.py::"
+                "test_resume_continues_the_stream_at_the_resumed_step",
+                "that test's tiny stream run measures inconclusive (ratio 0.0506, "
+                "read from its footer 2026-09-26); rounded to inert, train() "
+                "quarantines the checkpoint the test resumes from, so the resume "
+                "cannot find it. The quarantine, seen from a checkpoint consumer.",
+            ),
+        ),
     ),
     Mutation(
         "liveness-wiring: an inconclusive run exits 0",
