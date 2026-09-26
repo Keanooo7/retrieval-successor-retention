@@ -182,3 +182,111 @@ def test_the_run_never_calls_record(e0e):
         and (getattr(n.func, "attr", None) or getattr(n.func, "id", None)) == "record"
     ]
     assert calls == [], calls
+
+
+# --------------------------------------------------------------------------- #
+# main(): the ledger status agrees with the exit code
+# --------------------------------------------------------------------------- #
+
+
+class _FakeLedger:
+    """Stands in for `scripts/ledger.py`'s `Ledger`: records what main() sets and
+    writes nothing (no `runs/` dir, no dirty-tree check)."""
+
+    last: _FakeLedger | None = None
+    STATUSES: tuple[str, ...] = ()
+
+    def __init__(self, run_id, question=""):
+        self.status_ = None
+        self.exit_code = None
+        _FakeLedger.last = self
+
+    def manifest(self, config):
+        return Path("manifest.json")
+
+    def run_meta(self, **kw):
+        pass
+
+    def note(self, *a, **kw):
+        pass
+
+    def stat(self, *a, **kw):
+        pass
+
+    def status(self, s):
+        if s not in self.STATUSES:  # the real vocabulary, not a copy
+            raise ValueError(f"{s!r} not in {self.STATUSES}")
+        self.status_ = s
+
+    def command(self, argv, exit_code):
+        self.exit_code = exit_code
+
+    def write(self):
+        return Path("ledger.json")
+
+
+def _drive_main(e0e, monkeypatch, *, problems, tau):
+    import ledger as real  # scripts/ is on sys.path via the run module
+
+    monkeypatch.setattr(_FakeLedger, "STATUSES", real.STATUSES)
+    fake = type("ledger", (), {"Ledger": _FakeLedger, "STATUSES": real.STATUSES})
+    monkeypatch.setitem(sys.modules, "ledger", fake)
+    canned = {
+        "sentences": [], "step_sums": [], "obs_count_ok": True,
+        "liveness": {"band": "live"},
+    }  # fmt: skip
+    monkeypatch.setattr(e0e, "measure_seed", lambda s, root: dict(canned))
+    monkeypatch.setattr(e0e, "consistency_problems", lambda ss, st: list(problems))
+    keys = [
+        "E_lifetime",
+        "n_written",
+        "evicted_only_mean",
+        "n_evicted",
+        "write_to_boundary_mean",
+        "half_life",
+        "ema_alpha",
+        "n_obs",
+        "fraction_inside_tau",
+        "fraction_inside_v04_025",
+        "tau_at_50pct_firing",
+        "tau_init_first_obs",
+        "tau_full_memory_only",
+        "n_obs_full_memory",
+        "ubar_mean",
+        "ubar_min",
+        "ubar_max",
+        "M_ubar_quantiles",
+        "b_max",
+        "gamma_b",
+    ]
+    summary = {k: 1.0 for k in keys}
+    summary["tau"] = tau
+    summary["per_seed"] = {
+        s: {"E_lifetime": 1.0, "tau": tau, "evicted_only_mean": 1.0} for s in (0, 1)
+    }
+    monkeypatch.setattr(e0e, "summarise", lambda per_seed, b_max: summary)
+    monkeypatch.setattr(e0e, "would_be_record_calls", lambda summ, rid: [])
+    code = e0e.main(["--seeds", "0", "1", "--run-id", "e0e-test"])
+    return int(code), _FakeLedger.last
+
+
+def test_a_consistency_failure_is_ledgered_as_failed_not_ok(e0e, monkeypatch):
+    """A run whose PREREG consistency checks fail exits 1 -- and its ledger must
+    not say `ok`. A failure recorded as `ok` is read as a pass by anything that
+    reads the ledger and not the exit code (`orchestrator/lanes.py` does)."""
+    code, led = _drive_main(e0e, monkeypatch, problems=["seed 0: a gap"], tau=0.5)
+    assert code == 1
+    assert led.status_ == "failed", led.status_
+    assert led.exit_code == 1
+
+
+def test_a_clean_run_is_ledgered_ok(e0e, monkeypatch):
+    code, led = _drive_main(e0e, monkeypatch, problems=[], tau=0.5)
+    assert (code, led.status_, led.exit_code) == (0, "ok", 0)
+
+
+def test_a_nan_tau_is_ledgered_did_not_run_with_its_own_exit_code(e0e, monkeypatch):
+    """tau NaN returns 3; the ledger must say `did_not_run` and record exit 3, not
+    `ok` with the exit code of the consistency verdict."""
+    code, led = _drive_main(e0e, monkeypatch, problems=[], tau=float("nan"))
+    assert (code, led.status_, led.exit_code) == (3, "did_not_run", 3)

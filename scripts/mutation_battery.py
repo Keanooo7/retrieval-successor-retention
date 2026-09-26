@@ -3032,6 +3032,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG precondition: an inert or inconclusive memory's shares are not the "
         "retrieval demand of a memory that retrieves.",
     ),
+    Mutation(
+        "e0e: a consistency failure ledgered as ok",
+        "test_a_consistency_failure_is_ledgered_as_failed_not_ok",
+        "experiments/e0e/run.py",
+        '        code, status = Exit.FAIL, "failed"',
+        '        code, status = Exit.FAIL, "ok"',
+        "the exit-1 path wrote status ok: a failure the ledger calls a pass, read "
+        "as one by anything that reads the ledger rather than the exit code "
+        "(orchestrator/lanes.py refuses only status != ok).",
+    ),
 )
 
 

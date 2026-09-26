@@ -509,8 +509,17 @@ def main(argv: list[str] | None = None) -> Exit:
         calls,
         how="D2 is the owner's: printed and ledgered, never executed",
     )
-    code = Exit.FAIL if problems else Exit.OK
-    led.status("ok")
+    # One code, one status: a consistency failure is exit 1 and "failed", a NaN
+    # tau is exit 3 and "did_not_run" (it wins, as it always did). Never "ok"
+    # beside a non-zero exit.
+    tau_nan = math.isnan(summary["tau"])
+    if tau_nan:
+        code, status = Exit.DID_NOT_RUN, "did_not_run"
+    elif problems:
+        code, status = Exit.FAIL, "failed"
+    else:
+        code, status = Exit.OK, "ok"
+    led.status(status)
     led.command(argv_s, exit_code=int(code))
     out = led.write()
     print(json.dumps({k: v for k, v in summary.items() if k != "per_seed"}, indent=1))
@@ -519,9 +528,9 @@ def main(argv: list[str] | None = None) -> Exit:
     for c in calls:
         print("  " + c)
     print(f"ledger: {out}; problems: {problems}")
-    if math.isnan(summary["tau"]):
+    if tau_nan:
         return did_not_run("tau is NaN")
-    return Exit.FAIL if problems else Exit.OK
+    return code
 
 
 if __name__ == "__main__":

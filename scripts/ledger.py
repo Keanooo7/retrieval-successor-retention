@@ -99,8 +99,10 @@ TOOL_ENTRY_POINTS = {
 }
 
 #: `status` vocabulary. "unknown" is deliberately absent -- it is the silent-fail
-#: shape this field exists to remove.
-STATUSES = ("ok", "partial", "crashed", "did_not_run")
+#: shape this field exists to remove. "failed" is a run that completed and whose
+#: own pre-registered check failed, exit 1 (`rsr.exit_codes.Exit.FAIL`): recording
+#: that as "ok" makes the ledger say pass where the exit code says fail.
+STATUSES = ("ok", "partial", "crashed", "did_not_run", "failed")
 
 
 class SingleSample(ValueError):
