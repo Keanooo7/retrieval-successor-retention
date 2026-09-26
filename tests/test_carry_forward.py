@@ -281,11 +281,180 @@ def test_bitexact_control_refuses_a_one_ulp_difference():
 
 
 def test_residency_control():
+    L = run._loo()
+    R, E, N = L.OWN_RESIDENT, L.OWN_EVICTED, L.OWN_NEVER_WRITTEN
     rec = {
-        "gap": torch.tensor([1, 16, 17, 40]),
-        "own_resident": torch.tensor([1, 1, 0, 0]),
+        "gap": torch.tensor([1, 16, 17, 40, 3]),
+        "own_status": torch.tensor([R, R, E, E, N]),
+        "own_resident": torch.tensor([True, True, False, False, False]),
     }
-    assert run.residency(rec)["ok"]
-    rec["own_resident"] = torch.tensor([1, 1, 1, 0])
+    r = run.residency(rec)
+    assert r["ok"] and r["n_never_written"] == 1
+    rec["own_status"] = torch.tensor([R, R, R, E, N])
+    rec["own_resident"] = torch.tensor([True, True, True, False, False])
     r = run.residency(rec)
     assert not r["ok"] and r["n_violations"] == 1
+
+
+# --------------------------------------------------------------------------- #
+# readout populations and baselines, on hand-built records
+# --------------------------------------------------------------------------- #
+
+
+def _records(n_docs=40, per_doc=6, seed=0):
+    """Hand-built loo_readout-shaped records: every condition's columns, flags,
+    statuses. Values are random 0/1 accuracies; nll16 = 1 - ok."""
+    L = run._loo()
+    g = torch.Generator().manual_seed(seed)
+    n = n_docs * per_doc
+    gap = torch.randint(1, 41, (n,), generator=g)
+    rec = {
+        "doc_id": torch.arange(n_docs).repeat_interleave(per_doc),
+        "gap": gap,
+        "own_status": torch.where(gap <= M, L.OWN_RESIDENT, L.OWN_EVICTED),
+        "ctrl_status": torch.randint(0, 3, (n,), generator=g),
+    }
+    rec["own_resident"] = rec["own_status"] == L.OWN_RESIDENT
+    for f in (
+        "dup_key_in_doc",
+        "ctrl_same_object",
+        "own_donor_same_object",
+        "ctrl_donor_same_object",
+        "all_donor_has_object",
+    ):
+        rec[f] = torch.zeros(n, dtype=torch.bool)
+    for c in L.ALL_CONDITIONS:
+        ok = torch.randint(0, 2, (n,), generator=g).double()
+        rec[f"{c}_ok"] = ok
+        rec[f"{c}_nll16"] = 1.0 - ok
+    return rec
+
+
+def test_l_population_is_gap_2_to_M():
+    rec = _records()
+    pop = run.l_population(rec)
+    assert pop.any()
+    assert bool(((rec["gap"] >= 2) & (rec["gap"] <= M))[pop].all())
+    assert not bool((rec["gap"] == 1)[pop].any())
+
+
+def test_l_population_excludes_unapplied_resamples_and_dup_keys():
+    rec = _records()
+    w = (rec["gap"] >= 2) & (rec["gap"] <= M)
+    i, j = w.nonzero().flatten()[:2].tolist()
+    rec["all_slots_resample_ok"][i] = float("nan")
+    rec["dup_key_in_doc"][j] = True
+    pop = run.l_population(rec)
+    assert not pop[i] and not pop[j]
+
+
+def test_l_uses_the_like_for_like_denominator():
+    rec = _records()
+    pop = run.l_population(rec)
+    rec["live_ok"][pop] = 1.0
+    rec["own_resample_ok"][pop] = 0.5
+    rec["all_slots_resample_ok"][pop] = 0.0
+    rec["all_slots_zeroed_ok"][pop] = 0.75  # would give L = 2.0 if used
+    r = run.l_readout(rec)
+    assert r["L.acc"]["point"] == pytest.approx(0.5)
+    assert r["denominator.acc"]["point"] == pytest.approx(1.0)
+
+
+def test_l_denominator_guard():
+    ci = {"point": 0.9, "lo": 0.8, "hi": 1.0}
+    assert run.l_label(ci, {"point": 0.3, "lo": 0.2, "hi": 0.4}) == "LOCALISED"
+    assert run.l_label(ci, {"point": 0.1, "lo": 0.0, "hi": 0.2}) == "INDETERMINATE"
+
+
+def test_s_population_excludes_object_leaks_and_is_paired():
+    rec = _records()
+    rec["ctrl_status"][:] = 0
+    base = run.s_population(rec)
+    i = base.nonzero().flatten()[0]
+    for f in ("ctrl_same_object", "own_donor_same_object", "ctrl_donor_same_object"):
+        r2 = {k: v.clone() for k, v in rec.items()}
+        r2[f][i] = True
+        assert not run.s_population(r2)[i], f
+    assert bool((base <= run.l_population(rec)).all())
+
+
+def test_reach_baseline_is_all_slots_resample_on_evicted_targets():
+    rec = _records()
+    ev = rec["gap"] > M
+    rec["live_ok"][ev] = 1.0
+    rec["all_slots_resample_ok"][ev] = 0.9
+    rec["all_slots_zeroed_ok"][ev] = 0.0
+    r = run.reach_readout(rec)
+    assert r["17_40"]["excess.acc"]["point"] == pytest.approx(0.1)
+    assert r["17_40"]["excess_zeroed.acc"]["point"] == pytest.approx(1.0)
+    assert r["17_40"]["n"] == int(ev.sum())
+    assert r["decidable"]
+
+
+def test_reach_coverage_below_0_8_is_not_decidable():
+    rec = _records()
+    ev = (rec["gap"] >= 17).nonzero().flatten()
+    rec["all_slots_resample_ok"][ev[: int(0.25 * len(ev)) + 1]] = float("nan")
+    assert not run.reach_readout(rec)["decidable"]
+
+
+# --------------------------------------------------------------------------- #
+# end to end, a tiny random model through the real loo_readout
+# --------------------------------------------------------------------------- #
+
+
+def _tiny(V):
+    from rsr.model.tg import TGConfig, TGModel
+
+    torch.manual_seed(0)
+    return TGModel(
+        TGConfig(
+            D=16,
+            H=2,
+            N=4,
+            V=V,
+            block_config=("S", "C", "S", "C"),
+            srep_extraction_layer=2,
+            max_sentence_tokens=run.S003.CONFIG["max_tokens"],
+            max_sentences_in_short_term=M,
+            pad_id=0,
+            bos_id=1,
+            eos_id=2,
+            eod_id=3,
+        )
+    )
+
+
+def test_measure_one_end_to_end_on_a_tiny_model():
+    full = run.seed_sets(0)
+    sets = {**full, "H64": full["H64"][:12], "EXT": full["EXT"][:20]}
+    model = _tiny(full["V"])
+    ids, mask, tmask, gap = run.encode_set(sets["H64"], sets["vmap"])
+    sym = run.sym_ids_of(sets["vmap"])
+    ref = {
+        c: run.S003._summarise(
+            run.S003.answer_readout(model, ids, mask, tmask, gap, sym, cond=c)
+        )
+        for c in ("live", "slots_zeroed")
+    }
+    r = run.measure_one(model, sets, 0, ref)
+    c = r["controls"]
+    assert all(v["ok"] for v in c["reproduction"].values())
+    assert all(b["ok"] for b in c["bitexact"]), c["bitexact"]
+    assert len(c["bitexact"]) == 2  # H64 + one EXT chunk
+    assert all(v["ok"] for v in c["residency"].values())
+    for set_ in ("H64", "EXT"):
+        assert r[set_]["L"]["n_pop"] > 0
+        assert r[set_]["reach"]["17_40"]["n"] > 0
+    led_rows = []
+
+    class _Led:
+        def note(self, key, value, how):
+            led_rows.append(key)
+
+        def stat(self, key, samples, how):
+            led_rows.append(key)
+
+    run.write_rows(_Led(), {0: {3000: r}})
+    assert "s0.ckpt3000.EXT.reach.17_40.excess.acc" in led_rows
+    assert "s0.ckpt3000.H64.L.L.acc" in led_rows

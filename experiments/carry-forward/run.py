@@ -1,6 +1,7 @@
 """carry-forward -- arm B: answer in its own slot, or surviving that slot's eviction?
 
-Pre-registration: `experiments/carry-forward/PREREG.md` (commit e076da8), committed alone
+Pre-registration: `experiments/carry-forward/PREREG.md` (commit ca34aa7; amendment 1
+f4e1c87), committed alone
 ahead of this file. Every constant in the "PREREG front matter, transcribed" block is
 that file's; changing one is changing the PREREG.
 
@@ -44,7 +45,8 @@ from rsr.exit_codes import Exit, run_main  # noqa: E402
 EXPERIMENT = "experiments/carry-forward/run.py"
 RUN_ID = "carry-forward"
 PREREG = "experiments/carry-forward/PREREG.md"
-PREREG_COMMIT = "e076da8"
+PREREG_COMMIT = "ca34aa7"
+AMENDMENT_COMMIT = "f4e1c87"
 
 
 def _load(name: str, rel: str):
@@ -689,13 +691,12 @@ def _concat(recs: list[dict]) -> dict:
     return {k: torch.cat([r[k] for r in recs]) for k in keys}
 
 
-def _bitexact_both(r, a_live, a_bos, set_name):
-    return [
-        dict(set=set_name, cond="live", **bitexact_live(r, a_live)),
-        dict(
-            set=set_name, cond="live_bos_off", **bitexact_live(r, a_bos, "live_bos_off")
-        ),
-    ]
+def _bitexact(r, a_live, set_name):
+    """Control 3 on `live` only. Amendment 1 A5: `*_bos_off` too "if S0-03 has
+    that condition" -- it does not (S003.CONDITIONS), and answer_readout's
+    cond="live_bos_off" would switch bos off on every step, changing the memory
+    trajectory, whereas loo's live_bos_off is single-step: not the same quantity."""
+    return [dict(set=set_name, cond="live", **bitexact_live(r, a_live))]
 
 
 def measure_one(
@@ -725,9 +726,7 @@ def measure_one(
         c: compare_summary(ref_summary[c], summ[c]) for c in summ
     }
     h = loo_readout(model, sets["H64"], ids, mask, tmask, gap, sym, seed=seed)
-    out["controls"]["bitexact"] = _bitexact_both(
-        h, ar_live, ar(ids, mask, tmask, gap, "live_bos_off"), "H64"
-    )
+    out["controls"]["bitexact"] = _bitexact(h, ar_live, "H64")
     h_traj = {"ok": ar_zero["ok"]}
     # EXT: four calls of EXT_CHUNK consecutive ids; donors come from the call
     ext_recs, ext_traj = [], []
@@ -735,10 +734,9 @@ def measure_one(
         chunk = sets["EXT"][k : k + EXT_CHUNK]
         ids, mask, tmask, gap = encode_set(chunk, vmap)
         r = loo_readout(model, chunk, ids, mask, tmask, gap, sym, seed=seed)
-        out["controls"]["bitexact"] += _bitexact_both(
+        out["controls"]["bitexact"] += _bitexact(
             r,
             ar(ids, mask, tmask, gap, "live"),
-            ar(ids, mask, tmask, gap, "live_bos_off"),
             f"EXT[{chunk[0].doc_id},{chunk[-1].doc_id + 1})",
         )
         ext_recs.append(r)
@@ -839,6 +837,7 @@ def manifest(source: Path, shas: dict) -> dict:
         "run_id": RUN_ID,
         "prereg": PREREG,
         "prereg_commit": PREREG_COMMIT,
+        "amendment_commit": AMENDMENT_COMMIT,
         "question": QUESTION,
         "falsifier": FALSIFIER,
         "expected": EXPECTED,
