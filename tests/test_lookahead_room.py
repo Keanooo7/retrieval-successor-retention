@@ -39,6 +39,30 @@ def doc():
 
 
 # --------------------------------------------------------------------------- #
+# r_i: E0e's target, gated (correction 17) and fill-rescaled (§3.2.1)
+# --------------------------------------------------------------------------- #
+
+
+def test_r_i_is_e0es_gated_rescaled_target(lr):
+    """E0e's hand-built trace: gates 1 and 3 decide the shares 1:3, rescaled by
+    n_live/M = 1/2. Ungated, the shares would be equal."""
+    from rsr.retention.policy import AttentionTrace
+
+    L_, H, M_, D_ = 2, 1, 4, 2
+    alpha = torch.zeros(L_, H, M_)
+    alpha[0, 0, 0] = 1.0
+    alpha[1, 0, 1] = 1.0
+    wo_v = torch.zeros(L_, H, M_, D_)
+    wo_v[..., 0] = 1.0
+    trace = AttentionTrace(
+        alpha=alpha, wo_v=wo_v, live=torch.tensor([True, True, False, False]),
+        step=0, eval_mode=True, gate=torch.tensor([1.0, 3.0]),
+    )  # fmt: skip
+    r = lr.r_of(trace, 2, M_)
+    assert torch.allclose(r, torch.tensor([0.125, 0.375, 0.0, 0.0], dtype=r.dtype))
+
+
+# --------------------------------------------------------------------------- #
 # targets
 # --------------------------------------------------------------------------- #
 

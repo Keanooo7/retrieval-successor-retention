@@ -3042,6 +3042,85 @@ MUTATIONS: tuple[Mutation, ...] = (
         "as one by anything that reads the ledger rather than the exit code "
         "(orchestrator/lanes.py refuses only status != ok).",
     ),
+    # ----------------------------------------------------------------------- #
+    # lookahead-room (W10, experiments/lookahead-room/PREREG.md): is there room
+    # for 3b (gamma 0.9 vs gamma 0) at M = 16?
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "lookahead-room: r_i read ungated",
+        "test_r_i_is_e0es_gated_rescaled_target",
+        "experiments/lookahead-room/run.py",
+        "    return retrieval_demand(trace, n_live=n_live, capacity=m, gated=True)",
+        "    return retrieval_demand(trace, n_live=n_live, capacity=m, gated=False)",
+        "correction 17 / D-E: the gamma = 0 and gamma > 0 targets are both built "
+        "from r_i; ungated, room_3b compares targets RSR would never train on.",
+    ),
+    Mutation(
+        "lookahead-room: every probe reads the resident rank-0 sentence",
+        "test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one",
+        "experiments/lookahead-room/run.py",
+        "            kvP[p, 0] = self.gest[i]",
+        "            kvP[p, 0] = self.gest[cand[0]]",
+        "PREREG demand-if-resident: a probe that never swaps the sentence in gives "
+        "every evicted sentence the rank-0 resident's demand -- a target that "
+        "cannot tell a pending fact from filler by construction.",
+    ),
+    Mutation(
+        "lookahead-room: the return drops its discount",
+        "test_the_discounted_return_sums_the_future_within_the_stream",
+        "experiments/lookahead-room/run.py",
+        "        acc = row + gamma * acc",
+        "        acc = row + acc",
+        "§3.4 / correction 2: G = sum gamma^k r(t+k). Undiscounted, 0.9 and 0.97 "
+        "become the same horizon-to-stream-end sum and room_3b measures neither.",
+        off_gate_allowed=(
+            (
+                "tests/test_lookahead_room.py::"
+                "test_the_literal_target_is_zero_where_fifo_did_not_hold_the_sentence",
+                "targets() builds rule_g09 through discounted_returns; that test "
+                "pins rule_g09 = 0.4 + 0.9 * 0.7 on the same matrix -- the return, "
+                "seen from the target table.",
+            ),
+        ),
+    ),
+    Mutation(
+        "lookahead-room: target-rule ties go to the newest slot",
+        "test_a_target_rule_evicts_the_argmin_and_ties_go_to_the_oldest",
+        "experiments/lookahead-room/run.py",
+        "            if v < best_v:",
+        "            if v <= best_v:",
+        "PREREG target rules: ties to the lowest slot (the oldest), as OraclePolicy. "
+        "Ties to the newest turn every all-zero literal target into evict-newest "
+        "and every tie into an age preference nobody registered.",
+    ),
+    Mutation(
+        "lookahead-room: literal target keeps the probed demand",
+        "test_the_literal_target_is_zero_where_fifo_did_not_hold_the_sentence",
+        "experiments/lookahead-room/run.py",
+        "        resident, torch.nan_to_num(D, nan=0.0), torch.zeros_like(D)",
+        "        resident | True, torch.nan_to_num(D, nan=0.0), torch.zeros_like(D)",
+        "PREREG secondary variant: the literal FIFO-rollout target is zero where "
+        "FIFO did not hold the sentence; keeping the probe makes it the primary "
+        "and the caveat it exists to size disappears.",
+    ),
+    Mutation(
+        "lookahead-room: NO_ROOM read from the point, not the CI",
+        "test_the_rule_is_the_prereg_rule",
+        "experiments/lookahead-room/run.py",
+        '    if all(v["hi"] < NO_ROOM_MAX for v in per_seed.values()):',
+        '    if all(v["point"] < NO_ROOM_MAX for v in per_seed.values()):',
+        "PREREG decision rule: NO_ROOM needs the CI upper bound below 0.02 on "
+        "every seed; a point estimate under 0.02 with a wide CI is PARTIAL.",
+    ),
+    Mutation(
+        "lookahead-room: a failed control still exits 0",
+        "test_a_failed_control_makes_the_run_inconclusive",
+        "experiments/lookahead-room/run.py",
+        '        "exit": int(Exit.DID_NOT_RUN if failed else Exit.OK),',
+        '        "exit": int(Exit.OK),',
+        "PREREG: any control failure is INCONCLUSIVE, exit 3. 'Did not run' and "
+        "'found something' are different facts.",
+    ),
 )
 
 
