@@ -200,3 +200,40 @@ filler, but not pending from answered — which the pending-vs-kind gap, 1.000 v
 
 0 a classification was reached (PARTIAL included) · 3 inconclusive / did not run
 (a control failed, a measurement raised, a checkpoint missing or mismatched).
+
+---
+
+## Amendment 1 (2026-09-26), written AFTER run 1's data was seen
+
+**Status.** This amendment is written **after** the first run (`runs/lookahead-room/`,
+run sha `95a96fc`, verdict INCONCLUSIVE, exit 3) and after every number it produced
+had been read. Run 1 stays on the record unchanged. The re-run it governs uses a new
+run id, `lookahead-room-r2`, and a run sha at or after this commit.
+
+**The only change: C1's tolerance.** C1 now passes when both of these hold:
+1. **argmax identity.** On `P`, every answer's argmax-correct flag from the harness's
+   B = 1 FIFO rollout equals the flag S0-03's own instrument produces
+   (`answer_readout(cond="live")`, batched over `P` as the fresh-stream ledger was
+   measured). Zero mismatches are allowed.
+2. **float32 accuracy, exact.** Per S0-03 bucket, the harness's accuracy recomputed
+   as `float(ok.float().mean())` (a float32 mean, which is how the reference ledger
+   computed it) equals the ledger's `B.ckpt{c}.heldout.live.<bucket>.answer_acc`
+   sample for the seed **exactly** (`==`).
+
+The `answer_nll` comparison stays descriptive, with its 1e-4 tolerance.
+
+**Why.** The reference ledger stores float32 means (`_summarise`:
+`float(r["ok"][m].float().mean())`). A float64 recomputation differs from them by
+float32 rounding (run 1: up to about 3e-08) even when every argmax matches. So the
+original "`|diff| ≤ 1e-12`" could never hold, whatever the rollout did. The defect was
+in this PREREG's transcription of "exactly", not in the rollout.
+
+**Unchanged.** No threshold (0.05 / 0.02 / CI rule), arm, rule, target definition
+(`D`, `T0`, `G_0.9`, `G_0.97`, `Tnext`, literal), document set, seed, checkpoint,
+bootstrap, or other control changes.
+
+**Expected outcome, stated honestly.** Run 1's numbers have been seen:
+`room_3b` at ckpt3000 was 0.0355 / 0.0420 / 0.0478, every CI lower bound above 0 and
+every point below 0.05. The pipeline is deterministic on CPU, so r2 is expected to
+reproduce run 1 bit-for-bit and classify **PARTIAL** at both checkpoints. Any
+difference from run 1 is itself a finding and will be reported.
