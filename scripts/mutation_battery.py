@@ -3190,6 +3190,24 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG: any control failure is INCONCLUSIVE, exit 3. 'Did not run' and "
         "'found something' are different facts.",
     ),
+    Mutation(
+        "lookahead-room: C1 compared in float64 again",
+        "test_c1_passes_on_float32_exact_accuracy_that_float64_misses",
+        "experiments/lookahead-room/run.py",
+        "                if float(okb[msk].float().mean()) != float(theirs):",
+        "                if float(ok64[msk].mean()) != float(theirs):",
+        "PREREG Amendment 1: the reference ledger stores float32 means, so a float64 "
+        "comparison fails C1 whatever the rollout did -- run 1's INCONCLUSIVE.",
+    ),
+    Mutation(
+        "lookahead-room: C1 ignores argmax mismatches",
+        "test_c1_fails_on_one_argmax_mismatch_or_a_wrong_accuracy",
+        "experiments/lookahead-room/run.py",
+        '        "ok": not bad and not missing and mism == 0 and missing_keys == 0,',
+        '        "ok": not bad and not missing,',
+        "PREREG Amendment 1: argmax identity is half of the amended C1; bucket means "
+        "can agree while individual answers flip in opposite directions.",
+    ),
 )
 
 
