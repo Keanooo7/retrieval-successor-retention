@@ -1,0 +1,47 @@
+[
+ {
+  "claim": "headline INCONCLUSIVE (C1 failed on all six children); the rule, had C1 passed, gives PARTIAL at both checkpoints",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room/ledger.json'))['rows']}; print(r['classification']['value'], r['per_checkpoint']['value'], len(r['controls_failed']['value']))\"",
+  "expected": "INCONCLUSIVE {'B.ckpt2500': 'PARTIAL', 'B.ckpt3000': 'PARTIAL'} 6"
+ },
+ {
+  "claim": "room_3b at B.ckpt3000 on U, point / lo / hi per seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room/ledger.json'))['rows']}; print([[round(x,4) for x in r['B.ckpt3000.U.room_3b.'+f]['samples']] for f in ('point','lo','hi')])\"",
+  "expected": "[[0.0355, 0.042, 0.0478], [0.0304, 0.0376, 0.0431], [0.0405, 0.0463, 0.0526]]"
+ },
+ {
+  "claim": "C1 diagnostic: the failure is float32 vs float64 means; float32 means of the harness's own P answers equal every reference bucket exactly (0 mismatches of 48)",
+  "command": "uv run python -c \"import json,gzip,torch,importlib.util,sys; s=importlib.util.spec_from_file_location('lr','experiments/lookahead-room/run.py'); m=importlib.util.module_from_spec(s); sys.modules['lr']=m; s.loader.exec_module(m); ref=m.reference_rows(m.default_source()); n=bad=0\nfor c in (2500,3000):\n  for sd in (0,1,2):\n    p=json.load(gzip.open(f'runs/lookahead-room/raw/B-ckpt{c}-seed{sd}.json.gz','rt')); a=[x for d in p['per_doc'] if 4096<=d['doc']<4160 for x in d['fifo_answers']]; g=torch.tensor([x[0] for x in a]); ok=torch.tensor([x[1] for x in a])\n    for b,sel in m.S003.BUCKETS.items():\n      k=sel(g)\n      if k.sum(): n+=1; bad+=float(ok[k].float().mean())!=ref[f'B.ckpt{c}.heldout.live.{b}.answer_acc']['samples'][sd]\nprint(n,bad)\"",
+  "expected": "48 0"
+ },
+ {
+  "claim": "C2: model-free oracle-FIFO and kindrand fact/filler on P reproduce the red team; oracle and pending_fifo differ on 0 victims",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room/ledger.json'))['rows']}; print({k:(round(v['oracle_minus_fifo'],4),round(v['kindrand_minus_fifo'],4),v['victims_differing'],v['victims_total'],v['ok']) for k,v in r['C2']['value'].items()})\"",
+  "expected": "{'0': (0.1852, 0.1498, 0, 2048, True), '1': (0.1739, 0.1403, 0, 2048, True), '2': (0.1896, 0.1577, 0, 2048, True)}"
+ },
+ {
+  "claim": "B.ckpt3000 U hit rates: fifo, rule_g0, rule_g09, online_g0",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room/ledger.json'))['rows']}; print([[round(x,4) for x in r['B.ckpt3000.U.hit.'+p]['samples']] for p in ('fifo','rule_g0','rule_g09','online_g0')])\"",
+  "expected": "[[0.8059, 0.8093, 0.8088], [0.7997, 0.7881, 0.8457], [0.8352, 0.8301, 0.8935], [0.7948, 0.7935, 0.8491]]"
+ },
+ {
+  "claim": "B.ckpt3000 resident pending-vs-filler AUC of T0 and G_0.9",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room/ledger.json'))['rows']}; print([[round(x,4) for x in r['B.ckpt3000.auc.res.pend_vs_fill.'+t]['samples']] for t in ('rule_g0','rule_g09')])\"",
+  "expected": "[[0.6356, 0.5753, 0.7108], [0.653, 0.5495, 0.8226]]"
+ },
+ {
+  "claim": "re-executing child B ckpt3000 seed1 reproduces its room_3b exactly (about 20 minutes CPU)",
+  "command": "uv run python experiments/lookahead-room/run.py --single --checkpoint 3000 --seed 1 --out /tmp/lr-verify/B-3000-1.json.gz; echo rc=$?; uv run python -c \"import gzip,json,importlib.util,sys; s=importlib.util.spec_from_file_location('lr','experiments/lookahead-room/run.py'); m=importlib.util.module_from_spec(s); sys.modules['lr']=m; s.loader.exec_module(m); o=m.summarise_child(json.load(gzip.open('/tmp/lr-verify/B-3000-1.json.gz','rt')))['U']['diffs']['room_3b']; r={x['key']:x for x in json.load(open('runs/lookahead-room/ledger.json'))['rows']}; print(all(o[f]==r['B.ckpt3000.U.room_3b.'+f]['samples'][1] for f in ('point','lo','hi')))\"",
+  "expected": "rc=0 then: True"
+ },
+ {
+  "claim": "the experiment's tests pass",
+  "command": "uv run pytest -q -p no:cacheprovider tests/test_lookahead_room.py",
+  "expected": "passed=18 failed=0 skipped=0 errors=0"
+ },
+ {
+  "claim": "RESULTS.md passes the scoreboard audit",
+  "command": "uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/lookahead-room/RESULTS.md; echo rc=$?",
+  "expected": "OK: every number ... resolves to a ledger key; rc=0"
+ }
+]
