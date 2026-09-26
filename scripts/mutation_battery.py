@@ -2339,6 +2339,78 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scaffold-dose PREREG 'instrument': the corpus-size curve's measure_checkpoint, "
         "imported -- the object called must be that function, not a copy.",
     ),
+    # --- retention-readability (experiments/retention-readability/PREREG.md, ab7cbd2) ---
+    Mutation(
+        "retention-readability: the per-document id assertion dropped",
+        "test_document_id_mismatch_raises",
+        "experiments/retention-readability/run.py",
+        "    if policy.doc_id != doc.doc_id:\n",
+        "    if policy.doc_id != doc.doc_id and False:\n",
+        "retention-readability PREREG control 3: a policy built for one document must "
+        "never run on another (batched OraclePolicy applies row 0's demand to every "
+        "row, policy_loop.py:358-365).",
+    ),
+    Mutation(
+        "retention-readability: the oracle-demand check dropped",
+        "test_oracle_demand_of_another_document_raises",
+        "experiments/retention-readability/run.py",
+        "        if policy.inner.demand != own:\n",
+        "        if policy.inner.demand != own and False:\n",
+        "retention-readability PREREG control 3: the oracle's demand matrix must be "
+        "discounted_demand(doc, 0.97) of the document being run.",
+    ),
+    Mutation(
+        "retention-readability: rank index read newest-first",
+        "test_rank_index_is_M_minus_gap_under_fifo",
+        "experiments/retention-readability/run.py",
+        '"rank": prefix.index(a) if resident else -1,',
+        '"rank": len(prefix) - 1 - prefix.index(a) if resident else -1,',
+        "retention-readability PREREG 'Instrument': rank index is the position in the "
+        "OLDEST-first prefix (ADR-0006), so under FIFO a full memory puts gap g at "
+        "rank M - g.",
+    ),
+    Mutation(
+        "retention-readability: the bootstrap unpaired across arms",
+        "test_paired_bootstrap_identical_arms_have_zero_width",
+        "experiments/retention-readability/run.py",
+        '    rep = {a: torch.einsum("rd,dbk->rbk", W, x) for a, x in sums.items()}\n',
+        "    rep = {\n"
+        "        a: torch.einsum(\n"
+        '            "rd,dbk->rbk", W[torch.randperm(n_boot, generator=g)], x\n'
+        "        )\n"
+        "        for a, x in sums.items()\n"
+        "    }\n",
+        "retention-readability PREREG: one resampled multiset of documents per "
+        "replicate, used for every arm (paired). Unpaired replicates widen every "
+        "difference's CI.",
+    ),
+    Mutation(
+        "retention-readability: PENALTY on any seed",
+        "test_classify_a_table",
+        "experiments/retention-readability/run.py",
+        '    if all(v["point"] >= RP_MAX and v["lo"] > 0 for v in per_seed.values()):\n',
+        '    if any(v["point"] >= RP_MAX and v["lo"] > 0 for v in per_seed.values()):\n',
+        "retention-readability PREREG (a): PENALTY needs point >= 0.03 and CI lower "
+        "bound > 0 on EVERY seed.",
+    ),
+    Mutation(
+        "retention-readability: control 1's tolerance loosened",
+        "test_control1_tolerance_is_exact",
+        "experiments/retention-readability/run.py",
+        "CONTROL1_TOL = 0.0\n",
+        "CONTROL1_TOL = 1e-6\n",
+        "retention-readability PREREG control 1: the harness's FIFO NLL equals "
+        "answer_readout's at B = 1 EXACTLY (max |diff| == 0.0).",
+    ),
+    Mutation(
+        "retention-readability: the arm A null ignored",
+        "test_decide_a_null_failure_is_inconclusive",
+        "experiments/retention-readability/run.py",
+        "        if not a_null_ok(null):\n",
+        "        if False and not a_null_ok(null):\n",
+        "retention-readability PREREG control 6: arm A's oracle - FIFO CI outside "
+        "(-0.03, +0.03) voids the arm-B readouts (inconclusive).",
+    ),
 )
 
 
