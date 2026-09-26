@@ -1,0 +1,139 @@
+{
+  "arm_order": [
+    600,
+    400,
+    300,
+    200,
+    100
+  ],
+  "arms_in_parallel": false,
+  "arms_k": [
+    100,
+    200,
+    300,
+    400,
+    600
+  ],
+  "batch": 16,
+  "c_threshold": 0.8875,
+  "child": "experiments/fresh-stream/run.py::single('B') with RESUME_STEP = k, iters = k + 500",
+  "ckpt_every": 100,
+  "control_2": "measure_checkpoint of n64/seed<s>/ckpt-000600.pt vs runs/scaffold-timing/ledger.json n64.ckpt600.* statistic keys",
+  "corpus": "synthetic S0-03, SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+  "d": 128,
+  "deadline": "2026-09-26T06:00:00-07:00",
+  "decision_rule": "A failed resume check, a measurement that raised, or a missing end checkpoint for any seed of any arm makes that arm's cell unreadable; the result is inconclusive if any arm is unreadable. Otherwise U(k) holds when R holds at ckpt k + 500 on every seed. k* is the smallest k in the sweep with U(k). The reading is from the table below.",
+  "delta": 0.03,
+  "device": "cpu",
+  "expected": "k* = 400: k = 600 unlocks on every seed; k = 400 on every seed but slowly; k = 300 on one or two seeds; k = 200 and 100 do not. The unlock is fast (under 200 steps) wherever it happens.",
+  "heldout_documents": [
+    4096,
+    4160
+  ],
+  "instrument": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported, identity), n=64",
+  "iters": 300,
+  "lr": 0.001,
+  "masked_loss": true,
+  "max_tokens": 64,
+  "measure_heldout": "generate(SyntheticConfig(n_documents=128, seed=<seed>))[64:]",
+  "measure_train": "generate(SyntheticConfig(seed=<seed>))  # docs 0..63",
+  "measured_checkpoint": {
+    "k100": 600,
+    "k200": 700,
+    "k300": 800,
+    "k400": 900,
+    "k600": 1100
+  },
+  "memory_slots": 16,
+  "parent_torch_num_threads": 12,
+  "policy": "fifo",
+  "prereg": "experiments/scaffold-dose/PREREG.md",
+  "prereg_commit": "4249567",
+  "probe_documents": [
+    0,
+    64
+  ],
+  "python": "3.12.13",
+  "question": "How much memorisation unlocks learning from a non-repeating stream? Resume the corpus-size N = 64 arm at step k and train 500 fresh-stream steps: which k unlocks memory-mediated retrieval on unseen documents?",
+  "reading": {
+    "AT_MEMORISATION": "unlocking comes with memorisation, before held-out retrieval is measurable",
+    "AT_RETRIEVAL_ONSET": "unlocking needs the held-out retrieval the model had already started to show",
+    "EARLY": "little or no memorisation is needed; the scaffold may be generic early training on repeated data",
+    "UNLOCK_AFTER_600": "more than retrieval onset is needed, or 500 steps is too few below k = 1000"
+  },
+  "reference_ledger": "runs/scaffold-timing/ledger.json",
+  "reference_ledger_sha256": "fd774e87a746eadb8ed5b4f335519ee01209e5ed2049df0c37ddb9f9c7e75e00",
+  "reproduction_tolerance": 1e-06,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seeds_trained_in_parallel": true,
+  "source_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/corpus-curve/runs/corpus-size-curve",
+  "srep_norm_reg_weight": 0.0,
+  "start_checkpoint_sha256": {
+    "k100": {
+      "seed0": "8b08d5bbe886b60f1feb79932d5ec3930b83e41240b34e9d4123c13ae6c5e807",
+      "seed1": "a37c83bcf132578fd2b60fd7ede2dae53a9986ad510cf9020f0942a3c30da13f",
+      "seed2": "2e26430c516f518002d28edc3f45df473a88baec856c78c08d81169a5bd02ca0"
+    },
+    "k200": {
+      "seed0": "c2afe93f94962b9b0a30083f1a33e6ff8c7af444616c4df8cbffdc6ca5ce5e25",
+      "seed1": "20519dbec63668200d3c399a18f3a27db5fc87774cc78bec48370184efc30ffb",
+      "seed2": "cb2435f6a00d201970d85e7dc037dc6c4fb5e649f1cfa0ab8a824b2817710e9e"
+    },
+    "k300": {
+      "seed0": "1ee3823be06803d24cdac6d58a8d4235d135f8aa7fcba9b4318a5724c7ef27b5",
+      "seed1": "efbd2fc1624c0187131f2a8e0fe836d5d7e147b657b99771f171c49df15e70bf",
+      "seed2": "575ab0cac83911273a07988a3356f270ed5c50d1e042eb0a61077efed21802d7"
+    },
+    "k400": {
+      "seed0": "c374783b0ad50132c5fa016089fb32b1315d10683d70097a921d77245c7a5be7",
+      "seed1": "e83639919ca2e8a9c88ab972ffbdaa3e9475c3328b13ef8355f49e738f7f220d",
+      "seed2": "3353adf68474ace05ef84fc37960c96d2a427f79eb5474138bb11a16a7c292e3"
+    },
+    "k600": {
+      "seed0": "64cf46176322af7b5428e1ffabfbca8cdb9a9eac595c0b0071a4050dc387cd94",
+      "seed1": "7dc5e3fa73d921af2ac67b34b562f214ad95af20c3de88fa1de572072e5099b4",
+      "seed2": "53767e7ecdf299ca807e1c363e956d3776014fd3f78847a947f2521495b19665"
+    }
+  },
+  "steps_per_arm": 500,
+  "steps_per_stream": 48,
+  "stream": {
+    "offset": 4160,
+    "stride": 16,
+    "vocab_documents": 64
+  },
+  "stream_documents": {
+    "k100": [
+      5760,
+      13760
+    ],
+    "k200": [
+      7360,
+      15360
+    ],
+    "k300": [
+      8960,
+      16960
+    ],
+    "k400": [
+      10560,
+      18560
+    ],
+    "k600": [
+      13760,
+      21760
+    ]
+  },
+  "stream_loss_threshold": 2.672588722239781,
+  "threads_per_seed": 5,
+  "torch": "2.14.0",
+  "vocab": "derived from the corpus",
+  "vocab_documents": [
+    0,
+    64
+  ]
+}

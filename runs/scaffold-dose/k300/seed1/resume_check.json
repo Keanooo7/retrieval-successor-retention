@@ -1,0 +1,15 @@
+{
+  "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/corpus-curve/runs/corpus-size-curve/n64/seed1/ckpt-000300.pt",
+  "stored_step": 300,
+  "ok": true,
+  "model": {
+    "equal": true,
+    "n_tensors": 206,
+    "mismatches": []
+  },
+  "optimizer": {
+    "equal": true,
+    "n_tensors": 618,
+    "mismatches": []
+  }
+}
