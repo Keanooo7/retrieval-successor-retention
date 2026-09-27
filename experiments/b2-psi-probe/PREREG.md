@@ -1054,3 +1054,50 @@ written here: §9.4 computes it from the phase-A fits on `FIT_VAL`, which have n
   `n_C / p = 10.03`.
 - **Source.** `runs/b2-psi-probe-sizing/ledger.json` on `run/b2-psi-probe`, run at `9b76963`
   (status `ok`, rc 0). Its only documents are `FIT_VAL` ids `[936000, 936032)` per seed.
+
+## Addendum: TBD-2, the capture cost (fence item 2)
+
+**Written 2026-09-27 by a model** (Claude Opus 5.5, an `rsr-researcher` session, item B2-B). **Not
+written by Brendan.** **Append-only.** It fills fence item 2 (A1.1) and changes no rule. **Every number
+was measured on `FIT_VAL` only**, in `runs/b2-psi-probe-sizing/ledger.json` (run at `9b76963`, rc 0).
+The run captured the first 32 `FIT_VAL` documents per (checkpoint, seed) and timed every arm type on
+8 of them. It fitted nothing, selected no λ and kept no accuracy; the ψ̂ arms were timed with `w = 0`.
+
+**Conditions.** CPU, six children at once (one per checkpoint and seed), one thread each, alone on
+the machine. Figures are written seed 0 / 1 / 2.
+
+- **Capture** (§5: the FIFO rollout plus rank 0–3 probes), wall seconds per document, mean:
+  - ckpt3000: 3.038 / 3.049 / 3.053;
+  - ckpt2500: 3.004 / 3.006 / 3.024.
+- **Capture peak RSS per child:**
+  - ckpt3000: 0.94 / 0.93 / 0.86 GB;
+  - ckpt2500: 0.90 / 0.86 / 0.95 GB.
+- **Gram accumulation** (fp64, p = 16,640, 8 threads, 16 documents of ckpt3000 seed 0), seconds per
+  document: U mean 0.813 (sd 0.026); C mean 0.463 (sd 0.021).
+- **The solve.** One full-size `eigh` of a p × p Gram, 8 threads: **263 s**. Peak RSS of that process:
+  **9.6 GB**.
+- **Cost per arm-document** (§7; one B = 1 rollout of one document, with the policy's overhead;
+  ckpt3000), seconds:
+
+  | Arm | seed 0 / 1 / 2 |
+  |---|---|
+  | ψ̂ (bilinear) | 0.162 / 0.159 / 0.157 |
+  | age-only | 0.156 / 0.152 / 0.153 |
+  | FIFO, plain | 0.152 / 0.156 / 0.151 |
+  | FIFO with the E0h pre-hook (the Tier 1 FIFO arm, A1.4) | 0.196 / 0.190 / 0.189 |
+  | random | 0.147 / 0.154 / 0.150 |
+  | oracle | 0.146 / 0.153 / 0.150 |
+  | kind-oracle | 0.155 / 0.153 / 0.150 |
+  | fact/filler | 0.150 / 0.156 / 0.150 |
+
+- **Tier 1 cost per (document, seed)** for A1.4's 12 arms, as ψ̂ × 2 + FIFO-with-hook + age × 2 +
+  random × 5 + oracle + kind-oracle, from the seed means: **1.870 s**. That is 0.156 s per
+  arm-document.
+- **A1.4 item 7, projected from these numbers.**
+  - One Tier 1 child per ckpt3000 seed, so three run in parallel.
+  - At the cap `N_E = 40,000`, Tier 1 is 40,000 × 1.870 s = **20.8 h of wall time**, which is within
+    the 72 h budget. The ceiling does not bind at any `N_E ≤ 40,000`.
+  - Tier 2, at 0.156 s per arm-document on 4096 documents, is 16 arms (ckpt3000) = 2.8 h and 28 arms
+    (ckpt2500) = 5.0 h per child. That is within 24 h.
+  - The projection assumes EVAL runs under the same conditions as this measurement (six concurrent
+    1-thread children). It is a projection, not a measurement of EVAL.
