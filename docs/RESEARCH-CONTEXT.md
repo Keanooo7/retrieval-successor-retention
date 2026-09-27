@@ -506,14 +506,18 @@ measured on a single M4 Max**, and the paper must not imply anything about other
 | **E0a** | μP coordinate check — bare TG, then TG + value head | **Yes** | ⚠️ **PARTIAL / DEFERRED.** Value-head half ran (5 seeds) on the **MacBook**; its `run.py` and `coord_check` **are not in this tree** and the APIs are incompatible. And its input premise is wrong for real TG — see §9 |
 | **E0b** | Reduction test vs TG, separate RNG for `φ` | **Yes** | ✅ **GREEN, bit-exact** |
 | **E0c** | Memory/throughput ceiling on the Studio | Resizes everything | ✅ **RUN** |
-| **E0d** | `r_i` vs leave-one-out Δloss | **Yes** | ☐ not run. ⚠️ `metrics/loo.py` is a stub that raises — §3.2.1's truth rule has **no implemented arbiter** |
-| **E0e** | `ū` distribution on a FIFO run → `τ`, `E[lifetime]` → `γ_b` | No | ☐ not run. ⚠️ **E0e MEASURES; it does not freeze `γ_b`** — the scope question is §12.2 |
+| **E0d** | `r_i` vs leave-one-out Δloss | **Yes** | ☐ not run. **The instrument exists** *(updated 2026-09-27; was "`metrics/loo.py` is a stub that raises")*: `src/rsr/metrics/loo.py` landed in #48 (resample and zero knockouts, `L_PAIRS`). E0d is **held**: its queue item requires a `R-*-retrieval-shown` ruling (`docs/owner/rulings/R-2026-09-22-sprint2-start.md`), and no such ruling file exists. Writing it is Brendan's. The next-science proposal is E0d, and the lookahead-room finding below ("`r_i` barely separates pending facts from filler") is its question |
+| **E0e** | `ū` distribution on a FIFO run → `τ`, `E[lifetime]` → `γ_b` | No | ◐ **RUN, values NOT recorded in the registry** *(updated 2026-09-27; was "not run")*. #51; `experiments/e0e/RESULTS.md`, `runs/e0e/ledger.json`, verified (`runs/e0e/verification.json`). FIFO on fresh-stream arm B's frozen checkpoints, 3 seeds, CPU, all `live`. `tau` **0.27555** (per-seed 0.24097 / 0.27573 / 0.31805), `E_lifetime` **13.1667** (sd exactly zero across seeds — analytic under FIFO, pre-registered), `gamma_b` **0.30380**, against §3.5's "order 0.05–0.1" (§12 item 2). The `record()` calls are listed in the ledger row `would_be_record_calls_NOT_MADE` and **none was made**: which substrate E1's constants come from is **D2**, open. The `τ` rule is the researcher's, pre-registered (`experiments/e0e/PREREG.md` item 4, q0.75 of `\|M·ū − 1\|`); the spec gives none (§12 item 8). ⚠️ **E0e MEASURES; it does not freeze `γ_b`** — the scope question is §12.2 |
 | **E0f** | Verify [P5]–[P14] against primary sources | No | ◐ **pass 2 run 2026-09-20 — 13 of 14 done, [P9] outstanding.** Not clean: corrections 25–30, including three on [P11], the cognitive claim (§2). Record: `docs/citation-audit.md` (pass 1, 2026-09-17, ported to trunk in `dd78db7` / #1; pass 2 in `8f6f81d` / #6). *(2026-09-22: `experiments/e0f/RESULTS.md` said "NOT RUN". It was a scaffold stub whose content was last written in `83bdf57`, before either pass. It now points here.)* |
 | **E0g** | Name and obtain the E7 stimulus set | **Yes, for E7** | ✅ **PASS** |
 | **E0h** | Regress `ψ̂(γ=0)` on current cross-attention logits | **Yes** | ☐ not run |
 | **E0i** | Coref histogram over the PG-19 subset, CPU | **Yes — kill gate** | 🔴 **exit 3 — DID NOT RUN.** Pre-registration is **final and UNSIGNED** |
 | **E-feas** | Oracle vs FIFO per corpus | **Yes, per corpus** | ✅ **synthetic: `survived`** (#19; `experiments/efeas/RESULTS.md`, `runs/efeas-synthetic/ledger.json`). Headroom `headroom_oracle_minus_fifo` **0.1807 ± 0.0123** at `M = 16`, 3 corpus seeds; `secondary.M32.headroom` 0.034, not judged. Re-run on the S0-03 corpus is **identical to the last bit** (#33; `experiments/efeas/RESULTS-s003.md`, `runs/efeas-synthetic-s003/ledger.json`), as designed: the simulation reads only gaps. Model-free. PG-19 not run *(updated 2026-09-22; was "not run")* |
-| **E1** | Synthetic, full baseline set + `ν` sweep | **Yes — kill gate only** | ☐ not run |
+| *fresh-stream / fresh-escape* | *Not a ladder rung — substrate.* Does TG's memory carry answers on unseen documents with no document repeated? | No | *(added 2026-09-27)* **fresh-stream** (#45): `classification` **SCAFFOLD** — `R3000(B)` holds, `R3000(A)` fails (`experiments/fresh-stream/RESULTS.md`, `runs/fresh-stream/ledger.json`). Arm B (memorise-then-stream) **shows retrieval on unseen documents under FIFO**; arm A (fresh start) does not. **fresh-escape** (#46): arm A trained on to step 9000, `classification_reported_as` **NO_ESCAPE by 9000** (`experiments/fresh-escape/RESULTS.md`, `runs/fresh-escape/ledger.json`); verifier CONFIRMED-WITH-CORRECTIONS, classification unaffected (RESULTS, last section) |
+| *retention-readability* | *D2 input.* Can arm B, trained only under FIFO, read a fact kept at a rank FIFO never produces? | No | *(added 2026-09-27)* #49. `classification` **READABLE_AT_SHIFTED_RANK** at both checkpoints, `verdict.outcome` `survived`, verified (`runs/retention-readability/verification.json`). Rank penalty `B.ckpt3000.U.RP` 0.0016 / 0.0033 / 0.0084 (3 seeds); model-based headroom `B.ckpt3000.U.H_model` 0.1512 / 0.1459 / 0.1244; arm A null (`A.ckpt3000.U.H_model` ≈ 0). `experiments/retention-readability/RESULTS.md`, `runs/retention-readability/ledger.json` |
+| *carry-forward* | *Does a fact outlive its own slot's eviction in arm B?* | No | *(added 2026-09-27)* #53. `classification.outcome` **MIXED**, `classification.carry_seeds` [2]: only seed 2 carries past eviction (`s2.ckpt3000.EXT.reach.17_40.excess.acc` 0.1346 [0.1198, 0.1498]); seeds 0 and 1 do not (0.0105, 0.0025). **L LOCALISED, S SPECIFIC** on every seed and checkpoint (a fact lives in its own slot). Verified (`runs/carry-forward/verification.json`). `experiments/carry-forward/RESULTS.md`, `runs/carry-forward/ledger.json` |
+| *lookahead-room* | *D1 input.* Does falsifier 3b have room on S0-03 at `M = 16`? | No | *(added 2026-09-27)* #54. **Run 1 INCONCLUSIVE** and kept on the record (`runs/lookahead-room/ledger.json`: control C1 compared float64 against a float32 ledger). **r2 PARTIAL** at both checkpoints after a C1-only amendment committed before the re-run (`experiments/lookahead-room/RESULTS-r2.md`, `runs/lookahead-room-r2/ledger.json`, verified in `runs/lookahead-room-r2/verification.json`). `B.ckpt3000.U.room_3b` 0.0355 / 0.0420 / 0.0478, every CI > 0, below the 0.05 bar, against `oracle_minus_fifo` ≈ 0.19. Hindsight, FIFO-world proxy — **not RSR's result**. See §9, *Two findings of 2026-09-26* |
+| **E1** | Synthetic, full baseline set + `ν` sweep | **Yes — kill gate only** | ☐ not run. **Still blocked** *(updated 2026-09-27)*: the `ψ̂` learning path is unbuilt (ADR-0009, #52, **proposed**); D2; correction 31(b); the Expire-Span, H2O and leading-edge baselines are stubs. See §13.3 |
 | **E2** | Vacuity gate on the full eviction score | **Yes** | ☐ not run |
 | E3 | PG-19 at `S = 80`, reintroduction loss vs `k` | No | **unapproved** |
 | E4 | WikiText comparability | No | **unapproved** |
@@ -785,6 +789,10 @@ incompatible APIs. **Gate status: DEFERRED, not passed.**
 
 ### Mutation battery — `docs/mutation-battery.md`, **17/17 gates PROVEN**
 
+> 📌 **Update 2026-09-27: the count above is history.** `docs/mutation-battery.md` now reads
+> **245/245 gates proven**, regenerated (`b21f3c3`) from a full battery run at `1384c27` that
+> returned RC 0. That run gated the merge of #46–#54 into `main`.
+
 > **A new check is not believed until a mutation has shown it red — and the mutation must redden
 > *only* it. If nothing reddens it, the check adds nothing and that is the finding.**
 
@@ -807,6 +815,31 @@ supposed to be learning would quietly learn nothing while still being called RSR
 📌 **`tests/conftest.py`'s all-skipped tripwire cannot be mutated from inside the suite it guards.**
 Proved separately by running a suite in which every test skips: `FAILED: only 0 tests passed, floor
 is 100`, exit 1, against the real suite's exit 0.
+
+
+### Two findings of 2026-09-26 — findings, not decisions
+
+*(added 2026-09-27.)* **Neither changes any constant, rule or gate.** Each is an input to an owner
+decision that §12 lists. Neither is a correction; a correction is written by Brendan.
+
+1. **`r_i` barely separates pending facts from filler.** In `runs/lookahead-room-r2/ledger.json`
+   (arm B, FIFO-resident slots at full-memory steps, ckpt 3000), the mean immediate demand
+   `B.ckpt3000.class.res.pending.D.mean` is **0.0711 / 0.0688 / 0.0787** (3 seeds). For filler,
+   `B.ckpt3000.class.res.filler.D.mean` is **0.0573 / 0.0606 / 0.0544**. Roughly 0.07 against 0.06.
+   So a rule that evicts on the `γ = 0` target sits near FIFO. Its hit rate,
+   `B.ckpt3000.U.hit.rule_g0`, is **0.7997 / 0.7881 / 0.8457**, against `B.ckpt3000.U.hit.fifo`
+   **0.8059 / 0.8093 / 0.8088**. The causal fact/filler rule reaches `B.ckpt3000.U.hit.factfiller`
+   **0.9655 / 0.9653 / 0.9666**. **The headroom exists, and `r_i` points at it only weakly.**
+   Whether `r_i` is the right target is **E0d's question** (§3.2.1). 🔴 These are hindsight,
+   FIFO-world proxies (RESULTS-r2's own caveat), not a result about a trained RSR head.
+2. **`β` is inert under AdamW with `φ`-only gradient.** Only `φ` receives `L_MC`'s gradient
+   (§13.3), and AdamW is invariant to a constant rescaling of the gradient. So `β` as a loss weight
+   changes nothing, and E1's `β` sweep would return a null by construction. That is the shape of
+   defect D-1. Source: ADR-0009 decision **L7**, on the **unmerged, proposed** PR #52
+   (`docs/decisions/ADR-0009-rsr-learning-path.md` on branch `docs/adr-learning-path`).
+   **This is a candidate spec correction for Brendan to write.** It is not in
+   `docs/spec-corrections.md`, and no agent should add it there. The registry's `beta` entry is
+   untouched.
 
 ---
 
@@ -1016,6 +1049,13 @@ nothing.* Live ⇒ the cause was the objective and the fix is known.
 **So: four of the eight baselines do not exist, the shadow buffer and bias loop do not exist, and
 the LOO metric — §3.2.1's own arbiter of truth — does not exist.**
 
+> 📌 **Update 2026-09-27, re-counted at `b21f3c3` (`grep -c 'raise NotImplementedError'`).** Two rows
+> above are history. **`metrics/loo.py` is real:** 800 lines, 0 raises, landed in #48 (E0d's
+> instrument). **`baselines/oracle.py` is real:** 81 lines, 0 raises (E-feas, #19). Still stubs that
+> raise: `baselines/h2o.py`, `expire_span.py`, `leading_edge.py`; `retention/bias.py`, `shadow.py`;
+> `metrics/reintroduction.py`, `vacuity.py`, `gini.py`; `data/coref.py`, `pg19.py`. The
+> `experiments/*/run.py` row was not re-counted here.
+
 ---
 
 ## 11. Retracted numbers — do not quote these
@@ -1044,7 +1084,8 @@ experiment ledgers' `cycle` field runs one behind the scoreboard's numbering, tw
 
 ## 12. Decisions only the owner can make — do not make them, do not work around them
 
-**Measure around them; do not resolve them.** All seven are the owner's.
+**Measure around them; do not resolve them.** All seven are the owner's. *(Updated 2026-09-27:
+items 8–11 were added as pointers from the 2026-09-26 day. All eleven are the owner's.)*
 
 1. 🔴 **The `b_max` invariant.** `b_max` is FROZEN at 1.0 and it **really is** one SD of `ψ̂`
    (measured **0.98280 ± 0.00360**, theory 0.98111). **But the argmin turns on the gap between the
@@ -1088,10 +1129,35 @@ experiment ledgers' `cycle` field runs one behind the scoreboard's numbering, tw
    at batch 16 would make an epoch 4 optimizer steps) or runs a never-repeating stream (no epoch at
    all). It used to pass `iters`, making the warmup the whole run. `build_policy("rsr",
    steps_per_epoch=None)` **refuses** until this is ruled — that refusal is not a bug to route around.
+8. **E0e's `τ` rule.** *(Pointer, added 2026-09-27.)* The spec gives no rule that maps the `ū`
+   distribution to `τ`. E0e used the researcher's rule, pre-registered as item 4 of
+   `experiments/e0e/PREREG.md`: the 75th percentile of `|M·ū − 1|`. It gave `tau` 0.27555
+   (`runs/e0e/ledger.json`). The same ledger records the sensitivity `tau_init_first_obs` 0.39788
+   (EMA started at its first observation). Choosing the rule, or accepting the pre-registered one, is
+   the owner's.
+9. **`γ_b` = 0.30380 is outside §3.5's range.** *(Pointer, added 2026-09-27.)* `gamma_b` in
+   `runs/e0e/ledger.json` is `b_max / (0.25 · E_lifetime)` with `E_lifetime` 13.1667. §3.5 says
+   "order 0.05–0.1". This is item 2's scoping problem, now measured at the synthetic scope. It is
+   **not recorded** into the registry: that waits on item 10.
+10. **D2: the E1 substrate protocol.** *(Pointer, added 2026-09-27.)* Train E1 from scratch on the
+    repeating corpus, as the spec does, or resume from fresh-stream arm B? Transformer frozen, or
+    `L_NTP` continuing? The same answer decides which substrate E0e's constants are recorded from.
+    The inputs so far are retention-readability (#49), carry-forward (#53) and E0e (#51), in §6's
+    table. The day's framing is in `~/Documents/RSR-2026-09-26-day/ROADMAP.md`, outside the repo.
+11. **ADR-0009 sign-off** (PR #52, **proposed**, unmerged). *(Pointer, added 2026-09-27.)* This is
+    the `ψ̂` learning path, decisions L1–L13. It includes L7, the inert-`β` finding (§9, *Two
+    findings of 2026-09-26*), which is a candidate correction for the owner to write. No agent merges
+    or edits the ADR.
 
 📌 **Also owner-only, and already flagged:** ADR-0005's sign-off on departing from the spec's ranked
 stimulus list, and pinning `c_t` before E0a runs (§4.2 — the decision is made as D-C, the
 confirmation is not).
+
+📌 **Also owner-only (added 2026-09-27):** the `R-*-retrieval-shown` ruling file that the `e0d`
+queue item requires (`docs/owner/rulings/R-2026-09-22-sprint2-start.md` holds E0d on it). Fresh-stream
+arm B shows retrieval (§6), but only the owner writes in `docs/owner/rulings/`. On 2026-09-26 the
+permission system refused an agent's write there (`R-2026-09-26-day-gates.md`), and that refusal is
+the rule working.
 
 ---
 
@@ -1144,6 +1210,15 @@ point.***
   and names the experiment that owes the value. **If it raises, the answer is "E0e has not run," not
   a default.**
 - **Do not start E1**, and do not tune `γ_b` or `ν`. **All of it sits above a memory that does nothing.**
+  > 📌 **Update 2026-09-27: the rule stands; the reason given for it is superseded for one
+  > substrate.** "A memory that does nothing" no longer describes fresh-stream arm B. Its ledger
+  > shows retrieval on unseen documents under FIFO (`runs/fresh-stream/ledger.json`,
+  > `classification` SCAFFOLD, `R3000(B)` holds; #45). Arm A, and the models of §10.3, are unchanged.
+  > **E1 is still not to be started.** It is blocked by: (1) the unbuilt `ψ̂` learning path (ADR-0009,
+  > PR #52, **proposed**, awaiting Brendan); (2) D2, the substrate protocol (§12 item 10);
+  > (3) correction 31(b), what an epoch is (§12 item 7); (4) the Expire-Span, H2O and leading-edge
+  > baselines, which are still stubs that raise (`src/rsr/baselines/`). **Do not tune `γ_b` or `ν`
+  > either:** E0e's `gamma_b` is measured, not recorded (§12 item 9).
 - **Mention unrelated problems; don't fix them.** Surface them in the return; don't fold cleanup in.
 
 ---
@@ -1238,7 +1313,7 @@ it stops at a password screen and is unreachable until someone types it in physi
 
 | Need | Read |
 |---|---|
-| 🔴 **Corrections that OVERRIDE the spec** | `docs/spec-corrections.md` — **24 entries, read before the spec** |
+| 🔴 **Corrections that OVERRIDE the spec** | `docs/spec-corrections.md` — **31 entries** *(updated 2026-09-27; was 24)*, **read before the spec** |
 | What has and has not been checked against sources | `docs/citation-audit.md` (⚠️ see §17) |
 | The spec | `docs/spec/rsr_model_spec_v0.5.md` (793 lines) |
 | Where the released TG diverges from the paper | `docs/code-vs-paper.md` |
