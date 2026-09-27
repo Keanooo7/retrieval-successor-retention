@@ -2802,6 +2802,10 @@ def write_claims(path: Path, claims: list[dict]) -> Path:
 #: here only after the PREREG diff that records it. `None` makes phase B refuse.
 SEC_PER_ARM_DOC: float | None = None
 FIT_RUN_ID = "b2-psi-probe-fit"
+#: Measured by the sizing run (runs/b2-psi-probe-sizing, gram.peak_rss_gb = 9.6 GB
+#: for one Gram + eigh at p = 16,640): six concurrent phase-A children would need
+#: ~58 GB of 64. Three is the cap.
+FIT_MAX_PARALLEL = 3
 
 
 def _children(argvs: dict, root: Path, parallel: int, led) -> dict:  # pragma: no cover
@@ -2885,7 +2889,7 @@ def run_fit(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: no
         for c in CHECKPOINTS
         for s in SEEDS
     }
-    rcs = _children(argvs, root, parallel, led)
+    rcs = _children(argvs, root, min(parallel, FIT_MAX_PARALLEL), led)
     t0e = t0_verify()
     led.note("T0.end", t0e, how="run.py::t0_verify")
     bad = {k: v for k, v in rcs.items() if v != 0}
@@ -2930,7 +2934,7 @@ def run_eval(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: n
         sec_per_arm_doc=SEC_PER_ARM_DOC,
         arms=len(TIER1),
         seeds=len(SEEDS),
-        parallel=parallel,
+        parallel=min(parallel, len(SEEDS)),  # one Tier 1 child per ckpt3000 seed
     )
     n_e = ceil1["N_E"]
     n2 = min(n_e, TIER2_MAX_DOCS)
