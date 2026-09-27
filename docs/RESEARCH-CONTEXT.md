@@ -816,7 +816,6 @@ supposed to be learning would quietly learn nothing while still being called RSR
 Proved separately by running a suite in which every test skips: `FAILED: only 0 tests passed, floor
 is 100`, exit 1, against the real suite's exit 0.
 
-
 ### Two findings of 2026-09-26 — findings, not decisions
 
 *(added 2026-09-27.)* **Neither changes any constant, rule or gate.** Each is an input to an owner
