@@ -14,6 +14,7 @@ the guard. Nothing here runs `run.py` end to end on arm B.
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import sys
 from pathlib import Path
@@ -463,14 +464,27 @@ class _FakeLedger:
     def verdict(self, **kw):
         self.v = kw
 
+    @property
+    def path(self):
+        return _FakeLedger.root / self.run_id / "ledger.json"
+
     def write(self):
-        return Path("/dev/null")
+        """Writes the rows to disk, as the real ledger does: A1.4's exit guard
+        reads `e0d.class` back out of the written file."""
+        self.writes = getattr(self, "writes", 0) + 1
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        rows = [{"key": k, "value": v} for k, v in self.rows.items()]
+        self.path.write_text(
+            json.dumps({"rows": rows, "status": self._status}, default=str)
+        )
+        return self.path
 
 
 @pytest.fixture
-def fake_ledger(monkeypatch):
+def fake_ledger(monkeypatch, tmp_path):
     import ledger as real
 
+    monkeypatch.setattr(_FakeLedger, "root", tmp_path / "runs", raising=False)
     monkeypatch.setattr(_FakeLedger, "STATUSES", real.STATUSES)
     fake = type("ledger", (), {"Ledger": _FakeLedger, "STATUSES": real.STATUSES})
     monkeypatch.setitem(sys.modules, "ledger", fake)
@@ -488,26 +502,6 @@ def test_main_refuses_before_any_e0d_document_without_the_rulings(
     assert gen == []
     assert fake_ledger.last._status == "did_not_run"
     assert fake_ledger.last.commands == [3]
-
-
-def test_main_exits_3_before_any_document_even_when_preconditions_pass(
-    e0d, monkeypatch, fake_ledger
-):
-    """At this commit the analysis awaits the PREREG amendment, so a cleared run
-    still refuses (3) and generates nothing -- never a silent 0."""
-    gen = []
-    monkeypatch.setattr(e0d, "_generate_document", lambda i, cfg: gen.append(i))
-    monkeypatch.setattr(
-        e0d, "check_authority", lambda *a, **k: {"rho_star": 0.5, "rulings": {}}
-    )
-    monkeypatch.setattr(e0d, "check_substrate", lambda root: {})
-    monkeypatch.setattr(e0d, "used_ranges", lambda runs: [])
-    monkeypatch.setattr(e0d, "measure_seed", lambda *a, **k: pytest.fail("measured"))
-    code = e0d.main([])
-    assert int(code) == 3
-    assert gen == []
-    assert fake_ledger.last._status == "did_not_run"
-    assert "not_implemented" in fake_ledger.last.rows
 
 
 def test_main_ledgers_the_failing_control(e0d, monkeypatch, fake_ledger):
@@ -558,3 +552,616 @@ def test_the_runner_imports_no_retention_policy(e0d):
         for m in mods
     ), mods
     assert not names & {"RSRPolicy", "ShadowBuffer", "BalanceController"}, names
+
+
+# =========================================================================== #
+# PREREG Amendment 1 (84e21c5, erratum 268b947): strata, statistics, C10,
+# flatness, labels, classification, exits, and the A1.5-A1.7 guards.
+# Every fixture below is hand-built or from documents [0, 64) of seed 0.
+# =========================================================================== #
+
+A1 = PREREG.read_text().split("## Amendment 1", 1)[1]
+
+
+def _ref_rank(x):
+    """Average ranks by brute force (1-based), independent of the runner's ranker."""
+    x = np.asarray(x, dtype=float)
+    return np.array([(x < v).sum() + ((x == v).sum() + 1) / 2 for v in x])
+
+
+def _ref_spearman(x, y):
+    return float(np.corrcoef(_ref_rank(x), _ref_rank(y))[0, 1])
+
+
+def _cells(n_docs=40, *, M=4, t0=4, n_steps=12, score="good", a_delta=0.5,
+           noise=1e-3, seed=0):  # fmt: skip
+    """Hand-built cells with the columns `cells_from` returns, every one full.
+    Every third step is a query; its assert is resident (gap <= M) at FIFO rank
+    M - gap, and there Delta is `a_delta`. Elsewhere Delta is noise."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for d in range(n_docs):
+        for t in range(t0, t0 + n_steps):
+            q = t % 3 == 0
+            gap = 1 + (d + t) % (M + 2) if q else -1
+            a_rank = M - gap if q and gap <= M else -1
+            for i in range(M):
+                a = i == a_rank
+                dr = (a_delta if a else 0.0) + rng.normal(0, noise)
+                dz = (2 * a_delta if a else 0.0) + rng.normal(0, noise)
+                rows.append((d, t, i, t - M + i, q, a, gap, dr, dz))
+    cols = list(zip(*rows, strict=True))
+    n = len(rows)
+    c = {
+        "doc": np.array(cols[0]),
+        "t": np.array(cols[1]),
+        "rank": np.array(cols[2]),
+        "sentence": np.array(cols[3]),
+        "n_live": np.full(n, M),
+        "q_step": np.array(cols[4], dtype=bool),
+        "a_cell": np.array(cols[5], dtype=bool),
+        "gap": np.array(cols[6]),
+        "d_resample": np.array(cols[7]),
+        "d_zero": np.array(cols[8]),
+    }
+    c["pc"] = c["a_cell"].astype(float)
+    d = c["d_resample"]
+    if score == "good":
+        r = d - d.min() + 1e-3
+    elif score == "bad":
+        r = rng.uniform(0.01, 1.0, n)
+    elif score == "inverted":
+        r = d.max() - d + 1e-3
+    else:
+        raise ValueError(score)
+    c["r_gated"], c["r_ungated"] = r, r.copy()
+    c["layer_gated"] = np.stack([r, r], 1)
+    c["layer_ungated"] = np.stack([r, r], 1)
+    c["pre_share_gated"] = np.ones(n)
+    c["pre_share_ungated"] = np.ones(n)
+    c["kind"] = np.where(c["a_cell"], "pending_assert", "filler").astype(object)
+    c["full"] = np.ones(n, dtype=bool)
+    return c
+
+
+def _W(e0d, c, n_boot=60, seed=7):
+    return e0d.bootstrap_doc_weights(int(c["doc"].max()) + 1, n_boot, seed)
+
+
+def test_amendment_constants_are_the_preregs(e0d):
+    """A1's numbers, read back out of the committed text."""
+    assert "median over A-cells of `Δ_resample` is < 1e-2 nats" in A1
+    assert e0d.LOO_FLAT_A == 1e-2
+    assert "q90 over cells of |delta_resample| < 1e-3 nats" in PREREG.read_text()
+    assert e0d.LOO_FLAT_Q90 == 1e-3
+    assert "`< 0.05`" in PREREG.read_text() and e0d.R_FLAT == 0.05
+    assert "2000 resamples, generator seed 20260927, 95% percentile" in (
+        PREREG.read_text()
+    )
+    assert (e0d.BOOT_N, e0d.BOOT_SEED, e0d.CI_LEVEL) == (2000, 20260927, 0.95)
+    assert "t_cap ≤ 16123" in A1 and e0d.B5_T_CAP_MAX == 16123
+    assert "ρ\\* ∈ {0.3, 0.7}" in A1  # noqa: RUF001
+    assert e0d.SENSITIVITY_RHO == (0.3, 0.7)
+
+
+# --------------------------------------------------------------------------- #
+# A1.1 strata: fixed by document structure, never by Delta or r_i
+# --------------------------------------------------------------------------- #
+
+
+def test_strata_are_fixed_by_document_structure(e0d, world, measured):
+    from rsr.data.synthetic import true_demand
+
+    docs = world[1]
+    c = e0d.cells_from([measured], [docs], M)
+    for j in range(len(c["t"])):
+        doc, t, s = docs[c["doc"][j]], int(c["t"][j]), int(c["sentence"][j])
+        qa = {q: a for a, q in doc.pairs}
+        q = doc.sentences[t].kind == "query"
+        assert bool(c["q_step"][j]) == q
+        assert bool(c["a_cell"][j]) == (q and s == qa[t])
+        assert int(c["gap"][j]) == (t - qa[t] if q else -1)
+        assert c["pc"][j] == true_demand(doc)[t][s]
+    st = e0d.strata(c)
+    assert np.array_equal(st["Q"], c["full"] & c["q_step"])
+    assert np.array_equal(st["N"], c["full"] & ~c["q_step"])
+    assert np.array_equal(st["A"], st["Q"] & c["a_cell"])
+    assert st["Q"].any() and st["A"].any() and st["N"].any()
+    # never by Delta: scrambling Delta and r_i leaves every stratum unchanged
+    c2 = dict(c)
+    rng = np.random.default_rng(0)
+    c2["d_resample"] = rng.permutation(c["d_resample"])
+    c2["r_gated"] = rng.permutation(c["r_gated"])
+    for k, v in e0d.strata(c2).items():
+        assert np.array_equal(v, st[k]), k
+
+
+def test_rho_q_is_on_query_step_cells_only(e0d):
+    """rho_Q (primary) reads Q-step cells; N-step cells cannot move it."""
+    c = _cells(score="good")
+    Q, N = c["q_step"], ~c["q_step"]
+    r = c["r_gated"].copy()
+    r[N] = -r[N]  # anti-agreement everywhere off the query steps
+    keep = np.ones(len(r), dtype=bool)
+    s = e0d.score_stats(c, r, c["d_resample"], keep=keep, W=_W(e0d, c), M=4)
+    assert s["rho_Q"] == pytest.approx(_ref_spearman(r[Q], c["d_resample"][Q]))
+    assert s["rho_Q"] == pytest.approx(1.0)
+    assert s["rho_N"] == pytest.approx(-1.0)
+    assert s["rho_pool"] == pytest.approx(_ref_spearman(r, c["d_resample"]))
+    lo, hi = s["rho_Q_ci"]
+    assert lo == pytest.approx(1.0) and hi == pytest.approx(1.0)
+
+
+def test_rho_q_rank_is_the_count_weighted_within_rank_mean(e0d):
+    c = _cells(score="bad")
+    r, d = c["r_gated"], c["d_resample"]
+    keep = np.ones(len(r), dtype=bool)
+    s = e0d.score_stats(c, r, d, keep=keep, W=_W(e0d, c), M=4)
+    num = den = 0.0
+    for i in range(4):
+        sel = c["q_step"] & (c["rank"] == i)
+        rho = _ref_spearman(r[sel], d[sel])
+        assert s["per_rank_Q"][i] == pytest.approx(rho)
+        num, den = num + sel.sum() * rho, den + sel.sum()
+    assert s["rho_Q_rank"] == pytest.approx(num / den)
+
+
+def test_bootstrap_is_per_document_seeded_and_shared(e0d):
+    W1 = e0d.bootstrap_doc_weights(10, 5, 20260927)
+    W2 = e0d.bootstrap_doc_weights(10, 5, 20260927)
+    assert np.array_equal(W1, W2) and W1.shape == (5, 10)
+    assert (W1.sum(1) == 10).all()
+    assert not np.array_equal(W1, e0d.bootstrap_doc_weights(10, 5, 1))
+    c = _cells(score="bad")
+    keep = np.ones(len(c["t"]), dtype=bool)
+    W = _W(e0d, c)
+    a = e0d.score_stats(c, c["r_gated"], c["d_resample"], keep=keep, W=W, M=4)
+    b = e0d.score_stats(c, c["r_gated"], c["d_resample"], keep=keep, W=W, M=4)
+    assert a["rho_Q_ci"] == b["rho_Q_ci"]
+    assert a["rho_Q_ci"][0] <= a["rho_Q"] <= a["rho_Q_ci"][1]
+
+
+def test_a_nan_replicate_makes_the_interval_nan(e0d):
+    lo, hi = e0d.percentile_ci(np.array([0.1, np.nan, 0.3]))
+    assert np.isnan(lo) and np.isnan(hi)
+
+
+# --------------------------------------------------------------------------- #
+# C10 positive control (true_demand as the score) and RANK_CEILING
+# --------------------------------------------------------------------------- #
+
+
+def test_c10_ceiling_scores_true_demand_through_the_identical_code(e0d):
+    c = _cells(score="bad")
+    an = e0d.analyse_seed(c, M=4, n_docs=40, rho_star=0.5, n_boot=40)
+    Q = c["q_step"]
+    for k in ("resample", "zero"):
+        pc = an["populations"]["all"]["stats"]["pc"][k]
+        d = c[f"d_{k}"]
+        assert pc["rho_Q"] == pytest.approx(_ref_spearman(c["pc"][Q], d[Q]))
+    # the same bootstrap: the PC and r_i intervals come from the same W
+    got = an["populations"]["all"]["stats"]
+    assert got["pc"]["resample"]["n_boot"] == got["gated"]["resample"]["n_boot"] == 40
+
+
+def test_c10_ceiling_label_comes_first(e0d):
+    base = dict(loo_flat=True, r_flat=True, rho_Q_ci=(0.9, 0.95),
+                rho_Q_rank_ci=(0.9, 0.95))  # fmt: skip
+    assert e0d.seed_label({**base, "pc_rho_Q_ci": (0.1, 0.4)}, rho_star=0.5) == "CEILING"
+    assert e0d.seed_label({**base, "pc_rho_Q_ci": (0.6, 0.9)}, rho_star=0.5) == (
+        "DEGENERATE"
+    )
+    # a PC with no defined rho cannot reach rho*: CEILING, never DISAGREE
+    nan = (float("nan"), float("nan"))
+    lab = e0d.seed_label({**base, "loo_flat": False, "pc_rho_Q_ci": nan,
+                          "rho_Q_ci": (0.0, 0.1)}, rho_star=0.5)  # fmt: skip
+    assert lab == "CEILING"
+
+
+def test_c10_ceiling_counts_as_unresolved_in_section_8(e0d):
+    assert e0d.classify(["CEILING", "DISAGREE", "DISAGREE"]) == ("MIXED_UNRESOLVED", 2)
+    assert e0d.classify(["CEILING"] * 3) == ("MIXED_UNRESOLVED", 2)
+    assert e0d.classify(["CEILING", "DEGENERATE", "LOO_UNINFORMATIVE"]) == (
+        "DEGENERATE_UNINFORMATIVE",
+        2,
+    )
+
+
+def _an(label, *, all_label=None, ungated=None, zero=None, loo_flat=False,
+        r_flat=False, pc_rank_ceiling=False):  # fmt: skip
+    def pop(lab):
+        return {
+            "labels": {
+                "gated_resample": lab,
+                "ungated_resample": ungated or lab,
+                "gated_zero": zero or lab,
+            },
+            "sensitivity": {"0.3": lab, "0.7": lab},
+            "flags": {
+                "loo_flat": loo_flat,
+                "r_flat": r_flat,
+                "pc_rank_ceiling": pc_rank_ceiling,
+            },
+        }
+
+    return {"populations": {"bos_excluded": pop(label), "all": pop(all_label or label)}}
+
+
+def test_rank_ceiling_flags_agree_via_rank_and_changes_nothing(e0d):
+    ans = {
+        0: _an("AGREE_VIA_RANK", pc_rank_ceiling=True),
+        1: _an("AGREE_VIA_RANK", pc_rank_ceiling=False),
+        2: _an("DISAGREE", pc_rank_ceiling=True),
+    }
+    out = e0d.classify_run(ans)
+    assert out["rank_ceiling_seeds"] == [0]
+    assert (out["class"], out["exit"]) == ("RECENCY_ONLY", 2)
+
+
+def test_a_degenerate_run_hidden_by_ceiling_is_reported(e0d):
+    ans = {
+        0: _an("CEILING", loo_flat=True, r_flat=True),
+        1: _an("CEILING", loo_flat=True),
+        2: _an("AGREE"),
+    }
+    out = e0d.classify_run(ans)
+    assert out["class"] == "MIXED_UNRESOLVED"
+    assert out["degenerate_under_ceiling"] is True
+    assert out["seed_flatness"]["0"] == {"loo_flat": True, "r_flat": True}
+    assert (
+        e0d.classify_run({s: _an("AGREE") for s in range(3)})["degenerate_under_ceiling"]
+        is False
+    )
+
+
+# --------------------------------------------------------------------------- #
+# §5 flatness (A1.1): A-cell median of Delta_resample < 1e-2, R_FLAT unchanged
+# --------------------------------------------------------------------------- #
+
+
+def test_loo_flatness_is_the_a_cell_median_at_1e_2(e0d):
+    c = _cells(a_delta=0.02, noise=1e-4)
+    A = c["q_step"] & c["a_cell"]
+    out = e0d.loo_flat_a(c["d_resample"], A)
+    assert out["median_a"] == pytest.approx(np.median(c["d_resample"][A]))
+    assert out["flat"] is False
+    # the withdrawn q90 rule would have called this flat: the scale matters
+    assert e0d.loo_flat_q90(c["d_resample"])["flat"] is True
+    c9 = _cells(a_delta=0.009, noise=1e-4)
+    assert e0d.loo_flat_a(c9["d_resample"], c9["q_step"] & c9["a_cell"])["flat"] is True
+    with pytest.raises(e0d.MeasurementUndefined):
+        e0d.loo_flat_a(c["d_resample"], np.zeros(len(A), dtype=bool))
+
+
+def test_analysis_reads_flatness_on_a_cells(e0d):
+    c = _cells(a_delta=0.02, noise=1e-4, score="bad")
+    an = e0d.analyse_seed(c, M=4, n_docs=40, rho_star=0.5, n_boot=20)
+    pa = an["populations"]["all"]
+    assert pa["flags"]["loo_flat"] is False
+    assert pa["flatness"]["q90_abs_delta_resample"] < 1e-3
+    assert pa["flatness"]["loo_flat_resample"]["n_a"] == int(
+        (c["q_step"] & c["a_cell"]).sum()
+    )
+
+
+def test_r_flat_is_the_median_within_step_cv(e0d):
+    flat = np.array([[1.0, 1.0, 1.0, 1.0], [1.0, 1.02, 0.98, 1.0]])
+    assert e0d.r_flat(flat)["flat"] is True
+    steep = np.array([[1.0, 0.0, 0.0, 0.0], [0.5, 0.5, 0.0, 0.0]])
+    assert e0d.r_flat(steep)["flat"] is False
+    # an excluded slot (NaN) is left out of its step, not the whole step
+    holed = np.array([[1.0, 1.0, 1.0, np.nan], [1.0, 1.0, 1.0, np.nan]])
+    assert e0d.r_flat(holed)["median_cv"] == 0.0
+
+
+# --------------------------------------------------------------------------- #
+# §7 labels and §8 classification (amended)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "rho_q, rho_rank, lf, rf, want",
+    [
+        ((0.6, 0.8), (0.6, 0.8), True, True, "DEGENERATE"),
+        ((0.6, 0.8), (0.6, 0.8), True, False, "LOO_UNINFORMATIVE"),
+        ((-0.3, -0.1), (0.0, 0.1), False, False, "INVERTED"),
+        ((0.1, 0.4), (0.0, 0.1), False, False, "DISAGREE"),
+        ((0.6, 0.8), (0.55, 0.7), False, True, "AGREE"),
+        ((0.6, 0.8), (0.1, 0.4), False, False, "AGREE_VIA_RANK"),
+        ((0.4, 0.6), (0.4, 0.6), False, False, "UNRESOLVED"),
+        ((0.6, 0.8), (0.4, 0.6), False, False, "UNRESOLVED"),
+    ],
+)
+def test_seed_labels_first_match_wins(e0d, rho_q, rho_rank, lf, rf, want):
+    inp = dict(pc_rho_Q_ci=(0.8, 0.9), loo_flat=lf, r_flat=rf, rho_Q_ci=rho_q,
+               rho_Q_rank_ci=rho_rank)  # fmt: skip
+    assert e0d.seed_label(inp, rho_star=0.5) == want
+
+
+@pytest.mark.parametrize(
+    "labels, want",
+    [
+        (["AGREE"] * 3, ("AGREE", 0)),
+        (["INVERTED"] * 3, ("CONFOUND_INVERTED", 1)),
+        (["DISAGREE", "INVERTED", "DISAGREE"], ("CONFOUND", 1)),
+        (["DEGENERATE", "LOO_UNINFORMATIVE", "AGREE"], ("DEGENERATE_UNINFORMATIVE", 2)),
+        (["DEGENERATE", "AGREE", "AGREE"], ("MIXED_UNRESOLVED", 2)),
+        (["AGREE", "AGREE", "UNRESOLVED"], ("MIXED_UNRESOLVED", 2)),
+    ],
+)
+def test_classification_rows(e0d, labels, want):
+    assert e0d.classify(labels) == want
+
+
+def test_recency_only_exits_2_never_1(e0d):
+    """A1.2: AGREE_VIA_RANK is agreement that fails within age strata -- not the
+    §3.2.1 kill. Exit 1 is reachable only from CONFOUND and CONFOUND_INVERTED."""
+    assert e0d.classify(["AGREE_VIA_RANK", "DISAGREE", "INVERTED"]) == (
+        "RECENCY_ONLY",
+        2,
+    )
+    assert e0d.classify(["AGREE_VIA_RANK"] * 3) == ("RECENCY_ONLY", 2)
+    assert e0d.CLASS_EXIT["RECENCY_ONLY"] == 2
+    assert {k for k, v in e0d.CLASS_EXIT.items() if v == 1} == {
+        "CONFOUND",
+        "CONFOUND_INVERTED",
+    }
+
+
+def test_gate_sensitive_and_zero_are_reported_never_the_exit(e0d):
+    ans = {s: _an("DISAGREE", ungated="AGREE", zero="AGREE") for s in range(3)}
+    out = e0d.classify_run(ans)
+    assert (out["class"], out["exit"]) == ("CONFOUND", 1)
+    assert out["class_ungated"] == "AGREE" and out["gate_sensitive"] is True
+    assert out["class_zero"] == "AGREE"
+    assert set(out["sensitivity"]) == {"0.3", "0.7"}
+
+
+# --------------------------------------------------------------------------- #
+# A1.3 the bos-copy exclusion recomputation
+# --------------------------------------------------------------------------- #
+
+
+def test_bos_exclusion_drops_rank_m_minus_1_and_gap_1_query_steps(e0d):
+    c = _cells()
+    keep = e0d.bos_keep(c, M=4)
+    want = (c["rank"] != 3) & ~(c["q_step"] & (c["gap"] == 1))
+    assert np.array_equal(keep, want)
+    assert (c["q_step"] & (c["gap"] == 1)).any() and (c["rank"] == 3).any()
+
+
+def test_bos_exclusion_recomputes_every_decision_statistic(e0d):
+    c = _cells(score="bad")
+    an = e0d.analyse_seed(c, M=4, n_docs=40, rho_star=0.5, n_boot=20)
+    keep = e0d.bos_keep(c, M=4)
+    pe = an["populations"]["bos_excluded"]
+    assert pe["n_cells"] == int(keep.sum())
+    Q = c["q_step"] & keep
+    d = c["d_resample"]
+    assert pe["stats"]["gated"]["resample"]["rho_Q"] == pytest.approx(
+        _ref_spearman(c["r_gated"][Q], d[Q])
+    )
+    assert pe["stats"]["pc"]["resample"]["rho_Q"] == pytest.approx(
+        _ref_spearman(c["pc"][Q], d[Q])
+    )
+    A = Q & c["a_cell"]
+    assert pe["flatness"]["loo_flat_resample"]["median_a"] == pytest.approx(
+        np.median(d[A])
+    )
+    assert an["populations"]["all"]["n_cells"] == len(d)
+
+
+def test_exit_follows_the_bos_excluded_class(e0d):
+    out = e0d.classify_run({s: _an("DISAGREE", all_label="AGREE") for s in range(3)})
+    assert (out["class"], out["exit"]) == ("CONFOUND", 1)
+    assert out["class_all_cells"] == "AGREE" and out["bos_sensitive"] is True
+    out = e0d.classify_run({s: _an("AGREE", all_label="DISAGREE") for s in range(3)})
+    assert (out["class"], out["exit"]) == ("AGREE", 0)
+    same = e0d.classify_run({s: _an("AGREE") for s in range(3)})
+    assert same["bos_sensitive"] is False
+
+
+# --------------------------------------------------------------------------- #
+# A1.5 B5 re-check, A1.6 the separate r_i capture forward, A1.7 the T0 record
+# --------------------------------------------------------------------------- #
+
+
+def _stream_manifest(root, name, **kw):
+    d = root / name
+    d.mkdir(parents=True)
+    body = {"stream": {"offset": 4160, "stride": 16}, **kw}
+    (d / "manifest.json").write_text(json.dumps(body))
+
+
+def test_c2_rechecks_a_b5_stream_against_its_recorded_last_step(e0d, tmp_path):
+    _stream_manifest(tmp_path, "b5", resume_step=3000, end_step=16123)
+    got = e0d.stream_ranges(tmp_path)
+    assert {"name": "b5.stream(resume_step..end_step)", "range": (52160, 262128),
+            "seeds": (0, 1, 2)} in got  # fmt: skip
+    e0d.check_disjoint(e0d.D_E0D, seeds=e0d.SEEDS, used=got)
+    (tmp_path / "b5" / "manifest.json").unlink()
+    (tmp_path / "b5").rmdir()
+    _stream_manifest(tmp_path, "b5", resume_step=3000, end_step=16124)
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.stream_ranges(tmp_path)
+    assert ei.value.control == "C2"
+
+
+def test_a_stream_manifest_without_a_range_is_a_refusal(e0d, tmp_path):
+    _stream_manifest(tmp_path, "b5", resume_step=3000)
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.stream_ranges(tmp_path)
+    assert ei.value.control == "C2"
+
+
+def test_c2_reads_every_committed_stream_manifest(e0d):
+    names = {u["name"] for u in e0d.used_ranges(ROOT / "runs")}
+    assert "fresh-escape.stream(resume_step..end_step)" in names
+
+
+def test_r_i_comes_from_its_own_capture_forward(e0d, world, monkeypatch):
+    """A1.6: `loo_delta_loss` does not capture; r_i is read from live_pass's
+    own FIFO forward with capture=True, once per step."""
+    model, docs, ids, mask = world
+    calls = []
+    real = e0d.cross_capture
+
+    def counting(*a, **k):
+        calls.append(1)
+        return real(*a, **k)
+
+    monkeypatch.setattr(e0d, "cross_capture", counting)
+    e0d.measure_batch(model, docs, ids, mask, seed=0)
+    assert len(calls) == ids.shape[1]
+
+
+def test_c1_reads_the_t0_manifest_from_the_t0_record(e0d, tmp_path):
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.t0_manifest(tmp_path)
+    assert ei.value.control == "C1"
+    rec = tmp_path / "t0-substrate"
+    rec.mkdir()
+    (rec / "manifest.json").write_text(
+        json.dumps({"substrate_manifest": "/x/MANIFEST.sha256", "repo_root": "/y"})
+    )
+    got = e0d.t0_manifest(tmp_path)
+    assert got["manifest"] == Path("/x/MANIFEST.sha256") and got["cwd"] == Path("/y")
+    assert "rsr-substrate/2026-09-27" not in RUN.read_text()
+
+
+# --------------------------------------------------------------------------- #
+# main(): A1.4 crash/kill separation, the exit mapping, claims.json
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def cleared(e0d, monkeypatch, fake_ledger, tmp_path):
+    """main() with C8/C1/C2 passing and measure_seed replaced by hand-built cells.
+    Nothing here generates a document of any range."""
+    gen = []
+    monkeypatch.setattr(e0d, "_generate_document", lambda i, cfg: gen.append(i))
+    monkeypatch.setattr(
+        e0d, "check_authority", lambda *a, **k: {"rho_star": 0.5, "rulings": {}}
+    )
+    monkeypatch.setattr(e0d, "check_substrate", lambda root: {})
+    monkeypatch.setattr(
+        e0d, "t0_manifest", lambda runs: {"manifest": tmp_path / "M", "cwd": tmp_path}
+    )
+    monkeypatch.setattr(e0d, "used_ranges", lambda runs: [])
+    monkeypatch.setattr(e0d, "substrate_recheck", lambda m, cwd: {"rc": 0})
+    monkeypatch.setattr(e0d, "BOOT_N", 30)
+    state = {"score": "bad", "raise": None}
+
+    def fake_measure(seed, **kw):
+        if state["raise"] is not None:
+            raise state["raise"]
+        return {"seed": seed, "M": 4, "n_docs": 40, "S": 16,
+                "cells": _cells(score=state["score"], seed=seed)}  # fmt: skip
+
+    monkeypatch.setattr(e0d, "measure_seed", fake_measure)
+    state["gen"] = gen
+    return state
+
+
+def _rows(fake_ledger):
+    return json.loads(fake_ledger.last.path.read_text())["rows"]
+
+
+def _row(fake_ledger, key):
+    got = [r["value"] for r in _rows(fake_ledger) if r["key"] == key]
+    return got[-1] if got else None
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        ValueError("boom"),
+        ZeroDivisionError(),
+        KeyboardInterrupt(),
+        SystemExit(1),
+        SystemExit(0),
+    ],
+    ids=[
+        "ValueError",
+        "ZeroDivisionError",
+        "KeyboardInterrupt",
+        "SystemExit1",
+        "SystemExit0",
+    ],
+)
+def test_a_crash_exits_3_never_1(e0d, cleared, fake_ledger, exc):
+    """A1.4: any exception, SystemExit and KeyboardInterrupt included, exits 3
+    with the traceback in the ledger; no class is written."""
+    cleared["raise"] = exc
+    assert int(e0d.main([])) == 3
+    tb = _row(fake_ledger, "measurement_raised")
+    assert tb is not None and "Traceback" in tb["traceback"]
+    assert _row(fake_ledger, "e0d.class") is None
+    assert fake_ledger.last._status in ("crashed", "did_not_run")
+    assert fake_ledger.last.commands[-1] == 3
+
+
+def test_exit_1_is_emitted_only_after_the_class_is_written(
+    e0d, cleared, fake_ledger, monkeypatch
+):
+    cleared["score"] = "bad"
+    assert int(e0d.main([])) == 1
+    assert _row(fake_ledger, "e0d.class") == "CONFOUND"
+    assert fake_ledger.last._status == "failed"
+    # the same run with the class never reaching the written ledger: exit 3
+    real_note = _FakeLedger.note
+
+    def drop_class(self, k, v, *, how):
+        if k != "e0d.class":
+            real_note(self, k, v, how=how)
+
+    monkeypatch.setattr(_FakeLedger, "note", drop_class)
+    assert int(e0d.main([])) == 3
+
+
+def test_the_exit_guard_reads_the_class_back(e0d, tmp_path):
+    p = tmp_path / "ledger.json"
+    p.write_text(json.dumps({"rows": [{"key": "e0d.class", "value": "CONFOUND"}]}))
+    assert e0d.confirm_exit(p, 1) == 1
+    with pytest.raises(RuntimeError):
+        e0d.confirm_exit(p, 0)
+    p.write_text(json.dumps({"rows": [{"key": "e0d.class", "value": "AGREE"}]}))
+    assert e0d.confirm_exit(p, 0) == 0
+    with pytest.raises(RuntimeError):
+        e0d.confirm_exit(p, 1)
+    p.write_text(json.dumps({"rows": []}))
+    with pytest.raises(RuntimeError):
+        e0d.confirm_exit(p, 2)
+
+
+def test_main_runs_the_amended_analysis_when_cleared(e0d, cleared, fake_ledger):
+    cleared["score"] = "good"
+    assert int(e0d.main([])) == 0
+    assert _row(fake_ledger, "e0d.class") == "AGREE"
+    assert _row(fake_ledger, "e0d.labels") == ["AGREE"] * 3
+    for k in ("e0d.class_all_cells", "e0d.bos_sensitive", "e0d.gate_sensitive",
+              "e0d.class_ungated", "e0d.class_zero", "e0d.rank_ceiling_seeds",
+              "e0d.degenerate_under_ceiling", "c1_substrate_end"):  # fmt: skip
+        assert _row(fake_ledger, k) is not None, k
+    assert cleared["gen"] == []
+
+
+def test_claims_json_is_written_only_by_a_real_run(e0d, cleared, fake_ledger):
+    cleared["raise"] = ValueError("boom")
+    assert int(e0d.main([])) == 3
+    claims = fake_ledger.last.path.parent / "claims.json"
+    assert not claims.exists()
+    cleared["raise"] = None
+    assert int(e0d.main([])) == 1
+    got = json.loads(claims.read_text())
+    assert isinstance(got, list) and len(got) >= 4
+    for c in got:
+        assert set(c) == {"claim", "command", "expected"}
+        assert all(isinstance(c[k], str) and c[k] for k in c)
+    assert any(c["expected"] == "CONFOUND" for c in got)
+    assert any(c["expected"] == "1" for c in got)
+
+
+def test_a_refused_run_writes_no_claims(e0d, monkeypatch, fake_ledger):
+    assert int(e0d.main([])) == 3  # C8, today
+    assert not (fake_ledger.last.path.parent / "claims.json").exists()
