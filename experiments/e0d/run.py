@@ -67,7 +67,13 @@ from rsr.data.synthetic import (  # noqa: E402
     generate,
     true_demand,
 )
-from rsr.exit_codes import ArgumentParser, Exit, did_not_run, run_main  # noqa: E402
+from rsr.exit_codes import (  # noqa: E402
+    ArgumentParser,
+    Exit,
+    did_not_run,
+    run_main,
+    status,
+)
 from rsr.metrics.loo import KIND, loo_delta_loss, stream_annotations  # noqa: E402
 from rsr.model.tg import TGConfig, TGModel  # noqa: E402
 from rsr.model.tg.model import init_memory  # noqa: E402
@@ -1512,6 +1518,17 @@ def _measure_and_classify(a, led, argv_s: str) -> Exit:
 
 
 def main(argv: list[str] | None = None) -> Exit:
+    """A1.4, outermost: whatever raises before the measurement's own guard can
+    ledger it (the ledger's construction, the manifest write, argument parsing)
+    still exits 3 -- never 1, never 0."""
+    try:
+        return status(_main(argv))
+    except BaseException as e:  # A1.4: nothing escapes as 1
+        traceback.print_exc()
+        return did_not_run(f"{type(e).__name__}: {e} (before the run could ledger it)")
+
+
+def _main(argv: list[str] | None) -> Exit:
     p = ArgumentParser(prog="e0d", description=__doc__)
     p.add_argument("--ckpt-root", type=Path, default=DEFAULT_CKPT_ROOT)
     p.add_argument("--rulings-dir", type=Path, default=DEFAULT_RULINGS_DIR)
@@ -1579,7 +1596,7 @@ def main(argv: list[str] | None = None) -> Exit:
         return did_not_run(reason)
 
     try:
-        return _measure_and_classify(a, led, argv_s)
+        return status(_measure_and_classify(a, led, argv_s))
     except ControlFailed as e:
         return refuse_run(
             "control_failed",

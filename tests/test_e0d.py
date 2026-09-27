@@ -1182,3 +1182,15 @@ def test_claims_json_is_written_only_by_a_real_run(e0d, cleared, fake_ledger):
 def test_a_refused_run_writes_no_claims(e0d, monkeypatch, fake_ledger):
     assert int(e0d.main([])) == 3  # C8, today
     assert not (fake_ledger.last.path.parent / "claims.json").exists()
+
+
+def test_a_raise_before_the_ledger_exists_still_exits_3(e0d, monkeypatch, fake_ledger):
+    """A1.4: the ledger's construction and the manifest write sit outside the
+    measurement's guard; a raise there (or a bad argument) is still 3, never 1."""
+
+    def boom(self, cfg):
+        raise OSError("manifest write refused")
+
+    assert int(e0d.main(["--no-such-flag"])) == 3
+    monkeypatch.setattr(_FakeLedger, "manifest", boom)
+    assert int(e0d.main([])) == 3
