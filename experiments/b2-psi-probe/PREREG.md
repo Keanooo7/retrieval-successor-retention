@@ -617,3 +617,366 @@ and any ψ̂ fit on any data.
 - **TBD-2** the capture cost: _not yet written._
 - **TBD-3** `N_E`: _not yet written; computed by §9.4 before any `EVAL` document is run._
 - **The "already seen" addendum after B0:** _not yet written._
+
+## Amendment 1 (2026-09-27, pre-data)
+
+**Written 2026-09-27 by a model** (Claude Opus 5.5, an RSR researcher session, item AMD). **Not
+written by Brendan.** **Append-only.** Nothing above this heading has been edited; it is
+byte-identical to `e5ab398`. Where this section and the text above disagree, **this section
+governs**, including over the front matter.
+
+- **Source.** Every paragraph below answers one finding of
+  `~/Documents/RSR-2026-09-27-plan/reviews/PREREG-REVIEW-e0d-b2.md` (the review), and applies the
+  review's amendment text, quoted. Where the author of this amendment disagrees with the review or
+  has to fill a gap it leaves, the paragraph carries a marked **author's note**. No author's note
+  changes a gating rule the review wrote.
+- **Authority.** PLAN-v4 B2 "Commit order" step 4 restricts edits only **after B0**, and
+  `~/Documents/RSR-2026-09-27-plan/LOOP.md` ("Hard stops", clarified in cycle 3) allows an
+  append-only amendment committed alone before any data exists, citing the finding it answers.
+- **This amendment is itself pre-data and pre-B0.** At this commit:
+  - no document of `FIT_TRAIN`, `FIT_VAL`, `EVAL` or `[900000, 920000)` has been generated, run or
+    inspected, and no ψ̂ has been fitted on any data;
+  - no B0 PREREG and no B0 branch exists (`git branch -a` shows none; the only `b0` name,
+    `origin/s0/b0b-sigkill`, is Sprint 0's unrelated "Brief 0");
+  - no E0d data exists (E0d's own Amendment 1, `run/e0d@84e21c5`, is also pre-data).
+- **The self-reference, stated.** The fence as committed (lines 35–43 above) forbids this very
+  amendment. A1.1 replaces that fence with PLAN-v4's, as the review's blocker B2-B1 requires. The
+  amendment is made under PLAN-v4 and LOOP.md, not under the committed fence; a reader who holds
+  the committed fence authoritative should read this amendment as the reported defect the fence
+  asks for, and B2's classification as void until Brendan rules. That is the owner's call.
+
+### A1.1 The fence (answers B2-B1, BLOCKER)
+
+The fence paragraph (lines 35–43, "**The fence.** After this commit, …" through "… it voids the
+classification.") and the matching sentence under the "already seen" section ("**After B0,** only
+…") are superseded by:
+
+> **The fence.** Until the B0 PREREG is committed, this file may be amended only by commits that:
+> (a) each cite the adversarial-review finding they apply (`reviews/PREREG-REVIEW-e0d-b2.md`);
+> (b) show their `git diff` against `e5ab398`; and
+> (c) are ordered before the B0 PREREG commit.
+> No such amendment may use any B2, B0 or E0d data. **After the B0 PREREG is committed,** only
+> three things may be added: … *(the existing three items, unchanged)*.
+
+The existing three items, unchanged, are: (1) **n**: the TBD fields `N_F` (and the ridge row
+counts it implies) and `N_E`; (2) **the capture cost**; (3) **an "already seen" addendum** (§A,
+formerly "§15"; see A1.14), listing what B0 showed. Each is added in its own commit showing its
+`git diff` against the commit before it. After the B0 PREREG is committed, an edit outside those
+three is itself a finding and voids the classification, as the committed fence said.
+
+Condition (a) is satisfied here by the finding map, A1.16. Condition (b) is satisfied by the
+commit that lands this section, whose `git diff e5ab398` is additions only.
+
+### A1.2 One-step-shifted companion targets, non-gating (answers B2-M1, MAJOR; and R1)
+
+**Why.** `run_policy_loop` calls `select_eviction` *after* step `t`'s forward has read memory,
+using that forward's `out.srep` as `c_t` (`policy_loop.py`). `OraclePolicy` scores demand from
+`step + 1` ("this step's query has already read memory… so it is not the victim's to lose",
+`oracle.py`). B2's `G_γ[i][t]` starts at `k = 0` (§5), so it includes `X[i][t]`, demand the
+eviction at `t` can no longer affect. At γ = 0 the whole target is decision-irrelevant; at
+γ = 0.9 the k = 0 term pulls ψ̂ toward protecting the slot just read (at a query step, the
+just-answered assert, whose future value is 0 since each fact is queried once). This is
+spec-faithful (§3.2.2, §3.3, correction 2), so **the gating arms are not changed**.
+
+**§5 "The target arms" gains a row; §7 and §9.6 gain non-gating arms:**
+
+> | **(U⁺, C⁺) one-step-shifted, non-gating** | as U and C, but `G⁺_γ[i][t] = Σ_{k=1}^{S−1−t} γ^{k−1} X[i][t+k]` (demand from the next step on, the quantity `OraclePolicy` scores) | as U and C | **Reported beside ψ̂-U and ψ̂-C with the same outcome rule; never gating.** It exists so that a LOSS or EQUIV can be attributed to the k = 0 term or to the target. |
+
+- **γ values:** U⁺ and C⁺ are fitted and run at **γ = 0.9 and γ = 0**, per checkpoint and seed.
+  At γ = 0, `G⁺_0[i][t] = X[i][t+1]` (with `0⁰ = 1`).
+- **Rows:** exactly U's and C's rows; at `t = S−1` the sum is empty and `G⁺ = 0`. Declared.
+- **Fit:** the §6 bilinear ridge with every §6 rule as amended here (A1.6, A1.7); the design
+  matrix is U's (resp. C's), only `y` differs.
+- **Outcome rule:** §9.5, against **the same `ref` and δ as the unshifted arm** (U⁺ against
+  `ref_U`, C⁺ against `ref_C`).
+- **Reporting:** a side-by-side table, per seed, of ψ̂-U, ψ̂-U⁺, ψ̂-C and ψ̂-C⁺ at each γ, with Δ,
+  CI and outcome. The truth table (§9.6) is computed on the unshifted arms only. A second
+  truth-table class computed on (U⁺, C⁺) is reported, labelled **non-gating, companion**.
+
+**E0h companion (R1), added to §10 "Reference, never gating":**
+
+> **k ≥ 1 companion, never gating.** The within-step R² of ψ̂-U⁺(γ = 0) (B2-M1: the target
+> `X[i][t+1]`, the one-step-ahead demand the γ = 0 oracle scores) on the same logits and rows. If
+> ψ̂-U(γ = 0) is COLLINEAR and ψ̂-U⁺(γ = 0) is not, the report states: "collinearity is inherited
+> from the k = 0 term of the §3.2.2 target". The class is unchanged. The interpretation is
+> Brendan's.
+
+> **🔴 Flag to Brendan (not a correction; owner's call):** spec §3.2.2 and §3.3 include `r_i(t)` in
+> the return, but the eviction at `t` is decided after step `t`'s read. Whether this is a spec
+> defect for `spec-corrections.md` is the owner's decision.
+
+This amendment does **not** edit `spec-corrections.md`, the spec, or the gating targets.
+
+### A1.3 E0h's own entry point and exit code (answers B2-M2, MAJOR)
+
+**Why.** E0h is a spec kill gate (spec :552, "Kills it? Yes"). As committed, COLLINEAR exits 0
+and "exact logits unavailable" gives B2 exit 0 with E0h marked DID NOT RUN, so a kill gate that
+did not run and one that fired both leave rc 0.
+
+**§12's E0h clause** ("or E0h's exact logits unavailable (that one affects E0h only; B2 may still
+exit 0 with E0h marked DID NOT RUN)") **is replaced, and §10.1 is added:**
+
+> **§10.1 E0h's own status.** E0h is run by its own entry point (`run.py e0h`), writes its own
+> ledger keys (`e0h.*`) and returns its own rc:
+> - **0:** NOT_COLLINEAR;
+> - **1:** COLLINEAR, emitted only once a ratifying ruling exists;
+> - **2:** INTERMEDIATE, UNINFORMATIVE, or unratified;
+> - **3:** DID NOT RUN, which includes logits being unavailable.
+>
+> B2's rc covers B2 alone. No report may give B2's rc as E0h's.
+
+- "Unratified" means: while no ruling ratifying (or replacing) the E0h thresholds exists, E0h
+  exits **2 whatever the R² values are**, and its numbers are reported unclassified (§10, "The
+  threshold"). Only after ratification can E0h exit 0 or 1.
+- `run.py e0h` needs B2's ψ̂-U(γ = 0) and ψ̂-U⁺(γ = 0) fits and the hooked FIFO rollout of `EVAL`
+  (A1.5). If either is absent, E0h exits 3.
+- An exception inside `run.py e0h` exits **3** (not 1), with the traceback in the ledger; exit 1
+  is emitted only after `e0h.class = COLLINEAR` has been written under a ratifying ruling. (This
+  is E0d-M3's rule, applied to E0h's kill gate; the review's M2 text implies it by making 1
+  mean COLLINEAR only.)
+- B2's own §12 table is otherwise unchanged: 0 = ran, every control passed, classification
+  reached; 1 = a measurement defect; 3 = did not run or a control failed.
+
+### A1.4 A compute ceiling on EVAL (answers B2-M3, MAJOR)
+
+**Why.** About 25 arm-runs per EVAL document, each 48 B = 1 forwards, at `N_E = 40000` × 2
+checkpoints × 3 seeds is about 2.9×10⁸ forwards: about 80 h even at 1 ms per forward, with no rule
+for an unaffordable `N_E`, while PLAN-v4 §5 schedules B2 in Day 2–3.
+
+**§9.4 gains item 7:**
+
+> 7. **Compute ceiling, fixed now.**
+>    - **Tier 1** (ckpt3000 × γ = 0.9, the arms in §9.5–9.7 plus FIFO, age-only, random, oracle
+>      and kind-oracle) runs on `N_E` documents.
+>    - **Tier 2** (ckpt2500, γ = 0, U-r, U⁺ and C⁺) runs on the first `min(N_E, 4096)` of the same
+>      documents and is labelled so.
+>    - Before any EVAL document is run, TBD-2 records the measured cost per arm-document. If Tier 1's
+>      projected wall time exceeds **72 h**, `N_E` is reduced to the largest value that fits, and
+>      the run is labelled **UNDERPOWERED**. The decision rule is read unchanged.
+
+**The forward count at the cap** (B = 1 forwards; 48 per arm-document; 3 seeds):
+
+| Tier | arm-runs per (document, seed) | documents at the cap | B = 1 forwards at the cap |
+|---|---|---|---|
+| 1 | 12: ψ̂-U, ψ̂-C, FIFO, age-only (U), age-only (C), random ×5, oracle, kind-oracle (random tie-break, A1.10) — all ckpt3000, γ = 0.9 | 40,000 | 12 · 48 · 40,000 · 3 = **69,120,000 ≈ 6.9×10⁷** |
+| 2 | 44: at ckpt3000, 16 (the γ = 0 set of ψ̂-U, ψ̂-C, age-only ×2, oracle, kind-oracle, kind-oracle oldest-tie, U⁺, C⁺; plus U-1..3, U⁺, C⁺, kind-oracle oldest-tie and fact/filler at γ = 0.9); at ckpt2500, all 28 arms | 4,096 | 44 · 48 · 4,096 · 3 = **25,952,256 ≈ 2.6×10⁷** |
+| total | | | **≈ 9.5×10⁷**, against ≈ 2.9×10⁸ uncapped (review) |
+
+- **Wall-time budget.** Tier 1: **72 h** (the review's rule, above), i.e. the Tier 1 cap is
+  affordable only at ≤ 3.75 ms per B = 1 forward including the policy's overhead
+  (72 · 3600 s / 6.912×10⁷). TBD-2 measures that cost; `N_E` follows from it.
+- *Author's note (Tier 2 budget; an addition the review does not contain).* The review gives no
+  Tier 2 budget. I add one so that Tier 2 cannot silently extend B2 past PLAN-v4's schedule:
+  **Tier 2's projected wall time, from the same TBD-2 cost, must be ≤ 24 h; if it is not, Tier 2's
+  document count is reduced to the largest value that fits and labelled `TIER2_REDUCED`.** Tier 2
+  is never gating, so this can change no classification.
+- *Author's note (arms the review's tiers do not name).* fact/filler and the kind-oracle
+  oldest-tie variant (A1.10) are reported, never gating, so I place them in Tier 2. E0h needs no
+  arm-run of its own: its rows are the Tier 1 FIFO rollout (ckpt3000, `N_E` documents), captured
+  with the A1.5 hook; the ckpt2500 E0h report uses the Tier 2 FIFO rollout.
+- **The oracle** at γ = 0.9 is kept in Tier 1 as the review lists it (its headroom is reported on
+  `EVAL`; δ still comes from `FIT_VAL`, §9.3).
+
+### A1.5 E0h logits: an exact pre-hook, mean collapse, the right control (answers B2-M5, MAJOR)
+
+**Why.** `Q_TOK_COLLAPSE` sums **post-softmax** α over query tokens (`policy_loop.py`,
+`cross_capture`). The committed control collapses logits "by the same rule", then checks that
+softmaxed logits reproduce captured α; since `softmax(Σ_q logit) ≠ Σ_q softmax(logit)`, that
+control fails spuriously and marks E0h DID NOT RUN. Collapsing logits by sum also multiplies them
+by `Q_real`, which varies by step, and breaks a pooled constant-β regression.
+
+**§10 "Regressors": the three sub-bullets (collapse "by the same rule as α"; "recomputed in the
+harness"; the softmax control; and "If the build cannot produce exact logits, E0h is exit 3 … No
+substitute (for example `log α`) is silently used") are replaced by:**
+
+> - Logits are captured per query token by a forward pre-hook on each `cross_attn` (the forward
+>   pass is unchanged) and **collapsed by the mean over real query tokens**.
+> - **Control:** per query token, *before* collapse, `softmax(recomputed logits)` reproduces
+>   `out.cross_attention` to ≤ 1e-5.
+> - If the hook cannot be built, the within-step primary may use the per-token `log α` (exactly
+>   equal after within-step demeaning, since the full memory has no masked slot). Only the pooled
+>   secondary is then DID NOT RUN.
+
+- **The hook.** A `register_forward_pre_hook` on each block's `cross_attn` captures its input
+  (`ln_mem(x)`, `mem_kv`, `mem_valid`); the logit is `query(x) · scale · key(mem_kv + PE)`,
+  per head. `test_fidelity.py` and the forward pass are untouched. A failed control is E0h exit 3.
+- **Why `log α` is exact for the primary.** Per query token `q`,
+  `log α_{q,i} = logit_{q,i} − logsumexp_i(logit_{q,·})`; the second term is constant over slots
+  `i`, so it vanishes under within-step demeaning, and the mean over `q` of demeaned values equals
+  the demeaned mean. E0h rows are full-memory FIFO-resident slots only, so no slot is masked.
+- If `log α` is used, the report says so, and E0h's ledger records `e0h.regressor_source =
+  "log_alpha"`; otherwise `"prehook_logit"`.
+
+### A1.6 The ridge residual check applies to the selected λ (answers B2-M4, MAJOR)
+
+**Why.** At `λ = 1e-6 · tr/p` the condition number can reach 1e8–1e9 for Kronecker features of
+low effective rank; a backward-stable solve's relative residual (≈ `c(p) · ε · κ`) can then exceed
+1e-8 at p = 16,640, and a grid point that will never be selected would end the run at exit 1.
+
+**§6 "Method": the Cholesky and residual bullets are replaced by:**
+
+> - **Method:** eigendecompose `XᵀX` once per Gram (fp64), and solve every λ spectrally.
+> - **Grid points:** any grid point whose relative residual exceeds `1e-6` is ineligible and
+>   logged.
+> - **The selected λ:** it must have a relative residual ≤ 1e-8. Otherwise the run exits 1.
+> - **If no grid point is eligible,** the run exits 1.
+
+The relative residual is §6's `‖(XᵀX + λ'I)w − Xᵀy‖ / ‖Xᵀy‖`. §11 control 10 now refers to the
+selected λ's check and the "no eligible grid point" check. λ is selected among eligible grid
+points only (A1.7).
+
+### A1.7 λ selection on the within-step demeaned MSE (answers B2-m3, R7)
+
+§6 "λ", first sub-bullet, is replaced by:
+
+> λ minimises the **within-step demeaned** validation MSE over full-memory rows (argmin is
+> shift-invariant within a step). The raw MSE is reported.
+
+Ties still go to the larger λ, and the refit on `FIT_TRAIN` alone is unchanged.
+
+*Author's note (scope).* This applies to every fit whose output is an eviction score: the
+bilinear heads (U, C, U-r, U⁺, C⁺) and the age-only heads. The age-decodability predictor (§6,
+§8.1) is not an eviction score, and its reported statistic is the R² of raw age, so it keeps λ by
+raw validation MSE. The review does not address that predictor.
+
+### A1.8 E0h thresholds: seed wording and the 0.49 provenance (answers B2-m9 and the 0.90/0.49 assessment)
+
+**§10's NOT COLLINEAR row is replaced by:**
+
+| Proposed class | Condition (within-step R², ψ̂-U(γ = 0), ckpt3000) |
+|---|---|
+| **NOT COLLINEAR** | R² < **0.49** on **every informative seed, with at least 2 informative** |
+
+COLLINEAR (≥ 0.90 on ≥ 2 of 3 seeds), INTERMEDIATE and UNINFORMATIVE are unchanged. A seed is
+informative when it is not UNINFORMATIVE. The front matter's `E0h_proposed` "< 0.49 on all 3" is
+superseded by this row.
+
+**Provenance note for 0.49.** 0.49 is `0.7²`, and 0.7 is the spec's line in E2's vacuity gate
+(§7.1; kill table :558, "Partial ρ < 0.7"). **That is a different statistic:** E2's 0.7 is a
+univariate *partial rank* correlation, while E0h's R² is a multiple R² over 12 regressors (6
+cross-attention layers × H = 2 heads). The borrowing is a convention, not a derivation, and a
+reader should not read E0h's 0.49 as the spec having set it.
+
+Both numbers (0.90, 0.49) remain **PROPOSED**; the review recommends ratifying them only together
+with A1.3 (E0h's own rc) and the k ≥ 1 companion (A1.2).
+
+### A1.9 Declared departure: E0h's rows (answers B2-m7)
+
+Added to §10:
+
+> **Declared departure from PLAN-v4:** E0h's rows come from EVAL's FIFO rollout, not from the
+> FIT capture, so that ψ̂ is scored out of sample.
+
+### A1.10 The kind-oracle's tie-break (answers B2-m1, R4)
+
+§6, the kind-oracle policy ("with ties going to the oldest"), is replaced by:
+
+> Ties within the lowest class are broken **uniformly at random**, with
+> `random.Random(f"ko:{seed}:{doc_id}:{t}")`. The oldest-tie-break variant is reported as a
+> secondary. Q2 uses the random-tie-break comparator.
+
+Why: an age tie-break gives Q2's comparator age information that ψ̂ is barred from. The
+random-tie-break kind-oracle is also the kind-oracle of the §9.4 power list, §9.6 and every
+Tier 1 use; the oldest-tie variant is Tier 2 (A1.4).
+
+### A1.11 δ at γ = 0 (answers B2-m2, R8)
+
+§9.3 is amended:
+
+> At γ = 0, δ is the γ = 0.9 δ of the same seed. The γ = 0 oracle's headroom is reported, not
+> used.
+
+Why: with the one-step γ = 0 oracle ≈ FIFO, a γ = 0 δ near 0 makes EQUIV unreachable and LOSS a
+sign test. This applies to every γ = 0 contrast, including U⁺ and C⁺ at γ = 0.
+
+### A1.12 Power: only gating contrasts; and what the power is sized for (answers B2-m4, R9)
+
+§9.4.1 is amended:
+
+> Only the gating contrasts (the first four bullets) enter the max. ψ̂-U − kind-oracle is reported
+> with the N_E that results.
+
+*Author's note (a miscount in the review's text; the intent is unambiguous).* §9.4 item 1 has
+**four** bullets, and the fourth is "ψ̂-U − kind-oracle", which the same sentence then excludes.
+I read "the first four bullets" as **the contrasts of the first three bullets** (six contrasts:
+ψ̂-U − ref_U and ψ̂-C − ref_C, all-query and on `gap_2_to_M`; ψ̂-U and ψ̂-C against the random
+mean). The kind-oracle contrast (Q2, outside the truth table) does not enter the max.
+
+**Stated, per R9.** The power is sized for EQUIV (CI half-width ≤ δ/2), not for WIN. At a true
+Δ = δ, per-seed WIN is ≈ 50 %, so 3 of 3 WIN is ≈ 12.5 %. PLAN-v4 accepted this.
+
+### A1.13 WIN/EQUIV overlap (answers B2-m8, R10)
+
+§9.5 is amended:
+
+> If `Δ̂ ∉ [lo, hi]`, the contrast is UNRESOLVED and flagged `CI_EXCLUDES_ESTIMATE`.
+
+This check runs before the WIN/LOSS/EQUIV order. It removes the only WIN ∧ EQUIV case (`Δ̂ ≥ δ >
+hi`); LOSS/EQUIV and WIN/LOSS were already disjoint. It applies to Q2 (§9.7) and to every
+companion arm too.
+
+### A1.14 "§15" is renamed "§A" (answers B2-m12)
+
+The section headed "## 15. "Already seen" declaration" above is hereafter **§A, "Already seen"**.
+Every reference in this file to "§15" in that sense (the fence's item 3; the addendum slots)
+means §A. **This file has no content for, and makes no reference to, spec §15**, which no model
+may fill. The heading text above is left as committed only because this file is append-only.
+
+### A1.15 The remaining minors and R-items
+
+- **Ranges (B2-m5).** §3 is amended:
+  > The table of used ranges also asserts `[262144, 263168)` (E0d, per `run/e0d@5357ad2`).
+  > `[900000, 920000)` stays unused by B2.
+
+  Why: the conditional row ("if `experiments/e0d/PREREG.md` exists on the run's branch") is false
+  on `run/b2-psi-probe`, so it would silently skip E0d's range. There is no collision today
+  (review §1). The "Coordination with E0d" paragraph of §3 is stale: `run/e0d` now exists and E0d
+  took `[262144, 263168)`, not the reserved block.
+- **N_F (B2-m6).** TBD-1 is amended:
+  > `N_F = ⌈10·p / 632⌉`, or a larger value fixed in the TBD-1 commit **before any fit is
+  > computed**. It is never revised after a fit.
+
+  At `d = 128`, `p = 16,640`, this is `⌈166,400 / 632⌉ = 264` (computed, to be asserted from `p`).
+- **T0 manifest path (B2-m11, R14).** §2's "T0 check" and §11 control 1 read the T0 manifest path
+  from the T0 record (`runs/t0-substrate/manifest.json` or its equivalent), not the literal
+  `~/rsr-substrate/2026-09-27/MANIFEST.sha256`. No T0 record at start is exit 3.
+- **`ref` (B2-m10, R3). NOT adopted by this amendment.** The review marks it optional and says it
+  changes PLAN-v4's "whichever scores higher", so it needs the PM's or Brendan's sign-off. The
+  committed §9.3 rule stands. The proposal, carried to them verbatim: "`ref` = age-only only if
+  its paired FIT_VAL CI against FIFO has lower bound > 0; otherwise FIFO." If adopted, it is by a
+  separate cited amendment ordered before the B0 PREREG (A1.1).
+- **R3 reporting.** The `ref` chosen for each (seed, arm, γ) is reported beside that arm's Δ,
+  since ψ̂-U and ψ̂-C may be compared against different refs.
+- **R2, declared.** The age-only head is a one-hot ridge. The C rows see only ages ≤ 16, so the
+  coefficients for ages never seen in its rows shrink to 0 under ridge; since the targets are
+  non-negative, an older slot kept by an age-only head then scores ≈ 0 and is expected to be
+  evicted next.
+- **R5, declared.** F-X1's random (0.3305 residency past gap M) never evicted the newest write, so
+  it is **not** this file's random arm (uniform over all live slots). F-X1 is not quoted as this
+  arm's prior.
+
+### A1.16 Finding → paragraph map
+
+| Review finding | Severity | Answered in |
+|---|---|---|
+| B2-B1 (the fence) | BLOCKER | A1.1; pre-data/pre-B0 statement in the preamble |
+| B2-M1 (k = 0 term; U⁺/C⁺ at γ = 0 and 0.9; flag to Brendan) | MAJOR | A1.2 |
+| R1 (E0h k ≥ 1 companion) | assessment → amendment | A1.2, "E0h companion" |
+| B2-M2 (E0h entry point and rc) | MAJOR | A1.3 |
+| B2-M3 (EVAL compute ceiling; forward count; wall time) | MAJOR | A1.4 |
+| B2-M4 (residual check at the selected λ) | MAJOR | A1.6 |
+| B2-M5 (pre-hook logits, mean collapse, `log α`, control) | MAJOR | A1.5 |
+| B2-m1 (R4, kind-oracle tie-break) | MINOR | A1.10 |
+| B2-m2 (R8, γ = 0 δ) | MINOR | A1.11 |
+| B2-m3 (R7, λ selection) | MINOR | A1.7 |
+| B2-m4 (R9, gating contrasts only drive `N_E`) | MINOR | A1.12 |
+| B2-m5 (E0d's range asserted) | MINOR | A1.15 |
+| B2-m6 (`N_F` rule) | MINOR | A1.15 |
+| B2-m7 (declared departure, E0h rows) | MINOR | A1.9 |
+| B2-m8 (R10, WIN/EQUIV overlap) | MINOR | A1.13 |
+| B2-m9 (E0h seed wording) | MINOR | A1.8 |
+| B2-m10 (R3, `ref` rule) | MINOR, optional | A1.15 — **not adopted; needs sign-off** |
+| B2-m11 (R14, T0 path) | MINOR | A1.15 |
+| B2-m12 ("§15" → "§A") | MINOR | A1.14 |
+| E0h 0.90/0.49 assessment (0.49 provenance) | assessment | A1.8 |
+| R2, R3, R5, R9 notes | assessment | A1.15, A1.12 |
