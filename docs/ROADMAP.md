@@ -145,6 +145,25 @@ numbers fed `torch.randn` gestalts, which is the wrong premise for real TG.
 also part of the §3.7 reduction condition.** An unlabelled pre-E0e RSR arm is partially reduced
 toward TG. Put it in the run metadata.
 
+> 📌 **Progress, 2026-09-27 (merged to `main` at `b21f3c3`).** The text above is the plan and is
+> unchanged.
+>
+> - ✅ **`eng-loo` done** (#48). `src/rsr/metrics/loo.py` is real: resample and zero knockouts, and
+>   `L_PAIRS`. It is E0d's instrument. The oracle and shadow-scorer uses are not built on it yet.
+> - ✅ **liveness-wiring done** (#50). Every `train()` run measures its own memory's liveness (`src/rsr/train/loop.py`); `Exit.INERT = 5`
+>   (`src/rsr/exit_codes.py`), and an inert checkpoint is quarantined.
+> - ◐ **E0e ran; its values are NOT recorded** (#51; `experiments/e0e/RESULTS.md`,
+>   `runs/e0e/ledger.json`, verified). `tau` 0.27555, `E_lifetime` 13.1667, `gamma_b` 0.30380.
+>   **It did not auto-unlock `γ_b`:** the run made none of its `record()` calls. Which substrate E1's
+>   constants come from is the owner's D2 (RESEARCH-CONTEXT §12 items 8–10). `ProtectionBias` is
+>   still a stub, so the ordering trap above still applies.
+> - ▶ **E0d is next.** Its instrument exists. Its queue item (`docs/queue/items/e0d.md`) still
+>   requires a `R-*-retrieval-shown` ruling, and **that file does not exist**. Only the owner writes
+>   in `docs/owner/`: on 2026-09-26 the permission system refused an agent's write there. Fresh-stream
+>   arm B's retrieval (`runs/fresh-stream/ledger.json`, SCAFFOLD) is the evidence a ruling would
+>   cite. The ruling itself is Brendan's to write.
+> - ☐ **E0a re-run** (the `coord_check` port) has not started. The gate needs both E0d and E0a.
+
 ### Sprint 3 — the baselines
 
 `leading_edge.py` **on the microstructure coherence graph, not the macrostructure** (correction 26 —
