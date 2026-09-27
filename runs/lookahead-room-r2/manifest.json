@@ -1,0 +1,74 @@
+{
+  "M": 16,
+  "S": 48,
+  "amendment1": "C1 = argmax identity + float32-mean accuracy exact",
+  "amendment1_commit": "674dd37",
+  "checkpoint_sha256": {
+    "B.ckpt2500.seed0": "26c4162e7dc6ef1f80dffa451e4ee75c56360bc94227533b38a45b62003e3176",
+    "B.ckpt2500.seed1": "327c3facde61ef9a7f4b9fcaeb31efcf40ab36d65a5d584ec97637db334bdadd",
+    "B.ckpt2500.seed2": "74b026f1dd3fe59eb473e501c37ed9bb7d836276270ec875939e5654d8e86ddd",
+    "B.ckpt3000.seed0": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+    "B.ckpt3000.seed1": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+    "B.ckpt3000.seed2": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8"
+  },
+  "checkpoints": [
+    "B.ckpt2500",
+    "B.ckpt3000"
+  ],
+  "device": "cpu",
+  "expected": "Pre-registered: pending-vs-filler AUC T0 ~0.6 (resident), G_0.9 ~0.75; rule_g0 near FIFO/random (0.79-0.82), rule_g09 ~0.90; headline ckpt3000 TESTABLE_HERE ~45%, PARTIAL ~30%, NO_ROOM ~25%; literal variants ~FIFO; online_g0 within +/-0.03 of rule_g0.",
+  "falsifier": "none of spec section 2 directly; a D1 input. Claim tested: 3b has room here (room_3b = hit(rule_g09) - hit(rule_g0) >= 0.05 with CI lo > 0 every seed). TESTABLE_HERE -> survived, NO_ROOM -> falsified, PARTIAL/INCONCLUSIVE -> inconclusive.",
+  "gammas": {
+    "g09": 0.9,
+    "g097": 0.97
+  },
+  "headline": "B.ckpt3000",
+  "oracle_gamma": 0.97,
+  "policies": [
+    "fifo",
+    "oracle",
+    "pending_fifo",
+    "factfiller",
+    "rule_g0",
+    "rule_g09",
+    "rule_g097",
+    "rule_next",
+    "lit_g0",
+    "lit_g09",
+    "lit_g097",
+    "online_g0"
+  ],
+  "prereg": "experiments/lookahead-room/PREREG.md",
+  "prereg_commit": "527daf4",
+  "question": "Can falsifier 3b (RSR at gamma=0.9 vs gamma=0) discriminate on the S0-03 corpus at M=16, i.e. does a gamma=0.9 demand target buy retention that the gamma=0 target cannot, on frozen fresh-stream arm B?",
+  "run_id": "lookahead-room-r2",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "sets": {
+    "E": [
+      64,
+      1088
+    ],
+    "P": [
+      4096,
+      4160
+    ],
+    "U": "E then P"
+  },
+  "source": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream",
+  "source_ledger_sha256": "56d065caa8b22a48fccf4a3e1124d26ffd2d92e17c6bab588218f1da6ad93782",
+  "threads_per_child": 1,
+  "thresholds": {
+    "ACC_TOL": 1e-12,
+    "BOOT_SEED_BASE": 20260926,
+    "IDENTITY_TOL": 1e-06,
+    "NLL_TOL": 0.0001,
+    "NO_ROOM_MAX": 0.02,
+    "N_BOOT": 2000,
+    "SUM_TOL": 1e-05,
+    "TESTABLE_MIN": 0.05
+  }
+}
