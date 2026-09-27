@@ -141,7 +141,10 @@ def test_the_canary_ledger_row_records_the_exit_code_it_returns(tmp_path, monkey
 
 #: `e` left on 2026-09-26: `experiments/e0e/run.py` is implemented (W7, PREREG
 #: `experiments/e0e/PREREG.md`) and its exit codes are its own tests'.
-STUBS = [f"experiments/e0{x}/run.py" for x in "adfghi"]
+#: `d` left on 2026-09-27: `experiments/e0d/run.py` runs its PREREG preconditions
+#: and writes a ledger, so running it here would write `runs/e0d/` into the tree;
+#: its exit-3 paths are `tests/test_e0d.py`'s (with a fake ledger).
+STUBS = [f"experiments/e0{x}/run.py" for x in "afghi"]
 
 
 @pytest.mark.parametrize("stub", STUBS)

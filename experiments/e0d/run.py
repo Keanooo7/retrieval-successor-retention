@@ -728,12 +728,11 @@ def main(argv: list[str] | None = None) -> Exit:
     led.run_meta(device="cpu")
     argv_s = " ".join(["uv run python", EXPERIMENT, *(argv or sys.argv[1:])])
 
-    def refuse(reason: str, key: str, value) -> Exit:
+    def ledger_refusal(key: str, value) -> None:
         led.note(key, value, how="PREREG §6 / §8 row 0")
         led.status("did_not_run")
         led.command(argv_s, exit_code=int(Exit.DID_NOT_RUN))
         led.write()
-        return did_not_run(reason)
 
     try:
         auth = check_authority(a.rulings_dir)  # C8 -- before anything is read
@@ -742,11 +741,14 @@ def main(argv: list[str] | None = None) -> Exit:
         disj = check_disjoint(D_E0D, seeds=SEEDS, used=used_ranges(a.runs_dir))
         led.note("c2_disjointness", disj, how="generator keys vs committed manifests")
     except ControlFailed as e:
-        return refuse(str(e), "control_failed", {"control": e.control, "msg": str(e)})
+        ledger_refusal("control_failed", {"control": e.control, "msg": str(e)})
+        return did_not_run(str(e))
     except (OSError, RuntimeError, ValueError, KeyError) as e:
         msg = f"{type(e).__name__}: {e}"
-        return refuse(msg, "measurement_raised", msg)
-    return refuse(PENDING_AMENDMENT, "not_implemented", PENDING_AMENDMENT)
+        ledger_refusal("measurement_raised", msg)
+        return did_not_run(msg)
+    ledger_refusal("not_implemented", PENDING_AMENDMENT)
+    return did_not_run(PENDING_AMENDMENT)
 
 
 if __name__ == "__main__":
