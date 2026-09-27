@@ -309,3 +309,281 @@ should concentrate on few slots while `r_i` spreads).
 - Anything about other checkpoints or substrates. ckpt3000 only. Which substrate E1 uses is D2,
   owner-only.
 - Anything about a trained `ψ̂`. E0d validates the target, not the head.
+
+## Amendment 1 (2026-09-27, pre-data)
+
+**Written 2026-09-27 by a model** (Claude Opus 5.5, an RSR researcher session, item AMD).
+**Append-only.** Nothing above this heading has been edited; it is byte-identical to `5357ad2`.
+Where this section and the text above disagree, **this section governs**, including over the
+front matter's `thresholds.RHO_STAR`, `thresholds.LOO_FLAT` and `prediction` fields.
+
+- **Authority.** `~/Documents/RSR-2026-09-27-plan/LOOP.md`, "Hard stops": an append-only amendment,
+  committed alone before any data exists, citing the review finding it answers, is allowed.
+- **Source.** Every paragraph below answers one finding of
+  `~/Documents/RSR-2026-09-27-plan/reviews/PREREG-REVIEW-e0d-b2.md` (the review), and applies the
+  review's amendment text. Where the author of this amendment disagrees with or has to interpret
+  the review, the paragraph carries a marked **author's note**. None changes the review's rule.
+- **Pre-data.** At this commit no document of `D_E0d = [262144, 263168)` has been generated, run or
+  inspected, no E0d measurement exists, and no ruling named in C8 exists. The review states that
+  it generated no document in any reserved range. The only E0d commits after `5357ad2` are tests
+  for the runner (`0b7a18f`), which contain no measurement.
+
+### A1.1 Strata, statistics and a positive control (answers E0d-B1, BLOCKER)
+
+**Why.** Only query sentences depend on memory in S0-03 documents. The review counts, on the
+already-seen set E `[64, 1088)` with S = 48 and M = 16, query steps at 42.0–42.3 % of full-memory
+steps, and query steps whose assert is still resident under FIFO at 1.93–1.95 % of full-memory
+cells. At the remaining steps Δ is structurally ≈ 0 for every slot while `r_i` still sums to 1,
+so the committed ρ_pool, ρ_rank and ρ_step are pulled toward 0 whatever `r_i`'s quality where it
+matters, and CONFOUND is close to built in.
+
+**§3.1 items 1–4 are replaced by the following.** Items 5–7 (per-layer profile, by content kind,
+flatness diagnostics) are unchanged and remain descriptive.
+
+> **§3.1 Strata (fixed by document structure before any data; never by Δ).**
+> - **Q-steps:** full-memory steps `t ≥ M` whose sentence `t` is a query.
+> - **A-cells:** at Q-steps, the slot holding the queried assert, when it is resident.
+> - **N-steps:** every other full-memory step.
+>
+> **Statistics.**
+> 1. **ρ_Q (primary):** Spearman ρ over all cells of Q-steps.
+> 2. **ρ_Q,rank (decision-bearing):** the cell-count-weighted mean, over ranks, of the within-rank
+>    Spearman ρ on Q-step cells.
+> 3. **Secondary, reported and never decision-bearing:**
+>    - ρ over all full-memory cells (the former ρ_pool);
+>    - ρ over N-step cells;
+>    - ρ_step and bottom-1 agreement on Q-steps;
+>    - the fraction of `r_i` mass on N-steps.
+
+The strata are read from the generator's sentence kinds and `doc.pairs` (`synthetic.py`), never
+from Δ or `r_i`. The bootstrap of §3.1 ("Intervals") applies unchanged to every statistic here.
+
+**Control C10 (added to §6).**
+
+> **C10 positive control.** Every statistic of §3.1 is also computed with `r_i` replaced by
+> `true_demand(doc)[t][slot_sentence]` (1 on the A-cell, 0 elsewhere), through the identical code
+> and bootstrap. If PC's ρ_Q CI **upper** bound is < ρ\* on a seed, that seed's label is
+> `CEILING`, whatever `r_i` scored. `CEILING` is never DISAGREE.
+
+`true_demand` is `src/rsr/data/synthetic.py::true_demand` (keyed by sentence index; the runner
+maps it to slots through `slot_sentence`). The PC runs against the same LOO Δ, knockout and cells
+as `r_i`. C10 is a positive control, not a precondition: a CEILING seed is labelled, not exit 3.
+
+**§5 "LOO flat" is replaced by the following.**
+
+> **§5 LOO flat (replaces the q90 rule):** the median over A-cells of `Δ_resample` is < 1e-2 nats
+> per sentence. This is about 1/30 of the measured live-vs-wiped answer-NLL gap (≈ 2.5 nats per
+> answer token, `runs/fresh-stream/ledger.json`), spread over a ~7-token query. The old q90 rule
+> is reported as a secondary.
+
+**Correction of the rationale's scale.** §5 above says "A single answer token's retrieval effect
+is order 0.1 nats." That is wrong by more than 10×. The committed ledger
+`runs/fresh-stream/ledger.json` (checked for this amendment) gives, per seed 0/1/2:
+
+| key | samples |
+|---|---|
+| `B.ckpt3000.heldout.live.gap_2_to_M.answer_nll` | 0.29087 / 0.26138 / 0.22961 |
+| `B.ckpt3000.heldout.slots_zeroed.gap_2_to_M.answer_nll` | 2.81859 / 2.82067 / 2.84604 |
+
+The live-vs-wiped gap is 2.53 / 2.56 / 2.62 nats per answer token, i.e. about 2.5, not 0.1. The
+old sentence is withdrawn as a rationale; it is kept above only because this file is append-only.
+The front matter's `LOO_FLAT` value is superseded by the A-cell median rule.
+
+*Author's note (key path, no change to the rule).* The review cites the key as
+`B.ckpt3000.heldout.gap_2_to_M.answer_nll`. The ledger's actual keys carry the condition,
+`...heldout.live...` and `...heldout.slots_zeroed...`, as in the table. The numbers match the
+review's.
+
+`R_FLAT` (§5, within-step CV of `r_i` < 0.05) is unchanged; the review assessed it as sensible.
+DEGENERATE and LOO_UNINFORMATIVE use the amended LOO flat rule.
+
+**§7 is replaced by the following** (primary cell unchanged: gated `r_i` × resample LOO; first
+match wins). This is the review's instruction ("§7 labels use ρ_Q and ρ_Q,rank in place of ρ_pool
+and ρ_rank. A new first row reads: `CEILING` (C10), which counts as `UNRESOLVED` in §8") written
+out in full.
+
+| # | condition | label |
+|---|---|---|
+| 0 | C10: PC's ρ_Q CI upper < ρ\* | `CEILING` |
+| 1 | LOO flat (amended §5) and `r_i` flat (§5) | `DEGENERATE` |
+| 2 | LOO flat (amended §5), `r_i` not flat | `LOO_UNINFORMATIVE` |
+| 3 | ρ_Q CI upper < 0 | `INVERTED` (the D-3 / falsifier-5 signature) |
+| 4 | ρ_Q CI upper < ρ\* | `DISAGREE` |
+| 5 | ρ_Q CI lower ≥ ρ\* and ρ_Q,rank CI lower ≥ ρ\* | `AGREE` |
+| 6 | ρ_Q CI lower ≥ ρ\* and ρ_Q,rank CI upper < ρ\* | `AGREE_VIA_RANK` |
+| 7 | otherwise | `UNRESOLVED` |
+
+In §8, `CEILING` counts as `UNRESOLVED`. A CEILING seed therefore rules out §8 rows 2–5 (each
+needs all 3 seeds); the class is row 1 if the other two seeds are DEGENERATE or LOO_UNINFORMATIVE,
+and row 6 (MIXED / UNRESOLVED) otherwise.
+
+*Author's note (ordering; additive reporting only, no change to any label or exit).* With CEILING
+first, a seed whose LOO is flat will usually also read CEILING (a flat Δ gives the PC no ρ to
+reach), so §8 row 1 (DEGENERATE / UNINFORMATIVE) can be pre-empted by row 6 (MIXED). Both exit 2,
+so the exit code is unaffected, but the class name would hide the degenerate case. I apply the
+review's order as written, and add a **reporting requirement**: for every seed, the report states
+whether the §5 LOO-flat and `r_i`-flat conditions hold, independently of the label the table
+assigns. If ≥ 2 seeds meet §8 row 1's condition while labelled CEILING, the report says so beside
+the class.
+
+*Author's note (ceiling on the rank statistic; additive reporting only).* C10 as written guards
+DISAGREE (a ρ_Q condition). AGREE and AGREE_VIA_RANK also need ρ_Q,rank. The report therefore also
+states the PC's ρ_Q,rank CI; if its upper bound is < ρ\* on a seed, AGREE is unreachable by design
+on that seed, and any `AGREE_VIA_RANK` label there is flagged `RANK_CEILING` in the report. The
+label and exit code are unchanged.
+
+*Author's note (a secondary that is fixed by construction).* At full memory `r_i` is a share
+rescaled by `|memory_t| / M = 1` (`reward.py::retrieval_demand`), so `Σ_i r_i(t) = 1` on every
+full-memory step. "The fraction of `r_i` mass on N-steps" is therefore exactly the fraction of
+full-memory steps that are N-steps; it carries no information about `r_i`. It is still reported,
+as the review asks. The report also gives the same fraction for the pre-share magnitude
+`Σ_i contribution_i` (recorded per step under §3), which is not normalised.
+
+### A1.2 Row 5 exits 2, not 1 (answers E0d-M1, MAJOR)
+
+**Why.** The spec's kill condition is disagreement (spec :189, :548). `AGREE_VIA_RANK` is agreement
+with LOO that fails only within age strata: that bears on whether an age-blind *head* can use the
+target (B2, E2), not on whether the *target* is faithful (E0d). Making it exit 1 was a
+model-invented kill criterion attached to a spec kill gate (REDTEAM-v3 N-5).
+
+**§8 row 5 is replaced by:**
+
+> | 5 | all 3 seeds in {`DISAGREE`, `INVERTED`, `AGREE_VIA_RANK`}, at least one `AGREE_VIA_RANK` | **AGREE_VIA_RANK / RECENCY_ONLY**: `r_i` agrees with LOO only through write-order rank. This is **not** the §3.2.1 kill. It is reported to Brendan as a recommendation that bears on B2 and E2. | **2** |
+
+After this amendment, exit 1 is reachable only from §8 rows 3 and 4 (CONFOUND, INVERTED; CONFOUND).
+§4's rationale item 4 ("So it cannot pass") still holds: row 5 is not AGREE and is not exit 0.
+
+### A1.3 The bos-copy path (answers E0d-M2, MAJOR)
+
+**Why.** `loo_delta_loss` leaves `bos_ctx = out.srep` of step `t−1` in place (`loo.py`, the FIFO
+write at the end of each step). The newest slot's content, write-order rank M−1, therefore
+survives its own knockout through token 0. `loo.py`'s own docstring ("The bos-copy path at gap 1")
+says: "Read L at gap 1 only from the `*_bos_off` columns, or restrict it to gap >= 2."
+`loo_delta_loss` has no bos-off twin.
+
+**Added to §3.1 and §8:**
+
+> **Bos-copy sensitivity.** Every decision-bearing statistic is recomputed with rank M−1 excluded
+> and with gap-1 Q-steps excluded. If the §8 class changes, the report says **BOS_SENSITIVE** and
+> names both classes; the exit code follows the class with the exclusions. (A bos-off LOO variant,
+> which passes `bos_valid = False` to both the live and the knockout forward, is a harness change
+> that does not touch the forward pass. It may replace the exclusion if it is built and tested
+> before the run.)
+
+*Author's note (interpretation of "and").* I read "with rank M−1 excluded and with gap-1 Q-steps
+excluded" as **one** recomputation with both exclusions applied together: every cell at rank M−1
+is dropped, and every cell of a Q-step whose query has gap 1 is dropped. At a gap-1 Q-step the
+A-cell is the newest slot, so the first exclusion already removes it; the second removes the rest
+of that step. The C10 positive control is recomputed under the same exclusions, so CEILING is
+also judged on the excluded population. If the bos-off variant replaces the exclusions, the
+decision to use it is committed before the run, in its own commit, with its test.
+
+### A1.4 A crash does not share exit 1 with "kill fired" (answers E0d-M3, MAJOR)
+
+**Why.** `exit_codes.run_main` is `sys.exit(int(status(main())))` with no `except`
+(`src/rsr/exit_codes.py`), so an uncaught raise exits **1**, which in E0d means CONFOUND. The
+module's own docstring records this collapse ("seven `experiments/e0*/run.py` stubs raised an
+uncaught `NotImplementedError`, which Python reports as **1** -- *did not run* collapsing to *real
+failure*"). The repo's convention is `3 = DID_NOT_RUN` ("environment / not implemented /
+precondition refused").
+
+**§8 "Exit semantics" is extended with:**
+
+> The runner wraps the whole measurement in `try/except BaseException` and maps any exception to
+> exit **3**, with the traceback in the ledger. Exit **1** is emitted only after the ledger key
+> `e0d.class ∈ {CONFOUND, CONFOUND_INVERTED}` has been written. The verifier checks that rc and
+> `e0d.class` agree.
+
+`CONFOUND_INVERTED` is §8 row 3's class ("CONFOUND, INVERTED"); `CONFOUND` is row 4's. Every
+other class's ledger value is written before its exit too, and the verifier's check covers every
+rc (0 ↔ AGREE; 2 ↔ DEGENERATE / UNINFORMATIVE, AGREE_VIA_RANK / RECENCY_ONLY, MIXED / UNRESOLVED;
+3 ↔ inconclusive).
+
+*Author's note (`SystemExit`).* `except BaseException` also catches `SystemExit`, which is how
+`rsr.exit_codes.refuse(code, reason)` exits with a *chosen* code from inside the call stack. A
+`refuse(Exit.DID_NOT_RUN, ...)` maps to 3 either way. Any `SystemExit` raised before `e0d.class`
+is written exits 3, whatever code it carries, so no path can emit 1 (or 0) without a written class.
+This is how I read the review's rule ("any exception to exit 3"; "exit 1 is emitted only after
+`e0d.class` has been written"); it does not relax it. `KeyboardInterrupt` maps to 3.
+
+### A1.5 B5's stream reaches `D_E0d` at step 16124 (answers E0d-m1, MINOR)
+
+**§2.2's table gains a row:**
+
+> | B5 continuation (future) | `[4160 + 16·3000, 4160 + 16·t_cap)` | PLAN-v4 B5. It is disjoint from `D_E0d` iff `t_cap ≤ 16123`. If B5 runs past step 16123, `D_E0d` may never again be used to measure a B5 checkpoint. |
+
+The stream offset 4160 and stride 16 are `runs/fresh-stream/manifest.json`
+`stream: {offset: 4160, stride: 16}` (checked for this amendment). `4160 + 16 · 16124 = 262144`,
+the first id of `D_E0d`. Since C2 reads its ranges from committed manifests at run time, C2 also
+asserts disjointness against **any B5 manifest committed by then**, with that manifest's actual
+last step. So either B5 caps at or below step 16123, or E0d re-asserts disjointness at run time
+against B5's recorded range and exits 3 on overlap. PLAN-v4 B5's cap is "step 9000 (or later if
+16 windows need it)", which is well below 16123.
+
+*Author's note (off by one, conservative).* A step `t` reads documents `[4160 + 16t,
+4160 + 16t + 16)`. With `t_cap` the exclusive step bound of the table's range, the last document
+read is `4160 + 16·t_cap − 1`, which is below 262144 iff `t_cap ≤ 16124`. The review's
+`t_cap ≤ 16123` is therefore one step conservative. I apply the review's bound unchanged; it is
+the safe side.
+
+### A1.6 `r_i` comes from its own capture forward (answers E0d-m2, MINOR)
+
+§3's "read from the **same forward**" is not literally possible: `loo_delta_loss` does not
+capture. **§3 is amended:**
+
+> `r_i(t)` is read from a separate FIFO forward with `capture=True`, over the same batch. C4
+> asserts that this forward's per-sentence loss equals `loo_delta_loss`'s `live_loss` to ≤ 1e-6,
+> and that its slot map equals `slot_sentence`.
+
+This is C4 as already registered, now stated as the mechanism. The capture goes through
+`rsr.model.tg.policy_loop.cross_capture`.
+
+### A1.7 The T0 manifest path (answers E0d-m3, MINOR)
+
+C1 writes `~/rsr-substrate/2026-09-27/MANIFEST.sha256` literally. **C1 is amended:**
+
+> C1 reads the T0 manifest path from the T0 record (`runs/t0-substrate/manifest.json` or its
+> equivalent), not a literal date.
+
+If no T0 record exists when the run starts, C1 fails (exit 3). The front-matter checkpoint sha256
+values are unchanged.
+
+### A1.8 ρ\* = 0.5, restated on the amended statistic
+
+**`RHO_STAR = 0.5` is PROPOSED FOR RATIFICATION. It is not ratified, and no kill is read until
+Brendan ratifies it** (C8, unchanged).
+
+- **What it is defined on.** ρ\* applies per seed, through the 95% cluster-bootstrap CI (never the
+  point estimate), to **ρ_Q** (the primary statistic, A1.1) and to **ρ_Q,rank** (decision-bearing),
+  for gated `r_i` against resample LOO. It is also the bar in C10's CEILING rule. It no longer
+  applies to ρ_pool, which is now a secondary.
+- **The asymmetric reading is unchanged:** AGREE needs the CI lower bound ≥ ρ\*; DISAGREE needs the
+  CI upper bound < ρ\*; a straddling CI is UNRESOLVED.
+- **The review's recommendation, carried to Brendan:** ratify 0.5 **only together with** A1.1's
+  strata and C10's ceiling rule, so that DISAGREE is readable only where a perfect proxy could have
+  passed.
+- The ratifying ruling (C8) must name the statistic it ratifies ρ\* on. A ruling that ratifies
+  0.5 "on ρ_pool" does not satisfy C8 after this amendment.
+- §4's rationale items 1–3 and 5–6 carry over to ρ_Q unchanged. Item 6's sensitivity values
+  ρ\* ∈ {0.3, 0.7} are reported on ρ_Q and ρ_Q,rank.
+
+**The registered prediction (§9)** is not rewritten. Its class prediction (CONFOUND; second most
+likely MIXED) is scored against the amended classification. Its numeric parts ("pooled gated
+ρ_resample 0.1–0.4", "ρ_rank below ρ_pool", bottom-1 agreement) are scored against the secondary
+ρ_pool, ρ_rank-on-all-cells and all-full-memory bottom-1 statistics, which are still computed and
+reported. This amendment registers no new numeric prediction.
+
+### A1.9 Finding → paragraph map
+
+| Review finding | Severity | Answered in |
+|---|---|---|
+| E0d-B1 (strata, ρ_Q primary, C10 CEILING, A-cell flatness, §7 labels) | BLOCKER | A1.1 |
+| E0d-B1 (LOO_FLAT rationale scale, >10× off) | BLOCKER | A1.1, "Correction of the rationale's scale" |
+| E0d-M1 (RECENCY_ONLY exits 2) | MAJOR | A1.2 |
+| E0d-M2 (bos-copy, rank M−1 and gap 1) | MAJOR | A1.3 |
+| E0d-M3 (exception ≠ exit 1) | MAJOR | A1.4 |
+| E0d-m1 (B5 reaches `D_E0d` at step 16124) | MINOR | A1.5 |
+| E0d-m2 (`r_i` from its own capture forward) | MINOR | A1.6 |
+| E0d-m3 (T0 manifest path not a literal date) | MINOR | A1.7 |
+| "E0d threshold ρ\* = 0.5 — assessment" | recommendation | A1.8 |
+| "E0d DEGENERATE definition and exit codes — assessment" | assessment | A1.1 (LOO flat), A1.2, A1.4 |
