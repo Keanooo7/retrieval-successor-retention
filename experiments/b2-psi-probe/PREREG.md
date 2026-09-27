@@ -980,3 +980,57 @@ may fill. The heading text above is left as committed only because this file is 
 | B2-m12 ("§15" → "§A") | MINOR | A1.14 |
 | E0h 0.90/0.49 assessment (0.49 provenance) | assessment | A1.8 |
 | R2, R3, R5, R9 notes | assessment | A1.15, A1.12 |
+
+## Addendum: already seen (B0)
+
+**Written 2026-09-27 by a model** (Claude Opus 5.5, an `rsr-researcher` session, item B0). **Not
+written by Brendan.** **Append-only.** This fills fence item 3 (A1.1): the "already seen"
+addendum, listing what B0 showed. Nothing above this heading changes. **It changes no rule,
+threshold, arm, range or target of B2, and it is not Q2's comparator.** B2's kind-oracle is
+re-estimated on `FIT_TRAIN` (§6, §9.7).
+
+- **Source.** `runs/b0-ceilings/ledger.json` on `run/b0-ceilings`.
+  - Run SHA **`bb40c40557d11bb01c0907a988ba76f86d3aa2ac`** (the code that ran; clean tree). Ledger committed at `b4f3661`.
+  - PREREG `fc26dbf`. Config hash `3df1a646…2433`. `status: ok`, rc 0, seeds [0, 1, 2], 1088 documents each.
+- **Scope.** Model-free residency on the U range, which was **already inspected**, with every
+  class mean estimated **in-sample**. Every number is written seed 0 / 1 / 2.
+- **Controls.**
+  - C3: B0 reproduced lookahead-room-r2's `U.hit.{fifo,factfiller,oracle,rule_g0,rule_g09}` exactly.
+  - T0 manifest: rechecked at start and at end, and 435/435 OK after the run.
+
+**Caps at ckpt3000, γ = 0.9.** Cap = (hit − FIFO) / (factfiller − FIFO); FIFO 0.8059 / 0.8093 / 0.8088; factfiller 0.9655 / 0.9653 / 0.9666.
+
+| Rule | Hit | Cap [paired per-doc 95% CI] |
+|---|---|---|
+| kind-oracle, the A1.10 random tie (`B.ckpt3000.g09.cap.ko`) | 0.9649 / 0.6613 / 0.9669 | +0.996 [+0.978, +1.016] / **−0.949** [−1.014, −0.891] / +1.002 [+0.982, +1.021] |
+| kind-oracle, the oldest tie | 0.9873 / 0.7086 / 0.9862 | +1.137 / −0.645 / +1.124 |
+| kind × age-band, **not a legal ψ̂** | 0.9491 / 0.7645 / 0.9770 | +0.898 / −0.287 / +1.066 |
+| age-only, argmin E[G \| age] | 0.8124 / 0.8256 / 0.8105 | +0.041 [+0.004, +0.074] / +0.105 [+0.077, +0.133] / +0.010 [−0.028, +0.044] |
+| hindsight `rule_g09` | 0.8352 / 0.8301 / 0.8935 | +0.184 / +0.134 / +0.537 |
+
+**Other combinations** (kind-oracle cap):
+- It is identical at γ = 0 and γ = 0.9 within each checkpoint, because the class-mean order does not change.
+- At ckpt2500 it is **−0.933 / −0.949 / +1.002**: seed 0 is negative too.
+
+**Why the kind-oracle is negative.** `E[G_0.9 | kind]` at ckpt3000 (assert / query / filler):
+- seed 0: 0.5728 / 0.5340 / 0.4586;
+- seed 1: 0.4055 / **0.5098** / 0.3425;
+- seed 2: 0.5862 / 0.4772 / 0.3181.
+
+Filler is the lowest class on every seed. On seed 1, however, assert < query, so once the fillers
+are gone the rule evicts asserts before query sentences. At ckpt2500, seed 0 has the same order
+(assert 0.5894 < query 0.5911).
+
+**🔴 A correction to F2 as quoted in §A and PLAN-v4 §1.**
+- Under the kind definition, `E[G_0.9 | assert] − E[G_0.9 | filler]` at ckpt3000 is **+0.114 / +0.063 / +0.268**. The CIs exclude 0, and at γ = 0 it is +0.015 / +0.007 / +0.036.
+- The scratch F2 (+0.0633 / **−0.0507** / +0.1601) is `E[G | kind = assert] − E[G | slot_class = filler]`, and W10's `slot_class` counts **query sentences as filler**.
+- From the same ledger: 0.5728 − 0.5095, 0.4055 − 0.4562, 0.5862 − 0.4260 = +0.0633 / −0.0507 / +0.1601.
+- So the "seed-1 reversal" is asserts against a pool that contains high-G query sentences, not against true fillers.
+- §13's expectation cites F2. **§13 is not edited:** it is the author's pre-data expectation, and it stands as written.
+
+**Reproduced exactly from §A** (now ledgered, `B.ckpt3000.F1.D.<age>|<class>.mean`, and the class means):
+- pending/filler `D` at age 1: 0.0930/0.0580, 0.0999/0.0831, 0.1047/0.0615;
+- at age 16: 0.0783/0.0928, 0.0508/0.0683, 0.0758/0.0731;
+- probe at rank 0: 0.0843/0.0962, 0.0544/0.0817, 0.0829/0.0757;
+- pooled `G_0.9` pending 0.6956 / 0.5285 / 0.7200, filler 0.5095 / 0.4562 / 0.4260;
+- hindsight cap 0.18 / 0.13 / 0.54.
