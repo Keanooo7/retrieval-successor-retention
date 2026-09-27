@@ -587,3 +587,12 @@ reported. This amendment registers no new numeric prediction.
 | E0d-m3 (T0 manifest path not a literal date) | MINOR | A1.7 |
 | "E0d threshold ρ\* = 0.5 — assessment" | recommendation | A1.8 |
 | "E0d DEGENERATE definition and exit codes — assessment" | assessment | A1.1 (LOO flat), A1.2, A1.4 |
+
+### A1.10 Erratum to A1's preamble (append-only; pre-data)
+
+A1's preamble says "The only E0d commits after `5357ad2` are tests for the runner (`0b7a18f`)".
+That was stale when committed. The commits between `5357ad2` and Amendment 1 (`84e21c5`) are
+`0b7a18f`, `3f90af9` and `42f6ee7` (`tests/test_e0d.py`), `7745436` (`experiments/e0d/run.py`,
+preconditions and LOO/`r_i` plumbing) and `dd6e644` (`scripts/mutation_battery.py`). None of them
+touches this file, and none adds a ledger, a manifest or any `runs/` path: no E0d measurement and
+no `D_E0d` document exists at this commit. The pre-data status stated in A1 is unchanged.
