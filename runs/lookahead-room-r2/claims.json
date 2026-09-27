@@ -1,0 +1,47 @@
+[
+ {
+  "claim": "r2 headline PARTIAL at both checkpoints, no control failed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; print(r['classification']['value'], r['per_checkpoint']['value'], r['controls_failed']['value'])\"",
+  "expected": "PARTIAL {'B.ckpt2500': 'PARTIAL', 'B.ckpt3000': 'PARTIAL'} []"
+ },
+ {
+  "claim": "r2's primary numbers equal run 1's: every statistic row except wall-clock seconds is bit-identical, and the C2 note is identical",
+  "command": "uv run python -c \"import json; a={x['key']:x for x in json.load(open('runs/lookahead-room/ledger.json'))['rows']}; b={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; ks=[k for k,x in a.items() if x.get('kind')=='statistic' and 'seconds' not in k]; print(len(ks), sum(a[k]['samples']!=b[k]['samples'] for k in ks), a['C2']['value']==b['C2']['value'])\"",
+  "expected": "600 0 True"
+ },
+ {
+  "claim": "room_3b at B.ckpt3000 on U, point / lo / hi per seed (r2)",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; print([[round(x,4) for x in r['B.ckpt3000.U.room_3b.'+f]['samples']] for f in ('point','lo','hi')])\"",
+  "expected": "[[0.0355, 0.042, 0.0478], [0.0304, 0.0376, 0.0431], [0.0405, 0.0463, 0.0526]]"
+ },
+ {
+  "claim": "room_3b at B.ckpt2500 on U (r2)",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; print([[round(x,4) for x in r['B.ckpt2500.U.room_3b.'+f]['samples']] for f in ('point','lo','hi')])\"",
+  "expected": "[[0.0205, 0.0367, 0.0215], [0.0156, 0.0327, 0.0169], [0.0254, 0.041, 0.026]]"
+ },
+ {
+  "claim": "amended C1 passes on all six children with 0 argmax mismatches",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; print([(k, r[k]['value']['C1']['ok'], r[k]['value']['C1']['argmax_mismatches']) for k in sorted(r) if k.endswith('.controls')])\"",
+  "expected": "six entries, each (\u2026, True, 0)"
+ },
+ {
+  "claim": "r2 run sha is at or after the amendment commit 674dd37",
+  "command": "/opt/homebrew/bin/git merge-base --is-ancestor 674dd37 $(uv run python -c \"import json; print(json.load(open('runs/lookahead-room-r2/ledger.json'))['provenance']['git_sha'])\"); echo rc=$?",
+  "expected": "rc=0"
+ },
+ {
+  "claim": "re-executing child B ckpt3000 seed0 reproduces r2's room_3b exactly and passes amended C1 (about 20 minutes CPU)",
+  "command": "uv run python experiments/lookahead-room/run.py --single --checkpoint 3000 --seed 0 --out /tmp/lr2-verify/B-3000-0.json.gz; echo rc=$?; uv run python -c \"import gzip,json,importlib.util,sys; s=importlib.util.spec_from_file_location('lr','experiments/lookahead-room/run.py'); m=importlib.util.module_from_spec(s); sys.modules['lr']=m; s.loader.exec_module(m); p=json.load(gzip.open('/tmp/lr2-verify/B-3000-0.json.gz','rt')); o=m.summarise_child(p)['U']['diffs']['room_3b']; r={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; print(all(o[f]==r['B.ckpt3000.U.room_3b.'+f]['samples'][0] for f in ('point','lo','hi')), p['control1']['ok'])\"",
+  "expected": "rc=0 then: True True"
+ },
+ {
+  "claim": "the experiment's tests pass",
+  "command": "uv run pytest -q -p no:cacheprovider tests/test_lookahead_room.py",
+  "expected": "passed=21 failed=0 skipped=0 errors=0"
+ },
+ {
+  "claim": "RESULTS-r2.md passes the scoreboard audit",
+  "command": "uv run python scripts/render_scoreboard.py --over runs/ --audit experiments/lookahead-room/RESULTS-r2.md; echo rc=$?",
+  "expected": "OK: every number ... resolves to a ledger key; rc=0"
+ }
+]

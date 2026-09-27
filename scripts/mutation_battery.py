@@ -303,6 +303,18 @@ _C0_RESTART_COUPLING = (
     "test asserts they come back -- through the same finally this mutation empties."
 )
 
+_LOOKAHEAD_READS_R_COUPLING = (
+    "lookahead-room (W10) reads r_i through the same retrieval_demand(gated=True) "
+    "and pins it on E0e's hand-built trace; an edit to reward.py reddening that "
+    "test is the target seen from the experiment that consumes it."
+)
+
+_LOOKAHEAD_S003_COUPLING = (
+    "lookahead-room's tiny-model tests build answer targets from the default "
+    "synthetic corpus via answer_targets, which refuses an out-of-band corpus: the "
+    "S0-03 refusal, seen from W10's harness."
+)
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -543,6 +555,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_e0e.py::test_r_i_is_the_gated_rescaled_target",
                 _E0E_READS_R_COUPLING,
             ),
+            (
+                "tests/test_lookahead_room.py::test_r_i_is_e0es_gated_rescaled_target",
+                _LOOKAHEAD_READS_R_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -605,6 +621,10 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_e0e.py::test_r_i_is_the_gated_rescaled_target",
                 _E0E_READS_R_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::test_r_i_is_e0es_gated_rescaled_target",
+                _LOOKAHEAD_READS_R_COUPLING,
             ),
         ),
     ),
@@ -992,6 +1012,27 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "observe never reached no sentence is seen live and every lifetime "
                 "reads 0: the same call site, seen from E0e.",
             ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                "lookahead-room records r_i and runs its probes and online_g0 rule from "
+                "observe(); never reached, no demand is recorded: the same call site, "
+                "seen from W10.",
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one",
+                "lookahead-room records r_i and runs its probes and online_g0 rule from "
+                "observe(); never reached, no demand is recorded: the same call site, "
+                "seen from W10.",
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_online_g0_evicts_its_own_argmin_and_replays_model_free",
+                "lookahead-room records r_i and runs its probes and online_g0 rule from "
+                "observe(); never reached, no demand is recorded: the same call site, "
+                "seen from W10.",
+            ),
         ),
     ),
     # ----------------------------------------------------------------------- #
@@ -1336,6 +1377,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "E-feas reads oracle - FIFO as an upper bound on what retention can buy. An "
         "oracle that is not optimal makes that bound a lower number than the truth, "
         "and 'oracle ~= FIFO' would then be a finding about the oracle.",
+        off_gate_allowed=(
+            (
+                "tests/test_lookahead_room.py::"
+                "test_control2_reproduces_the_red_team_on_seed_0",
+                "W10's control C2 re-derives the red team's oracle - FIFO headroom "
+                "and the oracle / pending-FIFO identity through OraclePolicy: an "
+                "anti-oracle fails both, the oracle seen from that control.",
+            ),
+        ),
     ),
     Mutation(
         "checkpoints written straight to the final path",
@@ -1365,6 +1415,26 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_fresh_stream.py::test_default_path_config_is_unchanged",
                 _FRESH_STREAM_S003_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                _LOOKAHEAD_S003_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_the_probes_never_feed_back_into_the_fifo_rollout",
+                _LOOKAHEAD_S003_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one",
+                _LOOKAHEAD_S003_COUPLING,
+            ),
+            (
+                "tests/test_lookahead_room.py::"
+                "test_online_g0_evicts_its_own_argmin_and_replays_model_free",
+                _LOOKAHEAD_S003_COUPLING,
             ),
             (
                 "tests/test_fresh_stream.py::"
@@ -3590,6 +3660,103 @@ MUTATIONS: tuple[Mutation, ...] = (
         'if False and any(per_seed[s]["L_label"] == "L_INCONCLUSIVE" for s in SEEDS):',
         "carry-forward amendment 2 ruling 3: with no seed carrying, an "
         "L_INCONCLUSIVE seed makes the classification inconclusive (exit 3).",
+    ),
+    # ----------------------------------------------------------------------- #
+    # lookahead-room (W10, experiments/lookahead-room/PREREG.md): is there room
+    # for 3b (gamma 0.9 vs gamma 0) at M = 16?
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "lookahead-room: r_i read ungated",
+        "test_r_i_is_e0es_gated_rescaled_target",
+        "experiments/lookahead-room/run.py",
+        "    return retrieval_demand(trace, n_live=n_live, capacity=m, gated=True)",
+        "    return retrieval_demand(trace, n_live=n_live, capacity=m, gated=False)",
+        "correction 17 / D-E: the gamma = 0 and gamma > 0 targets are both built "
+        "from r_i; ungated, room_3b compares targets RSR would never train on.",
+    ),
+    Mutation(
+        "lookahead-room: every probe reads the resident rank-0 sentence",
+        "test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one",
+        "experiments/lookahead-room/run.py",
+        "            kvP[p, 0] = self.gest[i]",
+        "            kvP[p, 0] = self.gest[cand[0]]",
+        "PREREG demand-if-resident: a probe that never swaps the sentence in gives "
+        "every evicted sentence the rank-0 resident's demand -- a target that "
+        "cannot tell a pending fact from filler by construction.",
+    ),
+    Mutation(
+        "lookahead-room: the return drops its discount",
+        "test_the_discounted_return_sums_the_future_within_the_stream",
+        "experiments/lookahead-room/run.py",
+        "        acc = row + gamma * acc",
+        "        acc = row + acc",
+        "§3.4 / correction 2: G = sum gamma^k r(t+k). Undiscounted, 0.9 and 0.97 "
+        "become the same horizon-to-stream-end sum and room_3b measures neither.",
+        off_gate_allowed=(
+            (
+                "tests/test_lookahead_room.py::"
+                "test_the_literal_target_is_zero_where_fifo_did_not_hold_the_sentence",
+                "targets() builds rule_g09 through discounted_returns; that test "
+                "pins rule_g09 = 0.4 + 0.9 * 0.7 on the same matrix -- the return, "
+                "seen from the target table.",
+            ),
+        ),
+    ),
+    Mutation(
+        "lookahead-room: target-rule ties go to the newest slot",
+        "test_a_target_rule_evicts_the_argmin_and_ties_go_to_the_oldest",
+        "experiments/lookahead-room/run.py",
+        "            if v < best_v:",
+        "            if v <= best_v:",
+        "PREREG target rules: ties to the lowest slot (the oldest), as OraclePolicy. "
+        "Ties to the newest turn every all-zero literal target into evict-newest "
+        "and every tie into an age preference nobody registered.",
+    ),
+    Mutation(
+        "lookahead-room: literal target keeps the probed demand",
+        "test_the_literal_target_is_zero_where_fifo_did_not_hold_the_sentence",
+        "experiments/lookahead-room/run.py",
+        "        resident, torch.nan_to_num(D, nan=0.0), torch.zeros_like(D)",
+        "        resident | True, torch.nan_to_num(D, nan=0.0), torch.zeros_like(D)",
+        "PREREG secondary variant: the literal FIFO-rollout target is zero where "
+        "FIFO did not hold the sentence; keeping the probe makes it the primary "
+        "and the caveat it exists to size disappears.",
+    ),
+    Mutation(
+        "lookahead-room: NO_ROOM read from the point, not the CI",
+        "test_the_rule_is_the_prereg_rule",
+        "experiments/lookahead-room/run.py",
+        '    if all(v["hi"] < NO_ROOM_MAX for v in per_seed.values()):',
+        '    if all(v["point"] < NO_ROOM_MAX for v in per_seed.values()):',
+        "PREREG decision rule: NO_ROOM needs the CI upper bound below 0.02 on "
+        "every seed; a point estimate under 0.02 with a wide CI is PARTIAL.",
+    ),
+    Mutation(
+        "lookahead-room: a failed control still exits 0",
+        "test_a_failed_control_makes_the_run_inconclusive",
+        "experiments/lookahead-room/run.py",
+        '        "exit": int(Exit.DID_NOT_RUN if failed else Exit.OK),',
+        '        "exit": int(Exit.OK),',
+        "PREREG: any control failure is INCONCLUSIVE, exit 3. 'Did not run' and "
+        "'found something' are different facts.",
+    ),
+    Mutation(
+        "lookahead-room: C1 compared in float64 again",
+        "test_c1_passes_on_float32_exact_accuracy_that_float64_misses",
+        "experiments/lookahead-room/run.py",
+        "                if float(okb[msk].float().mean()) != float(theirs):",
+        "                if float(ok64[msk].mean()) != float(theirs):",
+        "PREREG Amendment 1: the reference ledger stores float32 means, so a float64 "
+        "comparison fails C1 whatever the rollout did -- run 1's INCONCLUSIVE.",
+    ),
+    Mutation(
+        "lookahead-room: C1 ignores argmax mismatches",
+        "test_c1_fails_on_one_argmax_mismatch_or_a_wrong_accuracy",
+        "experiments/lookahead-room/run.py",
+        '        "ok": not bad and not missing and mism == 0 and missing_keys == 0,',
+        '        "ok": not bad and not missing,',
+        "PREREG Amendment 1: argmax identity is half of the amended C1; bucket means "
+        "can agree while individual answers flip in opposite directions.",
     ),
 )
 
