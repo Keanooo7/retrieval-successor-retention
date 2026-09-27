@@ -1,0 +1,87 @@
+{
+  "M": 16,
+  "S": 48,
+  "age_bands": [
+    [
+      1,
+      4
+    ],
+    [
+      5,
+      8
+    ],
+    [
+      9,
+      12
+    ],
+    [
+      13,
+      16
+    ],
+    [
+      17,
+      24
+    ],
+    [
+      25,
+      47
+    ]
+  ],
+  "already_inspected": true,
+  "bootstrap": {
+    "n": 2000,
+    "paired": true,
+    "seed_base": 20260927
+  },
+  "checkpoints": [
+    "B.ckpt2500",
+    "B.ckpt3000"
+  ],
+  "device": "cpu",
+  "documents": "U = [64, 1088) then [4096, 4160), lookahead-room documents(seed)",
+  "expected": "PREREG \u00a78: ko cap ~0.8-1.1 on seeds 0 and 2, negative on seed 1 (ckpt3000, g0.9; same signs at g0); age cap in [-0.5, 0.5]; kb >= ko on seed 1; C3 exact.",
+  "falsifier": "NONE: descriptive (PREREG \u00a71); it feeds only B2's already-seen addendum",
+  "gammas": {
+    "g0": 0.0,
+    "g09": 0.9
+  },
+  "hindsight": [
+    "rule_g0",
+    "rule_g09"
+  ],
+  "in_sample": true,
+  "inputs": {
+    "B.ckpt2500.seed0": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed0.D.pt",
+    "B.ckpt2500.seed1": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed1.D.pt",
+    "B.ckpt2500.seed2": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed2.D.pt",
+    "B.ckpt3000.seed0": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed0.D.pt",
+    "B.ckpt3000.seed1": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed1.D.pt",
+    "B.ckpt3000.seed2": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed2.D.pt"
+  },
+  "prereg": "experiments/b0-ceilings/PREREG.md",
+  "prereg_commit": "fc26dbf",
+  "question": "On the already-inspected U range, what do the kind-oracle argmin E[G|kind], the kind x age-band reference (not a legal psi_hat) and the age-only rule reach as model-free residency, against FIFO and fact/filler; and the F1/F2 tables.",
+  "reference_ledger": "runs/lookahead-room-r2/ledger.json",
+  "reference_ledger_sha256": "7fe5df833a39c9adc6f27c2f3bbfd86fd7e6733796ed53df2ff66bbb1838ee33",
+  "refs": [
+    "fifo",
+    "factfiller",
+    "oracle"
+  ],
+  "rows": "t in [M, S), i < t (full-memory steps, every past sentence)",
+  "rules": [
+    "ko",
+    "ko_oldest",
+    "kb",
+    "age"
+  ],
+  "run_id": "b0-ceilings",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "t0_manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+  "t0_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+  "tie_rule": "B2 A1.10: random.Random(f\"ko:{seed}:{doc_id}:{t}\").choice(sorted(tied))"
+}
