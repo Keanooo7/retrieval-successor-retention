@@ -1,0 +1,773 @@
+{
+  "run_id": "b2-psi-probe-sizing",
+  "cycle": null,
+  "question": "B2 sizing: n and capture cost on FIT_VAL only (PREREG TBD-1, TBD-2, A1.4)",
+  "started_utc": "2026-09-27T22:10:14Z",
+  "provenance": {
+    "git_sha": "9b76963d874a633d1ff6dca72e89614cd1d1f11f",
+    "dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "ok",
+  "config_hash": "e979852519582356d0f39d61d3480b2bd6d835636604cdb8540d96ae3791e807",
+  "manifest_written_utc": "2026-09-27T22:10:14Z",
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py size-child --checkpoint 2500 --seed 0 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-sizing/raw/ckpt2500-seed0.json --n-docs 32 --n-arm-docs 8",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-27T22:12:08Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py size-child --checkpoint 2500 --seed 1 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-sizing/raw/ckpt2500-seed1.json --n-docs 32 --n-arm-docs 8",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-27T22:12:08Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py size-child --checkpoint 2500 --seed 2 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-sizing/raw/ckpt2500-seed2.json --n-docs 32 --n-arm-docs 8",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-27T22:12:08Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py size-child --checkpoint 3000 --seed 0 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-sizing/raw/ckpt3000-seed0.json --n-docs 32 --n-arm-docs 8",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-27T22:12:08Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py size-child --checkpoint 3000 --seed 1 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-sizing/raw/ckpt3000-seed1.json --n-docs 32 --n-arm-docs 8",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-27T22:12:10Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py size-child --checkpoint 3000 --seed 2 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-sizing/raw/ckpt3000-seed2.json --n-docs 32 --n-arm-docs 8",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-27T22:12:10Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python experiments/b2-psi-probe/run.py size",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "the parent",
+      "at_utc": "2026-09-27T22:17:00Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "T0.start",
+      "kind": "observation",
+      "value": {
+        "ok": true,
+        "n": 435,
+        "bad": [],
+        "n_bad": 0,
+        "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256"
+      },
+      "how": "run.py::t0_verify"
+    },
+    {
+      "key": "children_wall_seconds",
+      "kind": "observation",
+      "value": 112.56373572349548,
+      "how": "parent wall clock"
+    },
+    {
+      "key": "ckpt2500.capture_s_per_doc.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.0044106766581535,
+        3.0056846737861633,
+        3.024387873709202
+      ],
+      "mean": 3.0114944080511727,
+      "sd": 0.011184223695752095,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.capture_s_per_doc.max",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.289241075515747,
+        3.163625955581665,
+        3.2379798889160156
+      ],
+      "mean": 3.2302823066711426,
+      "sd": 0.06316034490347477,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.rows_U_per_doc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1128.0,
+        1128.0,
+        1128.0
+      ],
+      "mean": 1128.0,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt2500.rows_C_per_doc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        632.0,
+        632.0,
+        632.0
+      ],
+      "mean": 632.0,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt2500.peak_rss_gb",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.89563136,
+        0.863223808,
+        0.954728448
+      ],
+      "mean": 0.9045278720000001,
+      "sd": 0.046396505576465664,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.sum_worst",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07
+      ],
+      "mean": 2.384185791015625e-07,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt2500.identity_worst.rank0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.9802322387695312e-08,
+        2.9802322387695312e-08,
+        2.9802322387695312e-08
+      ],
+      "mean": 2.9802322387695312e-08,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt2500.identity_worst.rank1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.2351741790771484e-08,
+        2.9802322387695312e-08,
+        2.9802322387695312e-08
+      ],
+      "mean": 2.7318795522054035e-08,
+      "sd": 4.301594713252975e-09,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.identity_worst.rank2",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.9802322387695312e-08,
+        2.9802322387695312e-08,
+        2.9802322387695312e-08
+      ],
+      "mean": 2.9802322387695312e-08,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt2500.identity_worst.rank3",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.2351741790771484e-08,
+        2.2351741790771484e-08,
+        1.4901161193847656e-08
+      ],
+      "mean": 1.9868214925130207e-08,
+      "sd": 4.301594713252975e-09,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.arm_s_per_doc.fifo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15463974472368136,
+        0.1557492863794323,
+        0.1504501302697463
+      ],
+      "mean": 0.15361305379095333,
+      "sd": 0.0027947870352166585,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.arm_s_per_doc.random",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1581429376237793,
+        0.15534071865840815,
+        0.15200097400520463
+      ],
+      "mean": 0.1551615434291307,
+      "sd": 0.003074899526011162,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.arm_s_per_doc.oracle",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15596176049439237,
+        0.15485975521733053,
+        0.15399498447368387
+      ],
+      "mean": 0.1549388333951356,
+      "sd": 0.0009857697487558699,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.arm_s_per_doc.factfiller",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15738732798490673,
+        0.15482690099452157,
+        0.1544282239919994
+      ],
+      "mean": 0.15554748432380924,
+      "sd": 0.0016057722008571145,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.arm_s_per_doc.kind",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15521768749749754,
+        0.15606315623153932,
+        0.1557043019856792
+      ],
+      "mean": 0.15566171523823868,
+      "sd": 0.00042434015642374347,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.arm_s_per_doc.psi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.16044430210604332,
+        0.16335132300446276,
+        0.16323161477339454
+      ],
+      "mean": 0.16234241329463353,
+      "sd": 0.0016449018445897896,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.arm_s_per_doc.age",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15731070822221227,
+        0.1571828178857686,
+        0.15599953138735145
+      ],
+      "mean": 0.15683101916511077,
+      "sd": 0.0007229231826143559,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.arm_s_per_doc.fifo+e0h_hook",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.19474289036588743,
+        0.19500028662150726,
+        0.18789381250098813
+      ],
+      "mean": 0.19254566316279428,
+      "sd": 0.0040306760156221255,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt2500.D",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        128.0,
+        128.0,
+        128.0
+      ],
+      "mean": 128.0,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt2500.n_docs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        32.0,
+        32.0,
+        32.0
+      ],
+      "mean": 32.0,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt3000.capture_s_per_doc.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.0378323197364807,
+        3.0484692454338074,
+        3.0533313527703285
+      ],
+      "mean": 3.0465443059802055,
+      "sd": 0.007926793183318277,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.capture_s_per_doc.max",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.2592949867248535,
+        3.2495291233062744,
+        3.409212112426758
+      ],
+      "mean": 3.3060120741526284,
+      "sd": 0.08950714466965132,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.rows_U_per_doc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1128.0,
+        1128.0,
+        1128.0
+      ],
+      "mean": 1128.0,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt3000.rows_C_per_doc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        632.0,
+        632.0,
+        632.0
+      ],
+      "mean": 632.0,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt3000.peak_rss_gb",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.943816704,
+        0.928956416,
+        0.857112576
+      ],
+      "mean": 0.9099618986666668,
+      "sd": 0.046368040929122924,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.sum_worst",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.384185791015625e-07,
+        2.384185791015625e-07,
+        2.384185791015625e-07
+      ],
+      "mean": 2.384185791015625e-07,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt3000.identity_worst.rank0",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        4.470348358154297e-08,
+        2.9802322387695312e-08,
+        4.470348358154297e-08
+      ],
+      "mean": 3.9736429850260414e-08,
+      "sd": 8.60318942650595e-09,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.identity_worst.rank1",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.9802322387695312e-08,
+        2.2351741790771484e-08,
+        2.9802322387695312e-08
+      ],
+      "mean": 2.7318795522054035e-08,
+      "sd": 4.301594713252975e-09,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.identity_worst.rank2",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.9802322387695312e-08,
+        2.9802322387695312e-08,
+        2.9802322387695312e-08
+      ],
+      "mean": 2.9802322387695312e-08,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt3000.identity_worst.rank3",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.9802322387695312e-08,
+        1.4901161193847656e-08,
+        4.470348358154297e-08
+      ],
+      "mean": 2.9802322387695312e-08,
+      "sd": 1.4901161193847656e-08,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.arm_s_per_doc.fifo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15223229188995901,
+        0.15591538525768556,
+        0.15142327615467366
+      ],
+      "mean": 0.1531903177674394,
+      "sd": 0.0023943937092262314,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.arm_s_per_doc.random",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1467174062418053,
+        0.15400416663032956,
+        0.15028095824527554
+      ],
+      "mean": 0.1503341770391368,
+      "sd": 0.0036436716948644856,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.arm_s_per_doc.oracle",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1457116719975602,
+        0.15286018235201482,
+        0.14965413548634388
+      ],
+      "mean": 0.14940866327863964,
+      "sd": 0.0035805715361521074,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.arm_s_per_doc.factfiller",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1497846823767759,
+        0.15631238525384106,
+        0.15005052085325588
+      ],
+      "mean": 0.15204919616129095,
+      "sd": 0.003694421937600389,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.arm_s_per_doc.kind",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15493588549725246,
+        0.15335411451815162,
+        0.15039877612434793
+      ],
+      "mean": 0.15289625871325066,
+      "sd": 0.0023029468771523245,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.arm_s_per_doc.psi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1615978124900721,
+        0.1586070207413286,
+        0.1571537812560564
+      ],
+      "mean": 0.1591195381624857,
+      "sd": 0.0022659123951443805,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.arm_s_per_doc.age",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1554807085194625,
+        0.15162391125340946,
+        0.1528315366449533
+      ],
+      "mean": 0.1533120521392751,
+      "sd": 0.0019727880380494564,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.arm_s_per_doc.fifo+e0h_hook",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.19565861961746123,
+        0.19025988539215177,
+        0.18920947912556585
+      ],
+      "mean": 0.1917093280450596,
+      "sd": 0.0034602769071423365,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "ckpt3000.D",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        128.0,
+        128.0,
+        128.0
+      ],
+      "mean": 128.0,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "ckpt3000.n_docs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        32.0,
+        32.0,
+        32.0
+      ],
+      "mean": 32.0,
+      "sd": 0.0,
+      "how": "run.py::size_child, FIT_VAL; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "gram.gram_U_seconds_per_doc",
+      "kind": "statistic",
+      "n": 16,
+      "samples": [
+        0.7969137920299545,
+        0.7869237090926617,
+        0.8122446669731289,
+        0.8096832080045715,
+        0.8119775829836726,
+        0.8082177919568494,
+        0.8104698329698294,
+        0.8997540840646252,
+        0.8215432920260355,
+        0.8081511670025066,
+        0.811203624936752,
+        0.8256867500022054,
+        0.7927717079874128,
+        0.784595208009705,
+        0.8082687499700114,
+        0.8128599999472499
+      ],
+      "mean": 0.8125790729973232,
+      "sd": 0.025823972632547126,
+      "how": "run.py::size_gram, ckpt3000 seed0 FIT_VAL captures",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "gram.gram_C_seconds_per_doc",
+      "kind": "statistic",
+      "n": 16,
+      "samples": [
+        0.46353795810136944,
+        0.45071787503547966,
+        0.5113989579258487,
+        0.46577091701328754,
+        0.4536264999769628,
+        0.45178212493192405,
+        0.4567137500271201,
+        0.46317970810923725,
+        0.45494099997449666,
+        0.46512687497306615,
+        0.44815716601442546,
+        0.4494265830144286,
+        0.4514809160027653,
+        0.45262929098680615,
+        0.5177158340811729,
+        0.45253400004003197
+      ],
+      "mean": 0.4630462160130264,
+      "sd": 0.020931816912028896,
+      "how": "run.py::size_gram, ckpt3000 seed0 FIT_VAL captures",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "gram.eigh_seconds",
+      "kind": "observation",
+      "value": 262.98655337502714,
+      "how": "run.py::size_gram"
+    },
+    {
+      "key": "gram.peak_rss_gb",
+      "kind": "observation",
+      "value": 9.617719296,
+      "how": "run.py::size_gram"
+    },
+    {
+      "key": "gram.p",
+      "kind": "observation",
+      "value": 16640,
+      "how": "run.py::p_of"
+    },
+    {
+      "key": "gram.threads",
+      "kind": "observation",
+      "value": 8,
+      "how": "run.py::size_gram"
+    },
+    {
+      "key": "N_F",
+      "kind": "observation",
+      "value": 264,
+      "how": "run.py::n_f (A1.15: ceil(10 p / 632))"
+    },
+    {
+      "key": "T0.end",
+      "kind": "observation",
+      "value": {
+        "ok": true,
+        "n": 435,
+        "bad": [],
+        "n_bad": 0,
+        "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256"
+      },
+      "how": "run.py::t0_verify"
+    }
+  ],
+  "verdict": {
+    "falsifier": "NONE: sizing",
+    "outcome": "inconclusive",
+    "detail": "sizing only; failed children []; controls ok True",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-27T22:17:00Z"
+}
