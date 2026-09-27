@@ -10,7 +10,7 @@ requires:
 - ruling: R-2026-09-22-liveness-go
 - item_done: capacity-c0
 brief: docs/lab-notes/dispatch-liveness-wiring.md
-status: blocked
+status: done
 attempts: 0
 source: docs/lab-notes/dispatch-2026-09-21-liveness-wiring.md:1
 ---
@@ -26,3 +26,8 @@ decisive run already pre-registered (`experiments/decisive-shuffle/PREREG.md:33-
 Amendment 1) and runs CPU smoke runs only; it tests no new hypothesis, so it needs no
 PREREG of its own. It waits on `capacity-c0` because the `cpu-det` lane does not exist
 until C0 has generated `ops/lanes.json`.
+
+**Status `done` (2026-09-27, docs sync at `b21f3c3`).** Merged in #50. `Exit.INERT = 5`
+(`src/rsr/exit_codes.py`). `train()` measures its own memory's liveness
+(`src/rsr/train/loop.py`), and an inert run's checkpoints are quarantined
+(`src/rsr/train/checkpoint.py`, `QUARANTINE_DIR`).

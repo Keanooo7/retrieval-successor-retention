@@ -11,7 +11,7 @@ requires:
 - item_done: capacity-c0
 - prereg: experiments/retrieval-curve/PREREG.md
 brief: docs/lab-notes/dispatch-retrieval-curve.md
-status: blocked
+status: done
 attempts: 0
 source: experiments/s0-03-rewardable-corpus/run.py:311; experiments/decisive-shuffle/PREREG.md:73
 ---
@@ -28,3 +28,10 @@ H4 failed). One factor changes: training length, to 3000. A `falsified` verdict 
 **Slots 15 = 3 seeds × 5 threads**, S0-03's thread setting. The PREREG's reproduction control is
 bit-exact only at the same thread count. ⚠️ If C0's `ops/lanes.json` gives `cpu-det` fewer than
 15, this item never becomes ready. Report that; **do not lower the thread count** to fit.
+
+**Status `done` (2026-09-27, docs sync at `b21f3c3`).** The run merged in #39 and #43.
+`runs/retrieval-curve/ledger.json` has `status` ok and `verdict.outcome` **falsified**: longer
+training makes memory help answers (`experiments/retrieval-curve/RESULTS.md`). This status is set
+in the same change that marks `capacity-c0` done. Without it, `retrieval-curve` would compute as
+**ready** and could be re-dispatched, although it has already run. Whether this verdict licenses
+`R-*-retrieval-shown` is the owner's ruling, and this status does not write one.

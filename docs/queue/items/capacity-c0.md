@@ -10,7 +10,7 @@ requires:
 - prereg: experiments/capacity-c0/PREREG.md
 - ruling: R-*-mlx-servers
 brief: docs/lab-notes/dispatch-capacity-c0.md
-status: blocked
+status: done
 attempts: 0
 source: CLAUDE.md:47; docs/decisions/ADR-0007-all-training-on-the-mac-studio.md
 ---
@@ -24,3 +24,7 @@ generated, report whether `cpu_det_slots >= 15`. `retrieval-curve` needs 3 seeds
 `experiments/retrieval-curve/PREREG.md` so its ckpt-300 control can reproduce S0-03). **If
 C0 allows fewer, report it — do not lower the thread count**; changing threads changes CPU
 float reductions and would fail the reproduction control for a reason unrelated to the question.
+
+**Status `done` (2026-09-27, docs sync at `b21f3c3`).** C0 ran and merged: #38 and #42.
+`experiments/capacity-c0/RESULTS.md` reads `c0.verdict` **survived**, and `ops/lanes.json` exists
+in the tree.
