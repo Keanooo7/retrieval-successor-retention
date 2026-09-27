@@ -3930,6 +3930,165 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG Amendment 1: argmax identity is half of the amended C1; bucket means "
         "can agree while individual answers flip in opposite directions.",
     ),
+    Mutation(
+        "b2-psi-probe: age leaks into psi-hat",
+        "test_no_age_in_psi_hat_permuting_written_at_and_step_changes_nothing",
+        "experiments/b2-psi-probe/run.py",
+        "            return X @ self.w\n",
+        "            return X @ self.w"
+        " + 1e-3 * (step - slots.written_at[live]).double()\n",
+        "PREREG §4, §6, §11 control 9 (CLAUDE.md: age is excluded from psi-hat): the "
+        "bilinear score reads (s_i, c_t) only. A score that also reads written_at and "
+        "the step collapses onto recency and makes the vacuity failure invisible.",
+    ),
+    Mutation(
+        "b2-psi-probe: a captured s_i / c_t keeps its graph",
+        "test_stopgrad_cuts_the_graph",
+        "experiments/b2-psi-probe/run.py",
+        "    return x.detach().clone()\n",
+        "    return x.clone()\n",
+        "PREREG §1, §5 (CLAUDE.md: no gradient into the transformer or W_sent; c_t "
+        "enters psi-hat with a stop-gradient): `_stopgrad` is the one place a captured "
+        "gestalt or context leaves the transformer.",
+    ),
+    Mutation(
+        "b2-psi-probe: the ridge lambda is chosen on whatever rows it is handed",
+        "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
+        "experiments/b2-psi-probe/run.py",
+        '    require_range([c.doc_id for c in val_caps], "FIT_VAL")\n',
+        "",
+        "PREREG §6 / A1.7: lambda minimises the FIT_VAL validation MSE. Without the "
+        "range guard an EVAL capture selects lambda silently -- a fit tuned on the "
+        "data it is scored on.",
+    ),
+    Mutation(
+        "b2-psi-probe: ref is chosen on whatever accuracies it is handed",
+        "test_ref_is_never_chosen_on_eval",
+        "experiments/b2-psi-probe/run.py",
+        '    require_range(doc_ids, "FIT_VAL")  # §9.3: ref on FIT_VAL, never EVAL\n',
+        "",
+        "PREREG §9.3 / PLAN-v4: ref (FIFO or the age-only head) is chosen per seed on "
+        "FIT_VAL, never on EVAL. Choosing it on EVAL picks the easier comparator after "
+        "seeing the contrast.",
+    ),
+    Mutation(
+        "b2-psi-probe: kind-oracle ties go to the oldest",
+        "test_kind_oracle_ties_are_uniform_random_seeded_per_step",
+        "experiments/b2-psi-probe/run.py",
+        "        return rng.choice(ks)\n",
+        "        return ks[0]\n",
+        "PREREG A1.10: ties inside the lowest class are uniformly random, seeded "
+        "ko:seed:doc:t. An oldest tie-break hands Q2's comparator the age information "
+        "psi-hat is barred from.",
+    ),
+    Mutation(
+        "b2-psi-probe: the random floor is its best seed, not its 5-seed mean",
+        "test_the_bootstrap_is_paired_and_the_random_floor_is_the_five_seed_mean",
+        "experiments/b2-psi-probe/run.py",
+        "    return torch.stack(xs).mean(0)\n",
+        "    return torch.stack(xs).min(0).values\n",
+        "PREREG §9.2: the random arm's accuracy per replicate is the mean over its 5 "
+        "seeds. Its minimum lowers the floor that WIN's clause (4) must clear.",
+    ),
+    Mutation(
+        "b2-psi-probe: WIN no longer has to beat random",
+        "test_the_random_floor_is_part_of_win",
+        "experiments/b2-psi-probe/run.py",
+        "and noninf_lo > -delta and rand_lo > 0:",
+        "and noninf_lo > -delta:",
+        "PREREG §9.5 WIN clause (4) (REDTEAM-v3 edit 5): psi-hat must beat the random "
+        "arm's 5-seed mean with a paired CI lower bound > 0.",
+        off_gate_allowed=(
+            (
+                "tests/test_b2_psi_probe.py::test_the_outcome_rule",
+                "the outcome rule's table carries the same clause as one of its rows "
+                "(rand_lo = -0.01 must not be WIN); the dedicated test isolates it. "
+                "Inspected: both fail on that one row and nothing else.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b2-psi-probe: E0h reads its class before the thresholds are ratified",
+        "test_e0h_rc_is_its_own_and_is_2_until_ratified",
+        "experiments/b2-psi-probe/run.py",
+        "    if not ratified:\n        return 2\n",
+        "",
+        "PREREG A1.3: until a ruling ratifies the proposed 0.90 / 0.49, E0h exits 2 "
+        "whatever the R^2; otherwise an unratified COLLINEAR is a kill (rc 1).",
+    ),
+    Mutation(
+        "b2-psi-probe: an exception inside E0h exits 1",
+        "test_e0h_without_its_fits_or_on_an_exception_exits_3",
+        "experiments/b2-psi-probe/run.py",
+        "            pass\n        return 3\n",
+        "            pass\n        return 1\n",
+        "PREREG A1.3: an exception inside run.py e0h is DID NOT RUN (3); 1 means "
+        "COLLINEAR under a ratifying ruling, and a crash must never read as a kill.",
+    ),
+    Mutation(
+        "b2-psi-probe: the range check skips the used ranges",
+        "test_an_overlap_with_any_used_range_is_a_problem",
+        "experiments/b2-psi-probe/run.py",
+        "        for uname, urng in used.items():\n",
+        "        for uname, urng in {}.items():\n",
+        "PREREG §3 / A1.15: B2's ranges are asserted disjoint from every used range, "
+        "E0d's [262144, 263168) included, before any model is loaded (exit 3).",
+    ),
+    Mutation(
+        "b2-psi-probe: the selected lambda's residual is not checked",
+        "test_a_selected_lambda_over_1e8_residual_or_no_eligible_point_exits_1",
+        "experiments/b2-psi-probe/run.py",
+        '    if path[best]["resid"] > SELECTED_RESID:\n',
+        '    if path[best]["resid"] > SELECTED_RESID * 1e3:\n',
+        "PREREG A1.6 / §11 control 10: the selected lambda's relative residual must "
+        "be <= 1e-8, else exit 1.",
+    ),
+    Mutation(
+        "b2-psi-probe: psi-hat ties go to the newest",
+        "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+        "experiments/b2-psi-probe/run.py",
+        "            if vals[q] < vals[j]:  # strict: ties to the lowest slot, "
+        "the oldest\n",
+        "            if vals[q] <= vals[j]:  # strict: ties to the lowest slot, "
+        "the oldest\n",
+        "PREREG §4: argmin with ties to the lowest slot index (the oldest), as "
+        "OraclePolicy. Ties to the newest is an age preference nobody registered.",
+    ),
+    Mutation(
+        "b2-psi-probe: a CI that excludes its estimate is read",
+        "test_a_ci_excluding_the_estimate_is_unresolved",
+        "experiments/b2-psi-probe/run.py",
+        '    if outcome_flags(point, lo, hi):\n        return "UNRESOLVED"\n',
+        "",
+        "PREREG A1.13: if the estimate is outside its CI the contrast is UNRESOLVED "
+        "(CI_EXCLUDES_ESTIMATE); it removes the only WIN and EQUIV overlap.",
+    ),
+    Mutation(
+        "b2-psi-probe: Q2's contrast sizes N_E",
+        "test_power_takes_the_max_over_gating_contrasts_only_and_clips",
+        "experiments/b2-psi-probe/run.py",
+        "        if c in GATING_CONTRASTS\n",
+        "        if True\n",
+        "PREREG A1.12: only the gating contrasts enter the max; psi-U - kind-oracle "
+        "(Q2, outside the truth table) is reported with the N_E that results.",
+    ),
+    Mutation(
+        "b2-psi-probe: the E0h pre-hook changes the forward pass",
+        "test_the_logit_prehook_does_not_change_the_forward",
+        "experiments/b2-psi-probe/run.py",
+        "        x, mem_kv, mem_valid = args[:3]\n        with torch.no_grad():\n"
+        "            lg = recompute_logits(module, x, mem_kv, mem_valid)\n"
+        "        self._pending.append(lg)\n        self._valid = mem_valid\n"
+        "        self.calls.append(tuple(lg.shape))\n        return None\n",
+        "        x, mem_kv, mem_valid = args[:3]\n        x = x * 1.001\n"
+        "        with torch.no_grad():\n"
+        "            lg = recompute_logits(module, x, mem_kv, mem_valid)\n"
+        "        self._pending.append(lg)\n        self._valid = mem_valid\n"
+        "        self.calls.append(tuple(lg.shape))\n        return (x, *args[1:])\n",
+        "PREREG A1.5: the logits come from a forward pre-hook and the forward pass is "
+        "unchanged (test_fidelity / test_reduction untouched). A hook that edits its "
+        "input passes the softmax control, since the recompute sees the same edit.",
+    ),
 )
 
 

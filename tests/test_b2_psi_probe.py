@@ -827,11 +827,16 @@ def test_e0h_rc_is_its_own_and_is_2_until_ratified(b2):
 
 
 def test_e0h_without_its_fits_or_on_an_exception_exits_3(b2, tmp_path):
-    assert b2.e0h_main(["--fits", str(tmp_path / "absent")]) == 3
-    bad = tmp_path / "fits"
-    bad.mkdir()
-    (bad / "e0h_inputs.json").write_text("{not json")
-    assert b2.e0h_main(["--fits", str(bad)]) == 3
+    fits, ev = tmp_path / "fits", tmp_path / "eval"
+    args = ["--fits", str(fits), "--eval-dir", str(ev)]
+    assert b2.e0h_main(args) == 3  # inputs absent
+    fits.mkdir()
+    ev.mkdir()
+    for s in b2.SEEDS:  # present but unreadable: torch.load raises inside e0h
+        (fits / f"ckpt3000-seed{s}.pt").write_text("not a checkpoint")
+        (ev / f"ckpt3000-seed{s}.e0h.pt").write_text("not a checkpoint")
+    assert b2.e0h_main(args) == 3
+    assert "Traceback" in (fits / "e0h_traceback.txt").read_text()
 
 
 def test_no_e0h_ruling_exists_so_e0h_is_unratified(b2):
