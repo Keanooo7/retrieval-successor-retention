@@ -112,14 +112,8 @@ def test_constants_are_the_preregs(e0d):
     assert e0d.D_E0D == (262144, 263168)
     assert re.search(r'RHO_STAR: "0\.5 -- PROPOSED', text)
     assert e0d.RHO_STAR_PROPOSED == 0.5
-    assert re.search(r"LOO_FLAT: \"q90 over cells of \|delta_resample\| < 1e-3", text)
-    assert e0d.LOO_FLAT == 1e-3
-    assert "coefficient of variation of r_i < 0.05" in text
-    assert e0d.R_FLAT == 0.05
     assert 'RESAMPLE_MIN_COVERAGE: "0.80' in text
     assert e0d.RESAMPLE_MIN_COVERAGE == 0.80
-    assert "2000 resamples, generator seed 20260927, 95% percentile" in text
-    assert (e0d.BOOT_N, e0d.BOOT_SEED, e0d.CI_LEVEL) == (2000, 20260927, 0.95)
     assert "more than 1% of cells" in text
     assert e0d.UNDERFULL_MAX == 0.01
     assert "within 1e-6" in text
@@ -127,7 +121,6 @@ def test_constants_are_the_preregs(e0d):
     assert e0d.SEEDS == (0, 1, 2)
     assert e0d.BATCH == 16
     assert e0d.KEY_STRIDE == 1_000_003
-    assert e0d.SENSITIVITY_RHO == (0.3, 0.7)
     for s, h in {
         0: "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
         1: "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
@@ -135,183 +128,6 @@ def test_constants_are_the_preregs(e0d):
     }.items():
         assert f"seed{s}: {h}" in text
         assert e0d.CKPT_SHA256[s] == h
-
-
-# --------------------------------------------------------------------------- #
-# Spearman with average ranks, and its weighted (cluster-bootstrap) form
-# --------------------------------------------------------------------------- #
-
-
-def test_spearman_uses_average_ranks_for_ties(e0d):
-    x = np.array([1.0, 2.0, 2.0, 3.0])
-    y = np.array([1.0, 3.0, 2.0, 4.0])
-    rx = np.array([1.0, 2.5, 2.5, 4.0])
-    ry = np.array([1.0, 3.0, 2.0, 4.0])
-    want = np.corrcoef(rx, ry)[0, 1]
-    assert e0d.spearman(x, y) == pytest.approx(want, abs=1e-12)
-    assert e0d.spearman(x, -y) == pytest.approx(-want, abs=1e-12)
-    # undefined, not zero: a constant side has no ranking
-    assert np.isnan(e0d.spearman(np.ones(4), y))
-    assert np.isnan(e0d.spearman(np.array([1.0]), np.array([2.0])))
-
-
-def test_weighted_spearman_equals_the_duplicated_sample(e0d):
-    """A per-document cluster bootstrap duplicates whole documents. The weighted
-    form must equal Spearman on the literally duplicated sample, ties included."""
-    rng = np.random.default_rng(0)
-    x = rng.integers(0, 5, 60).astype(float)  # heavy ties
-    y = x + rng.integers(0, 3, 60)
-    w = rng.integers(0, 4, 60)
-    ws = e0d.WeightedSpearman(x, y)
-    dup = np.repeat(np.arange(60), w)
-    assert ws(w.astype(float)) == pytest.approx(e0d.spearman(x[dup], y[dup]), abs=1e-12)
-    assert ws(np.ones(60)) == pytest.approx(e0d.spearman(x, y), abs=1e-12)
-
-
-def _strata_cells():
-    """Two ranks. Across ranks, r and delta rise together (age agrees); within
-    each rank they run opposite (content disagrees)."""
-    r = np.array([0.0, 1.0, 2.0, 10.0, 11.0, 12.0])
-    d = np.array([2.0, 1.0, 0.0, 12.0, 11.0, 10.0])
-    rank = np.array([0, 0, 0, 1, 1, 1])
-    return r, d, rank
-
-
-def test_rho_rank_is_within_stratum_and_count_weighted(e0d):
-    r, d, rank = _strata_cells()
-    assert e0d.spearman(r, d) > 0.4  # pooled agreement, through rank only
-    out = e0d.rho_rank(r, d, rank, n_ranks=2)
-    assert out["per_rank"] == pytest.approx([-1.0, -1.0])
-    assert out["rho"] == pytest.approx(-1.0)
-    # count weighting: add a positively-agreeing rank 2 with 6 cells
-    r2 = np.r_[r, np.arange(6.0) + 20]
-    d2 = np.r_[d, np.arange(6.0) + 20]
-    k2 = np.r_[rank, np.full(6, 2)]
-    out2 = e0d.rho_rank(r2, d2, k2, n_ranks=3)
-    assert out2["rho"] == pytest.approx((3 * -1 + 3 * -1 + 6 * 1) / 12)
-    assert out2["n_per_rank"] == [3, 3, 6]
-
-
-def test_rho_step_and_bottom1(e0d):
-    """Three full-memory steps of M = 4. Step 0 agrees perfectly, step 1 is
-    reversed, step 2 has a missing (NaN) slot and is kept for rho_step only."""
-    r = np.array([[0.1, 0.2, 0.3, 0.4], [0.1, 0.2, 0.3, 0.4], [0.4, 0.1, 0.3, 0.2]])
-    d = np.array([[1.0, 2.0, 3.0, 4.0], [4.0, 3.0, 2.0, 1.0], [np.nan, 1.0, 3.0, 2.0]])
-    out = e0d.step_stats(r, d)
-    assert out["per_step_rho"][:2] == pytest.approx([1.0, -1.0])
-    assert out["per_step_rho"][2] == pytest.approx(1.0)
-    # bottom-1: only steps with every slot valid -- step 0 agrees, step 1 does not
-    b1 = out["bottom1_ok"]
-    assert b1[0] == 1.0 and b1[1] == 0.0 and np.isnan(b1[2])
-
-
-# --------------------------------------------------------------------------- #
-# the cluster bootstrap: documents, not cells; one index set per seed
-# --------------------------------------------------------------------------- #
-
-
-def test_cluster_bootstrap_draws_documents_with_the_registered_seed(e0d):
-    w1 = e0d.bootstrap_doc_weights(n_docs=10, n_boot=50, seed=e0d.BOOT_SEED)
-    w2 = e0d.bootstrap_doc_weights(n_docs=10, n_boot=50, seed=e0d.BOOT_SEED)
-    assert w1.shape == (50, 10)
-    assert np.array_equal(w1, w2)  # same indices for every statistic of a seed
-    assert (w1.sum(axis=1) == 10).all()  # n documents drawn with replacement
-    assert not np.array_equal(w1, e0d.bootstrap_doc_weights(10, 50, seed=1))
-
-
-def test_cluster_bootstrap_keeps_a_documents_cells_together(e0d):
-    """Two documents, each internally perfectly agreeing but at different levels.
-    A document-level resample only ever reweights whole documents, so each cell of
-    one document carries the same weight in every replicate."""
-    doc = np.array([0, 0, 0, 1, 1, 1])
-    W = e0d.bootstrap_doc_weights(n_docs=2, n_boot=20, seed=e0d.BOOT_SEED)
-    cw = e0d.cell_weights(W, doc)
-    assert cw.shape == (20, 6)
-    assert (cw[:, :3] == cw[:, [0]]).all() and (cw[:, 3:] == cw[:, [3]]).all()
-    assert np.array_equal(cw[:, 0], W[:, 0]) and np.array_equal(cw[:, 3], W[:, 1])
-
-
-def test_percentile_ci(e0d):
-    vals = np.arange(1000, dtype=float)
-    lo, hi = e0d.percentile_ci(vals, level=0.95)
-    assert lo == pytest.approx(np.quantile(vals, 0.025))
-    assert hi == pytest.approx(np.quantile(vals, 0.975))
-    # NaN replicates are not silently dropped into a narrower interval
-    assert all(np.isnan(e0d.percentile_ci(np.array([1.0, np.nan]), level=0.95)))
-
-
-# --------------------------------------------------------------------------- #
-# §5 flatness, §7 labels, §8 classification
-# --------------------------------------------------------------------------- #
-
-
-def test_loo_flat_is_q90_of_abs_delta_strictly_below_1e_3(e0d):
-    d = np.full(100, 1e-4)
-    d[95:] = 1.0  # 5% large: q90 is still tiny -> flat
-    assert e0d.loo_flat(d)["flat"]
-    d[85:] = 1.0  # 15% large: q90 is 1.0 -> not flat
-    assert not e0d.loo_flat(d)["flat"]
-    assert not e0d.loo_flat(np.full(10, 1e-3))["flat"]  # strictly below
-    assert e0d.loo_flat(np.full(10, -5e-4))["flat"]  # absolute value
-
-
-def test_r_flat_is_median_within_step_cv_below_0_05(e0d):
-    uniform = np.full((5, 4), 0.25)
-    assert e0d.r_flat(uniform)["flat"]
-    spread = np.tile([0.1, 0.2, 0.3, 0.4], (5, 1))
-    assert not e0d.r_flat(spread)["flat"]
-    cv = np.std([0.1, 0.2, 0.3, 0.4]) / 0.25  # population sd (ddof 0)
-    assert e0d.r_flat(spread)["median_cv"] == pytest.approx(cv)
-
-
-def _stats(pool_ci, rank_ci, loo_flat=False, r_flat=False):
-    return {
-        "rho_pool_ci": pool_ci,
-        "rho_rank_ci": rank_ci,
-        "loo_flat": loo_flat,
-        "r_flat": r_flat,
-    }
-
-
-@pytest.mark.parametrize(
-    "stats,label",
-    [
-        (_stats((0.9, 0.95), (0.9, 0.95), loo_flat=True, r_flat=True), "DEGENERATE"),
-        (_stats((-0.9, -0.8), (0.9, 0.95), loo_flat=True), "LOO_UNINFORMATIVE"),
-        (_stats((-0.3, -0.1), (0.0, 0.1)), "INVERTED"),
-        (_stats((0.1, 0.4), (0.0, 0.1)), "DISAGREE"),
-        (_stats((0.6, 0.8), (0.55, 0.7)), "AGREE"),
-        (_stats((0.6, 0.8), (0.1, 0.3)), "AGREE_VIA_RANK"),
-        (_stats((0.4, 0.6), (0.1, 0.3)), "UNRESOLVED"),
-        (_stats((0.6, 0.8), (0.4, 0.6)), "UNRESOLVED"),
-        (_stats((float("nan"), float("nan")), (0.9, 0.9)), "UNRESOLVED"),
-    ],
-)
-def test_seed_label_first_match_wins_on_the_ci_not_the_point(e0d, stats, label):
-    assert e0d.seed_label(stats, rho_star=0.5) == label
-
-
-def test_disagree_needs_the_ci_upper_below_rho_star(e0d):
-    """A straddling CI is never a kill (PREREG §4 item 3)."""
-    assert e0d.seed_label(_stats((0.3, 0.55), (0.0, 0.1)), rho_star=0.5) == "UNRESOLVED"
-    assert e0d.seed_label(_stats((0.3, 0.49), (0.0, 0.1)), rho_star=0.5) == "DISAGREE"
-
-
-@pytest.mark.parametrize(
-    "labels,klass,code",
-    [
-        (["DEGENERATE", "LOO_UNINFORMATIVE", "AGREE"], "DEGENERATE_UNINFORMATIVE", 2),
-        (["AGREE"] * 3, "AGREE", 0),
-        (["INVERTED"] * 3, "CONFOUND_INVERTED", 1),
-        (["DISAGREE", "INVERTED", "DISAGREE"], "CONFOUND", 1),
-        (["DISAGREE", "AGREE_VIA_RANK", "INVERTED"], "RECENCY_ONLY", 1),
-        (["AGREE", "AGREE", "UNRESOLVED"], "MIXED_UNRESOLVED", 2),
-        (["DEGENERATE", "AGREE", "AGREE"], "MIXED_UNRESOLVED", 2),
-        (["AGREE_VIA_RANK"] * 3, "RECENCY_ONLY", 1),
-    ],
-)
-def test_classification_rows_and_exit_codes(e0d, labels, klass, code):
-    assert e0d.classify(labels) == (klass, code)
 
 
 # --------------------------------------------------------------------------- #
@@ -373,14 +189,16 @@ def test_the_real_rulings_dir_does_not_authorise_e0d_today(e0d):
 
 
 def test_disjointness_is_on_the_generator_key_across_seeds(e0d):
-    """Doc i of seed 0 is doc i - 1_000_003 of seed 1. An index check misses it."""
+    """Doc i of seed s is doc i + 1_000_003 of seed s - 1 (§2.1). A used range of
+    seed 0 above one key stride aliases E0d documents of seed 1 whose indices it
+    does not contain -- an index check misses it, the key check must not."""
     K = e0d.KEY_STRIDE
-    used = [{"name": "x", "range": (0, 64), "seeds": (1,)}]
+    used = [{"name": "x", "range": (K, K + 64), "seeds": (0,)}]
     with pytest.raises(e0d.ControlFailed) as ei:
-        e0d.check_disjoint((K, K + 10), seeds=(0,), used=used)
+        e0d.check_disjoint((0, 10), seeds=(1,), used=used)
     assert ei.value.control == "C2"
-    # the same indices under seed 1 itself (key 1*K + K..) do not collide
-    e0d.check_disjoint((K, K + 10), seeds=(1,), used=used)
+    # the same indices under seed 0 (keys 0..9) do not collide
+    e0d.check_disjoint((0, 10), seeds=(0,), used=used)
 
 
 def test_disjointness_catches_a_plain_index_overlap(e0d):
@@ -430,7 +248,7 @@ def test_the_e0d_range_is_not_generated_until_cleared(e0d, monkeypatch):
         e0d.e0d_documents(0, 48, (262000, 262200), cleared=False)  # overlaps
     assert calls == []
     # a fixture range is fine
-    docs = e0d.e0d_documents(0, S, (0, 3), cleared=False)
+    docs = e0d.e0d_documents(0, 48, (0, 3), cleared=False)
     assert calls == [0, 1, 2] and len(docs) == 3
 
 
@@ -602,71 +420,7 @@ def test_coverage_is_a_runtime_control_on_a_small_batch(e0d, world):
 
 
 # --------------------------------------------------------------------------- #
-# analysis: the primary is gated x resample x full memory
-# --------------------------------------------------------------------------- #
-
-
-def _synthetic_cells(n_docs=40, seed=0, agree=True):
-    """Cells whose gated r agrees with delta and whose ungated r is noise."""
-    rng = np.random.default_rng(seed)
-    rows = []
-    for d in range(n_docs):
-        for t in range(M, M + 6):
-            base = rng.normal(size=M)
-            for i in range(M):
-                rows.append((d, t, i, base[i]))
-    doc, t, rank, v = (np.array(x) for x in zip(*rows, strict=True))
-    n = len(v)
-    delta = v if agree else -v
-    return {
-        "doc": doc,
-        "t": t,
-        "rank": rank,
-        "full": np.ones(n, dtype=bool),
-        "n_live": np.full(n, M),
-        "d_resample": delta + 0.01 * rng.normal(size=n),
-        "d_zero": delta,
-        "r_gated": v + 1.0,
-        "r_ungated": rng.random(n) + 1.0,
-        "layer_gated": np.stack([v, v], axis=1),
-        "layer_ungated": np.stack([v, -v], axis=1),
-        "kind": np.array(["filler"] * n),
-        "pre_share_gated": np.ones(n),
-    }
-
-
-def test_primary_is_gated_r_against_resample(e0d):
-    c = _synthetic_cells()
-    out = e0d.analyse_seed(c, M=M, n_docs=40, rho_star=0.5, n_boot=50)
-    p = out["primary"]
-    assert p["rho_pool"] > 0.9  # gated agrees
-    assert out["cells"]["gated"]["resample"]["rho_pool"] == p["rho_pool"]
-    assert abs(out["cells"]["ungated"]["resample"]["rho_pool"]) < 0.3
-    assert out["label"] == "AGREE"
-    assert out["label_ungated"] != "AGREE"
-
-
-def test_analysis_reports_every_registered_statistic(e0d):
-    c = _synthetic_cells(agree=False)
-    out = e0d.analyse_seed(c, M=M, n_docs=40, rho_star=0.5, n_boot=50)
-    assert out["label"] == "INVERTED"
-    for g in ("gated", "ungated"):
-        for k in ("resample", "zero"):
-            cell = out["cells"][g][k]
-            for key in (
-                "rho_pool", "rho_pool_ci", "rho_rank", "rho_rank_ci", "per_rank",
-                "rho_step", "rho_step_ci", "bottom1", "bottom1_ci",
-                "rho_pool_all_steps", "per_layer", "by_kind",
-            ):  # fmt: skip
-                assert key in cell, (g, k, key)
-            assert len(cell["per_layer"]) == 2  # one entry per cross-attn layer
-    assert set(out["sensitivity"]) == {"0.3", "0.7"}
-    assert "q90_abs_delta_resample" in out["flatness"]
-    assert "median_cv_r_gated" in out["flatness"]
-
-
-# --------------------------------------------------------------------------- #
-# main(): refuses before loading any document; exit code follows gated
+# main(): C8 -> C1 -> C2, then exit 3 before any document (pending amendment)
 # --------------------------------------------------------------------------- #
 
 
@@ -727,58 +481,38 @@ def test_main_refuses_before_any_e0d_document_without_the_rulings(
     assert fake_ledger.last.commands == [3]
 
 
-def test_main_exit_3_on_any_control_failure(e0d, monkeypatch, fake_ledger, tmp_path):
-    d = _rulings(tmp_path, ALL3)
-    monkeypatch.setattr(e0d, "check_authority", lambda *a, **k: {"rho_star": 0.5,
-                        "rulings": {}})  # fmt: skip
-    monkeypatch.setattr(e0d, "check_substrate", lambda root: {})
-    monkeypatch.setattr(e0d, "used_ranges", lambda runs: [])
-
-    def boom(*a, **k):
-        raise e0d.ControlFailed("C6", "coverage 0.5 < 0.80")
-
-    monkeypatch.setattr(e0d, "measure_seed", boom)
-    code = e0d.main(["--rulings-dir", str(d)])
-    assert int(code) == 3
-    assert fake_ledger.last._status == "did_not_run"
-    assert "C6" in str(fake_ledger.last.rows.get("control_failed"))
-
-
-@pytest.mark.parametrize(
-    "labels,ungated,code,status",
-    [
-        (["AGREE"] * 3, ["AGREE"] * 3, 0, "ok"),
-        (["DISAGREE"] * 3, ["AGREE"] * 3, 1, "failed"),
-        (["AGREE", "UNRESOLVED", "AGREE"], ["DISAGREE"] * 3, 2, "inconclusive"),
-    ],
-)
-def test_main_exit_code_follows_the_gated_class(
-    e0d, monkeypatch, fake_ledger, labels, ungated, code, status
+def test_main_exits_3_before_any_document_even_when_preconditions_pass(
+    e0d, monkeypatch, fake_ledger
 ):
-    monkeypatch.setattr(e0d, "check_authority", lambda *a, **k: {"rho_star": 0.5,
-                        "rulings": {}})  # fmt: skip
+    """At this commit the analysis awaits the PREREG amendment, so a cleared run
+    still refuses (3) and generates nothing -- never a silent 0."""
+    gen = []
+    monkeypatch.setattr(e0d, "_generate_document", lambda i, cfg: gen.append(i))
+    monkeypatch.setattr(
+        e0d, "check_authority", lambda *a, **k: {"rho_star": 0.5, "rulings": {}}
+    )
     monkeypatch.setattr(e0d, "check_substrate", lambda root: {})
     monkeypatch.setattr(e0d, "used_ranges", lambda runs: [])
-    monkeypatch.setattr(e0d, "measure_seed", lambda s, **k: {"seed": s})
-    it = iter(zip(labels, ungated, strict=True))
+    monkeypatch.setattr(e0d, "measure_seed", lambda *a, **k: pytest.fail("measured"))
+    code = e0d.main([])
+    assert int(code) == 3
+    assert gen == []
+    assert fake_ledger.last._status == "did_not_run"
+    assert "not_implemented" in fake_ledger.last.rows
 
-    def fake_analyse(meas, **k):
-        g, u = next(it)
-        return {
-            "label": g, "label_ungated": u, "label_zero": g,
-            "primary": {"rho_pool": 0.0, "rho_rank": 0.0},
-            "sensitivity": {}, "flatness": {}, "cells": {},
-        }  # fmt: skip
 
-    monkeypatch.setattr(e0d, "analyse_measured", fake_analyse)
-    monkeypatch.setattr(e0d, "substrate_recheck", lambda *a, **k: {"rc": 0})
-    got = e0d.main([])
-    assert int(got) == code
-    assert fake_ledger.last._status == status
-    klass = fake_ledger.last.rows["class_gated"]
-    assert klass == e0d.classify(labels)[0]
-    if e0d.classify(labels)[0] != e0d.classify(ungated)[0]:
-        assert fake_ledger.last.rows["gate_sensitive"] is True
+def test_main_ledgers_the_failing_control(e0d, monkeypatch, fake_ledger):
+    monkeypatch.setattr(
+        e0d, "check_authority", lambda *a, **k: {"rho_star": 0.5, "rulings": {}}
+    )
+
+    def c1(root):
+        raise e0d.ControlFailed("C1", "sha mismatch")
+
+    monkeypatch.setattr(e0d, "check_substrate", c1)
+    code = e0d.main([])
+    assert int(code) == 3
+    assert fake_ledger.last.rows["control_failed"]["control"] == "C1"
 
 
 def test_substrate_recheck_refuses_a_failing_manifest(e0d, tmp_path):
