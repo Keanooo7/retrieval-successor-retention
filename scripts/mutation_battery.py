@@ -3930,6 +3930,95 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG Amendment 1: argmax identity is half of the amended C1; bucket means "
         "can agree while individual answers flip in opposite directions.",
     ),
+    # ----------------------------------------------------------------------- #
+    # E0d (experiments/e0d/PREREG.md at 5357ad2, spec §3.2.1): preconditions and
+    # the LOO/r_i plumbing. The statistics, labels and classification await the
+    # PREREG amendment and carry no mutation yet.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "e0d: C2 checks only same-seed generator keys",
+        "test_disjointness_is_on_the_generator_key_across_seeds",
+        "experiments/e0d/run.py",
+        "                n = min(mb, kb) - max(ma, ka)\n",
+        "                n = (min(mb, kb) - max(ma, ka)) if s == s2 else 0\n",
+        "PREREG §2.1: document i of seed s is byte-identical to document "
+        "i - 1_000_003 of seed s + 1, so C2 must compare generator keys across every "
+        "seed pair; a same-seed check misses exactly that alias.",
+    ),
+    Mutation(
+        "e0d: C8 requires only the rho* ruling",
+        "test_authority_refuses_without_each_ruling",
+        "experiments/e0d/run.py",
+        "        if not hits:\n",
+        '        if not hits and key == "rho_star":\n',
+        "PREREG §6 C8: R-*-retrieval-shown and R-*-sprint0-gate* must both exist "
+        "before any D_E0d document is loaded; ratifying rho* alone does not "
+        "authorise the run.",
+    ),
+    Mutation(
+        "e0d: an unstated rho* defaults to the unratified 0.5",
+        "test_a_rho_ruling_that_states_no_value_is_refused",
+        "experiments/e0d/run.py",
+        "    if len(values) != 1:\n",
+        "    values = values or {RHO_STAR_PROPOSED}\n    if len(values) != 1:\n",
+        "PREREG §4: RHO_STAR = 0.5 is PROPOSED, NOT RATIFIED; no kill is read until "
+        "Brendan ratifies or replaces it. A ruling file that names no value must "
+        "not fall back to the model's proposal.",
+    ),
+    Mutation(
+        "e0d: the D_E0d guard refuses only the exact range",
+        "test_the_e0d_range_is_not_generated_until_cleared",
+        "experiments/e0d/run.py",
+        "    if not cleared and lo < D_E0D[1] and D_E0D[0] < hi:\n",
+        "    if not cleared and (lo, hi) == D_E0D:\n",
+        "PREREG §2 / C8: no document of [262144, 263168) is generated before the "
+        "preconditions pass; a partial overlap generates E0d documents too.",
+    ),
+    Mutation(
+        "e0d: C3 vocabulary closure checks one document",
+        "test_vocabulary_closure_is_a_runtime_control",
+        "experiments/e0d/run.py",
+        "        check_vocabulary_closure(docs, vocab)\n",
+        "        check_vocabulary_closure(docs[:1], vocab)\n",
+        "PREREG §2.4 / C3: closure of D_E0d over [0, 64)'s vocabulary was believed, "
+        "not verified; any document with an out-of-vocabulary word is exit 3.",
+    ),
+    Mutation(
+        "e0d: C6 coverage floor moved below 0.80",
+        "test_resample_coverage_below_080_is_exit_3",
+        "experiments/e0d/run.py",
+        "    if not n or not cov >= RESAMPLE_MIN_COVERAGE:\n",
+        "    if not n or not cov >= RESAMPLE_MIN_COVERAGE - 0.1:\n",
+        "PREREG §6 C6: below 0.80 of full-memory cells with a resample donor the "
+        "primary cannot be read; coverage at batch 16 was believed, not verified.",
+    ),
+    Mutation(
+        "e0d: r_i read ungated in the live pass",
+        "test_r_i_is_read_from_the_same_forward_gated_and_rescaled",
+        "experiments/e0d/run.py",
+        "retrieval_demand(tr, n_live=n, capacity=M, gated=True).cpu()",
+        "retrieval_demand(tr, n_live=n, capacity=M, gated=False).cpu()",
+        "correction 17 / spec §3.2.1: the primary r_i includes g_mem; ungated is "
+        "the secondary, and reading it as the primary swaps the decided form.",
+    ),
+    Mutation(
+        "e0d: C4 slot-map alignment compares LOO with itself",
+        "test_alignment_control_catches_a_misaligned_slot_map",
+        "experiments/e0d/run.py",
+        '        map_ok &= torch.equal(o["slot_sentence"], lv["slot_sentence"])',
+        '        map_ok &= torch.equal(o["slot_sentence"], o["slot_sentence"])',
+        "PREREG §6 C4: r_i and delta must describe the same slot at every cell; a "
+        "misaligned map pairs each r_i with another slot's causal value.",
+    ),
+    Mutation(
+        "e0d: C4 live-loss tolerance dropped",
+        "test_alignment_control_catches_a_live_loss_mismatch",
+        "experiments/e0d/run.py",
+        "nan_ok and map_ok and max(diffs) <= LIVE_TOL):",
+        "nan_ok and map_ok):",
+        "PREREG §6 C4: loo_delta_loss's live_loss must equal a separate plain "
+        "forward within 1e-6, or the r_i forward is not the one LOO knocks out.",
+    ),
 )
 
 
