@@ -1021,11 +1021,16 @@ def test_c1_reads_the_t0_manifest_from_the_t0_record(e0d, tmp_path):
     assert ei.value.control == "C1"
     rec = tmp_path / "t0-substrate"
     rec.mkdir()
+    man = tmp_path / "MANIFEST.sha256"
     (rec / "manifest.json").write_text(
-        json.dumps({"substrate_manifest": "/x/MANIFEST.sha256", "repo_root": "/y"})
+        json.dumps({"substrate_manifest": str(man), "repo_root": "/y"})
     )
+    with pytest.raises(e0d.ControlFailed) as ei:  # names a manifest that is absent
+        e0d.t0_manifest(tmp_path)
+    assert ei.value.control == "C1"
+    man.write_text("")
     got = e0d.t0_manifest(tmp_path)
-    assert got["manifest"] == Path("/x/MANIFEST.sha256") and got["cwd"] == Path("/y")
+    assert got["manifest"] == man and got["cwd"] == Path("/y")
     assert "rsr-substrate/2026-09-27" not in RUN.read_text()
 
 
@@ -1160,6 +1165,16 @@ def test_claims_json_is_written_only_by_a_real_run(e0d, cleared, fake_ledger):
         assert all(isinstance(c[k], str) and c[k] for k in c)
     assert any(c["expected"] == "CONFOUND" for c in got)
     assert any(c["expected"] == "1" for c in got)
+    # the claims that read ledger rows run as written, from the repo root
+    import subprocess
+
+    for c in got:
+        if "['rows']" in c["command"]:
+            proc = subprocess.run(
+                c["command"], shell=True, cwd=ROOT, capture_output=True, text=True
+            )
+            assert proc.returncode == 0, proc.stderr
+            assert proc.stdout.strip() == c["expected"], c["claim"]
 
 
 def test_a_refused_run_writes_no_claims(e0d, monkeypatch, fake_ledger):

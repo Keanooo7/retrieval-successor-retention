@@ -1,30 +1,42 @@
 """E0d -- `r_i` against leave-one-out delta-loss (spec §3.2.1, §6 kill gate).
 
 Pre-registration: `experiments/e0d/PREREG.md`, committed alone at 5357ad2, ahead of
-this file. It fixes the substrate, the documents, every statistic, every threshold,
-the controls and the classification. This file implements them; it chooses none.
-Where the PREREG left a detail open, the choice is marked `PREREG-OPEN:` below and
-listed in RESULTS.md.
+this file, and **Amendment 1** (84e21c5, erratum 268b947), which governs wherever
+the two differ. They fix the substrate, the documents, every statistic, every
+threshold, the controls and the classification. This file implements them; it
+chooses none. Where they left a detail open, the choice is marked `PREREG-OPEN:`
+below and listed in RESULTS.md.
 
     uv run python experiments/e0d/run.py            # the run: runs/e0d/
     uv run python experiments/e0d/run.py --help
 
-🔴 **Blocked at this commit on three owner rulings (PREREG §6 C8).** Without
-`R-*-retrieval-shown`, `R-*-sprint0-gate*` and a ruling that ratifies or replaces
-`RHO_STAR`, `main()` exits 3 **before it generates a single document of
-`D_E0d = [262144, 263168)`**. `e0d_documents()` refuses that range unless the
-caller has cleared C8, C1 and C2.
+🔴 **Blocked at this commit on three owner rulings (PREREG §6 C8)** and on the T0
+record (A1.7). Without `R-*-retrieval-shown`, `R-*-sprint0-gate*` and a ruling that
+ratifies or replaces `RHO_STAR`, `main()` exits 3 **before it generates a single
+document of `D_E0d = [262144, 263168)`**. `e0d_documents()` refuses that range
+unless the caller has cleared C8, C1 and C2.
 
-🔴 **Partial at this commit, on purpose.** A pre-data review of the PREREG
-(E0d-B1, M1-M3) requires an append-only amendment before the analysis is written.
-Built here: C8 authority, C1 substrate, C2 generator-key disjointness against the
-committed manifests, the E0d-range guard, C3 vocabulary closure, and the
-measurement plumbing -- one live FIFO pass with capture (§3.2.1's `r_i`, gated and
-ungated, eval mode -- corrections 17, 20) beside `rsr.metrics.loo.loo_delta_loss`
-in `resample` and `zero` mode, with C4 alignment, C5 fill, C6 resample coverage,
-C7 determinism and C9 FIFO. **Not built:** the §3.1 statistics, §5 flatness, §7
-labels, §8 classification and exit mapping. `main()` runs C8 -> C1 -> C2 and then
-exits 3 before generating any document.
+What one run does, per seed of fresh-stream arm B's frozen `ckpt-003000` (read only):
+
+1. C8 authority -> C1 substrate sha256 and the T0 record (A1.7) -> C2
+   disjointness on the generator key, against every committed manifest, stream
+   manifests (B5, A1.5) included.
+2. Generate `D_E0d` (1024 docs), C3 vocabulary closure against `[0, 64)`'s vocab.
+3. 64 batches of 16 consecutive ids. Per batch, `r_i` (gated and ungated, eval
+   mode -- corrections 17, 20) from its **own** FIFO capture forward (A1.6), and
+   `rsr.metrics.loo.loo_delta_loss` in `resample` (primary) and `zero` mode. C4
+   alignment and C9 FIFO per batch; C7 determinism on the first batch.
+4. C5 fill, C6 resample coverage. Then A1.1's strata (Q-steps, A-cells, N-steps,
+   by document structure), rho_Q (primary) and rho_Q,rank (decision-bearing) with
+   the per-document cluster bootstrap, the secondaries, C10's positive control
+   (`true_demand` as the score) and the amended §5 flatness -- on all cells and,
+   once more, with A1.3's bos-copy exclusions (rank M-1, gap-1 Q-steps).
+5. §8 over the 3 seeds (A1.1/A1.2 labels; the exit follows gated x resample on
+   the excluded population; BOS_SENSITIVE, GATE_SENSITIVE and the zero knockout
+   are reported). C1 again at the end.
+6. A1.4: any exception exits 3 with its traceback in the ledger; an exit code
+   leaves only after `e0d.class` is read back from the written ledger.
+   `runs/<run_id>/claims.json` is written only by a run that reached a class.
 
 It trains nothing, touches no `RSRPolicy`, no `b`, nu = 0, no shadow (C9, PLAN-v4 T3).
 """
@@ -35,9 +47,11 @@ import fnmatch
 import hashlib
 import itertools
 import json
+import math
 import re
 import subprocess
 import sys
+import traceback
 from pathlib import Path
 
 import numpy as np
@@ -51,6 +65,7 @@ from rsr.data.synthetic import (  # noqa: E402
     SyntheticConfig,
     _generate_document,
     generate,
+    true_demand,
 )
 from rsr.exit_codes import ArgumentParser, Exit, did_not_run, run_main  # noqa: E402
 from rsr.metrics.loo import KIND, loo_delta_loss, stream_annotations  # noqa: E402
@@ -97,6 +112,22 @@ RESAMPLE_MIN_COVERAGE = 0.80
 UNDERFULL_MAX = 0.01
 #: §6 C4
 LIVE_TOL = 1e-6
+#: A1.1: §5 "LOO flat" is the median over A-cells of Delta_resample < 1e-2 nats
+#: per sentence (replaces the q90 rule; the rationale's 0.1-nat scale is withdrawn).
+LOO_FLAT_A = 1e-2
+#: §5's original q90 rule, kept as a reported secondary only (A1.1).
+LOO_FLAT_Q90 = 1e-3
+#: §5 R_FLAT, unchanged by A1.1.
+R_FLAT = 0.05
+#: §3.1 "Intervals": per-document cluster bootstrap.
+BOOT_N = 2000
+BOOT_SEED = 20260927
+CI_LEVEL = 0.95
+#: §4 item 6 / A1.8: descriptive sensitivity only; changes no class.
+SENSITIVITY_RHO = (0.3, 0.7)
+#: A1.5: a stream manifest's exclusive step bound may not exceed the review's
+#: (one-step conservative) 16123, or D_E0d is inside its stream.
+B5_T_CAP_MAX = 16123
 
 #: front matter `substrate` / `substrate_sha256`
 DEFAULT_CKPT_ROOT = Path(
@@ -109,8 +140,11 @@ CKPT_SHA256 = {
     1: "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
     2: "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8",
 }
-#: §6 C1: PLAN-v4 T0's manifest. Its paths are relative to the main checkout.
-DEFAULT_SUBSTRATE_MANIFEST = Path.home() / "rsr-substrate/2026-09-27/MANIFEST.sha256"
+#: §6 C1 as amended by A1.7: the T0 manifest's path is read from the T0 record, never
+#: typed. PREREG-OPEN: the record is `runs/t0-substrate/manifest.json` with keys
+#: `substrate_manifest` (required) and `repo_root` (optional; the manifest's paths
+#: are relative to it -- RESTORE.md: "Paths are relative to the repo root").
+T0_RECORD = Path("t0-substrate") / "manifest.json"
 DEFAULT_SUBSTRATE_CWD = Path("/Users/keanooo7/retrieval-successor-retention")
 
 #: §6 C8. PREREG-OPEN: the PREREG names the first two patterns and does not name
@@ -163,9 +197,9 @@ RANGE_SOURCES = (
 CONTENT_KINDS = ("pending_assert", "spent_assert", "unpaired_assert", "query", "filler")
 
 EXPECTED = (
-    "PREREG §9: CONFOUND -- pooled gated rho_resample 0.1-0.4 with CI upper < 0.5 on "
-    "every seed; rho_rank below rho_pool; bottom-1 above 1/16 but under 0.3. Second "
-    "most likely MIXED."
+    "PREREG §9 (scored per A1.8): class CONFOUND, second most likely MIXED; numeric "
+    "parts on the secondaries -- pooled gated rho_resample 0.1-0.4 with CI upper < "
+    "0.5 on every seed; rho_rank below rho_pool; bottom-1 above 1/16 but under 0.3."
 )
 
 
@@ -303,7 +337,84 @@ def used_ranges(runs_dir: Path) -> list[dict]:
             if not 0 <= a < b:
                 raise ControlFailed("C2", f"{nm} = {rng} is not a range")
             out.append({"name": nm, "range": (a, b), "seeds": seeds})
+    return out + stream_ranges(runs_dir)
+
+
+def stream_ranges(runs_dir: Path) -> list[dict]:
+    """A1.5: every committed manifest that read the fresh stream (`stream:
+    {offset, stride}`) -- B5 included, under whatever run id it gets -- with that
+    manifest's actual range: its `stream_documents`, and, where it records
+    `resume_step`/`end_step`, `[offset + stride * resume, offset + stride * end)`.
+
+    Refuses (C2) a stream manifest that records no range, and any whose
+    exclusive step bound exceeds `B5_T_CAP_MAX` (the review's bound, applied
+    unchanged: it is one step on the safe side, A1.5 author's note)."""
+    out = []
+    for path in sorted(Path(runs_dir).glob("*/manifest.json")):
+        try:
+            man = json.loads(path.read_text())
+        except (OSError, ValueError) as e:
+            msg = f"cannot read {path}: {type(e).__name__}: {e}"
+            raise ControlFailed("C2", msg) from e
+        st = man.get("stream") if isinstance(man, dict) else None
+        if not isinstance(st, dict):
+            continue
+        run = path.parent.name
+        try:
+            off, stride = int(st["offset"]), int(st["stride"])
+        except (KeyError, TypeError, ValueError) as e:
+            raise ControlFailed("C2", f"{path} `stream` has no offset/stride: {e}") from e
+        seeds = tuple(sorted({*SEEDS, *(int(x) for x in man.get("seeds", []))}))
+        items = []
+        sd = man.get("stream_documents")
+        if isinstance(sd, dict):
+            items += [(f"{run}.stream_documents.{k}", v) for k, v in sorted(sd.items())]
+        elif sd is not None:
+            items.append((f"{run}.stream_documents", sd))
+        if "end_step" in man:
+            if "resume_step" not in man:
+                raise ControlFailed("C2", f"{path} records end_step but no resume_step")
+            a = off + stride * int(man["resume_step"])
+            b = off + stride * int(man["end_step"])
+            items.append((f"{run}.stream(resume_step..end_step)", (a, b)))
+        if not items:
+            raise ControlFailed(
+                "C2", f"{path} reads the stream but records no stream range "
+                f"(stream_documents or resume_step/end_step): C2 cannot be asserted"
+            )  # fmt: skip
+        for nm, rng in items:
+            a, b = (int(x) for x in rng)
+            if not 0 <= a < b:
+                raise ControlFailed("C2", f"{nm} = {rng} is not a range")
+            t_cap = -(-(b - off) // stride)
+            if t_cap > B5_T_CAP_MAX:
+                raise ControlFailed(
+                    "C2", f"{nm} = {(a, b)} reaches stream step {t_cap} > "
+                    f"{B5_T_CAP_MAX}: D_E0d may not measure it (PREREG A1.5)"
+                )  # fmt: skip
+            out.append({"name": nm, "range": (a, b), "seeds": seeds})
     return out
+
+
+def t0_manifest(runs_dir: Path) -> dict:
+    """C1 (A1.7): the T0 manifest path, read from the T0 record. No record, or a
+    record naming no existing manifest, is C1 failing -- exit 3 before any
+    document is generated."""
+    rec = Path(runs_dir) / T0_RECORD
+    try:
+        man = json.loads(rec.read_text())
+        path = Path(man["substrate_manifest"])
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        raise ControlFailed(
+            "C1", f"no usable T0 record at {rec} (PREREG A1.7): {type(e).__name__}: {e}"
+        ) from e
+    if not path.is_file():
+        raise ControlFailed("C1", f"the T0 record names {path}, which does not exist")
+    return {
+        "record": str(rec),
+        "manifest": path,
+        "cwd": Path(man.get("repo_root", DEFAULT_SUBSTRATE_CWD)),
+    }
 
 
 def check_disjoint(doc_range, *, seeds, used) -> dict:
@@ -383,9 +494,11 @@ def _sent_loss(logits, ids_t, mask_t):
 
 @torch.no_grad()
 def live_pass(model, ids, mask) -> dict:
-    """The FIFO live pass `loo_delta_loss` runs, with capture on: §3.2.1's `r_i`
-    (gated and ungated) from the forward that reads sentence `t` over the memory
-    LOO knocks out. Eval mode (correction 20); `retrieval_demand` refuses else."""
+    """A1.6: `r_i`'s own FIFO forward, with `capture=True`, over the same batch
+    `loo_delta_loss` knocks out (which does not capture): §3.2.1's `r_i`, gated and
+    ungated, read from the forward that reads sentence `t` over that memory. C4
+    asserts its per-sentence loss equals LOO's `live_loss` (<= 1e-6) and its slot
+    map equals `slot_sentence`. Eval mode (correction 20)."""
     cfg = model.cfg
     was = model.training
     model.eval()
@@ -521,14 +634,39 @@ def check_fifo(slot_sentence: torch.Tensor, wrote: torch.Tensor, M: int) -> dict
 # --------------------------------------------------------------------------- #
 
 
+def doc_structure(docs, S: int) -> dict:
+    """A1.1's strata inputs, from the generator only (sentence kinds and
+    `doc.pairs`), never from Delta or `r_i`: per `[doc, t]` whether sentence `t` is
+    a query and the index of its assert (`-1` if not a query); per `[doc, t, s]`
+    `true_demand(doc)[t][s]` (C10's score)."""
+    n = len(docs)
+    q_step = np.zeros((n, S), dtype=bool)
+    assert_of = np.full((n, S), -1, dtype=np.int64)
+    td = np.zeros((n, S, S), dtype=np.float64)
+    for b, doc in enumerate(docs):
+        qa = {q: a for a, q in doc.pairs}
+        for t in range(min(S, len(doc.sentences))):
+            if doc.sentences[t].kind == "query":
+                if t not in qa:
+                    raise RuntimeError(f"doc {doc.doc_id}: query {t} has no pair")
+                q_step[b, t] = True
+                assert_of[b, t] = qa[t]
+        m = np.asarray(true_demand(doc), dtype=np.float64)[:S, :S]
+        td[b, : m.shape[0], : m.shape[1]] = m
+    return {"q_step": q_step, "assert_of": assert_of, "true_demand": td}
+
+
 def cells_from(batches: list[dict], docs_per_batch: list, M: int) -> dict:
     """Flat per-cell arrays. A cell is (document, step t, rank i) with slot i
     occupied and sentence t holding a real target: exactly the non-NaN cells of
-    the zero knockout (§3)."""
+    the zero knockout (§3). A1.1's strata columns come from `doc_structure`:
+    `q_step` (sentence t is a query), `a_cell` (the slot holds that query's
+    assert), `gap` (t minus the assert's index at a Q-step, else -1) and `pc`
+    (`true_demand(doc)[t][slot_sentence]`, C10's score)."""
     cols: dict[str, list] = {k: [] for k in (
         "doc", "t", "rank", "sentence", "n_live", "d_resample", "d_zero", "r_gated",
         "r_ungated", "layer_gated", "layer_ungated", "pre_share_gated",
-        "pre_share_ungated", "kind",
+        "pre_share_ungated", "kind", "q_step", "a_cell", "gap", "pc",
     )}  # fmt: skip
     names = {v: k for k, v in KIND.items()}
     offset = 0
@@ -538,6 +676,14 @@ def cells_from(batches: list[dict], docs_per_batch: list, M: int) -> dict:
         idx = torch.nonzero(~m["delta_zero"].isnan())
         b, t, i = idx[:, 0], idx[:, 1], idx[:, 2]
         s = m["slot_sentence"][b, t, i]
+        ds = doc_structure(docs, S)
+        bn, tn, sn = b.numpy(), t.numpy(), s.numpy()
+        qs = ds["q_step"][bn, tn]
+        aof = ds["assert_of"][bn, tn]
+        cols["q_step"].append(qs)
+        cols["a_cell"].append(qs & (aof == sn))
+        cols["gap"].append(np.where(qs, tn - aof, -1))
+        cols["pc"].append(ds["true_demand"][bn, tn, sn])
         kind = ann["kind"][b, s]
         q = ann["query_of"][b, s]
         labels = []
@@ -594,6 +740,552 @@ def check_coverage(d_resample: np.ndarray, full: np.ndarray) -> dict:
     if not n or not cov >= RESAMPLE_MIN_COVERAGE:
         raise ControlFailed("C6", f"resample coverage {out} < {RESAMPLE_MIN_COVERAGE}")
     return out
+
+
+# --------------------------------------------------------------------------- #
+# §3.1 statistics (A1.1): Spearman with average ranks, weighted for the bootstrap
+# --------------------------------------------------------------------------- #
+
+
+class MeasurementUndefined(ControlFailed):
+    """A registered statistic has no value (e.g. no A-cell carries a Delta): the
+    rule cannot be read, so the run is `inconclusive`, exit 3 (§8 row 0)."""
+
+    def __init__(self, msg: str) -> None:
+        super().__init__("§5", msg)
+
+
+class _Ranker:
+    """Average ranks of `x` under integer-like weights: a weight-`w` element is `w`
+    copies, so a tie group of total weight `g` after `c` lighter weight gets the
+    average rank `c + (g + 1) / 2` -- exactly the duplicated sample's."""
+
+    def __init__(self, x: np.ndarray) -> None:
+        x = np.asarray(x, dtype=np.float64)
+        order = np.argsort(x, kind="stable")
+        xs = x[order]
+        new = np.ones(len(xs), dtype=bool)
+        new[1:] = xs[1:] != xs[:-1]
+        gid_sorted = np.cumsum(new) - 1
+        self.gid = np.empty(len(x), dtype=np.int64)
+        self.gid[order] = gid_sorted
+        self.ng = int(gid_sorted[-1]) + 1 if len(x) else 0
+
+    def ranks(self, w: np.ndarray) -> np.ndarray:
+        gw = np.bincount(self.gid, weights=w, minlength=self.ng)
+        avg = np.cumsum(gw) - gw + (gw + 1.0) / 2.0
+        return avg[self.gid]
+
+
+def _wpearson(x: np.ndarray, y: np.ndarray, w: np.ndarray) -> float:
+    W = w.sum()
+    if W <= 0:
+        return math.nan
+    mx, my = (w * x).sum() / W, (w * y).sum() / W
+    dx, dy = x - mx, y - my
+    vx, vy = (w * dx * dx).sum(), (w * dy * dy).sum()
+    if vx <= 0 or vy <= 0:
+        return math.nan
+    return float((w * dx * dy).sum() / math.sqrt(vx * vy))
+
+
+class WeightedSpearman:
+    """Spearman rho (average ranks) of the sample in which cell `j` appears
+    `w[j]` times. `w = 1` is plain Spearman; a document bootstrap's counts give
+    the resampled statistic without materialising the resample."""
+
+    def __init__(self, x, y) -> None:
+        self.rx, self.ry = _Ranker(x), _Ranker(y)
+        self.n = len(np.asarray(x))
+
+    def __call__(self, w) -> float:
+        w = np.asarray(w, dtype=np.float64)
+        if self.n < 2 or (w > 0).sum() < 2:
+            return math.nan
+        return _wpearson(self.rx.ranks(w), self.ry.ranks(w), w)
+
+
+def spearman(x, y) -> float:
+    x = np.asarray(x, dtype=np.float64)
+    return WeightedSpearman(x, y)(np.ones(len(x)))
+
+
+class RankStrata:
+    """Spearman within each write-order rank, then the mean weighted by each
+    rank's cell count (the summed bootstrap weight, under the bootstrap). A rank
+    whose rho is undefined carries no weight (PREREG-OPEN)."""
+
+    def __init__(self, r, d, rank, *, n_ranks: int) -> None:
+        r, d, rank = (np.asarray(a) for a in (r, d, rank))
+        self.sel = [rank == i for i in range(n_ranks)]
+        self.ws = [WeightedSpearman(r[s], d[s]) for s in self.sel]
+        self.n = len(r)
+
+    def __call__(self, w=None) -> dict:
+        w = np.ones(self.n) if w is None else np.asarray(w, dtype=np.float64)
+        per, counts = [], []
+        for sel, ws in zip(self.sel, self.ws, strict=True):
+            per.append(ws(w[sel]) if sel.any() else math.nan)
+            counts.append(float(w[sel].sum()))
+        pairs = [(c, p) for c, p in zip(counts, per, strict=True) if not math.isnan(p)]
+        den = sum(c for c, _ in pairs)
+        return {
+            "rho": sum(c * p for c, p in pairs) / den if den > 0 else math.nan,
+            "per_rank": per,
+            "n_per_rank": [int(c) for c in counts],
+        }
+
+
+def bootstrap_doc_weights(n_docs: int, n_boot: int, seed: int) -> np.ndarray:
+    """`[n_boot, n_docs]` counts: each replicate draws `n_docs` documents with
+    replacement (§3.1 Intervals). One generator, seeded once, so every statistic of
+    a seed uses the same indices."""
+    g = torch.Generator().manual_seed(int(seed))
+    idx = torch.randint(n_docs, (n_boot, n_docs), generator=g).numpy()
+    W = np.zeros((n_boot, n_docs), dtype=np.float64)
+    for k in range(n_boot):
+        W[k] = np.bincount(idx[k], minlength=n_docs)
+    return W
+
+
+def percentile_ci(vals, *, level: float = CI_LEVEL) -> tuple[float, float]:
+    """The percentile interval. A NaN replicate makes the interval NaN rather than
+    silently narrowing it."""
+    vals = np.asarray(vals, dtype=np.float64)
+    if len(vals) == 0 or np.isnan(vals).any():
+        return (math.nan, math.nan)
+    a = (1.0 - level) / 2.0
+    return (float(np.quantile(vals, a)), float(np.quantile(vals, 1.0 - a)))
+
+
+def strata(c: dict) -> dict:
+    """A1.1, fixed by document structure (`cells_from`'s `q_step`/`a_cell`):
+    Q-steps are full-memory steps whose sentence is a query, A-cells the slot
+    holding the queried assert at a Q-step, N-steps every other full step."""
+    full = np.asarray(c["full"], dtype=bool)
+    q = np.asarray(c["q_step"], dtype=bool)
+    Q = full & q
+    return {"full": full, "Q": Q, "N": full & ~q, "A": Q & np.asarray(c["a_cell"])}
+
+
+def bos_keep(c: dict, M: int) -> np.ndarray:
+    """A1.3, one recomputation with both exclusions: drop every cell at write-order
+    rank M-1, and every cell of a Q-step whose query has gap 1."""
+    return (np.asarray(c["rank"]) != M - 1) & ~(
+        np.asarray(c["q_step"], dtype=bool) & (np.asarray(c["gap"]) == 1)
+    )
+
+
+def _step_key(c: dict) -> np.ndarray:
+    return np.asarray(c["doc"], dtype=np.int64) * (int(np.max(c["t"])) + 1) + c["t"]
+
+
+def _grid(c: dict, sel: np.ndarray, col, M: int):
+    """Cells `sel` as `[n_steps, M]` by write-order rank (NaN where a rank has no
+    cell), with each step's document."""
+    col = np.asarray(col, dtype=np.float64)
+    key = _step_key(c)[sel]
+    uniq, inv = np.unique(key, return_inverse=True)
+    grid = np.full((len(uniq), M), np.nan)
+    grid[inv, np.asarray(c["rank"])[sel]] = col[sel]
+    step_doc = np.zeros(len(uniq), dtype=np.int64)
+    step_doc[inv] = np.asarray(c["doc"])[sel]
+    return grid, step_doc
+
+
+def step_stats(r_grid: np.ndarray, d_grid: np.ndarray) -> dict:
+    """Per step: the within-step Spearman over its measured slots (PREREG-OPEN:
+    >= 3 needed), and bottom-1 agreement `argmin r == argmin delta` over its
+    measured slots (PREREG-OPEN: >= 2 needed; a slot with no Delta, or excluded
+    by A1.3, is left out of its step)."""
+    n = r_grid.shape[0]
+    rho = np.full(n, np.nan)
+    b1 = np.full(n, np.nan)
+    for j in range(n):
+        ok = ~(np.isnan(r_grid[j]) | np.isnan(d_grid[j]))
+        if ok.sum() >= 3:
+            rho[j] = spearman(r_grid[j, ok], d_grid[j, ok])
+        if ok.sum() >= 2:
+            b1[j] = float(np.argmin(r_grid[j, ok]) == np.argmin(d_grid[j, ok]))
+    return {"per_step_rho": rho, "bottom1_ok": b1}
+
+
+def _wmean(v: np.ndarray, w: np.ndarray) -> float:
+    ok = ~np.isnan(v)
+    den = w[ok].sum()
+    return float((v[ok] * w[ok]).sum() / den) if den > 0 else math.nan
+
+
+def score_stats(c: dict, score, delta, *, keep, W: np.ndarray, M: int) -> dict:
+    """Every A1.1 statistic of one score against one knockout's Delta, on the kept
+    cells, each with its cluster-bootstrap CI from the same `W`.
+
+    Decision-bearing: `rho_Q` (primary) and `rho_Q_rank`. Secondary, never
+    decision-bearing: `rho_pool` (all full-memory cells), `rho_N`, `rho_rank_all`,
+    `rho_step_Q` / `bottom1_Q`, `rho_step_full` / `bottom1_full`, `rho_all_steps`
+    (underfull included) and `mass_fraction_N`."""
+    score = np.asarray(score, dtype=np.float64)
+    delta = np.asarray(delta, dtype=np.float64)
+    have = np.asarray(keep, dtype=bool) & ~(np.isnan(score) | np.isnan(delta))
+    st = strata(c)
+    full = have & st["full"]
+    Q, N = have & st["Q"], have & st["N"]
+    doc, rank = np.asarray(c["doc"]), np.asarray(c["rank"])
+    ws = {
+        nm: (WeightedSpearman(score[m], delta[m]), doc[m])
+        for nm, m in (("Q", Q), ("N", N), ("pool", full), ("all_steps", have))
+    }
+    rk_Q = RankStrata(score[Q], delta[Q], rank[Q], n_ranks=M)
+    rk_all = RankStrata(score[full], delta[full], rank[full], n_ranks=M)
+    steps = {}
+    for nm, m in (("Q", Q), ("full", full)):
+        rg, sdoc = _grid(c, m, score, M)
+        dg, _ = _grid(c, m, delta, M)
+        steps[nm] = (step_stats(rg, dg), sdoc)
+    boots: dict[str, list] = {k: [] for k in (
+        "Q", "N", "pool", "all_steps", "Q_rank", "rank_all", "step_Q", "b1_Q",
+        "step_full", "b1_full",
+    )}  # fmt: skip
+    for w in W:
+        for nm, (f, d_) in ws.items():
+            boots[nm].append(f(w[d_]))
+        boots["Q_rank"].append(rk_Q(w[doc[Q]])["rho"])
+        boots["rank_all"].append(rk_all(w[doc[full]])["rho"])
+        for nm in ("Q", "full"):
+            s, sdoc = steps[nm]
+            boots[f"step_{nm}"].append(_wmean(s["per_step_rho"], w[sdoc]))
+            boots[f"b1_{nm}"].append(_wmean(s["bottom1_ok"], w[sdoc]))
+    point = {nm: f(np.ones(len(d_))) for nm, (f, d_) in ws.items()}
+    pq, pa = rk_Q(), rk_all()
+    ci = {k: percentile_ci(v) for k, v in boots.items()}
+    out = {
+        "rho_Q": point["Q"],
+        "rho_Q_ci": ci["Q"],
+        "rho_Q_rank": pq["rho"],
+        "rho_Q_rank_ci": ci["Q_rank"],
+        "per_rank_Q": pq["per_rank"],
+        "n_per_rank_Q": pq["n_per_rank"],
+        "n_Q_cells": int(Q.sum()),
+        "rho_N": point["N"],
+        "rho_N_ci": ci["N"],
+        "n_N_cells": int(N.sum()),
+        "rho_pool": point["pool"],
+        "rho_pool_ci": ci["pool"],
+        "n_full_cells": int(full.sum()),
+        "rho_rank_all": pa["rho"],
+        "rho_rank_all_ci": ci["rank_all"],
+        "per_rank_all": pa["per_rank"],
+        "rho_all_steps": point["all_steps"],
+        "rho_all_steps_ci": ci["all_steps"],
+        "n_all_cells": int(have.sum()),
+        "bottom1_chance": 1.0 / M,
+        "mass_fraction_N": (
+            float(score[N].sum() / score[full].sum()) if score[full].sum() else math.nan
+        ),
+        "n_boot": len(W),
+    }
+    for nm in ("Q", "full"):
+        s, sdoc = steps[nm]
+        ones = np.ones(len(sdoc))
+        out[f"rho_step_{nm}"] = _wmean(s["per_step_rho"], ones)
+        out[f"rho_step_{nm}_ci"] = ci[f"step_{nm}"]
+        out[f"bottom1_{nm}"] = _wmean(s["bottom1_ok"], ones)
+        out[f"bottom1_{nm}_ci"] = ci[f"b1_{nm}"]
+        out[f"n_steps_{nm}"] = len(sdoc)
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# §5 flatness (A1.1), §7 labels and §8 classification (A1.1, A1.2)
+# --------------------------------------------------------------------------- #
+
+
+def loo_flat_a(delta, a_mask) -> dict:
+    """A1.1 §5 LOO flat: the median over A-cells of Delta < `LOO_FLAT_A` nats per
+    sentence. A-cells without a Delta (no resample donor) are left out; none at
+    all leaves the rule unreadable, which is exit 3."""
+    d = np.asarray(delta, dtype=np.float64)[np.asarray(a_mask, dtype=bool)]
+    d = d[~np.isnan(d)]
+    if not len(d):
+        raise MeasurementUndefined("§5 (A1.1): no A-cell carries a Delta")
+    med = float(np.median(d))
+    return {"median_a": med, "n_a": len(d), "flat": bool(med < LOO_FLAT_A)}
+
+
+def loo_flat_q90(delta) -> dict:
+    """§5's withdrawn q90 rule, reported as a secondary (A1.1)."""
+    d = np.asarray(delta, dtype=np.float64)
+    d = d[~np.isnan(d)]
+    q90 = float(np.quantile(np.abs(d), 0.9)) if len(d) else math.nan
+    return {"q90_abs_delta": q90, "flat": bool(q90 < LOO_FLAT_Q90)}
+
+
+def r_flat(r_grid) -> dict:
+    """§5 R_FLAT: the median over steps of the within-step CV (population sd /
+    mean, PREREG-OPEN: ddof 0) of `r_i` over the step's slots. A slot with no
+    value (A1.3's exclusion) is left out of its step."""
+    cvs = []
+    for row in np.asarray(r_grid, dtype=np.float64):
+        v = row[~np.isnan(row)]
+        if len(v) >= 2 and v.mean() > 0:
+            cvs.append(float(v.std() / v.mean()))
+    if not cvs:
+        raise MeasurementUndefined("§5 R_FLAT: no step has two slots with an r_i")
+    med = float(np.median(cvs))
+    return {"median_cv": med, "n_steps": len(cvs), "flat": bool(med < R_FLAT)}
+
+
+def seed_label(inp: dict, *, rho_star: float) -> str:
+    """§7 as replaced by A1.1, first match wins, on 95 % CIs, never a point.
+    PREREG-OPEN: a PC CI that is undefined (NaN) cannot reach rho*, so it reads
+    CEILING; an undefined r_i CI falls through to UNRESOLVED."""
+    pc_hi = inp["pc_rho_Q_ci"][1]
+    q_lo, q_hi = inp["rho_Q_ci"]
+    k_lo, k_hi = inp["rho_Q_rank_ci"]
+    if not pc_hi >= rho_star:
+        return "CEILING"
+    if inp["loo_flat"] and inp["r_flat"]:
+        return "DEGENERATE"
+    if inp["loo_flat"]:
+        return "LOO_UNINFORMATIVE"
+    if q_hi < 0:
+        return "INVERTED"
+    if q_hi < rho_star:
+        return "DISAGREE"
+    if q_lo >= rho_star and k_lo >= rho_star:
+        return "AGREE"
+    if q_lo >= rho_star and k_hi < rho_star:
+        return "AGREE_VIA_RANK"
+    return "UNRESOLVED"
+
+
+#: §8 rows 1-6 -> exit (A1.2: RECENCY_ONLY is 2; exit 1 only from rows 3 and 4).
+CLASS_EXIT = {
+    "DEGENERATE_UNINFORMATIVE": 2,
+    "AGREE": 0,
+    "CONFOUND_INVERTED": 1,
+    "CONFOUND": 1,
+    "RECENCY_ONLY": 2,
+    "MIXED_UNRESOLVED": 2,
+}
+CLASS_KEY = "e0d.class"
+
+
+def classify(labels) -> tuple[str, int]:
+    """§8 rows 1-6 over the 3 seeds' labels (row 0 -- any control failing or
+    anything raising -- is exit 3 in `main`). A1.1: CEILING counts as UNRESOLVED.
+    A1.2: row 5 (AGREE_VIA_RANK / RECENCY_ONLY) exits 2."""
+    ls = ["UNRESOLVED" if x == "CEILING" else x for x in labels]
+    if len(ls) != len(SEEDS):
+        raise ValueError(f"§8 classifies {len(SEEDS)} seeds, got {len(ls)} labels")
+    if sum(x in ("DEGENERATE", "LOO_UNINFORMATIVE") for x in ls) >= 2:
+        k = "DEGENERATE_UNINFORMATIVE"
+    elif all(x == "AGREE" for x in ls):
+        k = "AGREE"
+    elif all(x == "INVERTED" for x in ls):
+        k = "CONFOUND_INVERTED"
+    elif all(x in ("DISAGREE", "INVERTED") for x in ls):
+        k = "CONFOUND"
+    elif all(x in ("DISAGREE", "INVERTED", "AGREE_VIA_RANK") for x in ls) and (
+        "AGREE_VIA_RANK" in ls
+    ):
+        k = "RECENCY_ONLY"
+    else:
+        k = "MIXED_UNRESOLVED"
+    return k, CLASS_EXIT[k]
+
+
+# --------------------------------------------------------------------------- #
+# per-seed analysis and the run's classification
+# --------------------------------------------------------------------------- #
+
+KNOCKOUTS = ("resample", "zero")
+SCORES = (("gated", "r_gated"), ("ungated", "r_ungated"), ("pc", "pc"))
+
+
+def _population(c: dict, keep: np.ndarray, *, M: int, W, rho_star: float,
+                descriptive: bool) -> dict:  # fmt: skip
+    st = strata(c)
+    stats = {
+        sc: {k: score_stats(c, c[col], c[f"d_{k}"], keep=keep, W=W, M=M)
+             for k in KNOCKOUTS}
+        for sc, col in SCORES
+    }  # fmt: skip
+    A = st["A"] & keep
+    # PREREG-OPEN: the zero-knockout table reads its LOO flatness on Delta_zero.
+    lf = {k: loo_flat_a(c[f"d_{k}"], A) for k in KNOCKOUTS}
+    fk = st["full"] & keep
+    rf = {g: r_flat(_grid(c, fk, c[f"r_{g}"], M)[0]) for g in ("gated", "ungated")}
+    _, first = np.unique(_step_key(c)[fk], return_index=True)
+    step_q = np.asarray(c["q_step"])[fk][first]
+    flat = {
+        "loo_flat_resample": lf["resample"],
+        "loo_flat_zero": lf["zero"],
+        "q90_abs_delta_resample": loo_flat_q90(c["d_resample"][fk])["q90_abs_delta"],
+        "q90_abs_delta_zero": loo_flat_q90(c["d_zero"][fk])["q90_abs_delta"],
+        "r_flat_gated": rf["gated"],
+        "r_flat_ungated": rf["ungated"],
+    }
+    for g in ("gated", "ungated"):
+        pre = np.asarray(c[f"pre_share_{g}"], dtype=np.float64)[fk][first]
+        flat[f"pre_share_{g}_median"] = float(np.median(pre)) if len(pre) else math.nan
+        flat[f"pre_share_{g}_mass_fraction_N"] = (
+            float(pre[~step_q].sum() / pre.sum()) if pre.sum() else math.nan
+        )
+
+    def inp(g: str, k: str) -> dict:
+        return {
+            "pc_rho_Q_ci": stats["pc"][k]["rho_Q_ci"],
+            "loo_flat": lf[k]["flat"],
+            "r_flat": rf[g]["flat"],
+            "rho_Q_ci": stats[g][k]["rho_Q_ci"],
+            "rho_Q_rank_ci": stats[g][k]["rho_Q_rank_ci"],
+        }
+
+    labels = {
+        "gated_resample": seed_label(inp("gated", "resample"), rho_star=rho_star),
+        "ungated_resample": seed_label(inp("ungated", "resample"), rho_star=rho_star),
+        "gated_zero": seed_label(inp("gated", "zero"), rho_star=rho_star),
+    }
+    out = {
+        "n_cells": int(np.asarray(keep).sum()),
+        "stats": stats,
+        "flatness": flat,
+        "labels": labels,
+        "sensitivity": {
+            str(x): seed_label(inp("gated", "resample"), rho_star=x)
+            for x in SENSITIVITY_RHO
+        },
+        "flags": {
+            "loo_flat": lf["resample"]["flat"],
+            "r_flat": rf["gated"]["flat"],
+            "r_flat_flag": bool(rf["gated"]["flat"] and not lf["resample"]["flat"]),
+            "pc_rank_ceiling": bool(
+                not stats["pc"]["resample"]["rho_Q_rank_ci"][1] >= rho_star
+            ),
+            "pc_rho_Q_rank_ci": stats["pc"]["resample"]["rho_Q_rank_ci"],
+        },
+    }
+    if descriptive:  # §3.1 items 5-6, unchanged by A1.1, on full-memory cells
+        full = st["full"]
+        d = np.asarray(c["d_resample"], dtype=np.float64)
+        out["per_layer"] = {
+            g: [spearman(np.asarray(c[f"layer_{g}"])[full, k], d[full])
+                for k in range(np.asarray(c[f"layer_{g}"]).shape[1])]
+            for g in ("gated", "ungated")
+        }  # fmt: skip
+        out["by_kind"] = {
+            kd: {
+                "rho_gated_resample": spearman(
+                    np.asarray(c["r_gated"])[full & (c["kind"] == kd)],
+                    d[full & (c["kind"] == kd)],
+                ),
+                "n": int((full & (c["kind"] == kd)).sum()),
+            }
+            for kd in CONTENT_KINDS
+        }
+    return out
+
+
+def analyse_seed(c: dict, *, M: int, n_docs: int, rho_star: float,
+                 n_boot: int | None = None) -> dict:  # fmt: skip
+    """Every A1.1 statistic for {gated, ungated, PC (C10)} x {resample, zero}, the
+    amended §5 flatness and §7 labels -- on all cells and, as one recomputation,
+    with A1.3's bos-copy exclusions. The exit reads the excluded population."""
+    n_boot = BOOT_N if n_boot is None else n_boot
+    W = bootstrap_doc_weights(n_docs, n_boot, BOOT_SEED)
+    n = len(np.asarray(c["t"]))
+    return {
+        "populations": {
+            "all": _population(
+                c, np.ones(n, dtype=bool), M=M, W=W, rho_star=rho_star, descriptive=True
+            ),
+            "bos_excluded": _population(
+                c, bos_keep(c, M), M=M, W=W, rho_star=rho_star, descriptive=False
+            ),
+        },
+        "rho_star": rho_star,
+        "n_boot": n_boot,
+        "bootstrap_seed": BOOT_SEED,
+    }
+
+
+def classify_run(analyses: dict) -> dict:
+    """§8 over the seeds. The exit follows gated x resample on the A1.3-excluded
+    population; every other table is reported and moves no exit."""
+    seeds = sorted(analyses)
+
+    def pop(s, p="bos_excluded"):
+        return analyses[s]["populations"][p]
+
+    def labs(combo, p="bos_excluded"):
+        return [pop(s, p)["labels"][combo] for s in seeds]
+
+    labels = labs("gated_resample")
+    klass, code = classify(labels)
+    labels_all = labs("gated_resample", "all")
+    klass_all, _ = classify(labels_all)
+    klass_u, _ = classify(labs("ungated_resample"))
+    klass_z, _ = classify(labs("gated_zero"))
+    flags = [pop(s)["flags"] for s in seeds]
+    lf_seeds = [s for s, f in zip(seeds, flags, strict=True) if f["loo_flat"]]
+    return {
+        "class": klass,
+        "exit": code,
+        "labels": labels,
+        "class_all_cells": klass_all,
+        "labels_all_cells": labels_all,
+        "bos_sensitive": klass_all != klass,
+        "class_ungated": klass_u,
+        "labels_ungated": labs("ungated_resample"),
+        "gate_sensitive": klass_u != klass,
+        "class_zero": klass_z,
+        "labels_zero": labs("gated_zero"),
+        "class_ungated_all_cells": classify(labs("ungated_resample", "all"))[0],
+        "class_zero_all_cells": classify(labs("gated_zero", "all"))[0],
+        "sensitivity": {
+            str(x): {
+                "labels": (ls := [pop(s)["sensitivity"][str(x)] for s in seeds]),
+                "class": classify(ls)[0],
+            }
+            for x in SENSITIVITY_RHO
+        },
+        "rank_ceiling_seeds": [
+            s
+            for s, f, lab in zip(seeds, flags, labels, strict=True)
+            if f["pc_rank_ceiling"] and lab == "AGREE_VIA_RANK"
+        ],
+        "seed_flatness": {
+            str(s): {"loo_flat": f["loo_flat"], "r_flat": f["r_flat"]}
+            for s, f in zip(seeds, flags, strict=True)
+        },
+        # A1.1 author's note: >= 2 seeds meet §8 row 1's condition while one of
+        # them is labelled CEILING, so row 1 was pre-empted. Reporting only.
+        "degenerate_under_ceiling": bool(
+            len(lf_seeds) >= 2
+            and any(labels[seeds.index(s)] == "CEILING" for s in lf_seeds)
+            and klass != "DEGENERATE_UNINFORMATIVE"
+        ),
+    }
+
+
+def written_class(ledger_path: Path) -> str | None:
+    rows = json.loads(Path(ledger_path).read_text()).get("rows", [])
+    vals = [r.get("value") for r in rows if r.get("key") == CLASS_KEY]
+    return vals[-1] if vals else None
+
+
+def confirm_exit(ledger_path: Path, code: int) -> int:
+    """A1.4: an exit code leaves only after the class it stands for has been
+    written. Reads `e0d.class` back out of the written ledger; a missing or
+    disagreeing class raises (-> exit 3)."""
+    k = written_class(ledger_path)
+    if k is None or CLASS_EXIT.get(k) != code:
+        raise RuntimeError(
+            f"exit {code} without a matching written {CLASS_KEY} (found {k!r} in "
+            f"{ledger_path}); A1.4"
+        )
+    return code
 
 
 # --------------------------------------------------------------------------- #
@@ -678,15 +1370,145 @@ def measure_seed(
 # --------------------------------------------------------------------------- #
 
 
-# --------------------------------------------------------------------------- #
-# main -- preconditions only at this commit
-# --------------------------------------------------------------------------- #
+def _jsonable(x):
+    if isinstance(x, dict):
+        return {str(k): _jsonable(v) for k, v in x.items()}
+    if isinstance(x, list | tuple):
+        return [_jsonable(v) for v in x]
+    if isinstance(x, Path):
+        return str(x)
+    if isinstance(x, np.ndarray):
+        return _jsonable(x.tolist())
+    if isinstance(x, np.generic):
+        x = x.item()
+    if isinstance(x, float) and math.isnan(x):
+        return None
+    return x
 
-PENDING_AMENDMENT = (
-    "the §3.1 statistics, §5 flatness, §7 labels and §8 classification/exit mapping "
-    "are not implemented: a pre-data review (E0d-B1, M1-M3) requires an append-only "
-    "PREREG amendment first. The run refuses before generating any D_E0d document."
-)
+
+#: PREREG-OPEN: `scripts/ledger.py` has no status word for exit 2 ("ran, no
+#: decision"); `partial` is used so a non-zero exit never sits beside `ok`.
+_STATUS = {0: "ok", 1: "failed", 2: "partial"}
+_OUTCOME = {0: "survived", 1: "falsified", 2: "inconclusive"}
+
+
+def _rel(p: Path) -> str:
+    try:
+        return str(Path(p).resolve().relative_to(ROOT))
+    except ValueError:
+        return str(p)
+
+
+def write_claims(path: Path, *, ledger_path: Path, run_id: str, out: dict,
+                 seeds: list[int], t0: dict) -> Path:  # fmt: skip
+    """`runs/<run_id>/claims.json`: one `{claim, command, expected}` per checkable
+    claim, each command runnable from a clean checkout of the head (compute is
+    slot-wrapped). Written only by a run that reached a class."""
+    led = _rel(ledger_path)
+    py = ".venv/bin/python"
+    row = (
+        f"{py} -c \"import json; r=json.load(open('{led}'))['rows']; "
+        "print(json.dumps([x['value'] for x in r if x['key']=='{k}'][-1]))\""
+    )
+    code = int(out["exit"])
+    claims = [
+        {"claim": f"E0d's §8 class (gated x resample, A1.3-excluded) is {out['class']}",
+         "command": row.format(k=CLASS_KEY).replace("json.dumps(", "(", 1),
+         "expected": out["class"]},
+        {"claim": f"the run exited {code}",
+         "command": f"{py} -c \"import json; print(json.load(open('{led}'))"
+                    "['commands'][-1]['exit_code'])\"",
+         "expected": str(code)},
+        {"claim": f"the per-seed §7 labels are {out['labels']}",
+         "command": row.format(k="e0d.labels"),
+         "expected": json.dumps(out["labels"])},
+        {"claim": f"the class recomputes from the ledger's labels as {out['class']}",
+         "command": f"{py} -c \"import importlib.util as u, json; "
+                    f"s=u.spec_from_file_location('e0d_run', '{EXPERIMENT}'); "
+                    "m=u.module_from_spec(s); s.loader.exec_module(m); "
+                    f"r=json.load(open('{led}'))['rows']; "
+                    "print(m.classify([x['value'] for x in r "
+                    "if x['key']=='e0d.labels'][-1])[0])\"",
+         "expected": out["class"]},
+        {"claim": f"seeds actually run: {seeds}",
+         "command": f"{py} -c \"import json; print(json.load(open('{led}'))"
+                    "['seeds_actually_run'])\"",
+         "expected": str(seeds)},
+        {"claim": f"the class without the bos-copy exclusions is "
+                  f"{out['class_all_cells']}",
+         "command": row.format(k="e0d.class_all_cells").replace("json.dumps(", "(", 1),
+         "expected": out["class_all_cells"]},
+        {"claim": "the T0 substrate manifest still verifies (C1, end)",
+         "command": f"cd {t0['cwd']} && shasum -a 256 -c {t0['manifest']} "
+                    "> /dev/null 2>&1; echo $?",
+         "expected": "0"},
+        {"claim": f"re-running the experiment reproduces exit {code}",
+         "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run "
+                    f"--lane cpu-det --slots 3 -- {py} {EXPERIMENT} "
+                    f"--run-id {run_id}-reverify > /dev/null 2>&1; echo $?",
+         "expected": str(code)},
+    ]  # fmt: skip
+    Path(path).write_text(json.dumps(claims, indent=2) + "\n")
+    return Path(path)
+
+
+def _measure_and_classify(a, led, argv_s: str) -> Exit:
+    auth = check_authority(a.rulings_dir)  # C8 -- before anything is read
+    led.note("c8_authority", _jsonable(auth), how="docs/owner/rulings, committed")
+    led.note("c1_substrate_start", check_substrate(a.ckpt_root), how="sha256")
+    t0 = t0_manifest(a.runs_dir)  # C1 (A1.7): no T0 record, no documents
+    led.note("c1_t0_record", _jsonable(t0), how="runs/t0-substrate (A1.7)")
+    disj = check_disjoint(D_E0D, seeds=SEEDS, used=used_ranges(a.runs_dir))
+    led.note("c2_disjointness", disj, how="generator keys vs committed manifests")
+
+    per_seed: dict[int, dict] = {}
+    analyses: dict[int, dict] = {}
+    for s in SEEDS:
+        print(f"seed {s}: measuring", flush=True)
+        per_seed[s] = measure_seed(
+            s, ckpt_root=a.ckpt_root, doc_range=D_E0D, batch=BATCH, cleared=True
+        )
+        analyses[s] = analyse_seed(
+            per_seed[s]["cells"], M=per_seed[s]["M"], n_docs=per_seed[s]["n_docs"],
+            rho_star=auth["rho_star"], n_boot=BOOT_N,
+        )  # fmt: skip
+    end = substrate_recheck(t0["manifest"], cwd=t0["cwd"])  # C1, end
+    led.note("c1_substrate_end", end, how="shasum -a 256 -c (PLAN-v4 T0, A1.7)")
+
+    seeds = sorted(per_seed)
+    led.run_meta(seeds_actually_run=seeds)
+    for s in seeds:
+        meas = {k: v for k, v in per_seed[s].items() if k != "cells"}
+        led.note(f"seed{s}.controls", _jsonable(meas), how="measure_seed")
+        led.note(f"seed{s}.analysis", _jsonable(analyses[s]), how="analyse_seed")
+    out = classify_run(analyses)
+    for k, v in out.items():
+        if k not in ("class", "exit"):
+            led.note(f"e0d.{k}", _jsonable(v), how="§8 (A1.1-A1.3), classify_run")
+    for key in ("rho_Q", "rho_Q_rank", "rho_pool"):
+        led.stat(
+            f"primary.{key}",
+            [analyses[s]["populations"]["bos_excluded"]["stats"]["gated"]["resample"]
+             [key] for s in seeds],
+            how="gated r_i x resample LOO, A1.3-excluded, per seed (spread over 3)",
+        )  # fmt: skip
+    code = int(out["exit"])
+    led.note(CLASS_KEY, out["class"], how="§8 first matching row (A1.4: before exit)")
+    led.status(_STATUS[code])
+    led.verdict(
+        falsifier="spec §6 E0d / §3.2.1: 'If not, LOO is truth and r_i is a confound'",
+        outcome=_OUTCOME[code],
+        detail=f"class {out['class']} (all cells {out['class_all_cells']}, ungated "
+        f"{out['class_ungated']}, zero {out['class_zero']}); labels {out['labels']}",
+    )
+    led.command(argv_s, exit_code=code)
+    path = led.write()
+    write_claims(
+        Path(path).parent / "claims.json", ledger_path=Path(path), run_id=a.run_id,
+        out=out, seeds=seeds, t0=t0,
+    )  # fmt: skip
+    print(f"class {out['class']} -> exit {code}; labels {out['labels']}; {path}")
+    return Exit(confirm_exit(path, code))  # A1.4: raises -> 3 if not written
 
 
 def main(argv: list[str] | None = None) -> Exit:
@@ -702,12 +1524,14 @@ def main(argv: list[str] | None = None) -> Exit:
     led = ledger_mod.Ledger(
         a.run_id,
         question="E0d (§3.2.1, §6 kill gate): does r_i rank memory slots the way "
-        "leave-one-out delta next-sentence loss does? (preconditions only)",
+        "leave-one-out delta next-sentence loss does, on query steps and within "
+        "write-order rank, gated and ungated (correction 17; PREREG A1.1)?",
     )
     led.manifest(
         {
             "experiment": EXPERIMENT,
             "prereg": PREREG_PATH,
+            "prereg_amendment": "Amendment 1 (84e21c5) and erratum (268b947)",
             "run_id": a.run_id,
             "seeds": list(SEEDS),
             "ckpt_root": str(a.ckpt_root),
@@ -716,39 +1540,65 @@ def main(argv: list[str] | None = None) -> Exit:
             "documents": list(D_E0D),
             "batch": BATCH,
             "rho_star_proposed": RHO_STAR_PROPOSED,
+            "rho_star_source": "the C8 ruling (R-*-rho-star*)",
+            "loo_flat_a": LOO_FLAT_A,
+            "loo_flat_q90_secondary": LOO_FLAT_Q90,
+            "r_flat": R_FLAT,
+            "bootstrap": {"n": BOOT_N, "seed": BOOT_SEED, "level": CI_LEVEL},
+            "sensitivity_rho": list(SENSITIVITY_RHO),
+            "b5_t_cap_max": B5_T_CAP_MAX,
+            "class_exit": CLASS_EXIT,
             "resample_min_coverage": RESAMPLE_MIN_COVERAGE,
             "underfull_max": UNDERFULL_MAX,
             "live_tol": LIVE_TOL,
             "rulings_dir": str(a.rulings_dir),
+            "t0_record": str(a.runs_dir / T0_RECORD),
+            "loo": "rsr.metrics.loo.loo_delta_loss (resample primary, zero secondary)",
+            "r_i": "rsr.retention.reward.retrieval_demand (gated primary), eval mode, "
+            "own capture forward (A1.6)",
+            "policy": "fifo (no RSRPolicy, no b, nu = 0, no shadow)",
             "device": "cpu",
             "expected": EXPECTED,
-            "falsifier": "spec §6 E0d kill gate (not reachable at this commit)",
+            "falsifier": "spec §6 E0d kill gate: 'High rho. If not, LOO is truth and "
+            "r_i is a confound.'",
         }
     )
     led.run_meta(device="cpu")
     argv_s = " ".join(["uv run python", EXPERIMENT, *(argv or sys.argv[1:])])
 
-    def ledger_refusal(key: str, value) -> None:
-        led.note(key, value, how="PREREG §6 / §8 row 0")
-        led.status("did_not_run")
-        led.command(argv_s, exit_code=int(Exit.DID_NOT_RUN))
-        led.write()
+    def refuse_run(key: str, value, status: str, reason: str) -> Exit:
+        """§8 row 0: exit 3, with the reason (and traceback) in the ledger. If
+        the ledger itself cannot be written, still exit 3."""
+        try:
+            led.note(key, value, how="PREREG §6 / §8 row 0 / A1.4")
+            led.status(status)
+            led.command(argv_s, exit_code=int(Exit.DID_NOT_RUN))
+            led.write()
+        except BaseException as e2:  # A1.4: nothing escapes as 1
+            print(f"ledger write failed: {type(e2).__name__}: {e2}", file=sys.stderr)
+        return did_not_run(reason)
 
     try:
-        auth = check_authority(a.rulings_dir)  # C8 -- before anything is read
-        led.note("c8_authority", auth, how="docs/owner/rulings, committed")
-        led.note("c1_substrate_start", check_substrate(a.ckpt_root), how="sha256")
-        disj = check_disjoint(D_E0D, seeds=SEEDS, used=used_ranges(a.runs_dir))
-        led.note("c2_disjointness", disj, how="generator keys vs committed manifests")
+        return _measure_and_classify(a, led, argv_s)
     except ControlFailed as e:
-        ledger_refusal("control_failed", {"control": e.control, "msg": str(e)})
-        return did_not_run(str(e))
-    except (OSError, RuntimeError, ValueError, KeyError) as e:
+        return refuse_run(
+            "control_failed",
+            {"control": e.control, "msg": str(e), "traceback": traceback.format_exc()},
+            "did_not_run",
+            str(e),
+        )
+    except BaseException as e:  # A1.4: any exception is exit 3
         msg = f"{type(e).__name__}: {e}"
-        ledger_refusal("measurement_raised", msg)
-        return did_not_run(msg)
-    ledger_refusal("not_implemented", PENDING_AMENDMENT)
-    return did_not_run(PENDING_AMENDMENT)
+        return refuse_run(
+            "measurement_raised",
+            {
+                "type": type(e).__name__,
+                "msg": str(e),
+                "traceback": traceback.format_exc(),
+            },
+            "crashed",
+            msg,
+        )
 
 
 if __name__ == "__main__":
