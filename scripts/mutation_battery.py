@@ -3941,6 +3941,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "I5: the 09-26 dispatch red left only a node id because the battery ran "
         "--tb=no. A row whose reasons are all null is that blindness back.",
     ),
+    Mutation(
+        "the stub slot writes its job record in place again",
+        "test_the_stub_slot_never_exposes_a_half_written_job_record",
+        "tests/_orch_loop_helpers.py",
+        "    tmp.write_text(json.dumps(rec))\n    os.replace(tmp, path)\n",
+        "    path.write_text(json.dumps(rec))\n",
+        "I5b: write_text truncates then writes, and wait_job polls json.loads("
+        "read_text()) every 50 ms -- a demonstrated torn read (not established as "
+        "the cause of the 09-26 dispatch red).",
+    ),
 )
 
 
