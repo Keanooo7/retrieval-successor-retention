@@ -51,3 +51,47 @@ from another session (the b2-psi-probe worktree) was also running at the start.
   stub `slot` rewrites the job record with `path.write_text(...)`, which truncates and then
   writes, while `wait_job` does `json.loads(read_text())` every 50 ms. It is still
   unobserved as the cause of *this* flake.
+
+## I5b, 2026-09-27: capture made possible, and one race demonstrated and fixed
+
+Branch `run/i5-flake`. Evidence files are in `docs/lab-notes/i5b/`.
+
+### Part A: the battery now records a one-line failure reason per failing node
+
+- `scripts/mutation_battery.py`: `run_suite` runs `-rfE --tb=line` (it was `--tb=no`),
+  with `COLUMNS=4000`, because pytest trims the summary message to the terminal width
+  and drops it when the node id fills 80 columns. `parse_failures` returns
+  `{node: reason}` and every verdict row gains `failure_reasons`. Node ids are cut
+  exactly as before. Only the short-summary section is parsed, because `--tb=line`
+  prints message continuation lines and those can contain `ERROR `.
+- Tests first: `tests/test_battery_reasons.py` failed 9/9 on the old battery (commit
+  `709c019`, `i5b/a-red.log`).
+- **Verdicts are unchanged.** `scripts/battery_subset.py` runs the battery's own `main()`
+  with `MUTATIONS` filtered to `t_warm back to inf`, `off-gate failures stop counting`
+  and `a canary ledger row typed again`. It ran on 9436c05 (`i5b/verdicts-before.json`)
+  and on 75ee271 (`i5b/verdicts-after.json`). Every field of the old rows is identical
+  (`mutation, gate, why, reddened_gate, n_on_gate, off_gate, off_gate_allowed,
+  off_gate_undeclared, verdict`). The only new key is `failure_reasons`. Both runs
+  printed `3/3 gates proven by mutation`, rc=0.
+- New mutation `the battery drops the failure reason`: PROVEN, 1 on gate, 0 off
+  (`i5b/verdicts-new-mutations.json`).
+
+### Part B: the stub `slot`'s torn job record is a demonstrated race
+
+- `tests/test_orch_stub_job_record.py` runs the real stub from
+  `tests/_orch_loop_helpers.py` under a wrapper. The wrapper pauses every write-open
+  in `.orchestrator/jobs/` after the file has been truncated and before any byte is
+  written. At each pause the test does `wait_job`'s read. On the old stub it failed 3/3
+  runs, and both writes exposed `''`, giving `JSONDecodeError: Expecting value: line 1
+  column 1 (char 0)` (`i5b/b-red-1.log`, commit `1db749c`).
+- Fix (`78a12c4`): the stub writes its record to a tmp file and then calls `os.replace`,
+  the same pattern as `scripts/orchestrator/slot.py::_write_record`, which was already
+  atomic. The reader and its 20 s timeout are unchanged. The test then passed 3/3 runs,
+  and `test_orch_dispatch.py` passed 11/11 alongside it.
+- New mutation `the stub slot writes its job record in place again`: PROVEN, 1 on gate,
+  0 off. Its recorded reason is the torn read itself.
+
+**This fixes a demonstrated race in the test stub. It is still not established that
+this race caused the 2026-09-26 red on
+`test_submit_launches_the_slot_detached_at_the_pinned_sha`.** That run left no reason.
+The next battery red will record one.

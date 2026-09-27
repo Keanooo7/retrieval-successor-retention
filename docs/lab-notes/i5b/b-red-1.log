@@ -1,0 +1,12 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+E   AssertionError: wait_job's read saw a half-written job record: ["pause 0: '' -> Expecting value: line 1 column 1 (char 0)", "pause 1: '' -> Expecting value: line 1 column 1 (char 0)"]
+    assert ["pause 0: ''...n 1 (char 0)"] == []
+      
+      Left contains 2 more items, first extra item: "pause 0: '' -> Expecting value: line 1 column 1 (char 0)"
+      Use -v to get more diff
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_orch_stub_job_record.py:126: AssertionError: wait_job's read saw a half-written job record: ["pause 0: '' -> Expecting value: line 1 column 1 (char 0)", "pause 1: '' -> Expecting value: line 1 column 1 (char 0)"]
+------------------------------- rsr test census --------------------------------
+passed=0 failed=1 skipped=0 errors=0
+=========================== short test summary info ============================
+FAILED tests/test_orch_stub_job_record.py::test_the_stub_slot_never_exposes_a_half_written_job_record

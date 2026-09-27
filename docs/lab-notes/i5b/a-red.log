@@ -1,0 +1,42 @@
+FFFFFFFFF                                                                [100%]
+=================================== FAILURES ===================================
+E   AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:67: AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+E   AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:93: AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+E   AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:93: AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+E   AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:93: AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+E   AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:93: AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+E   AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:99: AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+E   AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:105: AttributeError: module 'mutation_battery' has no attribute 'parse_failures'
+E   AssertionError: assert '--tb=no' not in ['/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/.venv/bin/pytest', '-p', 'no:cacheprovider', '--tb=no', '-q', '--no-header']
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:118: AssertionError: assert '--tb=no' not in ['/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/.venv/bin/pytest', '-p', 'no:cacheprovider', '--tb=no', '-q', '--no-header']
+E   KeyError: 'failure_reasons'
+----------------------------- Captured stdout call -----------------------------
+suite threads: uncapped (source: unset (ops/lanes.json absent; environment unchanged))
+LEAKS         m                                          -> 1 on gate, 1 off (1 undeclared)
+
+0/1 gates proven by mutation
+UNPROVEN:
+  test_gate  (m) -- reddens 1 undeclared tests off its gate:
+      tests/t.py::test_other
+
+A gate whose mutation reddens nothing adds nothing. A mutation that reddens tests it did not declare has not isolated the defect. Declare the coupling with a reason, or narrow the mutation.
+/Users/keanooo7/retrieval-successor-retention/.worktrees/i5-flake/tests/test_battery_reasons.py:143: KeyError: 'failure_reasons'
+------------------------------- rsr test census --------------------------------
+passed=0 failed=9 skipped=0 errors=0
+=========================== short test summary info ============================
+FAILED tests/test_battery_reasons.py::test_parse_failures_records_a_one_line_reason_per_failing_node
+FAILED tests/test_battery_reasons.py::test_the_failing_node_set_is_unchanged[red]
+FAILED tests/test_battery_reasons.py::test_the_failing_node_set_is_unchanged[green]
+FAILED tests/test_battery_reasons.py::test_the_failing_node_set_is_unchanged[empty]
+FAILED tests/test_battery_reasons.py::test_the_failing_node_set_is_unchanged[internal-error]
+FAILED tests/test_battery_reasons.py::test_the_tb_line_body_cannot_add_a_node
+FAILED tests/test_battery_reasons.py::test_a_nonzero_exit_with_no_node_records_the_last_line
+FAILED tests/test_battery_reasons.py::test_run_suite_asks_pytest_for_the_reasons
+FAILED tests/test_battery_reasons.py::test_a_mutation_row_carries_the_failure_reasons

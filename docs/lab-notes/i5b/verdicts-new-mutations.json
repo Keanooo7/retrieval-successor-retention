@@ -1,0 +1,30 @@
+[
+  {
+    "mutation": "the battery drops the failure reason",
+    "gate": "test_a_mutation_row_carries_the_failure_reasons",
+    "why": "I5: the 09-26 dispatch red left only a node id because the battery ran --tb=no. A row whose reasons are all null is that blindness back.",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN",
+    "failure_reasons": {
+      "tests/test_battery_reasons.py::test_a_mutation_row_carries_the_failure_reasons": "AssertionError: assert {'tests/t.py:..._other': None} == {'tests/t.py:...e 1 column 1'}"
+    }
+  },
+  {
+    "mutation": "the stub slot writes its job record in place again",
+    "gate": "test_the_stub_slot_never_exposes_a_half_written_job_record",
+    "why": "I5b: write_text truncates then writes, and wait_job polls json.loads(read_text()) every 50 ms -- a demonstrated torn read (not established as the cause of the 09-26 dispatch red).",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN",
+    "failure_reasons": {
+      "tests/test_orch_stub_job_record.py::test_the_stub_slot_never_exposes_a_half_written_job_record": "AssertionError: wait_job's read saw a half-written job record: [\"pause 0: '' -> Expecting value: line 1 column 1 (char 0)\", \"pause 1: '' -> Expecting value: line 1 column 1 (char 0)\"]"
+    }
+  }
+]
