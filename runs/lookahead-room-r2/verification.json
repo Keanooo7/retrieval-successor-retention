@@ -1,0 +1,60 @@
+{
+ "status": "ok",
+ "seed": "83fa07505efdda3544d2d27ad6ef5fa5cbef5fd1ec6f4d2d4a21f692a92f449e",
+ "verifier_sha": "a0cc85ac7204032e8d55637da378a059169dc4ad",
+ "run_sha_from_ledger": "a0cc85ac7204032e8d55637da378a059169dc4ad",
+ "claims": [
+  {
+   "claim": "r2 headline PARTIAL at both checkpoints, no control failed",
+   "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; print(r['classification']['value'], r['per_checkpoint']['value'], r['controls_failed']['value'])\"",
+   "expected": "PARTIAL {'B.ckpt2500': 'PARTIAL', 'B.ckpt3000': 'PARTIAL'} []",
+   "observed": "PARTIAL {'B.ckpt2500': 'PARTIAL', 'B.ckpt3000': 'PARTIAL'} []",
+   "rc": 0,
+   "match": true,
+   "independent_path": "rule_g0/rule_g09 re-simulated from raw D.pt with own T0 and explicit-sum G_0.9, own argmin policy (ties->oldest), rsr.metrics.headroom.simulate; own numpy paired per-document bootstrap (2000 reps) AND torch seed 20260926+seed. PREREG rule applied: ckpt2500 PARTIAL, ckpt3000 PARTIAL under both bootstraps. Per-doc (n,hits) vs raw per_doc: 0 mismatches in 6 of 6 (ckpt,seed). controls_failed [] cross-checked only against the ledger's per-seed controls rows (C1 ok, argmax_mismatches 0); C1 was not re-executed on the model."
+  },
+  {
+   "claim": "r2's primary numbers equal run 1's: every statistic row except wall-clock seconds is bit-identical, and the C2 note is identical",
+   "command": "uv run python -c \"import json; a={x['key']:x for x in json.load(open('runs/lookahead-room/ledger.json'))['rows']}; b={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; ks=[k for k,x in a.items() if x.get('kind')=='statistic' and 'seconds' not in k]; print(len(ks), sum(a[k]['samples']!=b[k]['samples'] for k in ks), a['C2']['value']==b['C2']['value'])\"",
+   "expected": "600 0 True",
+   "observed": "600 0 True",
+   "rc": 0,
+   "match": true,
+   "independent_path": "all 613 rows: same key sets; the 10 rows that differ are classification, controls_failed, two *.seconds and six per-seed controls (C1 ok false->true under Amendment 1). All 6 raw D.pt are sha256-identical between run 1 and r2; per_doc and classes identical in all 6 json.gz, and only control1 and seconds differ."
+  },
+  {
+   "claim": "room_3b at B.ckpt3000 on U, point / lo / hi per seed (r2)",
+   "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/lookahead-room-r2/ledger.json'))['rows']}; print([[round(x,4) for x in r['B.ckpt3000.U.room_3b.'+f]['samples']] for f in ('point','lo','hi')])\"",
+   "expected": "[[0.0355, 0.042, 0.0478], [0.0304, 0.0376, 0.0431], [0.0405, 0.0463, 0.0526]]",
+   "observed": "[[0.0355, 0.042, 0.0478], [0.0304, 0.0376, 0.0431], [0.0405, 0.0463, 0.0526]]",
+   "rc": 0,
+   "match": true,
+   "independent_path": "own recomputation from raw D.pt, ckpt3000 point/lo/hi (torch-seeded bootstrap) seed0 0.035536779324055745/0.030403857118604452/0.0405433979193906, seed1 0.04201180496999157/0.03764571606462499/0.04633995404597746, seed2 0.04779228545798864/0.04308128336568662/0.05255743567051942, bit-identical to the ledger. Own numpy-RNG bootstrap: CI seed0 [0.0307,0.0406], seed1 [0.0375,0.0463], seed2 [0.0431,0.0525]. The printed rows are per field across seeds 0,1,2."
+  }
+ ],
+ "prereg_integrity": {
+  "527daf4": "touches only experiments/lookahead-room/PREREG.md (+202); no lookahead-room path exists at its parent; code a7cedb7 follows",
+  "674dd37": "touches only PREREG.md (+37, 0 deletions); ancestor of run sha a0cc85a; diff 527daf4..674dd37 is a pure append of 'Amendment 1': C1 tolerance only; no line of the original PREREG (thresholds 0.05/0.02, CI rule, arms, targets, document sets, seeds, bootstrap, other controls) is removed or altered",
+  "PREREG after 674dd37": "unchanged through a0cc85a and cb28187",
+  "run1": "runs/lookahead-room touched only by 033b37a; git diff 033b37a..HEAD empty"
+ },
+ "c2_model_free_P": {
+  "oracle_minus_fifo": {
+   "0": 0.1852,
+   "1": 0.1739,
+   "2": 0.1896
+  },
+  "own_belady_minus_fifo": {
+   "0": 0.1852,
+   "1": 0.1739,
+   "2": 0.1896
+  },
+  "kindrand_minus_fifo": {
+   "0": 0.1498,
+   "1": 0.1403,
+   "2": 0.1577
+  },
+  "note": "4 dp, simulate on docs [4096,4160); equal to the PREREG's C2 targets and to the ledger C2 row"
+ },
+ "scratch": "/private/tmp/claude-501/verify-w10/ (indep.py, indep.log, indep.json)"
+}
