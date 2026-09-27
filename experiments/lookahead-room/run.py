@@ -1308,7 +1308,7 @@ def render_results(doc: dict, run_id: str = RUN_ID) -> str:
         "",
         f"Rendered from `runs/{run_id}/ledger.json` by `{EXPERIMENT} --render-results "
         f"--run-id {run_id}`. PREREG `{PREREG}` (commit `{PREREG_COMMIT}`; "
-        f"Amendment 1 `{AMENDMENT1_COMMIT}`). Run sha "
+        f"C1 amendment `{AMENDMENT1_COMMIT}`). Run sha "
         f"`{prov.get('git_sha')}`, platform `{prov.get('platform')}`, device `cpu`.",
         "",
         f"Command: `uv run python {EXPERIMENT}` (children under `commands` in the "
