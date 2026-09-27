@@ -315,6 +315,94 @@ _LOOKAHEAD_S003_COUPLING = (
     "S0-03 refusal, seen from W10's harness."
 )
 
+# W11 (2026-09-26): couplings found by the final integration battery, each looked at
+# under its mutation before being declared (the failing line is named in the reason).
+_LOO_S003_COUPLING = (
+    "loo: the instrument's no-knockout path IS S0-03's answer_readout, and its "
+    "tests encode S0-03 documents through answer_targets (loop.py refuses an "
+    "out-of-band corpus: 27 tests) or re-encode a twin whose rewritten answers "
+    "must be in the vocabulary (encode KeyError: 3 tests). A corpus with no "
+    "in-stream answer has nothing to read: _S003_REFUSAL_COUPLING, seen from loo."
+)
+_LOO_S003_READERS = (
+    "test_all_slots_resample_donor_excludes_the_queried_key",
+    "test_all_slots_resample_swaps_whole_rows_for_a_different_documents_memory",
+    "test_batched_equals_row_by_row_for_row_local_conditions",
+    "test_bos_off_variants_drop_only_the_bos_context",
+    "test_control_is_never_of_the_queried_key",
+    "test_deterministic_under_a_seed_and_seed_moves_donors",
+    "test_donor_choice_does_not_depend_on_global_rng",
+    "test_duplicate_key_in_document_is_flagged",
+    "test_every_condition_matches_a_hand_recomputation",
+    "test_every_forward_is_eval_mode_and_no_grad_and_mode_is_restored",
+    "test_live_path_is_bit_exact_to_answer_readout",
+    "test_loo_delta_loss_matches_a_direct_single_knockout",
+    "test_loo_delta_loss_padding_step_is_nan_not_zero",
+    "test_loo_delta_loss_resample_excludes_the_slots_own_key",
+    "test_loo_delta_loss_resample_records_donor_or_nan",
+    "test_loo_delta_loss_step_one_by_hand",
+    "test_loo_delta_loss_zero_mode_needs_no_annotations",
+    "test_memory_off_masks_every_slot_for_the_query_forward_only",
+    "test_missing_control_is_recorded_not_substituted",
+    "test_missing_donor_is_recorded_not_substituted",
+    "test_no_knockout_is_written_back",
+    "test_object_flags_and_the_donor_object_exclusion",
+    "test_own_donor_excludes_the_queried_key",
+    "test_own_slot_is_the_slot_holding_t_minus_gap",
+    "test_own_status_distinguishes_evicted_from_never_written",
+    "test_pick_donor_is_called_with_the_required_exclusions",
+    "test_readout_knockout_forwards_differ_from_live_only_at_the_target",
+    "test_records_are_ordered_step_major_then_row",
+    "test_rejects_a_model_without_memory",
+    "test_resample_donor_is_same_kind_different_doc_same_rank",
+)
+_READABILITY_S003_COUPLING = (
+    "retention-readability: every one of these tests takes the module fixture "
+    "`world`, which maps ANSWER_SYMBOLS through the S0-03 corpus's vocabulary to "
+    "read answers under the 16-way mask; an out-of-band corpus adds no answer "
+    "token, so the fixture errors at setup (KeyError) for all of them: "
+    "_S003_CORPUS_COUPLING, seen from the readability harness."
+)
+_READABILITY_WORLD_READERS = (
+    "test_batched_rows_are_refused",
+    "test_document_id_mismatch_raises",
+    "test_documents_are_E_then_P_and_closed",
+    "test_factfiller_evicts_no_assert_while_a_filler_is_live",
+    "test_fifo_harness_bit_exact_to_answer_readout",
+    "test_oracle_demand_of_another_document_raises",
+    "test_oracle_keeps_every_queried_fact",
+    "test_rank_index_is_M_minus_gap_under_fifo",
+    "test_residency_matches_simulate_for_every_arm",
+)
+_CARRY_FORWARD_S003_COUPLING = (
+    "carry-forward's end-to-end test encodes H64 through encode_set, which calls "
+    "answer_targets; an out-of-band corpus is refused there: "
+    "_S003_REFUSAL_COUPLING, seen from carry-forward."
+)
+_CARRY_FORWARD_BITEXACT_COUPLING = (
+    "carry-forward's end-to-end test asserts its bit-exactness control on a real "
+    "measure_one: loo_readout's no-knockout path must equal S0-03's "
+    "answer_readout(cond='live') on H64 and an EXT chunk, field by field. A defect "
+    "on either side of that equality (the readout's Brier16, the live forward's "
+    "bos context, a knockout left in the live memory) fails the control by design: "
+    "loo's own exactness gate, seen from the experiment that relies on it."
+)
+_HELDOUT_READERS_COUPLING = (
+    "carry-forward and retention-readability take their held-out set from "
+    "corpus-size-curve (CSC.HELDOUT, CSC.doc_sets) and check it by document id "
+    "(ids 4096..4159); held-out drawn from docs 64..127 fails those id checks "
+    "(carry-forward: 'H64 by id differs from doc_sets' H64'). One held-out set, "
+    "three readers."
+)
+_LIVENESS_BATCH_STAMP_COUPLING = (
+    "liveness-wiring: loop.liveness_batch rebuilds the measurement corpus from the "
+    "frozen config and reads n_documents / stream only when the key is PRESENT -- "
+    "the stamped-only-when-set convention this mutation breaks. A None stamped on "
+    "the default path reaches generate() as n_documents=None (or None['vocab_"
+    "documents']), so every real train's liveness measurement is invalid and each "
+    "test that reads it reddens: the default-path config, seen from liveness."
+)
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -342,6 +430,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    "psi_override": "neg_age",',
         '    "psi_override": None,',
         "the §3.7 reduction is no longer argmin(-a_i)",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "it builds RSRConfig.reduction_to_tg() and asserts the one eviction is "
+                "attributed to neg_age -- the psi_override this mutation clears "
+                "(measured under it, W11: {'psi': 1} != {'neg_age': 1}). The "
+                "reduction, seen from correction 16's no-counter test.",
+            ),
+        ),
     ),
     Mutation(
         "drop nu from the off-switch table",
@@ -381,6 +478,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_rsr_policy_exposes_a_to_method",
                 "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
             )
+        )
+        + (
+            # W11: RSRConfig(...) missing 'nu' at construction, measured under it.
+            (
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                _REDUCTION_TABLE_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -1385,6 +1489,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "and the oracle / pending-FIFO identity through OraclePolicy: an "
                 "anti-oracle fails both, the oracle seen from that control.",
             ),
+            (
+                "tests/test_retention_readability.py::test_oracle_keeps_every_queried_fact",
+                "retention-readability's arm A is OraclePolicy(discounted_demand(doc)); "
+                "the test asserts it keeps every queried fact resident, which an "
+                "oracle evicting the most-needed sentence cannot: the oracle, seen "
+                "from readability's upper-bound arm.",
+            ),
         ),
     ),
     Mutation(
@@ -1550,6 +1661,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_the_decoy_is_the_untrained_model_at_the_same_seed",
                     "test_the_loader_refuses_a_quarantined_checkpoint",
                 )
+            ),
+            *((f"tests/test_loo.py::{t}", _LOO_S003_COUPLING) for t in _LOO_S003_READERS),
+            *(
+                (f"tests/test_retention_readability.py::{t}", _READABILITY_S003_COUPLING)
+                for t in _READABILITY_WORLD_READERS
+            ),
+            (
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                _CARRY_FORWARD_S003_COUPLING,
             ),
         ),
     ),
@@ -2350,6 +2470,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_fresh_stream.py::test_default_path_config_is_unchanged",
                 _DEFAULT_PATH_HASH_COUPLING,
             ),
+            *(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_BATCH_STAMP_COUPLING)
+                for t in (
+                    "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+                    "test_every_train_ends_with_the_liveness_measurement",
+                    *_LIVENESS_HOOK_READERS,
+                )
+            ),
         ),
     ),
     Mutation(
@@ -2361,6 +2489,19 @@ MUTATIONS: tuple[Mutation, ...] = (
         "corpus-size-curve brief bar (2). S0-03's held-out documents are training "
         "data for every N >= 128: measured there, the large arms read memorisation "
         "as retrieval.",
+        off_gate_allowed=(
+            *(
+                (f"tests/test_carry_forward.py::{t}", _HELDOUT_READERS_COUPLING)
+                for t in (
+                    "test_measure_one_end_to_end_on_a_tiny_model",
+                    "test_seed_sets_closure_and_prefix_stability",
+                )
+            ),
+            (
+                "tests/test_retention_readability.py::test_documents_are_E_then_P_and_closed",
+                _HELDOUT_READERS_COUPLING,
+            ),
+        ),
     ),
     Mutation(
         "corpus-size-curve: Brier16 computed as an absolute distance",
@@ -2371,6 +2512,19 @@ MUTATIONS: tuple[Mutation, ...] = (
         "corpus-size-curve brief bar (3). 'Squaring is what makes it proper; "
         "absolute distance would not be' (research corpus 03_Calibration:142): the "
         "primary readout must be the squared distance.",
+        off_gate_allowed=(
+            (
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                _CARRY_FORWARD_BITEXACT_COUPLING,
+            ),
+            (
+                "tests/test_loo.py::test_live_path_is_bit_exact_to_answer_readout",
+                "loo's exactness gate compares its own no-knockout Brier16 (squared) "
+                "with S0-03's answer_readout field by field; an absolute-distance "
+                "Brier16 on the S0-03 side breaks that equality (measured max |diff| "
+                "0.937, W11): the readout, seen from the instrument that reproduces it.",
+            ),
+        ),
     ),
     Mutation(
         "corpus-size-curve: the verdict read off the N=64 arm",
@@ -2558,6 +2712,14 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_corpus_size_curve.py::test_default_path_config_hash_is_s003s",
                 "it checks the same default-path config_hash against S0-03's ledger.",
+            ),
+            *(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_BATCH_STAMP_COUPLING)
+                for t in (
+                    "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+                    "test_every_train_ends_with_the_liveness_measurement",
+                    *_LIVENESS_HOOK_READERS,
+                )
             ),
         ),
     ),
@@ -3005,18 +3167,24 @@ MUTATIONS: tuple[Mutation, ...] = (
         "The exactness control: with no knockout, loo_readout must reproduce S0-03's "
         "answer_readout(cond='live') bit-exactly, or its deltas are against a "
         "different readout.",
-        off_gate_allowed=tuple(
+        off_gate_allowed=(
+            *(
+                (
+                    "tests/test_loo.py::" + node,
+                    "it compares a condition's bos flag or the live trajectory with "
+                    "the honest loop's, which this mutation changes.",
+                )
+                for node in (
+                    "test_memory_off_masks_every_slot_for_the_query_forward_only",
+                    "test_bos_off_variants_drop_only_the_bos_context",
+                    "test_no_knockout_is_written_back",
+                    "test_every_condition_matches_a_hand_recomputation",
+                )
+            ),
             (
-                "tests/test_loo.py::" + node,
-                "it compares a condition's bos flag or the live trajectory with the "
-                "honest loop's, which this mutation changes.",
-            )
-            for node in (
-                "test_memory_off_masks_every_slot_for_the_query_forward_only",
-                "test_bos_off_variants_drop_only_the_bos_context",
-                "test_no_knockout_is_written_back",
-                "test_every_condition_matches_a_hand_recomputation",
-            )
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                _CARRY_FORWARD_BITEXACT_COUPLING,
+            ),
         ),
     ),
     # -- W4-fix: PR #48 review (rsr.metrics.loo, spec §3.2.1) --
@@ -3173,6 +3341,10 @@ MUTATIONS: tuple[Mutation, ...] = (
             "later steps attend over."
         ),
         off_gate_allowed=(
+            (
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                _CARRY_FORWARD_BITEXACT_COUPLING,
+            ),
             (
                 ("tests/test_loo.py::test_live_path_is_bit_exact_to_answer_readout"),
                 (
