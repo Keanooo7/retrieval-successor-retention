@@ -177,10 +177,20 @@ def test_the_cpu_canary_trains_on_one_thread(tmp_path, monkeypatch):
 
     threads: list[int] = []
     _stub(monkeypatch, tmp_path, [[1.0]], threads)
-    before = torch.get_num_threads()
-    r = canary.run(5, device="cpu")
-    assert threads == [1]
-    assert torch.get_num_threads() == before
+    # The ambient thread count must differ from CPU_THREADS, or a canary that never
+    # sets it passes on the environment alone. It did: the mutation battery caps the
+    # suite at ops/lanes.json battery_cpu_slots = 1 thread, torch starts at 1, and
+    # "the CPU canary runs on every thread" reddened nothing (2026-09-26, W11).
+    # Force a known different count here and restore the process's own afterwards.
+    process_threads = torch.get_num_threads()
+    before = canary.CPU_THREADS + 1
+    torch.set_num_threads(before)
+    try:
+        r = canary.run(5, device="cpu")
+        assert threads == [canary.CPU_THREADS] == [1]
+        assert torch.get_num_threads() == before
+    finally:
+        torch.set_num_threads(process_threads)
     assert (tmp_path / "baseline-cpu.json").exists()
     assert not (tmp_path / "baseline.json").exists()
     assert r["ledger"].endswith("cycle-05-cpu/ledger.json")
