@@ -8,13 +8,13 @@
 
 **Clause 2 is enforced**, as of cycle 0 of the 2026-09-19 run. An off-gate failure makes a mutation unproven unless it is declared in that mutation's `off_gate_allowed` with a reason. Until then `off_gate` was computed, printed and never filtered on, so a mutation reddening 11 unrelated tests still scored `PROVEN`.
 
-**136/136 gates proven.**
+**245/245 gates proven.**
 
 | Mutation | Gate it must redden | Verdict | Off-gate | Declared |
 |---|---|---|---|---|
-| t_warm back to inf | `test_reduction` | **PROVEN** | 0 | 0 |
-| reduction uses the learned head | `test_reduction` | **PROVEN** | 0 | 0 |
-| drop nu from the off-switch table | `test_every_config_field_has_an_off_switch` | **PROVEN** | 19 | 19 |
+| t_warm back to inf | `test_reduction` | **PROVEN** | 2 | 2 |
+| reduction uses the learned head | `test_reduction` | **PROVEN** | 1 | 1 |
+| drop nu from the off-switch table | `test_every_config_field_has_an_off_switch` | **PROVEN** | 20 | 20 |
 | RSRConfig.nu gets a default | `test_no_registry_owned_field_has_a_default` | **PROVEN** | 0 | 0 |
 | LRU state back in MemoryState.accum | `test_lru_and_fifo_choose_different_slots_in_a_real_eviction_loop` | **PROVEN** | 2 | 2 |
 | an accumulating policy skips the admission hook | `test_an_accumulating_policy_is_corrupted_without_the_admission_hook` | **PROVEN** | 0 | 0 |
@@ -25,10 +25,10 @@
 | W transposed | `test_W_is_not_silently_transposed` | **PROVEN** | 1 | 1 |
 | linear term dropped | `test_both_terms_are_present` | **PROVEN** | 2 | 2 |
 | value head shares the transformer group | `test_the_value_head_has_its_own_group` | **PROVEN** | 2 | 2 |
-| r_i drops the memory gate | `test_the_memory_gate_changes_the_answer` | **PROVEN** | 1 | 1 |
+| r_i drops the memory gate | `test_the_memory_gate_changes_the_answer` | **PROVEN** | 3 | 3 |
 | r_i accepts a train-mode trace | `test_a_train_mode_trace_is_refused` | **PROVEN** | 1 | 1 |
 | rank shift counts the sliding window | `test_evicting_the_oldest_displaces_nothing` | **PROVEN** | 4 | 4 |
-| underfull steps are not rescaled | `test_underfull_steps_are_rescaled_not_masked` | **PROVEN** | 1 | 1 |
+| underfull steps are not rescaled | `test_underfull_steps_are_rescaled_not_masked` | **PROVEN** | 3 | 3 |
 | ledger accepts an unreproducible entry point | `test_command_refuses` | **PROVEN** | 0 | 0 |
 | any console script counts as a committed entry point | `test_command_refuses_an_undeclared_tool_entry_point` | **PROVEN** | 0 | 0 |
 | an unreproducible command stops capping the verdict | `test_the_escape_hatch_caps_the_verdict_at_inconclusive` | **PROVEN** | 0 | 0 |
@@ -61,28 +61,33 @@
 | a truncated canary run is compared over the overlap | `test_a_length_mismatch_is_a_move` | **PROVEN** | 0 | 0 |
 | the training loss scores padding again | `test_lm_loss` | **PROVEN** | 0 | 0 |
 | W_O dropped from the capture path | `test_capture_bridge` | **PROVEN** | 0 | 0 |
-| observe() is never reached | `test_observe` | **PROVEN** | 0 | 0 |
-| policy built unconditionally again | `test_train_does_not_stamp_a_policy_it_did_not_build` | **PROVEN** | 0 | 0 |
+| observe() is never reached | `test_observe` | **PROVEN** | 4 | 4 |
+| policy built unconditionally again | `test_train_does_not_stamp_a_policy_it_did_not_build` | **PROVEN** | 2 | 2 |
+| T_warm compared against the sentence index again | `test_warmup_below_S_covers_whole_training_steps` | **PROVEN** | 2 | 2 |
+| train() stops handing the policy its optimizer step | `test_warm_status_never_flips_inside_one_stream` | **PROVEN** | 1 | 1 |
+| an unset training step defaults to 0 | `test_a_warmup_policy_refuses_to_guess_its_training_step` | **PROVEN** | 0 | 0 |
+| build_policy accepts rsr without an epoch | `test_build_policy_refuses_rsr_without_an_epoch` | **PROVEN** | 1 | 1 |
+| train() passes iters as steps_per_epoch again | `test_train_does_not_stamp_a_policy_it_did_not_build` | **PROVEN** | 0 | 0 |
 | --policy stops reaching train() | `test_the_policy_is_selectable_from_the_command_line` | **PROVEN** | 0 | 0 |
 | srep-norm hinge back out of the objective | `test_the_hinge` | **PROVEN** | 0 | 0 |
 | ppl computed from the penalised loss | `test_perplexity_is_a_perplexity` | **PROVEN** | 0 | 0 |
 | --vocab default back to 50257 | `test_the_cli_vocab_default_reaches_the_derived_path` | **PROVEN** | 0 | 0 |
 | from_registry reads every field eagerly again | `test_from_registry` | **PROVEN** | 0 | 0 |
-| the shuffle control hands each row its own memory | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
-| the shuffle control never applies its permutation | `test_live_memory_moves_the_loss` | **PROVEN** | 0 | 0 |
-| the shuffle replay perturbs the memory it replays | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
-| the shuffle replay hands over the bos gestalt too | `test_shuffle_control.py::` | **PROVEN** | 0 | 0 |
+| the shuffle control hands each row its own memory | `test_shuffle_control.py::` | **PROVEN** | 2 | 2 |
+| the shuffle control never applies its permutation | `test_live_memory_moves_the_loss` | **PROVEN** | 2 | 2 |
+| the shuffle replay perturbs the memory it replays | `test_shuffle_control.py::` | **PROVEN** | 1 | 1 |
+| the shuffle replay hands over the bos gestalt too | `test_shuffle_control.py::` | **PROVEN** | 1 | 1 |
 | decisive: two arms swapped in the script | `test_arms_are_the_preregistered_table` | **PROVEN** | 0 | 0 |
 | decisive: the manifest-hash arm check never refuses | `test_an_arm_swap_is_refused_by_the_manifest_check` | **PROVEN** | 1 | 1 |
 | decisive: the aliasing clause dropped from the decision rule | `test_decisive_shuffle.py::` | **PROVEN** | 0 | 0 |
 | decisive: measure() ignores the decoy checkpoint it is handed | `test_the_decoy_pointed_at_the_trained_checkpoint` | **PROVEN** | 0 | 0 |
-| random replacement with self perturbs the memory | `test_random_replacement_with_self_reads_exactly_zero` | **PROVEN** | 0 | 0 |
+| random replacement with self perturbs the memory | `test_random_replacement_with_self_reads_exactly_zero` | **PROVEN** | 1 | 1 |
 | random replacement is not norm-matched | `test_random_replacement_preserves_each_slots_norm` | **PROVEN** | 0 | 0 |
 | the answer-token mask is ignored | `test_token_mask_on_padding_raises_and_default_adds_no_key` | **PROVEN** | 0 | 0 |
 | cross-row cosine reports a constant | `test_cross_row_cosine_is_one_for_identical_rows_and_bounded_otherwise` | **PROVEN** | 0 | 0 |
-| the oracle evicts the sentence most needed | `test_oracle.py::` | **PROVEN** | 0 | 0 |
+| the oracle evicts the sentence most needed | `test_oracle.py::` | **PROVEN** | 2 | 2 |
 | checkpoints written straight to the final path | `test_a_sigkill_mid_save_never_leaves_a_corrupt_checkpoint` | **PROVEN** | 0 | 0 |
-| the synthetic answer goes back out of band | `test_every_query_carries_its_answer_as_its_final_token` | **PROVEN** | 12 | 12 |
+| the synthetic answer goes back out of band | `test_every_query_carries_its_answer_as_its_final_token` | **PROVEN** | 75 | 75 |
 | the work queue offers owner items | `test_owner_item_` | **PROVEN** | 0 | 0 |
 | a PREREG co-committed with code satisfies the queue | `test_prereg_cocommitted_` | **PROVEN** | 0 | 0 |
 | the work queue's §16 sprint cap moves to 5 | `test_sprint_cap_` | **PROVEN** | 0 | 0 |
@@ -121,7 +126,7 @@
 | the CPU canary gets a tolerance | `test_the_cpu_canary_is_bit_exact` | **PROVEN** | 0 | 0 |
 | the CPU canary runs on every thread | `test_the_cpu_canary_trains_on_one_thread` | **PROVEN** | 0 | 0 |
 | loss_path_hash ignores file contents | `test_loss_path_hash_moves_with_the_code` | **PROVEN** | 0 | 0 |
-| small integers are backed by any ledger again | `test_the_audit_refuses_a_small_integer` | **PROVEN** | 1 | 1 |
+| small integers are backed by any ledger again | `test_the_audit_refuses_a_small_integer` | **PROVEN** | 2 | 2 |
 | a key from another run backs the sentence | `test_the_audit_refuses_a_small_integer_from_another_run` | **PROVEN** | 0 | 0 |
 | a plain English word names a key | `test_the_audit_refuses_a_small_integer_matched_only_by_an_unrelated_ledger` | **PROVEN** | 0 | 0 |
 | a dangling token passes | `test_a_token_that_resolves_to_no_key_is_flagged` | **PROVEN** | 0 | 0 |
@@ -145,9 +150,113 @@
 | C0: a name/port disagreement not refused | `test_servers_disagreement_refuses` | **PROVEN** | 0 | 0 |
 | C0: the start barrier released before every job is ready | `test_barrier_` | **PROVEN** | 0 | 0 |
 | retrieval-curve: decide() fed the train population | `test_decide_is_fed_heldout_not_train` | **PROVEN** | 0 | 0 |
-| retrieval-curve: the reproduction control's tolerance widened | `test_reproduction_control_tolerance` | **PROVEN** | 0 | 0 |
+| retrieval-curve: the reproduction control's tolerance widened | `test_reproduction_control_tolerance` | **PROVEN** | 1 | 1 |
 | retrieval-curve: the reproduction control's comparison ledger swapped | `test_reproduction_control_reads_the_s003_ledger` | **PROVEN** | 0 | 0 |
 | retrieval-curve: every checkpoint measured from the final checkpoint | `test_each_checkpoint_label_` | **PROVEN** | 0 | 0 |
+| corpus-size-curve: n_documents stamped into the default path's config | `test_default_path_config_hash_is_s003s` | **PROVEN** | 7 | 7 |
+| corpus-size-curve: held-out drawn from S0-03's docs 64..127 | `test_heldout_is_disjoint_from_every_arm` | **PROVEN** | 3 | 3 |
+| corpus-size-curve: Brier16 computed as an absolute distance | `test_brier16_` | **PROVEN** | 2 | 2 |
+| corpus-size-curve: the verdict read off the N=64 arm | `test_verdict_reads_the_n4096_arm_only` | **PROVEN** | 6 | 6 |
+| corpus-size-curve: the reproduction control read on the common held-out set | `test_control_reads_s003s_own_heldout` | **PROVEN** | 0 | 0 |
+| corpus-size-curve: the control arm passes n_documents | `test_control_arm_omits_n_documents` | **PROVEN** | 2 | 2 |
+| corpus-size-curve: the reproduction control's tolerance widened | `test_reproduction_control_tolerance` | **PROVEN** | 1 | 1 |
+| scaffold-timing: the sustained requirement dropped (first crossing = onset) | `test_single_noisy_crossing_that_lapses_is_not_an_onset` | **PROVEN** | 3 | 3 |
+| scaffold-timing: the reproduction control's tolerance widened | `test_reproduction_control_fails_at_2e_6` | **PROVEN** | 4 | 4 |
+| scaffold-timing: the onset comparison swapped (BEFORE <-> AFTER) | `test_classify_table` | **PROVEN** | 6 | 6 |
+| scaffold-timing: R and M hold on ANY seed instead of every seed | `test_R_and_M_need_every_seed` | **PROVEN** | 3 | 3 |
+| scaffold-timing: the measurement retyped as a local wrapper, not imported | `test_measurement_is_the_corpus_size_function` | **PROVEN** | 0 | 0 |
+| fresh-stream: the stream stamped on the default path | `test_default_path_config_is_unchanged` | **PROVEN** | 7 | 7 |
+| fresh-stream: a global-RNG draw before model init in stream mode | `test_initial_parameters_identical_with_and_without_the_stream` | **PROVEN** | 0 | 0 |
+| fresh-stream: a resumed run restarts the stream at its first window | `test_resume_continues_the_stream_at_the_resumed_step` | **PROVEN** | 0 | 0 |
+| fresh-stream: SCAFFOLD and TRAP swapped | `test_classify_table` | **PROVEN** | 5 | 5 |
+| fresh-stream: control 1's tolerance widened | `test_control_1_fails_at_2e_6` | **PROVEN** | 3 | 3 |
+| fresh-stream: the vocabulary closure disabled | `test_vocabulary_closure_raises_on_an_out_of_vocab_word` | **PROVEN** | 1 | 1 |
+| fresh-stream: control 3 drops the held-out overlap | `test_disjointness_catches_overlap` | **PROVEN** | 0 | 0 |
+| fresh-stream: C holds on ANY seed instead of every seed | `test_C_needs_every_seed` | **PROVEN** | 0 | 0 |
+| fresh-stream: the measurement retyped as a local wrapper, not imported | `test_measurement_is_the_corpus_size_function` | **PROVEN** | 0 | 0 |
+| fresh-stream: control 2 made approximate | `test_resume_check_is_exact` | **PROVEN** | 0 | 0 |
+| scaffold-dose: AT_MEMORISATION and EARLY swapped | `test_classification_table` | **PROVEN** | 9 | 9 |
+| scaffold-dose: k* the largest k with U(k) | `test_k_star_is_the_smallest` | **PROVEN** | 8 | 9 |
+| scaffold-dose: U(k) on ANY seed instead of every seed | `test_U_needs_every_seed` | **PROVEN** | 0 | 0 |
+| scaffold-dose: control 2's tolerance widened | `test_control_2_fails_at_2e_6` | **PROVEN** | 2 | 2 |
+| scaffold-dose: control 3 drops the held-out overlap | `test_arm_disjointness_catches_overlap` | **PROVEN** | 0 | 0 |
+| scaffold-dose: the start-checkpoint sha256 comparison dropped | `test_start_checkpoint_sha_mismatch_refuses` | **PROVEN** | 0 | 0 |
+| scaffold-dose: a monotonicity violation not named | `test_monotonicity_is_reported` | **PROVEN** | 1 | 1 |
+| scaffold-dose: the measurement retyped as a local wrapper, not imported | `test_measurement_is_the_corpus_size_function` | **PROVEN** | 0 | 0 |
+| fresh-escape: STIRRING and NO_ESCAPE swapped | `test_classification_table` | **PROVEN** | 10 | 10 |
+| fresh-escape: P the smallest checkpoint measured on every seed | `test_P_is_the_largest_checkpoint_on_every_seed` | **PROVEN** | 24 | 24 |
+| fresh-escape: the 6000 minimum on P lowered | `test_P_below_6000_is_inconclusive` | **PROVEN** | 6 | 6 |
+| fresh-escape: control 1's tolerance widened | `test_control_1_fails_at_2e_6` | **PROVEN** | 2 | 2 |
+| fresh-escape: control 3 drops the held-out overlap | `test_stream_disjointness_catches_overlap` | **PROVEN** | 0 | 0 |
+| fresh-escape: the start-checkpoint sha256 comparison dropped | `test_start_checkpoint_sha_mismatch_refuses` | **PROVEN** | 0 | 0 |
+| fresh-escape: stream-loss windows after P counted | `test_stirring_window_must_end_at_or_before_P` | **PROVEN** | 0 | 0 |
+| fresh-escape: post-deadline measurements counted toward P | `test_post_deadline_measurement_is_excluded_from_P` | **PROVEN** | 3 | 3 |
+| fresh-escape: the measurement retyped as a local wrapper, not imported | `test_measurement_is_the_corpus_size_function` | **PROVEN** | 0 | 0 |
+| loo: a knockout clobbers the whole row, not one slot | `test_knockout_kv_zero_changes_exactly_the_target_slot_of_the_target_row` | **PROVEN** | 3 | 3 |
+| loo: loo_readout runs with autograd enabled | `test_every_forward_is_eval_mode_and_no_grad_and_mode_is_restored` | **PROVEN** | 0 | 0 |
+| loo: a resample donor may come from the same document | `test_pick_donor_filters_kind_doc_rank_and_key` | **PROVEN** | 0 | 0 |
+| loo: a resample donor's sentence kind is not checked | `test_resample_donor_is_same_kind_different_doc_same_rank` | **PROVEN** | 1 | 1 |
+| loo: a missing control is substituted by any pending assert | `test_missing_control_is_recorded_not_substituted` | **PROVEN** | 0 | 0 |
+| loo: the live forward drops the bos-copy context | `test_live_path_is_bit_exact_to_answer_readout` | **PROVEN** | 5 | 5 |
+| loo: the whole-memory donor may ask the queried question | `test_all_slots_resample_donor_excludes_the_queried_key` | **PROVEN** | 0 | 0 |
+| loo: all_slots_resample keeps the row's own memory | `test_all_slots_resample_swaps_whole_rows_for_a_different_documents_memory` | **PROVEN** | 1 | 1 |
+| loo: memory_off leaves the memory valid | `test_memory_off_masks_every_slot_for_the_query_forward_only` | **PROVEN** | 1 | 1 |
+| loo: a bos_off condition keeps the bos-copy context | `test_bos_off_variants_drop_only_the_bos_context` | **PROVEN** | 1 | 1 |
+| loo: own donors may carry the answer object | `test_pick_donor_is_called_with_the_required_exclusions` | **PROVEN** | 1 | 1 |
+| loo: own donors may ask the queried question | `test_own_donor_excludes_the_queried_key` | **PROVEN** | 1 | 1 |
+| loo: control donors may ask the control's question | `test_pick_donor_is_called_with_the_required_exclusions` | **PROVEN** | 0 | 0 |
+| loo: the control may ask the queried question | `test_control_is_never_of_the_queried_key` | **PROVEN** | 0 | 0 |
+| loo: a knockout is written back into the live memory | `test_no_knockout_is_written_back` | **PROVEN** | 3 | 3 |
+| loo: delta-loss resample donors may ask the slot's own question | `test_loo_delta_loss_resample_excludes_the_slots_own_key` | **PROVEN** | 0 | 0 |
+| loo: a padding step scores 0.0 instead of NaN | `test_loo_delta_loss_padding_step_is_nan_not_zero` | **PROVEN** | 0 | 0 |
+| loo: zero-mode delta loss requires synthetic annotations | `test_loo_delta_loss_zero_mode_needs_no_annotations` | **PROVEN** | 0 | 0 |
+| loo: never-written asserts reported as evicted | `test_own_status_distinguishes_evicted_from_never_written` | **PROVEN** | 0 | 0 |
+| loo: the seed mix collides at role >= 131 again | `test_seed_mix_has_no_role_collision` | **PROVEN** | 0 | 0 |
+| loo: a duplicate key in a document is not flagged | `test_duplicate_key_in_document_is_flagged` | **PROVEN** | 0 | 0 |
+| loo: ctrl_same_object never fires | `test_object_flags_and_the_donor_object_exclusion` | **PROVEN** | 0 | 0 |
+| loo: all_donor_has_object never fires | `test_object_flags_and_the_donor_object_exclusion` | **PROVEN** | 0 | 0 |
+| retention-readability: the per-document id assertion dropped | `test_document_id_mismatch_raises` | **PROVEN** | 0 | 0 |
+| retention-readability: the oracle-demand check dropped | `test_oracle_demand_of_another_document_raises` | **PROVEN** | 0 | 0 |
+| retention-readability: control 2 passes a NaN again | `test_control2_fails_on_nan_on_either_or_both_sides` | **PROVEN** | 0 | 0 |
+| retention-readability: rank index read newest-first | `test_rank_index_is_M_minus_gap_under_fifo` | **PROVEN** | 0 | 0 |
+| retention-readability: the bootstrap unpaired across arms | `test_paired_bootstrap_identical_arms_have_zero_width` | **PROVEN** | 0 | 0 |
+| retention-readability: PENALTY on any seed | `test_classify_a_table` | **PROVEN** | 0 | 0 |
+| retention-readability: control 1's tolerance loosened | `test_control1_tolerance_is_exact` | **PROVEN** | 0 | 0 |
+| retention-readability: the arm A null ignored | `test_decide_a_null_failure_is_inconclusive` | **PROVEN** | 0 | 0 |
+| liveness-wiring: the liveness hook skipped | `test_every_train_ends_with_the_liveness_measurement` | **PROVEN** | 4 | 4 |
+| liveness-wiring: an inert run reported as 0 | `test_an_inert_ratio_is_inert_and_exits_5` | **PROVEN** | 2 | 2 |
+| liveness-wiring: the decoy pointed at the trained model | `test_the_decoy_is_the_untrained_model_at_the_same_seed` | **PROVEN** | 0 | 0 |
+| liveness-wiring: an inconclusive ratio rounded to inert | `test_an_inconclusive_ratio_exits_1_never_0_or_5` | **PROVEN** | 1 | 1 |
+| liveness-wiring: an inconclusive run exits 0 | `test_an_inconclusive_ratio_exits_1_never_0_or_5` | **PROVEN** | 1 | 1 |
+| liveness-wiring: an inert run's checkpoints left in place | `test_an_inert_run_quarantines_its_checkpoints` | **PROVEN** | 1 | 1 |
+| liveness-wiring: the loader override defaults to allow | `test_the_loader_refuses_a_` | **PROVEN** | 0 | 0 |
+| liveness-wiring: status() refuses 5 | `test_status_accepts_5_as_inert` | **PROVEN** | 1 | 1 |
+| e0e: r_i read ungated | `test_r_i_is_the_gated_rescaled_target` | **PROVEN** | 0 | 0 |
+| e0e: the half-life frozen at v0.4's 16 | `test_the_half_life_is_a_quarter_of_the_lifetime` | **PROVEN** | 0 | 0 |
+| e0e: lifetime counted over evicted sentences only | `test_lifetime_counts_every_written_sentence` | **PROVEN** | 1 | 1 |
+| e0e: the tau quantile moved to the median | `test_tau_is_the_75th_percentile_of_the_relative_deviation` | **PROVEN** | 0 | 0 |
+| e0e: a non-live seed admitted to the values | `test_a_seed_that_is_not_live_is_excluded` | **PROVEN** | 0 | 0 |
+| e0e: a consistency failure ledgered as ok | `test_a_consistency_failure_is_ledgered_as_failed_not_ok` | **PROVEN** | 0 | 0 |
+| carry-forward: the bootstrap resamples targets, not documents | `test_cluster_bootstrap_resamples_documents_not_targets` | **PROVEN** | 1 | 1 |
+| carry-forward: CARRY ignores the CI lower bound | `test_carry_needs_the_ci_lower_bound_above_zero` | **PROVEN** | 0 | 0 |
+| carry-forward: MIXED needs two carrying seeds, not one | `test_classification_table` | **PROVEN** | 1 | 1 |
+| carry-forward: EXT disjointness forgets the fresh-escape stream | `test_disjointness_catches_the_fresh_escape_stream` | **PROVEN** | 0 | 0 |
+| carry-forward: the reproduction tolerance widened tenfold | `test_reproduction_fails_at_2e_6` | **PROVEN** | 0 | 0 |
+| carry-forward: the bit-exact control accepts allclose | `test_bitexact_control_refuses_a_one_ulp_difference` | **PROVEN** | 0 | 0 |
+| carry-forward: L's window includes gap 1 | `test_l_population_is_gap_2_to_M` | **PROVEN** | 0 | 0 |
+| carry-forward: L's denominator is all_slots_zeroed again | `test_l_uses_the_like_for_like_denominator` | **PROVEN** | 0 | 0 |
+| carry-forward: the reach baseline is all_slots_zeroed again | `test_reach_baseline_is_all_slots_resample_on_evicted_targets` | **PROVEN** | 0 | 0 |
+| carry-forward: a sensitivity label change is not a disagreement | `test_sensitivity_disagreement_threshold` | **PROVEN** | 0 | 1 |
+| carry-forward: an inconclusive L no longer blocks a no-carry outcome | `test_inconclusive_l_without_carry_is_inconclusive_exit_3` | **PROVEN** | 0 | 0 |
+| lookahead-room: r_i read ungated | `test_r_i_is_e0es_gated_rescaled_target` | **PROVEN** | 0 | 0 |
+| lookahead-room: every probe reads the resident rank-0 sentence | `test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one` | **PROVEN** | 0 | 0 |
+| lookahead-room: the return drops its discount | `test_the_discounted_return_sums_the_future_within_the_stream` | **PROVEN** | 1 | 1 |
+| lookahead-room: target-rule ties go to the newest slot | `test_a_target_rule_evicts_the_argmin_and_ties_go_to_the_oldest` | **PROVEN** | 0 | 0 |
+| lookahead-room: literal target keeps the probed demand | `test_the_literal_target_is_zero_where_fifo_did_not_hold_the_sentence` | **PROVEN** | 0 | 0 |
+| lookahead-room: NO_ROOM read from the point, not the CI | `test_the_rule_is_the_prereg_rule` | **PROVEN** | 0 | 0 |
+| lookahead-room: a failed control still exits 0 | `test_a_failed_control_makes_the_run_inconclusive` | **PROVEN** | 0 | 0 |
+| lookahead-room: C1 compared in float64 again | `test_c1_passes_on_float32_exact_accuracy_that_float64_misses` | **PROVEN** | 0 | 0 |
+| lookahead-room: C1 ignores argmax mismatches | `test_c1_fails_on_one_argmax_mismatch_or_a_wrong_accuracy` | **PROVEN** | 0 | 0 |
 
 ## What each mutation breaks, and what else went red
 
@@ -157,7 +266,10 @@
 
 gauntlet 0.1: the reduction stops reaching the score path
 
-Reddened nothing else.
+Also reddened (2):
+
+- `tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]` — ✔ declared
+- `tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step` — ✔ declared
 
 ### reduction uses the learned head
 
@@ -165,7 +277,9 @@ Reddened nothing else.
 
 the §3.7 reduction is no longer argmin(-a_i)
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step` — ✔ declared
 
 ### drop nu from the off-switch table
 
@@ -173,7 +287,7 @@ Reddened nothing else.
 
 a term with no documented off-switch; the brief records this exact hole
 
-Also reddened (19):
+Also reddened (20):
 
 - `tests/test_device_placement.py::test_rsr_policy_exposes_a_to_method` — ✔ declared
 - `tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]` — ✔ declared
@@ -194,6 +308,7 @@ Also reddened (19):
 - `tests/test_reduction.py::test_the_reduction_pins_the_positional_index_to_rank` — ✔ declared
 - `tests/test_reduction.py::test_the_reduction_ran_through_the_score_path` — ✔ declared
 - `tests/test_reduction.py::test_the_reduction_shifts_no_ranks` — ✔ declared
+- `tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step` — ✔ declared
 
 ### RSRConfig.nu gets a default
 
@@ -297,9 +412,11 @@ Also reddened (2):
 
 D-E: layer-specific rescaling silently omitted
 
-Also reddened (1):
+Also reddened (3):
 
 - `tests/test_capture_bridge.py::test_the_captured_gate_is_the_models_memory_gate` — ✔ declared
+- `tests/test_e0e.py::test_r_i_is_the_gated_rescaled_target` — ✔ declared
+- `tests/test_lookahead_room.py::test_r_i_is_e0es_gated_rescaled_target` — ✔ declared
 
 ### r_i accepts a train-mode trace
 
@@ -330,9 +447,11 @@ Also reddened (4):
 
 §3.2.1: the estimator learns 'stream-initial content is valuable'
 
-Also reddened (1):
+Also reddened (3):
 
 - `tests/test_capture_bridge.py::test_retrieval_demand_runs_on_a_real_forward_pass` — ✔ declared
+- `tests/test_e0e.py::test_r_i_is_the_gated_rescaled_target` — ✔ declared
+- `tests/test_lookahead_room.py::test_r_i_is_e0es_gated_rescaled_target` — ✔ declared
 
 ### ledger accepts an unreproducible entry point
 
@@ -507,7 +626,7 @@ Reddened nothing else.
 
 **Gate:** `test_an_unimplemented_experiment_exits_3` — **PROVEN**
 
-S0-05 bar 5: seven e0* stubs exiting 1 (real failure) for the state that defines did-not-run. One mutation for the class: all seven go through `not_implemented()`, and all seven parametrised cases redden.
+S0-05 bar 5: seven e0* stubs exiting 1 (real failure) for the state that defines did-not-run. One mutation for the class: every stub goes through `not_implemented()`, and every parametrised case reddens (six since E0e was implemented, 2026-09-26).
 
 Reddened nothing else.
 
@@ -608,13 +727,68 @@ Reddened nothing else.
 
 S0-02 bar item 4. `git grep '\.observe(' -- src/` returned **zero hits** before this cycle: `reward.py` had 160 lines and 11 passing tests and no path from a forward pass to any of it. A call site with no test that notices its removal is the same condition with an extra line of code.
 
-Reddened nothing else.
+Also reddened (4):
+
+- `tests/test_e0e.py::test_fifo_lifetimes_on_a_tiny_live_model_are_the_analytic_ones` — ✔ declared
+- `tests/test_lookahead_room.py::test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one` — ✔ declared
+- `tests/test_lookahead_room.py::test_online_g0_evicts_its_own_argmin_and_replays_model_free` — ✔ declared
+- `tests/test_lookahead_room.py::test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds` — ✔ declared
 
 ### policy built unconditionally again
 
 **Gate:** `test_train_does_not_stamp_a_policy_it_did_not_build` — **PROVEN**
 
 S0-01 defect (b), the original line. `policy_name` still flows into the frozen config and the `run_id`, so `train(policy_name='rsr')` completes and returns `run_id='rsr-d32-...'` for a stream FIFO evicted. Nothing in the run contradicts anything else in it, which is what made the defect silent and what makes the test necessary: no assertion about the loss curve could ever have caught this, because the loss curve is genuine.
+
+Also reddened (2):
+
+- `tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream` — ✔ declared
+- `tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps` — ✔ declared
+
+### T_warm compared against the sentence index again
+
+**Gate:** `test_warmup_below_S_covers_whole_training_steps` — **PROVEN**
+
+Correction 31 (a), the original line. `step` is the sentence index inside one stream, so below S the warmup becomes a FIFO prefix of every stream from optimizer step 0, and at T_warm >= S the arm is FIFO forever -- gauntlet 0.1 by mixed units. Nothing crashes and the attribution field still reads plausibly, which is why it survived a registry, a correction and two warmup tests that fed `select_eviction` the sentence index.
+
+Also reddened (2):
+
+- `tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream` — ✔ declared
+- `tests/test_t_warm_dispatch.py::test_warmup_longer_than_a_stream_ends` — ✔ declared
+
+### train() stops handing the policy its optimizer step
+
+**Gate:** `test_warm_status_never_flips_inside_one_stream` — **PROVEN**
+
+Correction 31 (a), the call-site half. A policy fixed to count optimizer steps is useless if the loop never tells it which step it is on; here the unset-step guard is what turns that into a failure instead of a silent FIFO arm.
+
+Also reddened (1):
+
+- `tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps` — ✔ declared
+
+### an unset training step defaults to 0
+
+**Gate:** `test_a_warmup_policy_refuses_to_guess_its_training_step` — **PROVEN**
+
+Correction 31 (a). The natural 'harmless' default: a policy nobody told the step is at step 0, so it is warm, so it is FIFO -- every eval-time use of a trained RSR policy would silently report FIFO numbers as RSR's.
+
+Reddened nothing else.
+
+### build_policy accepts rsr without an epoch
+
+**Gate:** `test_build_policy_refuses_rsr_without_an_epoch` — **PROVEN**
+
+Correction 31 (b). With the check gone, None reaches the registry, which then fails for a reason unrelated to the open epoch decision -- or, once a ledger exists, not at all.
+
+Also reddened (1):
+
+- `tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_not_build` — ✔ declared
+
+### train() passes iters as steps_per_epoch again
+
+**Gate:** `test_train_does_not_stamp_a_policy_it_did_not_build` — **PROVEN**
+
+Correction 31 (b), the original line. `iters` makes section 3.4's one epoch the whole run, so the warmup never ends and a future 'rsr' run is FIFO throughout. Today the registry would still refuse (E1 has not logged nu/beta/gamma); the day it does not, this line is the defect.
 
 Reddened nothing else.
 
@@ -664,7 +838,10 @@ Reddened nothing else.
 
 S0-04 Bar 1: an instrument that cannot read non-zero. With the identity permutation the control reads exactly 0.0 on ANY model, live or dead -- the reading §10.3's null was, and the one cycle 1 was rejected for not having ruled out. Only the live-memory decoy can see it.
 
-Reddened nothing else.
+Also reddened (2):
+
+- `tests/test_liveness_wiring.py::test_a_decoy_aliased_to_the_trained_model_is_invalid` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
 
 ### the shuffle control never applies its permutation
 
@@ -672,7 +849,10 @@ Reddened nothing else.
 
 the same no-op with a correct `derangement()`: the replay reaches the forward un-permuted. The derangement test stays green, so only the live-memory reading catches it.
 
-Reddened nothing else.
+Also reddened (2):
+
+- `tests/test_liveness_wiring.py::test_a_decoy_aliased_to_the_trained_model_is_invalid` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
 
 ### the shuffle replay perturbs the memory it replays
 
@@ -680,7 +860,9 @@ Reddened nothing else.
 
 the replay hands over memory that is not the memory the reference pass read: a 1e-3 offset on every slot. The derangement is still correct and the live-memory decoy still moves, so neither of the other two entries sees it -- only a replay of each row's OWN memory, which must read exactly 0.0, can tell a faithful replay from a perturbed one.
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
 
 ### the shuffle replay hands over the bos gestalt too
 
@@ -688,7 +870,9 @@ Reddened nothing else.
 
 the control permutes the bos-copy path along with the memory, so its delta measures memory PLUS the bos gestalt rather than memory alone. With memory disabled the kv swap is a no-op but the bos swap is not, so the disabled-memory reading stops being exactly 0.0.
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
 
 ### decisive: two arms swapped in the script
 
@@ -730,7 +914,9 @@ Reddened nothing else.
 
 PREREG Secondary 2: the replacement path's own control. A path that moves tokens by itself would read as 'memory is read' on any model.
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
 
 ### random replacement is not norm-matched
 
@@ -762,7 +948,10 @@ Reddened nothing else.
 
 E-feas reads oracle - FIFO as an upper bound on what retention can buy. An oracle that is not optimal makes that bound a lower number than the truth, and 'oracle ~= FIFO' would then be a finding about the oracle.
 
-Reddened nothing else.
+Also reddened (2):
+
+- `tests/test_lookahead_room.py::test_control2_reproduces_the_red_team_on_seed_0` — ✔ declared
+- `tests/test_retention_readability.py::test_oracle_keeps_every_queried_fact` — ✔ declared
 
 ### checkpoints written straight to the final path
 
@@ -778,14 +967,77 @@ Reddened nothing else.
 
 S0-03's fixture mutation: the default corpus reverts to the pre-S0-03 generator, whose answer lived only in `Sentence.answer` and never entered the token stream -- so no next-token target required retrieval and 'the memory is inert' was a finding about the corpus. The named gate must redden; the rest are the declared consequences of the refusal.
 
-Also reddened (12):
+Also reddened (75):
 
 - `tests/test_capacity_c0.py::test_output_hash_identical_runs_equal_while_checkpoint_files_differ` — ✔ declared
+- `tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model` — ✔ declared
+- `tests/test_corpus_size_curve.py::test_default_corpus_call_is_unchanged` — ✔ declared
+- `tests/test_corpus_size_curve.py::test_default_path_config_hash_is_s003s` — ✔ declared
 - `tests/test_decisive_shuffle.py::test_the_decoy_pointed_at_the_trained_checkpoint_reads_ratio_one_and_inconclusive` — ✔ declared
+- `tests/test_fresh_stream.py::test_default_path_config_is_unchanged` — ✔ declared
+- `tests/test_fresh_stream.py::test_initial_parameters_identical_with_and_without_the_stream[0]` — ✔ declared
+- `tests/test_fresh_stream.py::test_initial_parameters_identical_with_and_without_the_stream[2]` — ✔ declared
+- `tests/test_fresh_stream.py::test_preflight_reports_a_closure_failure` — ✔ declared
+- `tests/test_fresh_stream.py::test_resume_check_is_exact` — ✔ declared
+- `tests/test_fresh_stream.py::test_resume_check_passes_on_a_real_resume` — ✔ declared
+- `tests/test_fresh_stream.py::test_resume_continues_the_stream_at_the_resumed_step` — ✔ declared
+- `tests/test_fresh_stream.py::test_train_default_path_is_bit_identical_with_explicit_none` — ✔ declared
+- `tests/test_liveness_wiring.py::test_a_decoy_aliased_to_the_trained_model_is_invalid` — ✔ declared
+- `tests/test_liveness_wiring.py::test_a_live_run_is_not_quarantined` — ✔ declared
+- `tests/test_liveness_wiring.py::test_an_inert_run_quarantines_its_checkpoints` — ✔ declared
+- `tests/test_liveness_wiring.py::test_every_train_ends_with_the_liveness_measurement` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_decoy_is_the_untrained_model_at_the_same_seed` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_loader_refuses_a_quarantined_checkpoint` — ✔ declared
+- `tests/test_loo.py::test_all_slots_resample_donor_excludes_the_queried_key` — ✔ declared
+- `tests/test_loo.py::test_all_slots_resample_swaps_whole_rows_for_a_different_documents_memory` — ✔ declared
+- `tests/test_loo.py::test_batched_equals_row_by_row_for_row_local_conditions` — ✔ declared
+- `tests/test_loo.py::test_bos_off_variants_drop_only_the_bos_context` — ✔ declared
+- `tests/test_loo.py::test_control_is_never_of_the_queried_key` — ✔ declared
+- `tests/test_loo.py::test_deterministic_under_a_seed_and_seed_moves_donors` — ✔ declared
+- `tests/test_loo.py::test_donor_choice_does_not_depend_on_global_rng` — ✔ declared
+- `tests/test_loo.py::test_duplicate_key_in_document_is_flagged` — ✔ declared
+- `tests/test_loo.py::test_every_condition_matches_a_hand_recomputation` — ✔ declared
+- `tests/test_loo.py::test_every_forward_is_eval_mode_and_no_grad_and_mode_is_restored` — ✔ declared
+- `tests/test_loo.py::test_live_path_is_bit_exact_to_answer_readout` — ✔ declared
+- `tests/test_loo.py::test_loo_delta_loss_matches_a_direct_single_knockout` — ✔ declared
+- `tests/test_loo.py::test_loo_delta_loss_padding_step_is_nan_not_zero` — ✔ declared
+- `tests/test_loo.py::test_loo_delta_loss_resample_excludes_the_slots_own_key` — ✔ declared
+- `tests/test_loo.py::test_loo_delta_loss_resample_records_donor_or_nan` — ✔ declared
+- `tests/test_loo.py::test_loo_delta_loss_step_one_by_hand` — ✔ declared
+- `tests/test_loo.py::test_loo_delta_loss_zero_mode_needs_no_annotations` — ✔ declared
+- `tests/test_loo.py::test_memory_off_masks_every_slot_for_the_query_forward_only` — ✔ declared
+- `tests/test_loo.py::test_missing_control_is_recorded_not_substituted` — ✔ declared
+- `tests/test_loo.py::test_missing_donor_is_recorded_not_substituted` — ✔ declared
+- `tests/test_loo.py::test_no_knockout_is_written_back` — ✔ declared
+- `tests/test_loo.py::test_object_flags_and_the_donor_object_exclusion` — ✔ declared
+- `tests/test_loo.py::test_own_donor_excludes_the_queried_key` — ✔ declared
+- `tests/test_loo.py::test_own_slot_is_the_slot_holding_t_minus_gap` — ✔ declared
+- `tests/test_loo.py::test_own_status_distinguishes_evicted_from_never_written` — ✔ declared
+- `tests/test_loo.py::test_pick_donor_is_called_with_the_required_exclusions` — ✔ declared
+- `tests/test_loo.py::test_readout_knockout_forwards_differ_from_live_only_at_the_target` — ✔ declared
+- `tests/test_loo.py::test_records_are_ordered_step_major_then_row` — ✔ declared
+- `tests/test_loo.py::test_rejects_a_model_without_memory` — ✔ declared
+- `tests/test_loo.py::test_resample_donor_is_same_kind_different_doc_same_rank` — ✔ declared
+- `tests/test_lookahead_room.py::test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one` — ✔ declared
+- `tests/test_lookahead_room.py::test_online_g0_evicts_its_own_argmin_and_replays_model_free` — ✔ declared
+- `tests/test_lookahead_room.py::test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds` — ✔ declared
+- `tests/test_lookahead_room.py::test_the_probes_never_feed_back_into_the_fifo_rollout` — ✔ declared
+- `tests/test_retention_readability.py::test_batched_rows_are_refused` — ✔ declared
+- `tests/test_retention_readability.py::test_document_id_mismatch_raises` — ✔ declared
+- `tests/test_retention_readability.py::test_documents_are_E_then_P_and_closed` — ✔ declared
+- `tests/test_retention_readability.py::test_factfiller_evicts_no_assert_while_a_filler_is_live` — ✔ declared
+- `tests/test_retention_readability.py::test_fifo_harness_bit_exact_to_answer_readout` — ✔ declared
+- `tests/test_retention_readability.py::test_oracle_demand_of_another_document_raises` — ✔ declared
+- `tests/test_retention_readability.py::test_oracle_keeps_every_queried_fact` — ✔ declared
+- `tests/test_retention_readability.py::test_rank_index_is_M_minus_gap_under_fifo` — ✔ declared
+- `tests/test_retention_readability.py::test_residency_matches_simulate_for_every_arm` — ✔ declared
 - `tests/test_synthetic.py::test_the_answer_is_the_only_difference_between_the_two_corpora` — ✔ declared
 - `tests/test_synthetic.py::test_the_answer_targets_are_a_minority_that_a_pooled_loss_would_hide` — ✔ declared
 - `tests/test_synthetic.py::test_the_gap_tensor_is_the_pairs_gap_at_each_query` — ✔ declared
 - `tests/test_synthetic.py::test_the_target_mask_marks_exactly_the_answer_token_of_every_query` — ✔ declared
+- `tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream` — ✔ declared
+- `tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps` — ✔ declared
 - `tests/test_train_loop.py::test_perplexity_is_a_perplexity_and_not_a_penalised_loss` — ✔ declared
 - `tests/test_train_loop.py::test_the_corpus_holds_156_unique_words` — ✔ declared
 - `tests/test_train_loop.py::test_the_derived_vocabulary_is_what_the_model_is_built_with` — ✔ declared
@@ -1126,9 +1378,10 @@ Reddened nothing else.
 
 2026-09-22 audit fix: any literal equal to any number in any ledger passed, so '3 seeds' was backed by whichever ledger held a 3. This is the hole itself.
 
-Also reddened (1):
+Also reddened (2):
 
 - `tests/test_capacity_c0.py::test_rendered_results_pass_the_prose_audit` — ✔ declared
+- `tests/test_fresh_stream.py::test_render_results_after_a_failed_control_passes_the_audit` — ✔ declared
 
 ### a key from another run backs the sentence
 
@@ -1328,7 +1581,9 @@ Reddened nothing else.
 
 retrieval-curve brief bar, mutation (2). The control is the one gate that fails where nothing else does: a curve that silently is not S0-03's configuration (another thread count, another interpreter) would pass every other check here.
 
-Reddened nothing else.
+Also reddened (1):
+
+- `tests/test_corpus_size_curve.py::test_control_failure_stops_every_later_arm` — ✔ declared
 
 ### retrieval-curve: the reproduction control's comparison ledger swapped
 
@@ -1346,10 +1601,1035 @@ retrieval-curve brief bar, mutation (3). Every label read off the last checkpoin
 
 Reddened nothing else.
 
+### corpus-size-curve: n_documents stamped into the default path's config
+
+**Gate:** `test_default_path_config_hash_is_s003s` — **PROVEN**
+
+corpus-size-curve brief bar (1). The default path must stay byte for byte S0-03's: a config_hash that moves on the default call means the N=64 arm is not the configuration its reproduction control compares against.
+
+Also reddened (7):
+
+- `tests/test_fresh_stream.py::test_default_path_config_is_unchanged` — ✔ declared
+- `tests/test_liveness_wiring.py::test_a_decoy_aliased_to_the_trained_model_is_invalid` — ✔ declared
+- `tests/test_liveness_wiring.py::test_an_inert_run_quarantines_its_checkpoints` — ✔ declared
+- `tests/test_liveness_wiring.py::test_every_train_ends_with_the_liveness_measurement` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_decoy_is_the_untrained_model_at_the_same_seed` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_loader_refuses_a_quarantined_checkpoint` — ✔ declared
+
+### corpus-size-curve: held-out drawn from S0-03's docs 64..127
+
+**Gate:** `test_heldout_is_disjoint_from_every_arm` — **PROVEN**
+
+corpus-size-curve brief bar (2). S0-03's held-out documents are training data for every N >= 128: measured there, the large arms read memorisation as retrieval.
+
+Also reddened (3):
+
+- `tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model` — ✔ declared
+- `tests/test_carry_forward.py::test_seed_sets_closure_and_prefix_stability` — ✔ declared
+- `tests/test_retention_readability.py::test_documents_are_E_then_P_and_closed` — ✔ declared
+
+### corpus-size-curve: Brier16 computed as an absolute distance
+
+**Gate:** `test_brier16_` — **PROVEN**
+
+corpus-size-curve brief bar (3). 'Squaring is what makes it proper; absolute distance would not be' (research corpus 03_Calibration:142): the primary readout must be the squared distance.
+
+Also reddened (2):
+
+- `tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model` — ✔ declared
+- `tests/test_loo.py::test_live_path_is_bit_exact_to_answer_readout` — ✔ declared
+
+### corpus-size-curve: the verdict read off the N=64 arm
+
+**Gate:** `test_verdict_reads_the_n4096_arm_only` — **PROVEN**
+
+corpus-size-curve brief bar (4). The N=64 arm is the memorised one; the question is the N=4096 arm's.
+
+Also reddened (6):
+
+- `tests/test_corpus_size_curve.py::test_B_needs_every_seed` — ✔ declared
+- `tests/test_corpus_size_curve.py::test_row_bar1_fails_where_B_would_be_read` — ✔ declared
+- `tests/test_corpus_size_curve.py::test_row_falsified_at_any_checkpoint[1000-gaps0]` — ✔ declared
+- `tests/test_corpus_size_curve.py::test_row_falsified_at_any_checkpoint[300-gaps1]` — ✔ declared
+- `tests/test_corpus_size_curve.py::test_row_stopped_before_ckpt1000` — ✔ declared
+- `tests/test_corpus_size_curve.py::test_row_survived` — ✔ declared
+
+### corpus-size-curve: the reproduction control read on the common held-out set
+
+**Gate:** `test_control_reads_s003s_own_heldout` — **PROVEN**
+
+corpus-size-curve brief bar (5). S0-03's ledger was measured on its own held-out docs 64..127; compared against the common set [4096, 4160) the control compares two different populations.
+
+Reddened nothing else.
+
+### corpus-size-curve: the control arm passes n_documents
+
+**Gate:** `test_control_arm_omits_n_documents` — **PROVEN**
+
+corpus-size-curve brief bar (1), the call-site half: the N=64 arm must take train()'s default path, or its config_hash is not S0-03's.
+
+Also reddened (2):
+
+- `tests/test_fresh_stream.py::test_arms_are_the_n64_call_plus_the_stream` — ✔ declared
+- `tests/test_scaffold_dose.py::test_single_is_fresh_streams_arm_B_from_ckpt_k` — ✔ declared
+
+### corpus-size-curve: the reproduction control's tolerance widened
+
+**Gate:** `test_reproduction_control_tolerance` — **PROVEN**
+
+corpus-size-curve brief bar (5). The run's REPRO_TOL is the PREREG's; the control itself is the retrieval curve's, imported.
+
+Also reddened (1):
+
+- `tests/test_corpus_size_curve.py::test_thresholds_are_the_preregs` — ✔ declared
+
+### scaffold-timing: the sustained requirement dropped (first crossing = onset)
+
+**Gate:** `test_single_noisy_crossing_that_lapses_is_not_an_onset` — **PROVEN**
+
+scaffold-timing PREREG 'Primary readout': onset is the earliest checkpoint from which R (or M) holds at that and EVERY later checkpoint -- a single noisy crossing does not count.
+
+Also reddened (3):
+
+- `tests/test_scaffold_timing.py::test_R_and_M_need_every_seed` — ✔ declared
+- `tests/test_scaffold_timing.py::test_noisy_crossing_in_tables_does_not_move_the_onset` — ✔ declared
+- `tests/test_scaffold_timing.py::test_onset_absent_when_the_last_checkpoint_fails` — ✔ declared
+
+### scaffold-timing: the reproduction control's tolerance widened
+
+**Gate:** `test_reproduction_control_fails_at_2e_6` — **PROVEN**
+
+scaffold-timing PREREG 'The reproduction control': every ledger key within 1e-6 absolute; a 2e-6 difference must fail.
+
+Also reddened (4):
+
+- `tests/test_scaffold_timing.py::test_render_results_after_a_failed_control_passes_the_audit` — ✔ declared
+- `tests/test_scaffold_timing.py::test_reproduction_control_exact_passes` — ✔ declared
+- `tests/test_scaffold_timing.py::test_run_measures_the_control_first_and_stops_on_failure` — ✔ declared
+- `tests/test_scaffold_timing.py::test_thresholds_are_the_preregs` — ✔ declared
+
+### scaffold-timing: the onset comparison swapped (BEFORE <-> AFTER)
+
+**Gate:** `test_classify_table` — **PROVEN**
+
+scaffold-timing PREREG decision table: BEFORE iff onset_R < onset_M, AFTER iff onset_R > onset_M.
+
+Also reddened (6):
+
+- `tests/test_scaffold_timing.py::test_R_and_M_need_every_seed` — ✔ declared
+- `tests/test_scaffold_timing.py::test_after_and_before_from_tables` — ✔ declared
+- `tests/test_scaffold_timing.py::test_noisy_crossing_in_tables_does_not_move_the_onset` — ✔ declared
+- `tests/test_scaffold_timing.py::test_render_results_passes_the_audit` — ✔ declared
+- `tests/test_scaffold_timing.py::test_run_passes_the_control_then_measures_everything` — ✔ declared
+- `tests/test_scaffold_timing.py::test_verdict_reads_the_n64_arm_only` — ✔ declared
+
+### scaffold-timing: R and M hold on ANY seed instead of every seed
+
+**Gate:** `test_R_and_M_need_every_seed` — **PROVEN**
+
+scaffold-timing PREREG 'Primary readout': R(c) and M(c) hold only when the quantity is >= DELTA on every seed.
+
+Also reddened (3):
+
+- `tests/test_fresh_escape.py::test_R_needs_every_seed_and_reads_P_only` — ✔ declared
+- `tests/test_fresh_stream.py::test_verdict_reads_ckpt3000_only` — ✔ declared
+- `tests/test_scaffold_dose.py::test_U_needs_every_seed` — ✔ declared
+
+### scaffold-timing: the measurement retyped as a local wrapper, not imported
+
+**Gate:** `test_measurement_is_the_corpus_size_function` — **PROVEN**
+
+scaffold-timing PREREG 'instrument': the corpus-size curve's measurement path, imported -- the object called must be that function, not a copy.
+
+Reddened nothing else.
+
+### fresh-stream: the stream stamped on the default path
+
+**Gate:** `test_default_path_config_is_unchanged` — **PROVEN**
+
+fresh-stream PREREG 'Condition': the stream argument's default (None) is today's path, byte for byte -- nothing stamped, S0-03's config_hash.
+
+Also reddened (7):
+
+- `tests/test_corpus_size_curve.py::test_default_path_config_hash_is_s003s` — ✔ declared
+- `tests/test_liveness_wiring.py::test_a_decoy_aliased_to_the_trained_model_is_invalid` — ✔ declared
+- `tests/test_liveness_wiring.py::test_an_inert_run_quarantines_its_checkpoints` — ✔ declared
+- `tests/test_liveness_wiring.py::test_every_train_ends_with_the_liveness_measurement` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_decoy_is_the_untrained_model_at_the_same_seed` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_loader_refuses_a_quarantined_checkpoint` — ✔ declared
+
+### fresh-stream: a global-RNG draw before model init in stream mode
+
+**Gate:** `test_initial_parameters_identical_with_and_without_the_stream` — **PROVEN**
+
+fresh-stream PREREG 'Arm A': the same initialisation as the corpus-size N = 64 arm of that seed -- anything drawn from the global RNG before model init shifts it (CLAUDE.md, test_reduction.py's RNG-ordering note).
+
+Reddened nothing else.
+
+### fresh-stream: a resumed run restarts the stream at its first window
+
+**Gate:** `test_resume_continues_the_stream_at_the_resumed_step` — **PROVEN**
+
+fresh-stream PREREG 'stream': A and B see identical documents at every step t in [1000, 3000) -- arm B, resumed at 1000, must read window 1000, not 0.
+
+Reddened nothing else.
+
+### fresh-stream: SCAFFOLD and TRAP swapped
+
+**Gate:** `test_classify_table` — **PROVEN**
+
+fresh-stream PREREG classification table: R3000(B) only is SCAFFOLD, R3000(A) only is TRAP.
+
+Also reddened (5):
+
+- `tests/test_fresh_stream.py::test_render_results_passes_the_audit` — ✔ declared
+- `tests/test_fresh_stream.py::test_run_all_happy_path_order_and_scaffold` — ✔ declared
+- `tests/test_fresh_stream.py::test_verdict_all_four_cells_from_tables[0.015625-0.0625-SCAFFOLD]` — ✔ declared
+- `tests/test_fresh_stream.py::test_verdict_all_four_cells_from_tables[0.0625-0.015625-TRAP]` — ✔ declared
+- `tests/test_fresh_stream.py::test_verdict_reads_ckpt3000_only` — ✔ declared
+
+### fresh-stream: control 1's tolerance widened
+
+**Gate:** `test_control_1_fails_at_2e_6` — **PROVEN**
+
+fresh-stream PREREG control 1: every n64.ckpt100 statistic key within 1e-6 absolute; a 2e-6 difference must fail.
+
+Also reddened (3):
+
+- `tests/test_fresh_stream.py::test_control_1_failure_stops_before_any_arm` — ✔ declared
+- `tests/test_fresh_stream.py::test_render_results_after_a_failed_control_passes_the_audit` — ✔ declared
+- `tests/test_fresh_stream.py::test_thresholds_are_the_preregs` — ✔ declared
+
+### fresh-stream: the vocabulary closure disabled
+
+**Gate:** `test_vocabulary_closure_raises_on_an_out_of_vocab_word` — **PROVEN**
+
+fresh-stream PREREG 'Vocabulary': a word outside the [0, 64) map must be refused before any step, not met as a KeyError mid-run.
+
+Also reddened (1):
+
+- `tests/test_fresh_stream.py::test_preflight_reports_a_closure_failure` — ✔ declared
+
+### fresh-stream: control 3 drops the held-out overlap
+
+**Gate:** `test_disjointness_catches_overlap` — **PROVEN**
+
+fresh-stream PREREG control 3: no stream id in [0, 64) or [4096, 4160), and no id repeats.
+
+Reddened nothing else.
+
+### fresh-stream: C holds on ANY seed instead of every seed
+
+**Gate:** `test_C_needs_every_seed` — **PROVEN**
+
+fresh-stream PREREG 'Primary readout': C(c) holds only when Brier16(live) <= 0.8875 on every seed.
+
+Reddened nothing else.
+
+### fresh-stream: the measurement retyped as a local wrapper, not imported
+
+**Gate:** `test_measurement_is_the_corpus_size_function` — **PROVEN**
+
+fresh-stream PREREG 'Instrument': the corpus-size curve's measure_checkpoint, imported -- the object called must be that function, not a copy.
+
+Reddened nothing else.
+
+### fresh-stream: control 2 made approximate
+
+**Gate:** `test_resume_check_is_exact` — **PROVEN**
+
+fresh-stream PREREG control 2: arm B's model and optimizer state after load must equal ckpt-001000.pt exactly.
+
+Reddened nothing else.
+
+### scaffold-dose: AT_MEMORISATION and EARLY swapped
+
+**Gate:** `test_classification_table` — **PROVEN**
+
+scaffold-dose PREREG classification table: k* in {300, 400} is AT_MEMORISATION, k* in {100, 200} is EARLY.
+
+Also reddened (9):
+
+- `tests/test_scaffold_dose.py::test_U_needs_every_seed` — ✔ declared
+- `tests/test_scaffold_dose.py::test_k_star_is_the_smallest` — ✔ declared
+- `tests/test_scaffold_dose.py::test_monotonicity_is_reported` — ✔ declared
+- `tests/test_scaffold_dose.py::test_render_results_passes_the_audit` — ✔ declared
+- `tests/test_scaffold_dose.py::test_run_all_order_and_classification` — ✔ declared
+- `tests/test_scaffold_dose.py::test_verdict_every_row_from_tables[unlocked2-AT_MEMORISATION]` — ✔ declared
+- `tests/test_scaffold_dose.py::test_verdict_every_row_from_tables[unlocked3-AT_MEMORISATION]` — ✔ declared
+- `tests/test_scaffold_dose.py::test_verdict_every_row_from_tables[unlocked4-EARLY]` — ✔ declared
+- `tests/test_scaffold_dose.py::test_verdict_every_row_from_tables[unlocked5-EARLY]` — ✔ declared
+
+### scaffold-dose: k* the largest k with U(k)
+
+**Gate:** `test_k_star_is_the_smallest` — **PROVEN**
+
+scaffold-dose PREREG decision rule: k* is the SMALLEST k in the sweep with U(k), also when U is not monotone in k.
+
+Also reddened (8):
+
+- `tests/test_scaffold_dose.py::test_U_needs_every_seed` — ✔ declared
+- `tests/test_scaffold_dose.py::test_monotonicity_is_reported` — ✔ declared
+- `tests/test_scaffold_dose.py::test_render_results_passes_the_audit` — ✔ declared
+- `tests/test_scaffold_dose.py::test_run_all_order_and_classification` — ✔ declared
+- `tests/test_scaffold_dose.py::test_verdict_every_row_from_tables[unlocked2-AT_MEMORISATION]` — ✔ declared
+- `tests/test_scaffold_dose.py::test_verdict_every_row_from_tables[unlocked3-AT_MEMORISATION]` — ✔ declared
+- `tests/test_scaffold_dose.py::test_verdict_every_row_from_tables[unlocked4-EARLY]` — ✔ declared
+- `tests/test_scaffold_dose.py::test_verdict_every_row_from_tables[unlocked5-EARLY]` — ✔ declared
+
+### scaffold-dose: U(k) on ANY seed instead of every seed
+
+**Gate:** `test_U_needs_every_seed` — **PROVEN**
+
+scaffold-dose PREREG decision rule: U(k) holds when R holds at ckpt k + 500 on EVERY seed.
+
+Reddened nothing else.
+
+### scaffold-dose: control 2's tolerance widened
+
+**Gate:** `test_control_2_fails_at_2e_6` — **PROVEN**
+
+scaffold-dose PREREG control 2: every n64.ckpt600 statistic key within 1e-6 of the scaffold-timing ledger; a 2e-6 difference must fail.
+
+Also reddened (2):
+
+- `tests/test_scaffold_dose.py::test_render_results_after_a_failed_control_passes_the_audit` — ✔ declared
+- `tests/test_scaffold_dose.py::test_thresholds_are_the_preregs` — ✔ declared
+
+### scaffold-dose: control 3 drops the held-out overlap
+
+**Gate:** `test_arm_disjointness_catches_overlap` — **PROVEN**
+
+scaffold-dose PREREG control 3: no id of [4160 + 16 k, 4160 + 16 (k + 500)) in [0, 64) or [4096, 4160), and no id repeats.
+
+Reddened nothing else.
+
+### scaffold-dose: the start-checkpoint sha256 comparison dropped
+
+**Gate:** `test_start_checkpoint_sha_mismatch_refuses` — **PROVEN**
+
+scaffold-dose PREREG 'Condition': the start checkpoints' sha256 must match runs/scaffold-timing/manifest.json, or the run is refused.
+
+Reddened nothing else.
+
+### scaffold-dose: a monotonicity violation not named
+
+**Gate:** `test_monotonicity_is_reported` — **PROVEN**
+
+scaffold-dose PREREG 'Monotonicity is reported, not assumed': U(k) at some k and not at a larger k is named.
+
+Also reddened (1):
+
+- `tests/test_scaffold_dose.py::test_render_results_passes_the_audit` — ✔ declared
+
+### scaffold-dose: the measurement retyped as a local wrapper, not imported
+
+**Gate:** `test_measurement_is_the_corpus_size_function` — **PROVEN**
+
+scaffold-dose PREREG 'instrument': the corpus-size curve's measure_checkpoint, imported -- the object called must be that function, not a copy.
+
+Reddened nothing else.
+
+### fresh-escape: STIRRING and NO_ESCAPE swapped
+
+**Gate:** `test_classification_table` — **PROVEN**
+
+fresh-escape PREREG classification table: not R(P) with a stream-loss window below 2.6726 at or before P is STIRRING; neither is NO_ESCAPE by P.
+
+Also reddened (10):
+
+- `tests/test_fresh_escape.py::test_P_is_the_largest_checkpoint_on_every_seed` — ✔ declared
+- `tests/test_fresh_escape.py::test_R_needs_every_seed_and_reads_P_only` — ✔ declared
+- `tests/test_fresh_escape.py::test_deadline_stops_the_children_and_P_is_what_exists` — ✔ declared
+- `tests/test_fresh_escape.py::test_post_deadline_measurement_is_excluded_from_P` — ✔ declared
+- `tests/test_fresh_escape.py::test_render_results_passes_the_audit` — ✔ declared
+- `tests/test_fresh_escape.py::test_run_all_stirring_from_the_heartbeats` — ✔ declared
+- `tests/test_fresh_escape.py::test_stirring_window_must_end_at_or_before_P` — ✔ declared
+- `tests/test_fresh_escape.py::test_verdict_every_row_from_tables[none]` — ✔ declared
+- `tests/test_fresh_escape.py::test_verdict_every_row_from_tables[stirring]` — ✔ declared
+- `tests/test_fresh_escape.py::test_verdict_every_row_from_tables[stirring_R_before_P]` — ✔ declared
+
+### fresh-escape: P the smallest checkpoint measured on every seed
+
+**Gate:** `test_P_is_the_largest_checkpoint_on_every_seed` — **PROVEN**
+
+fresh-escape PREREG decision rule: P is the LARGEST listed checkpoint measured on every seed before the deadline.
+
+Also reddened (24):
+
+- `tests/test_fresh_escape.py::test_P_below_6000_is_inconclusive` — ✔ declared
+- `tests/test_fresh_escape.py::test_P_below_6000_under_the_deadline_filter` — ✔ declared
+- `tests/test_fresh_escape.py::test_R_needs_every_seed_and_reads_P_only` — ✔ declared
+- `tests/test_fresh_escape.py::test_deadline_before_6000_is_inconclusive` — ✔ declared
+- `tests/test_fresh_escape.py::test_deadline_stops_the_children_and_P_is_what_exists` — ✔ declared
+- `tests/test_fresh_escape.py::test_failed_controls_are_inconclusive[control_1_absent]` — ✔ declared
+- `tests/test_fresh_escape.py::test_failed_controls_are_inconclusive[control_1_failed]` — ✔ declared
+- `tests/test_fresh_escape.py::test_failed_controls_are_inconclusive[control_1_raised]` — ✔ declared
+- `tests/test_fresh_escape.py::test_failed_controls_are_inconclusive[measurement_raised]` — ✔ declared
+- `tests/test_fresh_escape.py::test_failed_controls_are_inconclusive[preflight_absent]` — ✔ declared
+- `tests/test_fresh_escape.py::test_failed_controls_are_inconclusive[preflight_failed]` — ✔ declared
+- `tests/test_fresh_escape.py::test_failed_controls_are_inconclusive[resume_failed]` — ✔ declared
+- `tests/test_fresh_escape.py::test_failed_controls_are_inconclusive[resume_missing]` — ✔ declared
+- `tests/test_fresh_escape.py::test_post_deadline_measurement_is_excluded_from_P` — ✔ declared
+- `tests/test_fresh_escape.py::test_render_results_passes_the_audit` — ✔ declared
+- `tests/test_fresh_escape.py::test_run_all_order_and_classification` — ✔ declared
+- `tests/test_fresh_escape.py::test_run_all_stirring_from_the_heartbeats` — ✔ declared
+- `tests/test_fresh_escape.py::test_run_all_under_the_stamped_deadline` — ✔ declared
+- `tests/test_fresh_escape.py::test_stirring_window_must_end_at_or_before_P` — ✔ declared
+- `tests/test_fresh_escape.py::test_verdict_every_row_from_tables[escapes]` — ✔ declared
+- `tests/test_fresh_escape.py::test_verdict_every_row_from_tables[escapes_also_stirring]` — ✔ declared
+- `tests/test_fresh_escape.py::test_verdict_every_row_from_tables[none]` — ✔ declared
+- `tests/test_fresh_escape.py::test_verdict_every_row_from_tables[stirring]` — ✔ declared
+- `tests/test_fresh_escape.py::test_verdict_every_row_from_tables[stirring_R_before_P]` — ✔ declared
+
+### fresh-escape: the 6000 minimum on P lowered
+
+**Gate:** `test_P_below_6000_is_inconclusive` — **PROVEN**
+
+fresh-escape PREREG decision rule: if P < 6000 the result is inconclusive.
+
+Also reddened (6):
+
+- `tests/test_fresh_escape.py::test_P_below_6000_under_the_deadline_filter` — ✔ declared
+- `tests/test_fresh_escape.py::test_classification_table[4000-True-True-inconclusive]` — ✔ declared
+- `tests/test_fresh_escape.py::test_classification_table[5000-True-False-inconclusive]` — ✔ declared
+- `tests/test_fresh_escape.py::test_deadline_before_6000_is_inconclusive` — ✔ declared
+- `tests/test_fresh_escape.py::test_manifest_records_the_start_checkpoints` — ✔ declared
+- `tests/test_fresh_escape.py::test_thresholds_are_the_preregs` — ✔ declared
+
+### fresh-escape: control 1's tolerance widened
+
+**Gate:** `test_control_1_fails_at_2e_6` — **PROVEN**
+
+fresh-escape PREREG control 1: every A.ckpt3000 statistic key within 1e-6 of runs/fresh-stream/ledger.json; a 2e-6 difference must fail.
+
+Also reddened (2):
+
+- `tests/test_fresh_escape.py::test_render_results_after_a_failed_control_passes_the_audit` — ✔ declared
+- `tests/test_fresh_escape.py::test_thresholds_are_the_preregs` — ✔ declared
+
+### fresh-escape: control 3 drops the held-out overlap
+
+**Gate:** `test_stream_disjointness_catches_overlap` — **PROVEN**
+
+fresh-escape PREREG control 3: no id of [4160 + 16*3000, 4160 + 16*9000) in [0, 64) or [4096, 4160), and no id repeats.
+
+Reddened nothing else.
+
+### fresh-escape: the start-checkpoint sha256 comparison dropped
+
+**Gate:** `test_start_checkpoint_sha_mismatch_refuses` — **PROVEN**
+
+fresh-escape PREREG control 3: the sha256 of each start checkpoint equals the front matter, or the run is refused.
+
+Reddened nothing else.
+
+### fresh-escape: stream-loss windows after P counted
+
+**Gate:** `test_stirring_window_must_end_at_or_before_P` — **PROVEN**
+
+fresh-escape PREREG decision rule: STIRRING needs a 100-step window below 2.6726 AT OR BEFORE P; ckpt-P holds steps [0, P), so [P, P + 100) is after.
+
+Reddened nothing else.
+
+### fresh-escape: post-deadline measurements counted toward P
+
+**Gate:** `test_post_deadline_measurement_is_excluded_from_P` — **PROVEN**
+
+fresh-escape PREREG decision rule: P is the largest listed checkpoint measured on every seed BEFORE the deadline, which is absolute; a measurement completed after 08:30 is secondary and never feeds P.
+
+Also reddened (3):
+
+- `tests/test_fresh_escape.py::test_P_below_6000_under_the_deadline_filter` — ✔ declared
+- `tests/test_fresh_escape.py::test_deadline_stamped_stamps_and_refuses_to_start_after_the_deadline` — ✔ declared
+- `tests/test_fresh_escape.py::test_run_all_under_the_stamped_deadline` — ✔ declared
+
+### fresh-escape: the measurement retyped as a local wrapper, not imported
+
+**Gate:** `test_measurement_is_the_corpus_size_function` — **PROVEN**
+
+fresh-escape PREREG 'instrument': the corpus-size curve's measure_checkpoint, imported -- the object called must be that function, not a copy.
+
+Reddened nothing else.
+
+### loo: a knockout clobbers the whole row, not one slot
+
+**Gate:** `test_knockout_kv_zero_changes_exactly_the_target_slot_of_the_target_row` — **PROVEN**
+
+§3.2.1 LOO ablates slot i: a knockout must change exactly the target slot of the target row and pass every other element through bit-exactly.
+
+Also reddened (3):
+
+- `tests/test_loo.py::test_every_condition_matches_a_hand_recomputation` — ✔ declared
+- `tests/test_loo.py::test_knockout_kv_replace_writes_the_replacement_only_there` — ✔ declared
+- `tests/test_loo.py::test_readout_knockout_forwards_differ_from_live_only_at_the_target` — ✔ declared
+
+### loo: loo_readout runs with autograd enabled
+
+**Gate:** `test_every_forward_is_eval_mode_and_no_grad_and_mode_is_restored` — **PROVEN**
+
+LOO is a readout, not a training path (correction 20: eval-mode measurement); every forward runs under no_grad.
+
+Reddened nothing else.
+
+### loo: a resample donor may come from the same document
+
+**Gate:** `test_pick_donor_filters_kind_doc_rank_and_key` — **PROVEN**
+
+W4 resample semantics: the donor gestalt comes from a DIFFERENT document, or the 'knockout' can re-insert the target document's own content.
+
+Reddened nothing else.
+
+### loo: a resample donor's sentence kind is not checked
+
+**Gate:** `test_resample_donor_is_same_kind_different_doc_same_rank` — **PROVEN**
+
+W4 resample semantics: same kind (assert vs filler) keeps the knocked-out input in-distribution; a filler donor for an assert is a different intervention.
+
+Also reddened (1):
+
+- `tests/test_loo.py::test_pick_donor_filters_kind_doc_rank_and_key` — ✔ declared
+
+### loo: a missing control is substituted by any pending assert
+
+**Gate:** `test_missing_control_is_recorded_not_substituted` — **PROVEN**
+
+W4 control target: an ADJACENT-rank pending assert or recorded missing -- never silently another slot.
+
+Reddened nothing else.
+
+### loo: the live forward drops the bos-copy context
+
+**Gate:** `test_live_path_is_bit_exact_to_answer_readout` — **PROVEN**
+
+The exactness control: with no knockout, loo_readout must reproduce S0-03's answer_readout(cond='live') bit-exactly, or its deltas are against a different readout.
+
+Also reddened (5):
+
+- `tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model` — ✔ declared
+- `tests/test_loo.py::test_bos_off_variants_drop_only_the_bos_context` — ✔ declared
+- `tests/test_loo.py::test_every_condition_matches_a_hand_recomputation` — ✔ declared
+- `tests/test_loo.py::test_memory_off_masks_every_slot_for_the_query_forward_only` — ✔ declared
+- `tests/test_loo.py::test_no_knockout_is_written_back` — ✔ declared
+
+### loo: the whole-memory donor may ask the queried question
+
+**Gate:** `test_all_slots_resample_donor_excludes_the_queried_key` — **PROVEN**
+
+PR #48 M1: an all_slots_resample donor memory holding an assert of the queried key can answer the query itself.
+
+Reddened nothing else.
+
+### loo: all_slots_resample keeps the row's own memory
+
+**Gate:** `test_all_slots_resample_swaps_whole_rows_for_a_different_documents_memory` — **PROVEN**
+
+PR #48 M1: all_slots_resample replaces the row's whole memory with the donor's.
+
+Also reddened (1):
+
+- `tests/test_loo.py::test_every_condition_matches_a_hand_recomputation` — ✔ declared
+
+### loo: memory_off leaves the memory valid
+
+**Gate:** `test_memory_off_masks_every_slot_for_the_query_forward_only` — **PROVEN**
+
+PR #48 M1: memory_off is valid=False for every slot, for the query forward only.
+
+Also reddened (1):
+
+- `tests/test_loo.py::test_every_condition_matches_a_hand_recomputation` — ✔ declared
+
+### loo: a bos_off condition keeps the bos-copy context
+
+**Gate:** `test_bos_off_variants_drop_only_the_bos_context` — **PROVEN**
+
+PR #48 M2: at gap 1 the bos-copy context is the assert's gestalt; *_bos_off must switch it off.
+
+Also reddened (1):
+
+- `tests/test_loo.py::test_every_condition_matches_a_hand_recomputation` — ✔ declared
+
+### loo: own donors may carry the answer object
+
+**Gate:** `test_pick_donor_is_called_with_the_required_exclusions` — **PROVEN**
+
+PR #48 M3: a donor carrying the queried answer object re-supplies the answer the knockout removed.
+
+Also reddened (1):
+
+- `tests/test_loo.py::test_object_flags_and_the_donor_object_exclusion` — ✔ declared
+
+### loo: own donors may ask the queried question
+
+**Gate:** `test_own_donor_excludes_the_queried_key` — **PROVEN**
+
+PR #48 minor: the own donor must not ask the queried question (it survived at :411 before).
+
+Also reddened (1):
+
+- `tests/test_loo.py::test_pick_donor_is_called_with_the_required_exclusions` — ✔ declared
+
+### loo: control donors may ask the control's question
+
+**Gate:** `test_pick_donor_is_called_with_the_required_exclusions` — **PROVEN**
+
+A control donor asking the control's question re-supplies the knocked-out fact.
+
+Reddened nothing else.
+
+### loo: the control may ask the queried question
+
+**Gate:** `test_control_is_never_of_the_queried_key` — **PROVEN**
+
+PR #48 minor: a control of the queried key is not a control -- it can answer the query.
+
+Reddened nothing else.
+
+### loo: a knockout is written back into the live memory
+
+**Gate:** `test_no_knockout_is_written_back` — **PROVEN**
+
+Single-step interventions: no knockout may reach the memory later steps attend over.
+
+Also reddened (3):
+
+- `tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model` — ✔ declared
+- `tests/test_loo.py::test_every_condition_matches_a_hand_recomputation` — ✔ declared
+- `tests/test_loo.py::test_live_path_is_bit_exact_to_answer_readout` — ✔ declared
+
+### loo: delta-loss resample donors may ask the slot's own question
+
+**Gate:** `test_loo_delta_loss_resample_excludes_the_slots_own_key` — **PROVEN**
+
+PR #48 minor: an E0d resample donor asking the displaced sentence's question is not a knockout of it.
+
+Reddened nothing else.
+
+### loo: a padding step scores 0.0 instead of NaN
+
+**Gate:** `test_loo_delta_loss_padding_step_is_nan_not_zero` — **PROVEN**
+
+PR #48 minor: a sentence with no real target has no loss; 0.0 would enter E0d's correlation as data.
+
+Reddened nothing else.
+
+### loo: zero-mode delta loss requires synthetic annotations
+
+**Gate:** `test_loo_delta_loss_zero_mode_needs_no_annotations` — **PROVEN**
+
+PR #48 minor: E0d's zero mode must run on non-synthetic text.
+
+Reddened nothing else.
+
+### loo: never-written asserts reported as evicted
+
+**Gate:** `test_own_status_distinguishes_evicted_from_never_written` — **PROVEN**
+
+PR #48 minor: an assert that never entered memory was not evicted.
+
+Reddened nothing else.
+
+### loo: the seed mix collides at role >= 131 again
+
+**Gate:** `test_seed_mix_has_no_role_collision` — **PROVEN**
+
+PR #48 minor: (seed, doc, t, role) must not alias; E0d's roles are 16 + rank.
+
+Reddened nothing else.
+
+### loo: a duplicate key in a document is not flagged
+
+**Gate:** `test_duplicate_key_in_document_is_flagged` — **PROVEN**
+
+PR #48 minor: record documents where two asserts ask the queried question.
+
+Reddened nothing else.
+
+### loo: ctrl_same_object never fires
+
+**Gate:** `test_object_flags_and_the_donor_object_exclusion` — **PROVEN**
+
+PR #48 M3: a control carrying the answer object must be flagged for W5 to stratify.
+
+Reddened nothing else.
+
+### loo: all_donor_has_object never fires
+
+**Gate:** `test_object_flags_and_the_donor_object_exclusion` — **PROVEN**
+
+PR #48 M3: a whole-memory donor holding the answer object must be flagged.
+
+Reddened nothing else.
+
+### retention-readability: the per-document id assertion dropped
+
+**Gate:** `test_document_id_mismatch_raises` — **PROVEN**
+
+retention-readability PREREG control 3: a policy built for one document must never run on another (batched OraclePolicy applies row 0's demand to every row, policy_loop.py:358-365).
+
+Reddened nothing else.
+
+### retention-readability: the oracle-demand check dropped
+
+**Gate:** `test_oracle_demand_of_another_document_raises` — **PROVEN**
+
+retention-readability PREREG control 3: the oracle's demand matrix must be discounted_demand(doc, 0.97) of the document being run.
+
+Reddened nothing else.
+
+### retention-readability: control 2 passes a NaN again
+
+**Gate:** `test_control2_fails_on_nan_on_either_or_both_sides` — **PROVEN**
+
+retention-readability PREREG control 2: abs(nan - nan) > tol is False, so without the finiteness guard a NaN on both sides reproduces the reference and max_abs_diff stays 0.0.
+
+Reddened nothing else.
+
+### retention-readability: rank index read newest-first
+
+**Gate:** `test_rank_index_is_M_minus_gap_under_fifo` — **PROVEN**
+
+retention-readability PREREG 'Instrument': rank index is the position in the OLDEST-first prefix (ADR-0006), so under FIFO a full memory puts gap g at rank M - g.
+
+Reddened nothing else.
+
+### retention-readability: the bootstrap unpaired across arms
+
+**Gate:** `test_paired_bootstrap_identical_arms_have_zero_width` — **PROVEN**
+
+retention-readability PREREG: one resampled multiset of documents per replicate, used for every arm (paired). Unpaired replicates widen every difference's CI.
+
+Reddened nothing else.
+
+### retention-readability: PENALTY on any seed
+
+**Gate:** `test_classify_a_table` — **PROVEN**
+
+retention-readability PREREG (a): PENALTY needs point >= 0.03 and CI lower bound > 0 on EVERY seed.
+
+Reddened nothing else.
+
+### retention-readability: control 1's tolerance loosened
+
+**Gate:** `test_control1_tolerance_is_exact` — **PROVEN**
+
+retention-readability PREREG control 1: the harness's FIFO NLL equals answer_readout's at B = 1 EXACTLY (max |diff| == 0.0).
+
+Reddened nothing else.
+
+### retention-readability: the arm A null ignored
+
+**Gate:** `test_decide_a_null_failure_is_inconclusive` — **PROVEN**
+
+retention-readability PREREG control 6: arm A's oracle - FIFO CI outside (-0.03, +0.03) voids the arm-B readouts (inconclusive).
+
+Reddened nothing else.
+
+### liveness-wiring: the liveness hook skipped
+
+**Gate:** `test_every_train_ends_with_the_liveness_measurement` — **PROVEN**
+
+Bar 2: the falsifier itself -- a run that never measures and reports live exits 0 with nothing behind it, so an inert run is again indistinguishable from a live one.
+
+Also reddened (4):
+
+- `tests/test_liveness_wiring.py::test_an_inert_run_quarantines_its_checkpoints` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_controls_read_what_they_must_on_a_real_run` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_decoy_is_the_untrained_model_at_the_same_seed` — ✔ declared
+- `tests/test_liveness_wiring.py::test_the_loader_refuses_a_quarantined_checkpoint` — ✔ declared
+
+### liveness-wiring: an inert run reported as 0
+
+**Gate:** `test_an_inert_ratio_is_inert_and_exits_5` — **PROVEN**
+
+R-2026-09-22-inert-exit-5: an inert run exiting 0 is consumed downstream like a live one -- the state before this brief.
+
+Also reddened (2):
+
+- `tests/test_liveness_wiring.py::test_an_inert_run_quarantines_its_checkpoints` — ✔ declared
+- `tests/test_liveness_wiring.py::test_main_exits_on_the_liveness_band[inert-5]` — ✔ declared
+
+### liveness-wiring: the decoy pointed at the trained model
+
+**Gate:** `test_the_decoy_is_the_untrained_model_at_the_same_seed` — **PROVEN**
+
+decisive PREREG *Mutation bar* (decoy aliasing): A_decoy == A_trained, ratio == 1.0 exactly, which the rule makes invalid (3), never 0.
+
+Reddened nothing else.
+
+### liveness-wiring: an inconclusive ratio rounded to inert
+
+**Gate:** `test_an_inconclusive_ratio_exits_1_never_0_or_5` — **PROVEN**
+
+decisive PREREG :45: the band between is 'reported as such, not rounded to either outcome'. Folding it into inert is the ruling's own erratum.
+
+Also reddened (1):
+
+- `tests/test_fresh_stream.py::test_resume_continues_the_stream_at_the_resumed_step` — ✔ declared
+
+### liveness-wiring: an inconclusive run exits 0
+
+**Gate:** `test_an_inconclusive_ratio_exits_1_never_0_or_5` — **PROVEN**
+
+R-2026-09-22-inert-exit-5: inconclusive is 1, liveness not demonstrated; 0 would report an undemonstrated memory as live.
+
+Also reddened (1):
+
+- `tests/test_liveness_wiring.py::test_main_exits_on_the_liveness_band[inconclusive-1]` — ✔ declared
+
+### liveness-wiring: an inert run's checkpoints left in place
+
+**Gate:** `test_an_inert_run_quarantines_its_checkpoints` — **PROVEN**
+
+R-2026-09-22-inert-checkpoint-quarantine: an inert checkpoint left beside the live ones is read by any loader, silently.
+
+Also reddened (1):
+
+- `tests/test_liveness_wiring.py::test_the_loader_refuses_a_quarantined_checkpoint` — ✔ declared
+
+### liveness-wiring: the loader override defaults to allow
+
+**Gate:** `test_the_loader_refuses_a_` — **PROVEN**
+
+R-2026-09-22-inert-checkpoint-quarantine: 'loaders refuse a quarantined checkpoint unless explicitly overridden'. A default of allow is no refusal.
+
+Reddened nothing else.
+
+### liveness-wiring: status() refuses 5
+
+**Gate:** `test_status_accepts_5_as_inert` — **PROVEN**
+
+R-2026-09-22-inert-exit-5: a status() still bounded at 0-4 turns every INERT run into a ValueError at run_main.
+
+Also reddened (1):
+
+- `tests/test_liveness_wiring.py::test_main_exits_on_the_liveness_band[inert-5]` — ✔ declared
+
+### e0e: r_i read ungated
+
+**Gate:** `test_r_i_is_the_gated_rescaled_target` — **PROVEN**
+
+correction 17 / D-E: r_i includes TG's memory gate; ungated, every tau and u_bar is measured on a different quantity than the one b will act on.
+
+Reddened nothing else.
+
+### e0e: the half-life frozen at v0.4's 16
+
+**Gate:** `test_the_half_life_is_a_quarter_of_the_lifetime` — **PROVEN**
+
+§3.5 item 2: half-life E[lifetime]/4, 'not the frozen 16 of v0.4'.
+
+Reddened nothing else.
+
+### e0e: lifetime counted over evicted sentences only
+
+**Gate:** `test_lifetime_counts_every_written_sentence` — **PROVEN**
+
+PREREG Definitions 1: stream-end survivors are the lifetime b has to act within (b resets at the boundary). Evicted-only reads M under FIFO, the §12.2 audit's E[lt] = M, and moves gamma_b.
+
+Also reddened (1):
+
+- `tests/test_e0e.py::test_fifo_lifetimes_on_a_tiny_live_model_are_the_analytic_ones` — ✔ declared
+
+### e0e: the tau quantile moved to the median
+
+**Gate:** `test_tau_is_the_75th_percentile_of_the_relative_deviation` — **PROVEN**
+
+PREREG Definitions 4: the 0.75 quantile makes b fire on the 25% of steps §3.5 item 4's gamma_b derivation assumes. Moving it after data is choosing a threshold after seeing it.
+
+Reddened nothing else.
+
+### e0e: a non-live seed admitted to the values
+
+**Gate:** `test_a_seed_that_is_not_live_is_excluded` — **PROVEN**
+
+PREREG precondition: an inert or inconclusive memory's shares are not the retrieval demand of a memory that retrieves.
+
+Reddened nothing else.
+
+### e0e: a consistency failure ledgered as ok
+
+**Gate:** `test_a_consistency_failure_is_ledgered_as_failed_not_ok` — **PROVEN**
+
+the exit-1 path wrote status ok: a failure the ledger calls a pass, read as one by anything that reads the ledger rather than the exit code (orchestrator/lanes.py refuses only status != ok).
+
+Reddened nothing else.
+
+### carry-forward: the bootstrap resamples targets, not documents
+
+**Gate:** `test_cluster_bootstrap_resamples_documents_not_targets` — **PROVEN**
+
+carry-forward PREREG 'bootstrap': per-document cluster bootstrap; targets of one document are correlated, and resampling them narrows every CI.
+
+Also reddened (1):
+
+- `tests/test_carry_forward.py::test_cluster_bootstrap_point_is_the_ratio_of_sums` — ✔ declared
+
+### carry-forward: CARRY ignores the CI lower bound
+
+**Gate:** `test_carry_needs_the_ci_lower_bound_above_zero` — **PROVEN**
+
+carry-forward PREREG decision rule: CARRY needs excess >= 0.03 AND its 95% CI lower bound > 0.
+
+Reddened nothing else.
+
+### carry-forward: MIXED needs two carrying seeds, not one
+
+**Gate:** `test_classification_table` — **PROVEN**
+
+carry-forward PREREG table: CARRY on one or two seeds is MIXED.
+
+Also reddened (1):
+
+- `tests/test_carry_forward.py::test_inconclusive_l_without_carry_is_inconclusive_exit_3` — ✔ declared
+
+### carry-forward: EXT disjointness forgets the fresh-escape stream
+
+**Gate:** `test_disjointness_catches_the_fresh_escape_stream` — **PROVEN**
+
+carry-forward PREREG control 4: EXT is disjoint from fresh-escape's continuation of the stream [52160, 148160).
+
+Reddened nothing else.
+
+### carry-forward: the reproduction tolerance widened tenfold
+
+**Gate:** `test_reproduction_fails_at_2e_6` — **PROVEN**
+
+carry-forward PREREG control 2: within 1e-6 absolute.
+
+Reddened nothing else.
+
+### carry-forward: the bit-exact control accepts allclose
+
+**Gate:** `test_bitexact_control_refuses_a_one_ulp_difference` — **PROVEN**
+
+carry-forward PREREG control 3: loo live == answer_readout live under torch.equal, not a tolerance.
+
+Reddened nothing else.
+
+### carry-forward: L's window includes gap 1
+
+**Gate:** `test_l_population_is_gap_2_to_M` — **PROVEN**
+
+PR #48 review M2 / amendment 1 A2: at gap 1 the bos-copy context is the assert's own gestalt, so L is read on gap 2..M only.
+
+Reddened nothing else.
+
+### carry-forward: L's denominator is all_slots_zeroed again
+
+**Gate:** `test_l_uses_the_like_for_like_denominator` — **PROVEN**
+
+PR #48 review M1 / amendment 1 A1: own_resample pairs with all_slots_resample, like for like.
+
+Reddened nothing else.
+
+### carry-forward: the reach baseline is all_slots_zeroed again
+
+**Gate:** `test_reach_baseline_is_all_slots_resample_on_evicted_targets` — **PROVEN**
+
+amendment 1 A4: reach is read over all_slots_resample (in distribution).
+
+Reddened nothing else.
+
+### carry-forward: a sensitivity label change is not a disagreement
+
+**Gate:** `test_sensitivity_disagreement_threshold` — **PROVEN**
+
+carry-forward amendment 2 ruling 3: a label change between primary and sensitivity L is a material disagreement.
+
+Reddened nothing else.
+
+### carry-forward: an inconclusive L no longer blocks a no-carry outcome
+
+**Gate:** `test_inconclusive_l_without_carry_is_inconclusive_exit_3` — **PROVEN**
+
+carry-forward amendment 2 ruling 3: with no seed carrying, an L_INCONCLUSIVE seed makes the classification inconclusive (exit 3).
+
+Reddened nothing else.
+
+### lookahead-room: r_i read ungated
+
+**Gate:** `test_r_i_is_e0es_gated_rescaled_target` — **PROVEN**
+
+correction 17 / D-E: the gamma = 0 and gamma > 0 targets are both built from r_i; ungated, room_3b compares targets RSR would never train on.
+
+Reddened nothing else.
+
+### lookahead-room: every probe reads the resident rank-0 sentence
+
+**Gate:** `test_a_probe_reads_the_swapped_in_sentence_not_the_resident_one` — **PROVEN**
+
+PREREG demand-if-resident: a probe that never swaps the sentence in gives every evicted sentence the rank-0 resident's demand -- a target that cannot tell a pending fact from filler by construction.
+
+Reddened nothing else.
+
+### lookahead-room: the return drops its discount
+
+**Gate:** `test_the_discounted_return_sums_the_future_within_the_stream` — **PROVEN**
+
+§3.4 / correction 2: G = sum gamma^k r(t+k). Undiscounted, 0.9 and 0.97 become the same horizon-to-stream-end sum and room_3b measures neither.
+
+Also reddened (1):
+
+- `tests/test_lookahead_room.py::test_the_literal_target_is_zero_where_fifo_did_not_hold_the_sentence` — ✔ declared
+
+### lookahead-room: target-rule ties go to the newest slot
+
+**Gate:** `test_a_target_rule_evicts_the_argmin_and_ties_go_to_the_oldest` — **PROVEN**
+
+PREREG target rules: ties to the lowest slot (the oldest), as OraclePolicy. Ties to the newest turn every all-zero literal target into evict-newest and every tie into an age preference nobody registered.
+
+Reddened nothing else.
+
+### lookahead-room: literal target keeps the probed demand
+
+**Gate:** `test_the_literal_target_is_zero_where_fifo_did_not_hold_the_sentence` — **PROVEN**
+
+PREREG secondary variant: the literal FIFO-rollout target is zero where FIFO did not hold the sentence; keeping the probe makes it the primary and the caveat it exists to size disappears.
+
+Reddened nothing else.
+
+### lookahead-room: NO_ROOM read from the point, not the CI
+
+**Gate:** `test_the_rule_is_the_prereg_rule` — **PROVEN**
+
+PREREG decision rule: NO_ROOM needs the CI upper bound below 0.02 on every seed; a point estimate under 0.02 with a wide CI is PARTIAL.
+
+Reddened nothing else.
+
+### lookahead-room: a failed control still exits 0
+
+**Gate:** `test_a_failed_control_makes_the_run_inconclusive` — **PROVEN**
+
+PREREG: any control failure is INCONCLUSIVE, exit 3. 'Did not run' and 'found something' are different facts.
+
+Reddened nothing else.
+
+### lookahead-room: C1 compared in float64 again
+
+**Gate:** `test_c1_passes_on_float32_exact_accuracy_that_float64_misses` — **PROVEN**
+
+PREREG Amendment 1: the reference ledger stores float32 means, so a float64 comparison fails C1 whatever the rollout did -- run 1's INCONCLUSIVE.
+
+Reddened nothing else.
+
+### lookahead-room: C1 ignores argmax mismatches
+
+**Gate:** `test_c1_fails_on_one_argmax_mismatch_or_a_wrong_accuracy` — **PROVEN**
+
+PREREG Amendment 1: argmax identity is half of the amended C1; bucket means can agree while individual answers flip in opposite directions.
+
+Reddened nothing else.
+
 ## Declared couplings
 
 A coupling worth knowing about is one somebody wrote down. These are the reasons carried in the table itself, not in prose beside it:
 
+- since correction 31 a policy with T_warm > 0 and no optimizer step set raises instead of evicting FIFO. Under `t_warm = inf` every caller of the reduction that sets no step -- the accelerator placement test, the reduction's own no-counter test -- now fails loudly: the gauntlet 0.1 defect surfacing as an error rather than as a silently FIFO reduction. Found by the 2026-09-26 review (the raise confirmed in-process); the full battery is the measurement.
+- it builds RSRConfig.reduction_to_tg() and asserts the one eviction is attributed to neg_age -- the psi_override this mutation clears (measured under it, W11: {'psi': 1} != {'neg_age': 1}). The reduction, seen from correction 16's no-counter test.
 - `reduction_to_tg()` is built *from* the off-switch table, so removing an entry makes every reduction test fail to construct a config. The coupling is the design: one enumeration, not two.
 - the same defect: moving LRU's recency into MemoryState.accum is what both tests assert it does not do
 - the round-trip asserts LRU's recency lives in the policy's own state; moving it into MemoryState.accum is exactly what that test is checking cannot happen
@@ -1357,16 +2637,33 @@ A coupling worth knowing about is one somebody wrote down. These are the reasons
 - the muP multipliers are checked both on the attribute and on the output, deliberately -- an attribute set correctly and never applied is precisely the silent failure §4.3 warns about, so one edit must redden both.
 - the hand-computed forward is the same arithmetic the transpose gate checks; one edit cannot break one and not the other
 - `r_i` is asserted twice on purpose, and S0-02 is the reason: tests/test_reward.py checks the property on a hand-built `AttentionTrace`, tests/test_capture_bridge.py checks the same property end to end on a real `TGModel` forward pass. Those were two disconnected claims until the capture bridge existed -- `reward.py` had 11 passing tests and zero callers in `src/` precisely because nothing joined them -- so one edit to `reward.py` reddening both is the join working. A `reward.py` mutation that reddened ONLY the fixture test would mean the bridge does not actually reach the reward, which is the failure this file was written to detect.
+- E0e reads r_i through reward.retrieval_demand (gated, rescaled), imported, not retyped; its hand-built gated/underfull trace reddens with the target's own tests. One target, two readers.
+- lookahead-room (W10) reads r_i through the same retrieval_demand(gated=True) and pins it on E0e's hand-built trace; an edit to reward.py reddening that test is the target seen from the experiment that consumes it.
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006).
 - the displacement statistic is asserted in test_instrumentation.py and in test_reduction.py because it is both a property of the metric and a property of the reduction (ADR-0006). Added 2026-09-18: the on-the-real-model variant post-dates docs/mutation-battery.md's table.
 - SOURCE_ROOTS is one enumeration: what gates and what does not are the same list, so widening it necessarily moves both assertions
 - the timestamp test asserts both halves of the same behaviour -- a clock is skipped AND a real number beside it is still flagged -- so an audit that flags nothing necessarily reddens it too
 - the test asserts that `audit_prose` flags a specific literal; a mutation that makes the audit flag nothing necessarily reddens every such assertion. The small-integer rule's own mutations (under `# --- orchestrator: render_scoreboard ---`) each redden only their gate.
 - all three tests exercise the shared rsr.exit_codes.ArgumentParser usage-error path; one edit to its refusal reddens each CLI that asserts it. Confirmed 2026-09-22 by applying the mutation at 5ecda88 (owner proxy, MacBook).
+- E0e's recorder counts lifetimes through FIFOPolicy.observe; with observe never reached no sentence is seen live and every lifetime reads 0: the same call site, seen from E0e.
+- lookahead-room records r_i and runs its probes and online_g0 rule from observe(); never reached, no demand is recorded: the same call site, seen from W10.
+- correction 31's train-driven tests put their RSRPolicy into the real train() by patching build_policy -- the one path S0-01 made the only path. A train() that builds FIFOPolicy unconditionally never consults it, so those tests see zero RSR evictions: the same defect, observed from the warmup side.
+- correction 31 states one defect three ways -- below S (a FIFO prefix), above S (FIFO forever), and the invariant that warm never flips inside one stream. Restoring the sentence-index counter or dropping the loop's hand-off breaks all of them at once, by design.
+- train() reaches the epoch refusal through build_policy: one refusal, two call sites, and the S0-01 test matches its message to prove `iters` is no longer passed.
+- liveness-wiring: every train() now ends with memory_liveness's controls, and these tests read them off a real run. Breaking the instrument breaks the controls those tests assert: the same instrument, seen from the wiring.
 - the same refusal statement guards both the arm hash and the config's own stamp; disabling it must redden both, by design.
+- W10's control C2 re-derives the red team's oracle - FIFO headroom and the oracle / pending-FIFO identity through OraclePolicy: an anti-oracle fails both, the oracle seen from that control.
+- retention-readability's arm A is OraclePolicy(discounted_demand(doc)); the test asserts it keeps every queried fact resident, which an oracle evicting the most-needed sentence cannot: the oracle, seen from readability's upper-bound arm.
+- fresh-stream trains and hashes on the S0-03 corpus: its default-path bit identity, its init and resume exactness, and its vocabulary-closure preflight all build documents through the generator this mutation reverts. They fail for the corpus change, not for a defect of their own.
+- lookahead-room's tiny-model tests build answer targets from the default synthetic corpus via answer_targets, which refuses an out-of-band corpus: the S0-03 refusal, seen from W10's harness.
 - S0-03: the test reads a property of the in-stream answer token itself (its position, its id under the supervision mask, the vocabulary it adds), so it cannot hold on a corpus that has no such token.
 - S0-03: `rsr.train.loop.answer_targets` REFUSES a corpus whose answers are out of band rather than return an empty supervision mask, and `train()` calls it, so every test that trains reddens when the default corpus reverts to the pre-S0-03 one. The refusal is the design: an empty mask would make every answer-token loss a mean over nothing and pass silently.
 - capacity-c0: C0's workloads are S0-03's CONFIG and rewardable corpus, imported (PREREG training_workload / core_workload), and this test really trains the core workload twice; a corpus with no in-stream answer token cannot train.
+- correction 31's train-driven tests put an RSRPolicy into the real train() on the default corpus, so a corpus answer_targets refuses cannot train: _S003_REFUSAL_COUPLING, seen from the warmup tests. Undeclared since PR #47; found by liveness-wiring's subset battery (2026-09-26) and confirmed on cd41d4e with the two tests alone.
+- liveness-wiring: the test trains a real run on the default corpus (and the liveness batch is built from it), so a corpus answer_targets refuses cannot train: _S003_REFUSAL_COUPLING, seen from the liveness tests.
+- loo: the instrument's no-knockout path IS S0-03's answer_readout, and its tests encode S0-03 documents through answer_targets (loop.py refuses an out-of-band corpus: 27 tests) or re-encode a twin whose rewritten answers must be in the vocabulary (encode KeyError: 3 tests). A corpus with no in-stream answer has nothing to read: _S003_REFUSAL_COUPLING, seen from loo.
+- retention-readability: every one of these tests takes the module fixture `world`, which maps ANSWER_SYMBOLS through the S0-03 corpus's vocabulary to read answers under the 16-way mask; an out-of-band corpus adds no answer token, so the fixture errors at setup (KeyError) for all of them: _S003_CORPUS_COUPLING, seen from the readability harness.
+- carry-forward's end-to-end test encodes H64 through encode_set, which calls answer_targets; an out-of-band corpus is refused there: _S003_REFUSAL_COUPLING, seen from carry-forward.
 - orchestrator: the flock is the only thing that makes a slot exclusive, and every one of these asserts that a held slot is held -- against a second process, a killed holder, a reservation, the status probe, a full lane, or an orphaned child. One mechanism, observed from six places.
 - orchestrator: every CLI path loads ops/lanes.json through load_config, so the refusal naming C0 is observed through `lanes status` and `slot run` as well.
 - orchestrator: a signalled child's 128+N is passed through the same verbatim exit as any other rc, so collapsing it reddens the signal tests too.
@@ -1375,11 +2672,54 @@ A coupling worth knowing about is one somebody wrote down. These are the reasons
 - the zsh wrapper's test drives the same UNSET refusal through tick.zsh to prove the status is reported unborrowed; it cannot hold when the refusal it reports is gone. Skipped where zsh is absent (CI), so it may or may not redden there.
 - the tick's refusal notice is posted once BECAUSE notify dedupes it -- the tick deliberately has no second guard for a refusal.
 - a freshly generated template must fail on every required field; the placeholder rule is exactly what makes it fail.
+- fresh-stream's RESULTS renderer backs each small integer by naming its key in the same sentence -- the rule this mutation removes -- so its failed-control page fails the audit: the same rule seen from fresh-stream, as from C0.
 - C0's RESULTS renderer backs each small integer by naming its key in the same sentence -- the rule this mutation removes. Under the old value rule those integers have no equal value in C0's ledger, so the rendered page fails the audit: the same rule, seen from C0.
 - capacity-c0: `Wave` refuses a job whose out_dir already exists, so the real two-job wave in the output-hash test is refused under the same edit. Defence in depth for job_isolation, by design.
 - capacity-c0: a deadline is an exception out of the measurement, and the test asserts the servers come back after it.
 - capacity-c0: 'machine not quiet' after a YIELD stop is a refusal raised with the servers down, and the test asserts they come back.
 - capacity-c0 server safety (2026-09-22): a signal (S2) and a kill that raises mid-stop (S1) are both exceptions out of the run with servers down, and each test asserts they come back -- through the same finally this mutation empties.
+- corpus-size-curve imports this reproduction_control, so the tolerance it applies is this REPRO_TOL; widened, its 1e-3 fake miss passes and every later arm runs.
+- fresh-stream's control 1 asserts the default path's config is S0-03's, byte for byte. Stamping n_documents on the default path moves that hash: bar (1) read from the experiment that reproduces it.
+- liveness-wiring: loop.liveness_batch rebuilds the measurement corpus from the frozen config and reads n_documents / stream only when the key is PRESENT -- the stamped-only-when-set convention this mutation breaks. A None stamped on the default path reaches generate() as n_documents=None (or None['vocab_documents']), so every real train's liveness measurement is invalid and each test that reads it reddens: the default-path config, seen from liveness.
+- carry-forward and retention-readability take their held-out set from corpus-size-curve (CSC.HELDOUT, CSC.doc_sets) and check it by document id (ids 4096..4159); held-out drawn from docs 64..127 fails those id checks (carry-forward: 'H64 by id differs from doc_sets' H64'). One held-out set, three readers.
+- carry-forward's end-to-end test asserts its bit-exactness control on a real measure_one: loo_readout's no-knockout path must equal S0-03's answer_readout(cond='live') on H64 and an EXT chunk, field by field. A defect on either side of that equality (the readout's Brier16, the live forward's bos context, a knockout left in the live memory) fails the control by design: loo's own exactness gate, seen from the experiment that relies on it.
+- loo's exactness gate compares its own no-knockout Brier16 (squared) with S0-03's answer_readout field by field; an absolute-distance Brier16 on the S0-03 side breaks that equality (measured max |diff| 0.937, W11): the readout, seen from the instrument that reproduces it.
+- the decision-table rows are built with the N=4096 arm only; read off another arm, every row sees no arm and reads 'stopped before ckpt1000'.
+- fresh-stream arm B and scaffold-dose's single run are defined as the corpus-size N=64 call. If the control arm passes n_documents, that call leaves train()'s default path, so both identity tests fail: bar (1) seen from its two consumers.
+- it also transcribes REPRO_TOL from the PREREG front matter.
+- it reads an onset off flags that lapse after an early crossing.
+- it transcribes or exercises the same tolerance.
+- it asserts a BEFORE or AFTER classification end to end.
+- fresh-stream's verdict and scaffold-dose's U call scaffold-timing's `holds` (imported: experiments/fresh-stream/run.py `ST.holds`), so weakening it to any-seed weakens their every-seed readouts too; fresh-escape reads R through fresh-stream's `arm_readout` (experiments/fresh-escape/run.py `FS.arm_readout`), so it is the fourth reader. One rule, four readers.
+- it checks the same default-path config_hash against S0-03's ledger.
+- it asserts a SCAFFOLD or TRAP classification end to end.
+- the run's preflight proves the closure with the same function.
+- it asserts an AT_MEMORISATION or EARLY classification end to end.
+- it asserts the classification that follows from k*, end to end.
+- it asserts the monotonicity rows the ledger writes.
+- it asserts a STIRRING or NO_ESCAPE classification end to end.
+- it reads the classification or P of a run that reached ckpt >= 6000.
+- it transcribes or exercises the same minimum.
+- it exercises the same deadline filter end to end.
+- the same locality property for mode='replace': one selection mask serves both modes.
+- the same property observed through loo_readout's forward passes; knockout_kv is the one code path, so it must go red there too.
+- it recomputes every condition by direct indexing; a whole-row knockout is not the stated single-slot one.
+- the unit test of the same filter: its no-candidate case (a kind no row holds) returns a donor once kind is unchecked.
+- it compares a condition's bos flag or the live trajectory with the honest loop's, which this mutation changes.
+- it recomputes every condition by direct indexing of the live memory, so it goes red for any condition's plumbing defect by design.
+- it checks that no donor carries the answer object: the same exclusion, read from the records.
+- it checks the same exclusion at the pick_donor call site.
+- a write-back changes the live memory of every later step, so the live answers stop matching answer_readout.
+- liveness-wiring: it reads what the real train() measured (the controls, the decoy, or the band that triggers the quarantine). With the hook skipped there is no measurement to read: the same defect, seen from each reader.
+- liveness-wiring: main() and the quarantine test read the exit through the one band->exit table (loop.LIVENESS_EXIT), so its mapping reddens them too, by design: one table, not two.
+- that test's tiny stream run measures inconclusive (ratio 0.0506, read from its footer 2026-09-26); rounded to inert, train() quarantines the checkpoint the test resumes from, so the resume cannot find it. The quarantine, seen from a checkpoint consumer.
+- it loads the checkpoint the quarantine put under quarantine/; with no quarantine there is no such file to refuse.
+- main() returns status(liveness_exit(...)); an INERT band reaches status(5) there -- the same refusal seen from the entry point.
+- the end-to-end test asserts the same analytic E_lifetime on a real FIFO stream: the definition, seen from the recorder.
+- the same function's n_docs field counts clusters; with targets as clusters it counts targets.
+- its second case asserts that ONE carrying seed with an L_INCONCLUSIVE seed is still MIXED (amendment 2: MIXED does not rest on L) -- the same one-seed MIXED row of the table.
+- the same rule observed through l_full: its disagreement is a label change with the points 1.0 apart only on a subset.
+- targets() builds rule_g09 through discounted_returns; that test pins rule_g09 = 0.4 + 0.9 * 0.7 on the same matrix -- the return, seen from the target table.
 
 ## Not covered here
 
