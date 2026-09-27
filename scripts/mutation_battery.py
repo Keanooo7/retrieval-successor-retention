@@ -3940,6 +3940,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG §4, §6, §11 control 9 (CLAUDE.md: age is excluded from psi-hat): the "
         "bilinear score reads (s_i, c_t) only. A score that also reads written_at and "
         "the step collapses onto recency and makes the vacuity failure invisible.",
+        off_gate_allowed=(
+            (
+                "tests/test_b2_psi_probe.py::"
+                "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+                "inspected: that test ties slots 1 and 2 at psi 0.1 with ages 3 and 2; "
+                "an age term (+1e-3 * age) makes them 0.103 and 0.102, so the argmin "
+                "moves to slot 2 and the logged psi vector changes -- the same leak "
+                "seen through the tie-break and the per-eviction log.",
+            ),
+        ),
     ),
     Mutation(
         "b2-psi-probe: a captured s_i / c_t keeps its graph",
