@@ -65,7 +65,13 @@ from rsr.data.synthetic import (  # noqa: E402
     _generate_document,
     discounted_demand,
 )
-from rsr.exit_codes import ArgumentParser, Exit, did_not_run, run_main  # noqa: E402
+from rsr.exit_codes import (  # noqa: E402
+    ArgumentParser,
+    Exit,
+    did_not_run,
+    run_main,
+    status,
+)
 from rsr.metrics.headroom import simulate  # noqa: E402
 from rsr.model.tg.model import init_memory  # noqa: E402
 from rsr.model.tg.policy_loop import (  # noqa: E402
@@ -3045,7 +3051,7 @@ def main(argv: list[str] | None = None) -> Exit:
     ap.add_argument("--runs-root", type=Path, default=ROOT / "runs")
     a, rest = ap.parse_known_args(argv)
     if a.cmd == "e0h":
-        return Exit(e0h_main(rest))
+        return status(e0h_main(rest))
     if rest:
         return did_not_run(f"unknown arguments {rest}")
     if a.cmd == "check":
@@ -3059,30 +3065,32 @@ def main(argv: list[str] | None = None) -> Exit:
         )
     source = a.source or LR.default_source()
     if a.cmd == "size-child":
-        return Exit(
+        return status(
             size_child(a.checkpoint, a.seed, source, a.out, a.n_docs, a.n_arm_docs)
         )
     if a.cmd == "size":
-        return run_size(
-            source,
-            a.runs_root / SIZING_RUN_ID,
-            a.n_docs,
-            a.n_arm_docs,
-            a.gram_docs,
-            a.gram_threads,
-            a.parallel,
+        return status(
+            run_size(
+                source,
+                a.runs_root / SIZING_RUN_ID,
+                a.n_docs,
+                a.n_arm_docs,
+                a.gram_docs,
+                a.gram_threads,
+                a.parallel,
+            )
         )
     if a.cmd == "fit-child":
-        return Exit(phase_fit_child(a.checkpoint, a.seed, source, a.out))
+        return status(phase_fit_child(a.checkpoint, a.seed, source, a.out))
     if a.cmd == "fit":
-        return run_fit(source, a.runs_root, a.parallel)
+        return status(run_fit(source, a.runs_root, a.parallel))
     if a.cmd == "eval-child":
-        return Exit(
+        return status(
             phase_eval_child(
                 a.checkpoint, a.seed, source, a.fits, a.out, a.n_e, a.n_tier2
             )
         )
-    return run_eval(source, a.runs_root, a.parallel)
+    return status(run_eval(source, a.runs_root, a.parallel))
 
 
 if __name__ == "__main__":

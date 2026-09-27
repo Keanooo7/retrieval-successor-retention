@@ -3956,7 +3956,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
         "experiments/b2-psi-probe/run.py",
         '    require_range([c.doc_id for c in val_caps], "FIT_VAL")\n',
-        "",
+        "    pass\n",
         "PREREG §6 / A1.7: lambda minimises the FIT_VAL validation MSE. Without the "
         "range guard an EVAL capture selects lambda silently -- a fit tuned on the "
         "data it is scored on.",
@@ -3966,7 +3966,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_ref_is_never_chosen_on_eval",
         "experiments/b2-psi-probe/run.py",
         '    require_range(doc_ids, "FIT_VAL")  # §9.3: ref on FIT_VAL, never EVAL\n',
-        "",
+        "    pass\n",
         "PREREG §9.3 / PLAN-v4: ref (FIFO or the age-only head) is chosen per seed on "
         "FIT_VAL, never on EVAL. Choosing it on EVAL picks the easier comparator after "
         "seeing the contrast.",
@@ -4012,7 +4012,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_e0h_rc_is_its_own_and_is_2_until_ratified",
         "experiments/b2-psi-probe/run.py",
         "    if not ratified:\n        return 2\n",
-        "",
+        "    pass\n",
         "PREREG A1.3: until a ruling ratifies the proposed 0.90 / 0.49, E0h exits 2 "
         "whatever the R^2; otherwise an unratified COLLINEAR is a kill (rc 1).",
     ),
@@ -4059,7 +4059,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_a_ci_excluding_the_estimate_is_unresolved",
         "experiments/b2-psi-probe/run.py",
         '    if outcome_flags(point, lo, hi):\n        return "UNRESOLVED"\n',
-        "",
+        "    pass\n",
         "PREREG A1.13: if the estimate is outside its CI the contrast is UNRESOLVED "
         "(CI_EXCLUDES_ESTIMATE); it removes the only WIN and EQUIV overlap.",
     ),
