@@ -77,9 +77,16 @@ def tiny():
     vmap = build_vocab(train + val + ev)
     torch.manual_seed(0)
     cfg = TGConfig(
-        D=TD, V=4 + len(vmap), F=22, max_sentence_tokens=TL,
-        max_sentences_in_short_term=TM, pad_id=0, bos_id=1, eos_id=2, eod_id=3,
-    )  # fmt: skip
+        D=TD,
+        V=4 + len(vmap),
+        F=22,
+        max_sentence_tokens=TL,
+        max_sentences_in_short_term=TM,
+        pad_id=0,
+        bos_id=1,
+        eos_id=2,
+        eod_id=3,
+    )
     model = TGModel(cfg).eval()
     return {"model": model, "vmap": vmap, "train": train, "val": val, "eval": ev}
 
@@ -263,7 +270,10 @@ def test_the_probe_policy_is_not_rsrpolicy_and_nothing_is_recorded(b2):
         n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module
     }
     assert "rsr.retention.rsr" not in mods
-    assert "RSRPolicy" not in src.replace("not `RSRPolicy`", "")
+    names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} | {
+        a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) for a in n.names
+    }
+    assert "RSRPolicy" not in names and "RSRConfig" not in names
     calls = {
         n.func.attr
         for n in ast.walk(tree)
@@ -287,9 +297,7 @@ def test_stopgrad_cuts_the_graph(b2):
 def test_captured_s_and_c_are_stop_grad_and_nothing_reaches_the_model(b2, tiny):
     model = tiny["model"]
     with torch.enable_grad():
-        cap = b2.capture_doc(
-            model, tiny["train"][0], vmap=tiny["vmap"], S=TS, m=TM, L=TL
-        )
+        cap = b2.capture_doc(model, tiny["train"][0], vmap=tiny["vmap"], S=TS, m=TM, L=TL)
     for t in (cap.gest, cap.ctx):
         assert not t.requires_grad and t.grad_fn is None
     assert all(p.grad is None for p in model.parameters())
@@ -324,9 +332,14 @@ def test_probes_never_feed_back_into_the_fifo_rollout(b2, tiny, caps):
     """The capture's own FIFO answers equal a plain FIFO rollout's."""
     doc = tiny["train"][0]
     plain = b2.run_arm(
-        tiny["model"], doc, b2.Logged(FIFOPolicy(), doc=doc, model_seed=0, arm="fifo"),
-        vmap=tiny["vmap"], S=TS, m=TM, L=TL,
-    )  # fmt: skip
+        tiny["model"],
+        doc,
+        b2.Logged(FIFOPolicy(), doc=doc, model_seed=0, arm="fifo"),
+        vmap=tiny["vmap"],
+        S=TS,
+        m=TM,
+        L=TL,
+    )
     assert caps["train"][0].answers == plain["answers"]
 
 
@@ -370,9 +383,13 @@ def test_target_matrices_by_arm(b2, caps):
     assert torch.allclose(U2, b2.returns(cap.D[2], 0.9), equal_nan=True)
     Cp = b2.target_matrix(cap, "C+", 0.0)
     lit = b2.literal(cap.D[0], cap.resident)
-    assert torch.allclose(Cp[1:-1], torch.nan_to_num(lit[2:], nan=0.0).where(
-        ~torch.isnan(lit[1:-1]), torch.tensor(NAN, dtype=torch.float64)
-    ), equal_nan=True)  # fmt: skip
+    assert torch.allclose(
+        Cp[1:-1],
+        torch.nan_to_num(lit[2:], nan=0.0).where(
+            ~torch.isnan(lit[1:-1]), torch.tensor(NAN, dtype=torch.float64)
+        ),
+        equal_nan=True,
+    )
     A = b2.target_matrix(cap, "age", None)
     assert A[5, 2] == 3.0
 
@@ -399,8 +416,9 @@ def test_the_spectral_ridge_solves_the_normal_equations(b2):
     for pt in path:
         lam_eff = pt["lam"] * float(torch.trace(G.xtx)) / X.shape[1]
         assert pt["lam_eff"] == pytest.approx(lam_eff)
-        ref = torch.linalg.solve(G.xtx + lam_eff * torch.eye(6, dtype=torch.float64),
-                                 G.xty[:, 0])  # fmt: skip
+        ref = torch.linalg.solve(
+            G.xtx + lam_eff * torch.eye(6, dtype=torch.float64), G.xty[:, 0]
+        )
         assert torch.allclose(pt["w"], ref, atol=1e-8)
         assert pt["resid"] <= 1e-8 and pt["eligible"]
 
@@ -408,8 +426,10 @@ def test_the_spectral_ridge_solves_the_normal_equations(b2):
 def test_the_gram_refuses_a_tensor_that_carries_graph(b2):
     G = b2.Gram(2, 1)
     with pytest.raises(ValueError, match="stop-grad"):
-        G.add(torch.randn(3, 2, dtype=torch.float64, requires_grad=True),
-              torch.zeros(3, 1, dtype=torch.float64))  # fmt: skip
+        G.add(
+            torch.randn(3, 2, dtype=torch.float64, requires_grad=True),
+            torch.zeros(3, 1, dtype=torch.float64),
+        )
 
 
 def test_lambda_selection_takes_the_min_ties_to_the_larger_and_only_eligible(b2):
@@ -458,11 +478,12 @@ def test_the_fit_selects_on_demeaned_val_mse_and_reports_raw(b2, caps):
     fit = b2.fit_heads(
         caps["train"], caps["val"], "U", "bilinear", [("U", 0.9), ("U+", 0.0)], m=TM
     )
-    for key, f in fit.items():
+    for f in fit.values():
         k = f["selected"]
         dm = f["val_mse_demeaned"]
-        assert dm[k] == min(x for x, p in zip(dm, f["path"], strict=True)
-                            if p["eligible"])  # fmt: skip
+        assert dm[k] == min(
+            x for x, p in zip(dm, f["path"], strict=True) if p["eligible"]
+        )
         assert len(f["val_mse_raw"]) == len(b2.LAMBDAS)
         assert f["w"].dtype == torch.float64 and f["w"].shape == (b2.p_of(TD),)
         assert f["path"][k]["resid"] <= b2.SELECTED_RESID
@@ -529,8 +550,12 @@ def test_kind_oracle_evicts_the_lowest_class(b2):
     means = {"assert": 3.0, "query": 2.0, "filler": 1.0}
     pol = b2.KindOracle(means, doc=doc, model_seed=0, tie="random", S=TS)
     idx = list(range(4))
-    st = MemoryState(gestalts=torch.zeros(4, 1), written_at=torch.tensor(idx),
-                     live=torch.ones(4, dtype=torch.bool), step=5)  # fmt: skip
+    st = MemoryState(
+        gestalts=torch.zeros(4, 1),
+        written_at=torch.tensor(idx),
+        live=torch.ones(4, dtype=torch.bool),
+        step=5,
+    )
     k = pol.select_eviction(st, torch.zeros(1), 5)
     low = min(means[kinds[i]] for i in idx)
     assert means[kinds[k]] == low
@@ -553,8 +578,12 @@ def test_the_random_arm_is_randompolicy_seeded_from_sha256(b2):
 
 def test_the_random_arm_draws_over_all_live_slots_newest_included(b2):
     pol = b2.random_policy(0, 0, 940000)
-    st = MemoryState(gestalts=torch.zeros(4, 1), written_at=torch.arange(4),
-                     live=torch.ones(4, dtype=torch.bool), step=9)  # fmt: skip
+    st = MemoryState(
+        gestalts=torch.zeros(4, 1),
+        written_at=torch.arange(4),
+        live=torch.ones(4, dtype=torch.bool),
+        step=9,
+    )
     seen = {pol.select_eviction(st, torch.zeros(1), 9) for _ in range(200)}
     assert seen == {0, 1, 2, 3}
 
@@ -630,7 +659,7 @@ def test_power_takes_the_max_over_gating_contrasts_only_and_clips(b2):
     sig[("psiU_minus_kind", 0)] = 1.0  # Q2 does not enter the max (A1.12)
     out = b2.n_eval(sig, {0: 0.035, 1: 0.035, 2: 0.035}, 1024)
     assert out["N_E"] == 1024 and not out["underpowered"]  # clipped up
-    sig[(b2.GATING_CONTRASTS[0], 1)] = 0.05
+    sig[(b2.GATING_CONTRASTS[0], 1)] = 0.06  # N = 46,244 > 40,000
     out = b2.n_eval(sig, {0: 0.035, 1: 0.035, 2: 0.035}, 1024)
     assert out["N_E"] == 40000 and out["underpowered"]
     assert len(b2.GATING_CONTRASTS) == 6
@@ -824,3 +853,102 @@ def test_the_claims_writer_requires_claim_command_expected(b2, tmp_path):
     assert json.loads(p.read_text())[0]["command"] == "echo 1"
     with pytest.raises(ValueError):
         b2.write_claims(p, [{"claim": "c", "command": "echo 1"}])
+
+
+# --------------------------------------------------------------------------- #
+# the phase cores end to end on the tiny model (A1.4 tiers, E0h streaming)
+# --------------------------------------------------------------------------- #
+
+
+def test_the_tiers_are_a1_4s_table(b2):
+    p3 = b2.tier_plan(3000)
+    assert len(p3[(0.9, "tier1")]) == 12
+    assert len(p3[(0.9, "tier2")]) + len(p3[(0.0, "tier2")]) == 16
+    p25 = b2.tier_plan(2500)
+    assert sum(len(v) for v in p25.values()) == 28
+    assert "fifo" in p3[(0.9, "tier1")] and "kind" in p3[(0.9, "tier1")]
+
+
+def test_the_streamed_r2_equals_the_direct_r2(b2):
+    g = torch.Generator().manual_seed(3)
+    X = torch.randn(80, 4, generator=g, dtype=torch.float64)
+    groups = torch.arange(80) // 8
+    y = X @ torch.tensor([0.3, -1.0, 2.0, 0.0], dtype=torch.float64)
+    y = y + torch.randn(80, generator=g, dtype=torch.float64) + groups.double()
+    acc = b2.R2Acc(4)
+    for k in range(10):  # one (document, t) group per call
+        sl = slice(8 * k, 8 * k + 8)
+        acc.add(y[sl], X[sl], groups[sl])
+    assert acc.within() == pytest.approx(b2.within_step_r2(y, X, groups), abs=1e-10)
+    assert acc.pooled() == pytest.approx(b2.pooled_r2(y, X), abs=1e-10)
+    back = b2.R2Acc.from_state(acc.state())
+    assert back.within() == acc.within()
+
+
+@pytest.fixture(scope="module")
+def phase(b2, tiny):
+    kw = {"vmap": tiny["vmap"], "S": TS, "m": TM, "L": TL}
+    a = b2.fit_core(tiny["model"], tiny["train"], tiny["val"], seed=0, **kw)
+    fits = {"heads": a["fits"]["heads"], "class_means": a["fits"]["class_means"]}
+    e = b2.eval_core(
+        tiny["model"], tiny["eval"], fits, seed=0, label=3000, n_tier2=1, **kw
+    )
+    return a, e
+
+
+def test_phase_a_core_fits_decides_on_fit_val_and_passes_its_controls(b2, phase):
+    a, _e = phase
+    heads = a["fits"]["heads"]
+    for k in ("U@0.9", "C@0.9", "U+@0.0", "C+@0.9", "U3@0.9", "age_U@0.9", "age_C@0.0"):
+        assert heads[k]["val_range"] == "FIT_VAL"
+    dec = a["decisions"]
+    assert set(dec["ref"]) == {"U@0.9", "C@0.9", "U@0.0", "C@0.0"}
+    assert dec["delta"][0.0] == dec["delta"][0.9]
+    assert set(b2.GATING_CONTRASTS) <= set(dec["sigma"])
+    assert "psiU_minus_kind" in dec["sigma"]
+    assert a["controls"]["sum_worst"] <= b2.SUM_TOL
+    assert a["n"]["n_U"] == 4 * b2.u_rows(TS) and a["n"]["n_C"] == 4 * b2.c_rows(TS, TM)
+
+
+def test_phase_b_core_runs_every_tier_and_streams_e0h(b2, phase):
+    _a, e = phase
+    assert set(e) == {"0.9.tier1", "0.9.tier2", "0.0.tier2"}
+    t1 = e["0.9.tier1"]
+    assert set(t1["counts"]) == set(b2.TIER1)
+    assert all(v["all"].shape == (2, 2) for v in t1["counts"].values())
+    assert set(e["0.9.tier2"]["counts"]) == set(b2.TIER2_G09)
+    assert e["0.9.tier2"]["counts"]["psiU1"]["all"].shape == (1, 2)
+    acc = t1["e0h"]
+    assert set(acc) == {"U@0.0", "U+@0.0", "C@0.0", "target_D"}
+    assert acc["U@0.0"].k == 6 * 2  # six C layers x H = 2
+    assert acc["U@0.0"].n == 2 * (TS - TM) * TM
+    assert t1["controls"]["logit_control_worst"] <= b2.LOGIT_TOL
+
+
+def test_phase_b_summary_reads_ref_and_delta_from_phase_a(b2, phase):
+    a, e = phase
+    s = b2.summarise_eval(e, a["decisions"], 0, 3000, n_tier2=1)
+    assert set(s) == {"0.9.tier1", "0.9.tier2", "0.0.tier2"}
+    t1 = s["0.9.tier1"]
+    assert t1["ref"] == {
+        "U": a["decisions"]["ref"]["U@0.9"],
+        "C": a["decisions"]["ref"]["C@0.9"],
+    }
+    assert t1["delta"] == a["decisions"]["delta"][0.9]
+    assert {"psiU", "psiC", "q2_psiU_minus_kind"} <= set(t1["outcome"])
+    assert {"psiU+", "psiC+", "psiU1"} <= set(s["0.9.tier2"]["outcome"])
+    for v in t1["outcome"].values():
+        assert v["label"].removeprefix("Q2-") in ("WIN", "EQUIV", "LOSS", "UNRESOLVED")
+    cls = b2.classification({k: t1 for k in (0, 1, 2)})
+    assert cls["row"] in range(1, 7) and "companion" not in cls
+
+
+def test_the_attribution_source_has_row_1s_fields(b2, phase):
+    _a, e = phase
+    log = e["0.9.tier1"]["logs"]["psiU"]
+    att = b2.attribution(log, TS)
+    assert sum(att["age_hist"]) == len(log) == 2 * (TS - TM)
+    assert set(att) == {"age_hist", "rank_hist", "kind_status", "margin", "rank_shift"}
+    assert all(r["psi"] is not None and len(r["live_ages"]) == TM for r in log)
+    corr = b2.psi_age_corr_in_loop(log)
+    assert corr["n"] == len(log) * TM
