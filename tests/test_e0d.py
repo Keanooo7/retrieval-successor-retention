@@ -795,7 +795,9 @@ def test_rank_ceiling_flags_agree_via_rank_and_changes_nothing(e0d):
     }
     out = e0d.classify_run(ans)
     assert out["rank_ceiling_seeds"] == [0]
-    assert (out["class"], out["exit"]) == ("RECENCY_ONLY", 2)
+    # the flag moves neither the class nor its exit
+    assert out["class"] == "RECENCY_ONLY"
+    assert out["exit"] == e0d.CLASS_EXIT["RECENCY_ONLY"]
 
 
 def test_a_degenerate_run_hidden_by_ceiling_is_reported(e0d):

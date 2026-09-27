@@ -115,6 +115,18 @@ _CAPTURE_BRIDGE_COUPLING = (
     "reward, which is the failure this file was written to detect."
 )
 
+_E0D_C10_BOS_COUPLING = (
+    "PREREG A1.3 recomputes C10 under the bos-copy exclusions too (A1.3 author's "
+    "note), and this test pins that the excluded population's positive control "
+    "is Spearman(true_demand, Delta) on the kept Q cells: the same C10 score, "
+    "checked from the exclusion side. Inspected 2026-09-27."
+)
+_E0D_C10_END_TO_END_COUPLING = (
+    "main() end to end on hand-built cells with a poor r_i: when C10 re-scores "
+    "that r_i instead of true_demand, every seed reads CEILING (never DISAGREE), "
+    "so the run exits 2 instead of CONFOUND's 1 and writes the MIXED class. That "
+    "is C10's defect observed at the exit. Inspected 2026-09-27."
+)
 _S003_REFUSAL_COUPLING = (
     "S0-03: `rsr.train.loop.answer_targets` REFUSES a corpus whose answers are out "
     "of band rather than return an empty supervision mask, and `train()` calls it, "
@@ -4043,6 +4055,111 @@ MUTATIONS: tuple[Mutation, ...] = (
         "nan_ok and map_ok):",
         "PREREG §6 C4: loo_delta_loss's live_loss must equal a separate plain "
         "forward within 1e-6, or the r_i forward is not the one LOO knocks out.",
+    ),
+    # ----------------------------------------------------------------------- #
+    # E0d Amendment 1 (84e21c5, erratum 268b947): strata, C10, flatness, the
+    # RECENCY_ONLY exit, the crash/kill separation and the bos-copy exclusion.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "e0d: A-cell is any slot of a query step",
+        "test_strata_are_fixed_by_document_structure",
+        "experiments/e0d/run.py",
+        '        cols["a_cell"].append(qs & (aof == sn))',
+        '        cols["a_cell"].append(qs)',
+        "PREREG A1.1: an A-cell is the slot holding the queried assert at a Q-step, "
+        "read from doc.pairs; every other Q-step slot is not an A-cell. Marking all "
+        "of them moves the LOO-flat median onto non-causal slots.",
+    ),
+    Mutation(
+        "e0d: C10 CEILING row dropped from the labels",
+        "test_c10_ceiling_label_comes_first",
+        "experiments/e0d/run.py",
+        "    if not pc_hi >= rho_star:\n",
+        "    if False:\n",
+        "PREREG A1.1 §7 row 0: if the positive control's rho_Q CI upper is < rho*, "
+        "the seed is CEILING whatever r_i scored -- never DISAGREE.",
+    ),
+    Mutation(
+        "e0d: C10 scores r_i instead of true_demand",
+        "test_c10_ceiling_scores_true_demand_through_the_identical_code",
+        "experiments/e0d/run.py",
+        '("pc", "pc"))',
+        '("pc", "r_gated"))',
+        "PREREG A1.1 C10: the positive control replaces r_i by "
+        "true_demand(doc)[t][slot_sentence]; a control that re-scores r_i can "
+        "never show that a perfect proxy could have passed.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_bos_exclusion_recomputes_every_decision_"
+                "statistic",
+                _E0D_C10_BOS_COUPLING,
+            ),
+            (
+                "tests/test_e0d.py::test_exit_1_is_emitted_only_after_the_class_is_"
+                "written",
+                _E0D_C10_END_TO_END_COUPLING,
+            ),
+            (
+                "tests/test_e0d.py::test_claims_json_is_written_only_by_a_real_run",
+                _E0D_C10_END_TO_END_COUPLING,
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d: LOO flatness back at the withdrawn 1e-3 scale",
+        "test_loo_flatness_is_the_a_cell_median_at_1e_2",
+        "experiments/e0d/run.py",
+        '"flat": bool(med < LOO_FLAT_A)}',
+        '"flat": bool(med < LOO_FLAT_Q90)}',
+        "PREREG A1.1: LOO flat is the A-cell median of Delta_resample < 1e-2 nats; "
+        "the 0.1-nat rationale behind 1e-3 was >10x off and is withdrawn.",
+    ),
+    Mutation(
+        "e0d: RECENCY_ONLY exits 1 again",
+        "test_recency_only_exits_2_never_1",
+        "experiments/e0d/run.py",
+        '    "RECENCY_ONLY": 2,\n',
+        '    "RECENCY_ONLY": 1,\n',
+        "PREREG A1.2: AGREE_VIA_RANK / RECENCY_ONLY is not the §3.2.1 kill; exit 1 "
+        "is reachable only from CONFOUND and CONFOUND_INVERTED.",
+    ),
+    Mutation(
+        "e0d: a SystemExit escapes main with its own code",
+        "test_a_crash_exits_3_never_1",
+        "experiments/e0d/run.py",
+        "    except BaseException as e:  # A1.4: any exception is exit 3\n",
+        "    except (Exception, KeyboardInterrupt) as e:  # A1.4: any exception is "
+        "exit 3\n",
+        "PREREG A1.4 (author's note): any SystemExit raised before e0d.class is "
+        "written exits 3, whatever code it carries -- a refuse(1) deep in the call "
+        "stack must not read as CONFOUND.",
+    ),
+    Mutation(
+        "e0d: the exit code leaves without the written class",
+        "test_exit_1_is_emitted_only_after_the_class_is_written",
+        "experiments/e0d/run.py",
+        "    return Exit(confirm_exit(path, code))",
+        "    return Exit(code)",
+        "PREREG A1.4: exit 1 is emitted only after the ledger key e0d.class in "
+        "{CONFOUND, CONFOUND_INVERTED} has been written; the runner reads it back.",
+    ),
+    Mutation(
+        "e0d: bos-copy exclusion keeps rank M-1",
+        "test_bos_exclusion_drops_rank_m_minus_1_and_gap_1_query_steps",
+        "experiments/e0d/run.py",
+        '    return (np.asarray(c["rank"]) != M - 1) & ~(',
+        '    return (np.asarray(c["rank"]) != M) & ~(',
+        "PREREG A1.3: the newest slot survives its own knockout through bos_ctx "
+        "(loo.py's bos-copy path), so rank M-1 is excluded from the recomputation.",
+    ),
+    Mutation(
+        "e0d: the exit follows the class without the bos-copy exclusions",
+        "test_exit_follows_the_bos_excluded_class",
+        "experiments/e0d/run.py",
+        '    labels = labs("gated_resample")\n',
+        '    labels = labs("gated_resample", "all")\n',
+        "PREREG A1.3: if the class changes under the exclusions the report says "
+        "BOS_SENSITIVE and the exit code follows the class WITH the exclusions.",
     ),
 )
 
