@@ -81,7 +81,14 @@ def _model(V, model_seed=0):
         eos_id=2,
         eod_id=3,
     )
-    return TGModel(cfg)
+    model = TGModel(cfg)
+    # Distinct memory gates, so gated and ungated r_i differ (correction 17): with
+    # every g_mem at its init 1.0 the two forms coincide and a swap is invisible.
+    with torch.no_grad():
+        for g, block in zip((0.5, 2.0), (b for b in model.blocks if b.block_type == "C"),
+                            strict=True):  # fmt: skip
+            block.memory_gate.fill_(g)
+    return model
 
 
 @pytest.fixture(scope="module")
@@ -289,10 +296,8 @@ def test_r_i_is_read_from_the_same_forward_gated_and_rescaled(e0d, world, measur
                         assert torch.allclose(got, want.double(), atol=1e-12), key
             mem = write_at(mem, out.srep, out.has_eos, torch.zeros(B).long(), t)
             bos, bv = out.srep, out.has_eos & (t + 1 < S)
-    # gated and ungated really differ on a model whose gates differ
-    assert not torch.equal(measured["r_gated"], measured["r_ungated"]) or (
-        model.blocks[1].memory_gate.item() == model.blocks[3].memory_gate.item()
-    )
+    # the fixture's gates differ, so the two forms must differ somewhere
+    assert not torch.equal(measured["r_gated"], measured["r_ungated"])
 
 
 def test_r_i_sums_to_fill_share_and_is_zero_on_dead_slots(e0d, measured):
@@ -405,6 +410,10 @@ def test_resample_coverage_below_080_is_exit_3(e0d):
     with pytest.raises(e0d.ControlFailed) as ei:
         e0d.check_coverage(d_res, full)
     assert ei.value.control == "C6"
+    # 0.75 sits between any relaxed floor and 0.80: still a refusal
+    three_of_four = np.tile([0.1, 0.1, 0.1, np.nan], 5)
+    with pytest.raises(e0d.ControlFailed):
+        e0d.check_coverage(three_of_four, np.ones(20, dtype=bool))
 
 
 def test_coverage_is_a_runtime_control_on_a_small_batch(e0d, world):
