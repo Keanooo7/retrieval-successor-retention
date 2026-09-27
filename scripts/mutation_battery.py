@@ -233,6 +233,11 @@ _DISPLACEMENT_COUPLING = (
 )
 
 #: liveness-wiring: tests that read the measurement a real train() run wrote.
+_E0D_READS_R_COUPLING = (
+    "experiments/e0d/run.py reads spec §3.2.1's r_i through reward.retrieval_demand "
+    "(gated primary, correction 17) on a real forward, and its test recomputes it "
+    "by hand: a reward.py defect must redden it too. One definition, three readers."
+)
 _E0E_READS_R_COUPLING = (
     "E0e reads r_i through reward.retrieval_demand (gated, rescaled), imported, not "
     "retyped; its hand-built gated/underfull trace reddens with the target's own "
@@ -663,6 +668,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_lookahead_room.py::test_r_i_is_e0es_gated_rescaled_target",
                 _LOOKAHEAD_READS_R_COUPLING,
             ),
+            (
+                "tests/test_e0d.py::"
+                "test_r_i_is_read_from_the_same_forward_gated_and_rescaled",
+                _E0D_READS_R_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -729,6 +739,10 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_lookahead_room.py::test_r_i_is_e0es_gated_rescaled_target",
                 _LOOKAHEAD_READS_R_COUPLING,
+            ),
+            (
+                "tests/test_e0d.py::test_r_i_sums_to_fill_share_and_is_zero_on_dead_slots",
+                _E0D_READS_R_COUPLING,
             ),
         ),
     ),
@@ -2800,6 +2814,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_fresh_stream.py::test_preflight_reports_a_closure_failure",
                 "the run's preflight proves the closure with the same function.",
             ),
+            (
+                "tests/test_e0d.py::test_vocabulary_closure_is_a_runtime_control",
+                "E0d's C3 (PREREG §2.4) is this same function wrapped as an exit-3 "
+                "control; disabling it disables C3 too, by design (one definition).",
+            ),
         ),
     ),
     Mutation(
@@ -3144,6 +3163,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_loo.py::test_pick_donor_filters_kind_doc_rank_and_key",
                 "the unit test of the same filter: its no-candidate case (a kind no "
                 "row holds) returns a donor once kind is unchecked.",
+            ),
+            (
+                "tests/test_e0d.py::test_coverage_is_a_runtime_control_on_a_small_batch",
+                "E0d's C6 (PREREG §6) counts cells that receive a donor; with kind "
+                "unchecked any doc's slot qualifies, coverage rises above 0.80 on the "
+                "2-document fixture, and the refusal the test expects never fires.",
             ),
         ),
     ),
