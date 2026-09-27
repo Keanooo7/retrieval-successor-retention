@@ -1034,3 +1034,23 @@ are gone the rule evicts asserts before query sentences. At ckpt2500, seed 0 has
 - probe at rank 0: 0.0843/0.0962, 0.0544/0.0817, 0.0829/0.0757;
 - pooled `G_0.9` pending 0.6956 / 0.5285 / 0.7200, filler 0.5095 / 0.4562 / 0.4260;
 - hindsight cap 0.18 / 0.13 / 0.54.
+
+## Addendum: TBD-1, n (fence item 1)
+
+**Written 2026-09-27 by a model** (Claude Opus 5.5, an `rsr-researcher` session, item B2-B). **Not
+written by Brendan.** **Append-only.** It fills fence item 1 (A1.1) with `N_F` and the ridge row counts,
+and nothing else. It changes no rule, threshold, arm, range or target. `N_E` (TBD-3) is **not**
+written here: §9.4 computes it from the phase-A fits on `FIT_VAL`, which have not run.
+
+- **`N_F = 264`**, by A1.15's rule `N_F = ⌈10·p / 632⌉`, with no larger value chosen.
+  - `d = 128` is read from `runs/fresh-stream/manifest.json` (key `d`) and asserted equal to each
+    checkpoint's embedding width (sizing ledger `ckpt{2500,3000}.D` = 128 on all six).
+  - `p = d² + 2d = 16,640` (sizing ledger `gram.p`).
+  - `FIT_TRAIN` uses ids `[920000, 920264)` of each seed's generator.
+- **The row counts per document were measured, on `FIT_VAL` only**, and match §5. They are 1128 U rows
+  and 632 C rows on every one of the 32 documents × 3 seeds × 2 checkpoints (sizing ledger
+  `ckpt{c}.rows_U_per_doc`, `ckpt{c}.rows_C_per_doc`).
+- **The ridge row counts** are `n_U = 1128 · 264 = 297,792` and `n_C = 632 · 264 = 166,848`.
+  `n_C / p = 10.03`.
+- **Source.** `runs/b2-psi-probe-sizing/ledger.json` on `run/b2-psi-probe`, run at `9b76963`
+  (status `ok`, rc 0). Its only documents are `FIT_VAL` ids `[936000, 936032)` per seed.
