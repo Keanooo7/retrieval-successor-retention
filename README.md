@@ -23,19 +23,32 @@ eviction or is model-free, on the synthetic corpus at `M = 16`. None is evidence
 for or against the hypothesis; they establish that the instrument is sound and
 that the question has room.
 
-| Finding | Number | Source |
-|---|---|---|
-| PyTorch TG matches the pinned JAX reference, gradients included | total loss bit-identical; worst gradient uses 0.006 of a tolerance committed before the fixtures | `tests/test_fidelity.py`, ADR-0002 |
-| RSR reduces to TG when its terms are off (E0b, §3.7) | bit-exact | `tests/test_reduction.py` |
-| An oracle beats FIFO on the synthetic corpus (E-feas) | headroom 0.1807 ± 0.0123 | `runs/efeas-synthetic/ledger.json` |
-| The memory is live under the masked objective, but training from scratch does not retrieve | shuffle ratio 9.33 ± 4.68; held-out answer NLL 2.90 against chance 2.77 | `runs/decisive-shuffle/ledger.json` |
-| Memorise-then-stream retrieves on unseen documents; a fresh start does not by step 9000 | classification SCAFFOLD; NO_ESCAPE | `experiments/fresh-stream/`, `experiments/fresh-escape/` |
-| The retention target `r_i` barely separates pending facts from filler | demand ≈ 0.07 vs ≈ 0.06; a `γ = 0` rule on it hits 0.80–0.85 against FIFO's 0.81 and a causal rule's 0.97 | `runs/lookahead-room-r2/ledger.json` |
+**Standing** means a committed test that runs on every commit. **Preliminary** means
+three seeds on the synthetic corpus, read from a verified ledger, and not yet
+replicated or written up. Each number is the ledger's own key, with the run's code
+commit and the date the ledger landed.
 
-The last row is the open question: the headroom exists, and the signal RSR learns
-from points at it only weakly. E0d (`r_i` against leave-one-out Δloss) tests it
-next. The full register, including what is broken and what was retracted, is
-[`docs/RESEARCH-CONTEXT.md`](docs/RESEARCH-CONTEXT.md) §6, §9–§11.
+| Finding | Number (3 seeds unless stated) | Status | Source · code commit · date |
+|---|---|---|---|
+| PyTorch TG matches the pinned JAX reference, gradients included | total loss bit-identical (`125.3105468750`); worst gradient uses 0.006 of a tolerance committed before the fixtures | Standing | `tests/test_fidelity.py` · `d03b37b`; tolerance in [ADR-0002](docs/decisions/ADR-0002-rented-hardware.md) Part B · `083d5e2` · 2026-09-17 |
+| RSR reduces to TG when its terms are off (E0b, spec §3.7) | bit-exact | Standing | `tests/test_reduction.py` · `3e19dcb` · 2026-09-17 |
+| An oracle beats FIFO on the synthetic corpus (E-feas, model-free) | `headroom_oracle_minus_fifo` 0.1807 ± 0.0123 at `M = 16` | Preliminary | run `efeas-synthetic` · `1fc8199` · 2026-09-20 |
+| The memory is live under the masked objective, but training from scratch does not retrieve | `armB.ratio` 9.33 ± 4.68 (unmasked: 0.0030); held-out answer NLL 2.90 ± 0.06 against chance ln 16 ≈ 2.77 | Preliminary | run `decisive-shuffle` · `90438f3` · 2026-09-21 |
+| Memorise-then-stream retrieves on unseen documents; a fresh start does not by step 9000 | `classification` SCAFFOLD; `classification_reported_as` NO_ESCAPE by 9000 | Preliminary | runs `fresh-stream` · `e45e4fe` · 2026-09-25; `fresh-escape` · `cdaa871` · 2026-09-26 |
+| The retention target `r_i` barely separates pending facts from filler (FIFO-world, hindsight proxy; no RSR head trained) | mean demand 0.071 / 0.069 / 0.079 (pending) vs 0.057 / 0.061 / 0.054 (filler); a `γ = 0` rule on it hits 0.79–0.85 against FIFO's 0.81 and a causal fact/filler rule's 0.97 | **Preliminary, pending E0d** | run `lookahead-room-r2`, keys `B.ckpt3000.*` · `a0cc85a` · 2026-09-26 |
+
+Ledgers are at `runs/<run id>/ledger.json`, beside the verifier's
+`verification.json`. The last row is the open question: the headroom exists, and the
+signal RSR learns from points at it only weakly. E0d (`r_i` against leave-one-out
+Δloss) tests it next, and its result will be recorded here either way.
+
+**Where to find the audit trail**
+
+- **Shuffle control and its live-decoy amendment:** [`experiments/shuffle-control/PREREG.md`](experiments/shuffle-control/PREREG.md), Amendment 1. A known-live memory passed the original "inert" rule, so the rule was amended before the real run.
+- **Audit of the 2026-09-18 overnight run**, including the arm stamped `rsr` that ran FIFO: [`docs/RESEARCH-CONTEXT.md`](docs/RESEARCH-CONTEXT.md) §10.1 and §10.5.
+- **Retracted numbers:** [`docs/RESEARCH-CONTEXT.md`](docs/RESEARCH-CONTEXT.md) §11.
+- **Oracle before any policy:** [`experiments/efeas/`](experiments/efeas/). Headroom was measured before any retention policy was trained.
+- **Everything else:** what is measured, broken and open, in [`docs/RESEARCH-CONTEXT.md`](docs/RESEARCH-CONTEXT.md) §6 and §9–§11.
 
 ## Read these first, in this order
 
