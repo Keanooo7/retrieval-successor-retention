@@ -1,0 +1,6 @@
+suite threads: 1 (source: ops/lanes.json battery_cpu_slots)
+PROVEN        the battery drops the failure reason       -> 1 on gate, 0 off (0 undeclared)
+PROVEN        the stub slot writes its job record in place again -> 1 on gate, 0 off (0 undeclared)
+
+2/2 gates proven by mutation
+rc=0

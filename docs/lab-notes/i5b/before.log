@@ -1,0 +1,7 @@
+suite threads: 1 (source: ops/lanes.json battery_cpu_slots)
+PROVEN        t_warm back to inf                         -> 12 on gate, 2 off (0 undeclared)
+PROVEN        off-gate failures stop counting            -> 1 on gate, 0 off (0 undeclared)
+PROVEN        a canary ledger row typed again            -> 1 on gate, 0 off (0 undeclared)
+
+3/3 gates proven by mutation
+rc=0
