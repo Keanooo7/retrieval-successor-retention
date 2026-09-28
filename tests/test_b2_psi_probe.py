@@ -500,6 +500,18 @@ def test_age_decodability_is_raw_mse_lambda_and_r2_on_fit_val(b2, caps):
     assert out["r2"] <= 1.0
 
 
+def test_age_decodability_split_by_index_partitions_the_fit_val_rows(b2, caps):
+    """Build review F11: the i < M / i ≥ M split covers every FIT_VAL row once, and
+    is recomputed from the same w (a perfect predictor gives R² = 1 on both)."""
+    out = b2.age_decodability(caps["train"], caps["val"], "U", m=TM)
+    sp = out["r2_split"]
+    assert sp["i_lt_M"]["n"] + sp["i_ge_M"]["n"] == out["n_val_rows"]
+    assert sp["i_lt_M"]["n"] > 0 and sp["i_ge_M"]["n"] > 0
+    assert out["resid"] <= b2.SELECTED_RESID
+    with pytest.raises(b2.RangeError):
+        b2.r2_split_by_index(caps["train"], "U", out["w"], m=TM)
+
+
 # --------------------------------------------------------------------------- #
 # §6 / A1.10: the kind-oracle
 # --------------------------------------------------------------------------- #
@@ -913,6 +925,27 @@ def test_phase_a_core_fits_decides_on_fit_val_and_passes_its_controls(b2, phase)
     assert "psiU_minus_kind" in dec["sigma"]
     assert a["controls"]["sum_worst"] <= b2.SUM_TOL
     assert a["n"]["n_U"] == 4 * b2.u_rows(TS) and a["n"]["n_C"] == 4 * b2.c_rows(TS, TM)
+
+
+def test_phase_a_rows_carry_lambda_residual_age_split_and_threads(b2, phase):
+    a, _e = phase
+    saved = {
+        "heads": a["fits"]["heads"],
+        **{k: v for k, v in a.items() if k != "fits"},
+        "class_means": a["fits"]["class_means"],
+        "age_decodability": a["fits"]["age_decodability"],
+    }
+    rows = dict(b2.phase_a_rows(3000, 0, saved))
+    h = rows["ckpt3000.seed0.head.U@0.9"]
+    assert h["resid"] <= b2.SELECTED_RESID and h["lam"] in b2.LAMBDAS
+    assert h["grid_edge"] == (h["lam"] in (b2.LAMBDAS[0], b2.LAMBDAS[-1]))
+    assert set(rows["ckpt3000.seed0.age_decodability.C"]["r2_split"]) == {
+        "i_lt_M",
+        "i_ge_M",
+    }
+    assert "w" not in rows["ckpt3000.seed0.age_decodability.U"]
+    assert rows["ckpt3000.seed0.threads"] == saved["threads"] >= 1
+    json.dumps(rows)  # every row must be ledger-serialisable
 
 
 def test_phase_b_core_runs_every_tier_and_streams_e0h(b2, phase):

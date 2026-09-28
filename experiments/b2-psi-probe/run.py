@@ -1081,12 +1081,39 @@ def age_decodability(train_caps, val_caps, rowset: str, *, m: int) -> dict:
     )[("age", None)]
     return {
         "r2": f["val_r2_raw"][f["selected"]],
+        "r2_split": r2_split_by_index(val_caps, rowset, f["w"], m=m),
         "lam": f["lam"],
+        "resid": f["path"][f["selected"]]["resid"],
         "lambda_rule": "raw_val_mse",
         "val_range": f["val_range"],
         "n_val_rows": f["n_val_rows"],
         "w": f["w"],
     }
+
+
+def r2_split_by_index(val_caps, rowset: str, w: Tensor, *, m: int) -> dict:
+    """Build review F11 (descriptive, no rule): the age predictor's FIT_VAL R² of raw
+    age, split into rows with sentence index i < M (their srep was computed over an
+    under-full memory, so s_i may carry the fill level) and i ≥ M. Each split's R²
+    uses its own mean. Same fitted `w` (selected λ); nothing is refitted."""
+    require_range([c.doc_id for c in val_caps], "FIT_VAL")
+    acc = {k: [0, 0.0, 0.0, 0.0] for k in ("i_lt_M", "i_ge_M")}  # n, sse, Σy, Σy²
+    for cap in val_caps:
+        t, i = row_index(cap, rowset, m)
+        pred = design(cap, t, i, "bilinear") @ w.to(torch.float64)
+        y = (t - i).to(torch.float64)
+        for k, sel in (("i_lt_M", i < m), ("i_ge_M", i >= m)):
+            ys, ps = y[sel], pred[sel]
+            a = acc[k]
+            a[0] += len(ys)
+            a[1] += float(((ps - ys) ** 2).sum())
+            a[2] += float(ys.sum())
+            a[3] += float((ys * ys).sum())
+    out = {}
+    for k, (n, sse, sy, syy) in acc.items():
+        sst = syy - sy * sy / n if n else 0.0
+        out[k] = {"r2": 1.0 - sse / sst if sst > 0 else None, "n": n}
+    return out
 
 
 def class_means(
@@ -2388,6 +2415,7 @@ def fit_core(model, train_docs, val_docs, *, seed, vmap, S, m, L) -> dict:
     }
     first: dict[str, dict] = {}
     val_arms = {}
+    t_arms = time.time()
     names = {0.9: (*TIER1, "kind_oldest", "factfiller"), 0.0: ("fifo", "ageU", "ageC")}
     for g in GAMMAS:
         mk = arm_makers(fits, seed, g, S, names[g])
@@ -2413,7 +2441,8 @@ def fit_core(model, train_docs, val_docs, *, seed, vmap, S, m, L) -> dict:
         "val_counts": {g: r["counts"] for g, r in val_arms.items()},
         "psi_age_corr_fit_val": corr,
         "controls": {"identity_worst": ident, "sum_worst": sumw, "closure": clos},
-        "seconds": {"capture": cap_s, "fit": fit_s},
+        "seconds": {"capture": cap_s, "fit": fit_s, "val_arms": time.time() - t_arms},
+        "threads": torch.get_num_threads(),
         "n": {
             "N_F": len(train_docs),
             "n_U": sum(len(row_index(c, "U", m)[0]) for c in tcaps),
@@ -2662,6 +2691,7 @@ def control_c3(model, seed: int, label: int, vmap, source: Path) -> dict:
 def phase_fit_child(label, seed, source: Path, out_dir: Path) -> int:  # pragma: no cover
     """Phase A for one (checkpoint, seed)."""
     torch.set_num_threads(int(os.environ.get("RSR_B2_THREADS", "1")))
+    wall0 = time.time()
     try:
         model, vmap = load_checked(source, label, seed)
         c3 = control_c3(model, seed, label, vmap, source)
@@ -2685,6 +2715,8 @@ def phase_fit_child(label, seed, source: Path, out_dir: Path) -> int:  # pragma:
         print(f"RIDGE FAILURE (exit 1): {e}", file=sys.stderr)
         return 1
     res["controls"]["C3"] = c3
+    res["seconds"]["child_wall"] = time.time() - wall0
+    res["peak_rss_gb"] = _peak_rss_gb()
     out_dir.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
@@ -2696,6 +2728,56 @@ def phase_fit_child(label, seed, source: Path, out_dir: Path) -> int:  # pragma:
         out_dir / f"ckpt{label}-seed{seed}.pt",
     )
     return 0
+
+
+def phase_a_rows(label: int, seed: int, a: dict) -> list[tuple[str, Any]]:
+    """Phase A's per-child ledger rows (the brief for item B2-A): every head's
+    selected λ, its residual and grid-edge flag, the age decodability (with build
+    review F11's i < M / i ≥ M split), corr(ψ̂, age) on FIT_VAL, ref, δ, the FIT_VAL
+    accuracies, the bootstrap SD of every §9.4 contrast, threads, seconds, controls."""
+    pre = f"ckpt{label}.seed{seed}"
+    rows: list[tuple[str, Any]] = []
+    for k, h in a["heads"].items():
+        sel = h["selected"]
+        rows.append(
+            (
+                f"{pre}.head.{k}",
+                {
+                    "lam": h["lam"],
+                    "lam_eff": h["path"][sel]["lam_eff"],
+                    "resid": h["path"][sel]["resid"],
+                    "grid_edge": sel in (0, len(h["path"]) - 1),
+                    "n_eligible": sum(bool(pt["eligible"]) for pt in h["path"]),
+                    "resid_grid": [pt["resid"] for pt in h["path"]],
+                    "val_mse_demeaned": (
+                        h["val_mse_demeaned"][sel] if h["val_mse_demeaned"] else None
+                    ),
+                    "val_mse_raw": h["val_mse_raw"][sel],
+                    "val_r2_raw": h["val_r2_raw"][sel],
+                    "n_train_rows": h["n_train_rows"],
+                    "n_val_rows": h["n_val_rows"],
+                },
+            )
+        )
+    for r, dec in a["age_decodability"].items():
+        rows.append(
+            (
+                f"{pre}.age_decodability.{r}",
+                {k: v for k, v in dec.items() if k != "w"},
+            )
+        )
+    for k, v in a["psi_age_corr_fit_val"].items():
+        rows.append((f"{pre}.psi_age_corr_fit_val.{k}", v))
+    d = a["decisions"]
+    for k in ("ref", "delta", "acc", "sigma"):
+        rows.append((f"{pre}.decisions.{k}", d[k]))
+    rows.append((f"{pre}.class_means", a["class_means"]))
+    rows.append((f"{pre}.n", a["n"]))
+    rows.append((f"{pre}.seconds", a["seconds"]))
+    rows.append((f"{pre}.threads", a.get("threads")))
+    rows.append((f"{pre}.peak_rss_gb", a.get("peak_rss_gb")))
+    rows.append((f"{pre}.controls", a["controls"]))
+    return rows
 
 
 def n_e_from_phase_a(phase_a: dict[int, dict]) -> dict:
@@ -2904,6 +2986,11 @@ def run_fit(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: no
         }
         ne = n_e_from_phase_a(a3)
         led.note("N_E.power", ne, how="run.py::n_eval (§9.4, A1.12)")
+        for c in CHECKPOINTS:
+            for s in SEEDS:
+                a = torch.load(root / "phaseA" / f"ckpt{c}-seed{s}.pt")
+                for k, v in phase_a_rows(c, s, a):
+                    led.note(k, v, how=f"phaseA/ckpt{c}-seed{s}.pt")
         for s, v in a3.items():
             led.note(
                 f"seed{s}.decisions",
