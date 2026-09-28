@@ -3951,6 +3951,65 @@ MUTATIONS: tuple[Mutation, ...] = (
         "read_text()) every 50 ms -- a demonstrated torn read (not established as "
         "the cause of the 09-26 dispatch red).",
     ),
+    Mutation(
+        "b0-ceilings: kind-oracle ties go to the oldest",
+        "test_random_ties_use_b2s_a1_10_generator_exactly",
+        "experiments/b0-ceilings/run.py",
+        '    return random.Random(f"ko:{seed}:{doc_id}:{t}").choice(ks)',
+        "    return ks[0]",
+        "B0 PREREG §4 / B2 A1.10: an age tie-break gives the kind-oracle age "
+        "information psi_hat is barred from; B0's kind-oracle must break ties with "
+        "B2's own random draw, or its ceiling describes a different comparator.",
+        off_gate_allowed=(
+            (
+                "tests/test_b0_ceilings.py::"
+                "test_the_kind_oracle_evicts_the_lowest_class_and_ties_randomly",
+                "the tie rule is asserted twice on purpose: once on the bare draw, once "
+                "through the kind-oracle policy on a real document, so that a policy "
+                "that bypassed tie_break would be caught. One edit to the draw must "
+                "redden both.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b0-ceilings: the T0 manifest check ignores a changed D.pt",
+        "test_the_manifest_check_catches_a_changed_or_unlisted_file",
+        "experiments/b0-ceilings/run.py",
+        '    ok = all(v["want"] is not None and v["got"] == v["want"] for v in '
+        "files.values())",
+        '    ok = all(v["want"] is not None for v in files.values())',
+        "B0 PREREG §6 C1 / PLAN-v4 T0: every later run re-checks the substrate "
+        "manifest; a check that only asks whether the file is listed would pass a "
+        "D.pt rewritten in place.",
+    ),
+    Mutation(
+        "b0-ceilings: class-mean rows include under-full steps",
+        "test_rows_are_full_memory_steps_and_past_sentences_only",
+        "experiments/b0-ceilings/run.py",
+        "    return (t >= m) & (i < t)",
+        "    return (t >= 1) & (i < t)",
+        "B0 PREREG §3: rows are full-memory steps t >= M (B2 §6's kind-oracle rows); "
+        "under-full steps decide no eviction and would shift every class mean.",
+        off_gate_allowed=(
+            (
+                "tests/test_b0_ceilings.py::"
+                "test_class_means_pool_rows_by_kind_band_and_age",
+                "the class means are computed over row_mask's rows; the hand-computed "
+                "means use t >= 16, so widening the rows must change them. The "
+                "coupling is the point: the means are only as right as their rows.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b0-ceilings: C3 tolerates a float difference",
+        "test_c3_is_exact_equality_against_the_reference_ledger",
+        "experiments/b0-ceilings/run.py",
+        "            if got is None or float(got) != float(theirs):",
+        "            if got is None or abs(float(got) - float(theirs)) > 1e-9:",
+        "B0 PREREG §6 C3: the reproduction of lookahead-room-r2's U.hit keys is exact "
+        "(same tensors, same documents, same simulate); a tolerance would hide a "
+        "different reading of D.pt.",
+    ),
 )
 
 
