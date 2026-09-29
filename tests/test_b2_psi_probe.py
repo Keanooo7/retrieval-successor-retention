@@ -1576,3 +1576,8 @@ def test_only_the_named_ruling_ratifies_e0h(b2, tmp_path, monkeypatch):
     assert b2.e0h_ratified(tmp_path) is False  # named, but absent
     (rul / "R-2026-10-02-e0h.md").write_text("ratified\n")
     assert b2.e0h_ratified(tmp_path) is True
+
+
+def test_n_e_is_the_preregs_tbd_3(b2):
+    """PREREG "Addendum: TBD-3, N_E": the floor 1024 binds."""
+    assert b2.N_E == 1024 == b2.N_E_MIN

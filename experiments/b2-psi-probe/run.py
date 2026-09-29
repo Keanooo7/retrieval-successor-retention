@@ -165,8 +165,11 @@ N_DETERMINISM_DOCS = 8  # §11 control 8
 N_RANDOM = 5  # §7: random x5
 
 #: TBD-3 (§9.4 item 6): written into the PREREG by diff before any EVAL document
-#: is run, and then here. `None` makes `eval` exit 3.
-N_E: int | None = None
+#: is run (PREREG "Addendum: TBD-3, N_E", 3a90fce), and then here. The floor 1024
+#: of item 4 binds (largest required size 166; runs/b2-psi-probe-fit/ledger.json
+#: key N_E.power). `run_eval` re-derives it from the phase-A files and refuses a
+#: mismatch. `None` makes `eval` exit 3.
+N_E: int | None = 1024
 
 #: §9.4 item 1 as amended by A1.12: only these six contrasts size N_E.
 GATING_CONTRASTS = (
