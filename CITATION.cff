@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software or its results, please cite it as below."
+title: "Retrieval-Successor Retention"
+abstract: >-
+  Retrieval-Successor Retention (RSR) replaces Thought Gestalt's oldest-first
+  working-memory eviction with a learned policy that evicts the slot with the
+  lowest predicted future retrieval demand, to test whether a system trained
+  only to predict the next sentence rediscovers Kintsch and van Dijk's (1978)
+  leading-edge retention strategy.
+authors:
+  - family-names: Keane
+    given-names: Brendan
+type: software
+license: Apache-2.0
+repository-code: "https://github.com/Keanooo7/retrieval-successor-retention"
+url: "https://github.com/Keanooo7/retrieval-successor-retention"
+keywords:
+  - working memory
+  - memory eviction
+  - recurrent transformer
+  - discourse comprehension
+  - cognitive modelling

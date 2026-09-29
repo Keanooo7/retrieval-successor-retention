@@ -4161,6 +4161,86 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG A1.3: if the class changes under the exclusions the report says "
         "BOS_SENSITIVE and the exit code follows the class WITH the exclusions.",
     ),
+    Mutation(
+        "the battery drops the failure reason",
+        "test_a_mutation_row_carries_the_failure_reasons",
+        "scripts/mutation_battery.py",
+        # 📌 split so this literal is not itself the first match in this file
+        '                "failure_reasons": {f: reasons[f] '
+        + "for f in sorted(reasons)},",
+        '                "failure_reasons": dict.fromkeys(' + "sorted(reasons)),",
+        "I5: the 09-26 dispatch red left only a node id because the battery ran "
+        "--tb=no. A row whose reasons are all null is that blindness back.",
+    ),
+    Mutation(
+        "the stub slot writes its job record in place again",
+        "test_the_stub_slot_never_exposes_a_half_written_job_record",
+        "tests/_orch_loop_helpers.py",
+        "    tmp.write_text(json.dumps(rec))\n    os.replace(tmp, path)\n",
+        "    path.write_text(json.dumps(rec))\n",
+        "I5b: write_text truncates then writes, and wait_job polls json.loads("
+        "read_text()) every 50 ms -- a demonstrated torn read (not established as "
+        "the cause of the 09-26 dispatch red).",
+    ),
+    Mutation(
+        "b0-ceilings: kind-oracle ties go to the oldest",
+        "test_random_ties_use_b2s_a1_10_generator_exactly",
+        "experiments/b0-ceilings/run.py",
+        '    return random.Random(f"ko:{seed}:{doc_id}:{t}").choice(ks)',
+        "    return ks[0]",
+        "B0 PREREG §4 / B2 A1.10: an age tie-break gives the kind-oracle age "
+        "information psi_hat is barred from; B0's kind-oracle must break ties with "
+        "B2's own random draw, or its ceiling describes a different comparator.",
+        off_gate_allowed=(
+            (
+                "tests/test_b0_ceilings.py::"
+                "test_the_kind_oracle_evicts_the_lowest_class_and_ties_randomly",
+                "the tie rule is asserted twice on purpose: once on the bare draw, once "
+                "through the kind-oracle policy on a real document, so that a policy "
+                "that bypassed tie_break would be caught. One edit to the draw must "
+                "redden both.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b0-ceilings: the T0 manifest check ignores a changed D.pt",
+        "test_the_manifest_check_catches_a_changed_or_unlisted_file",
+        "experiments/b0-ceilings/run.py",
+        '    ok = all(v["want"] is not None and v["got"] == v["want"] for v in '
+        "files.values())",
+        '    ok = all(v["want"] is not None for v in files.values())',
+        "B0 PREREG §6 C1 / PLAN-v4 T0: every later run re-checks the substrate "
+        "manifest; a check that only asks whether the file is listed would pass a "
+        "D.pt rewritten in place.",
+    ),
+    Mutation(
+        "b0-ceilings: class-mean rows include under-full steps",
+        "test_rows_are_full_memory_steps_and_past_sentences_only",
+        "experiments/b0-ceilings/run.py",
+        "    return (t >= m) & (i < t)",
+        "    return (t >= 1) & (i < t)",
+        "B0 PREREG §3: rows are full-memory steps t >= M (B2 §6's kind-oracle rows); "
+        "under-full steps decide no eviction and would shift every class mean.",
+        off_gate_allowed=(
+            (
+                "tests/test_b0_ceilings.py::"
+                "test_class_means_pool_rows_by_kind_band_and_age",
+                "the class means are computed over row_mask's rows; the hand-computed "
+                "means use t >= 16, so widening the rows must change them. The "
+                "coupling is the point: the means are only as right as their rows.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b0-ceilings: C3 tolerates a float difference",
+        "test_c3_is_exact_equality_against_the_reference_ledger",
+        "experiments/b0-ceilings/run.py",
+        "            if got is None or float(got) != float(theirs):",
+        "            if got is None or abs(float(got) - float(theirs)) > 1e-9:",
+        "B0 PREREG §6 C3: the reproduction of lookahead-room-r2's U.hit keys is exact "
+        "(same tensors, same documents, same simulate); a tolerance would hide a "
+        "different reading of D.pt.",
+    ),
 )
 
 
@@ -4320,23 +4400,70 @@ def suite_threads() -> tuple[int | None, str]:
     return max(cfg.battery_cpu_slots, 1), f"{lanes.LANES_FILE} battery_cpu_slots"
 
 
-def run_suite() -> set[str]:
-    """Return the set of failing test node ids."""
+REASON_COLUMNS = "4000"
+"""Terminal width for the mutated suite. pytest trims the short-summary message to
+the width, and drops it altogether when the node id alone fills 80 columns."""
+
+_SUMMARY_HEADER = "short test summary info"
+
+
+def run_suite() -> dict[str, str | None]:
+    """Return ``{failing node id: one-line reason}`` (``None`` if pytest printed none).
+
+    📌 I5 (PLAN-v4 §4): this ran ``--tb=no`` until 2026-09-27, so the 09-26 red on
+    ``test_submit_launches_the_slot_detached_at_the_pinned_sha`` left only a node
+    id. The reason is recorded on the verdict row; it never enters a verdict --
+    the node set is parsed exactly as before (`parse_failures`).
+    """
     proc = subprocess.run(
-        [str(PYTEST), "-p", "no:cacheprovider", "--tb=no", "-q", "--no-header"],
+        [
+            str(PYTEST),
+            "-p",
+            "no:cacheprovider",
+            "-rfE",
+            "--tb=line",
+            "-q",
+            "--no-header",
+        ],
         cwd=ROOT,
         capture_output=True,
         text=True,
-        env=_suite_env(),
+        env={**_suite_env(), "COLUMNS": REASON_COLUMNS},
     )
-    failing = set()
-    for line in (proc.stdout + proc.stderr).splitlines():
+    return parse_failures(proc.stdout + proc.stderr, proc.returncode)
+
+
+def parse_failures(text: str, returncode: int) -> dict[str, str | None]:
+    """Failing node ids from pytest's short summary, each with its one-line reason.
+
+    The node id is cut at the first space exactly as the ``--tb=no`` parse did, so
+    the node SET -- the only thing a verdict reads -- is unchanged. Only lines
+    after the short-summary header count: ``--tb=line`` prints message
+    continuation lines, and a message may contain ``ERROR ``.
+    """
+    failing: dict[str, str | None] = {}
+    in_summary = False
+    for line in text.splitlines():
+        if _SUMMARY_HEADER in line and line.startswith("="):
+            in_summary = True
+            continue
+        if not in_summary:
+            continue
         line = line.strip()
         if line.startswith("FAILED ") or line.startswith("ERROR "):
-            failing.add(line.split(" ", 1)[1].split(" ")[0])
-    if not failing and proc.returncode not in (0, 5):
-        failing.add(f"<collection/exit {proc.returncode}>")
+            rest = line.split(" ", 1)[1]
+            node = rest.split(" ")[0]
+            _, sep, reason = rest.partition(" - ")
+            failing[node] = reason if sep else None
+    if not failing and returncode not in (0, 5):
+        last = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        failing[f"<collection/exit {returncode}>"] = last[-1] if last else None
     return failing
+
+
+def _reasons(failing) -> dict[str, str | None]:
+    """A stubbed ``run_suite`` may still return a bare set: no reasons, not a crash."""
+    return failing if isinstance(failing, dict) else dict.fromkeys(failing)
 
 
 def anchor_problems() -> list[str]:
@@ -4441,6 +4568,7 @@ def main() -> Exit:
             failing = run_suite()
         finally:
             path.write_text(original)
+        reasons = _reasons(failing)
         on_gate = sorted(f for f in failing if m.gate in f)
         off_gate = sorted(f for f in failing if m.gate not in f)
         declared = {node for node, _reason in m.off_gate_allowed}
@@ -4462,6 +4590,8 @@ def main() -> Exit:
                 "off_gate_allowed": [list(x) for x in m.off_gate_allowed],
                 "off_gate_undeclared": leaked,
                 "verdict": verdict,
+                # I5: one line per failing node. Data, never a verdict input.
+                "failure_reasons": {f: reasons[f] for f in sorted(reasons)},
             }
         )
         print(
