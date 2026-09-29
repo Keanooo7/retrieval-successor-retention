@@ -3969,8 +3969,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         # so the FIT_TRAIN line above it keeps this anchor unique (--check-anchors).
         '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n'
         '    require_range([c.doc_id for c in val_caps], "FIT_VAL")\n',
-        '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n'
-        "    pass\n",
+        '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n    pass\n',
         "PREREG §6 / A1.7: lambda minimises the FIT_VAL validation MSE. Without the "
         "range guard an EVAL capture selects lambda silently -- a fit tuned on the "
         "data it is scored on.",
@@ -4114,6 +4113,90 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG A1.5: the logits come from a forward pre-hook and the forward pass is "
         "unchanged (test_fidelity / test_reduction untouched). A hook that edits its "
         "input passes the softmax control, since the recompute sees the same edit.",
+    ),
+    Mutation(
+        "b2-psi-probe: EVAL units are held in RAM until the tier ends",
+        "test_eval_units_reach_disk_before_the_next_document_runs",
+        "experiments/b2-psi-probe/run.py",
+        "            _flush(pending)  # F1: every unit reaches disk before the next "
+        "document runs\n",
+        "",
+        "B2 build review F1 (BLOCKER): EVAL's per-eviction logs are about 1 kB a "
+        "record; held in RAM for a tier they reach tens of GB at the N_E cap. Each "
+        "document's unit must be on disk before the next runs, which is also what "
+        "makes a killed child resumable.",
+    ),
+    Mutation(
+        "b2-psi-probe: an E0h logit-control failure stops B2's EVAL child",
+        "test_a_failed_logit_control_is_e0h_exit_3_and_b2_still_completes",
+        "experiments/b2-psi-probe/run.py",
+        '            if not u["residency_ok"] or u["sum_worst"] > SUM_TOL:\n',
+        '            if not u["residency_ok"] or u["sum_worst"] > SUM_TOL or '
+        '(u["logit_control_worst"] or 0.0) > LOGIT_TOL:\n',
+        "PREREG A1.3 / A1.5 (build review F3): a failed logit control is E0h exit 3, "
+        "and B2's rc covers B2 alone. Raising it from the EVAL child kills B2 after "
+        "its cost is paid.",
+    ),
+    Mutation(
+        "b2-psi-probe: non-inferiority reads the all-query CI",
+        "test_win_needs_non_inferiority_on_gap_2_to_m",
+        "experiments/b2-psi-probe/run.py",
+        '            boot["gap_2_to_M"][k],\n',
+        '            boot["all"][k],\n',
+        "PREREG §9.5 WIN clause (3): the non-inferiority bound is read on "
+        "gap_2_to_M. Reading it on all queries lets an arm that loses the "
+        "short-gap bucket win (build review F4, M1).",
+    ),
+    Mutation(
+        "b2-psi-probe: E0h pairs each slot's logits with another slot's psi-hat",
+        "test_e0h_rows_pair_each_slot_with_its_own_sentence",
+        "experiments/b2-psi-probe/run.py",
+        "        i_idx = torch.arange(t - m, t)  # FIFO memory at t, oldest first\n",
+        "        i_idx = torch.arange(t - m, t).flip(0)"
+        "  # FIFO memory at t, oldest first\n",
+        "PREREG §10 / A1.4: E0h's rows pair FIFO slot j's logits with "
+        "psi-hat(s_{t-m+j}, c_t) and D[t, t-m+j]. A reversed index regresses one "
+        "slot's psi-hat on another's logits (build review F4, M2).",
+    ),
+    Mutation(
+        "b2-psi-probe: delta is measured from a random seed, not FIFO",
+        "test_val_decisions_delta_is_a_quarter_of_oracle_minus_fifo",
+        "experiments/b2-psi-probe/run.py",
+        '    d09 = delta_of(out["acc"][0.9]["oracle"], out["acc"][0.9]["fifo"])\n',
+        '    d09 = delta_of(out["acc"][0.9]["oracle"], out["acc"][0.9]["random0"])\n',
+        "PREREG §9.3: delta = 0.25 (acc_oracle - acc_FIFO) on FIT_VAL. Any other "
+        "baseline rescales every WIN / EQUIV / LOSS threshold (build review F4, M3).",
+    ),
+    Mutation(
+        "b2-psi-probe: the gamma = 0 contrasts use the gamma = 0.9 ref",
+        "test_the_gamma_zero_contrasts_use_the_gamma_zero_ref",
+        "experiments/b2-psi-probe/run.py",
+        '        ref = {"U": decisions["ref"][f"U@{g}"], '
+        '"C": decisions["ref"][f"C@{g}"]}\n',
+        '        ref = {"U": decisions["ref"]["U@0.9"], '
+        '"C": decisions["ref"]["C@0.9"]}\n',
+        "PREREG §9.3 / §9.8: ref is chosen per (seed, arm, gamma) on FIT_VAL; gamma "
+        "= 0 is read against its own ref (build review F4, M4).",
+    ),
+    Mutation(
+        "b2-psi-probe: the bootstrap draws from the global RNG",
+        "test_the_bootstrap_is_seeded_and_leaves_the_global_rng_alone",
+        "experiments/b2-psi-probe/run.py",
+        "    idx = torch.randint(0, D, (n_boot, D), generator=g)\n",
+        "    idx = torch.randint(0, D, (n_boot, D))\n",
+        "PREREG §9.2: the paired bootstrap uses torch.Generator(20260927 + seed). "
+        "Unseeded, every CI changes run to run and consumes the global stream "
+        "(build review F4, M7).",
+    ),
+    Mutation(
+        "b2-psi-probe: WIN's random clause reads the ref contrast",
+        "test_win_needs_the_random_floor_not_the_ref",
+        "experiments/b2-psi-probe/run.py",
+        'noninf_lo=n["lo"], rand_lo=rn["lo"]',
+        'noninf_lo=n["lo"], rand_lo=a["lo"]',
+        "PREREG §9.5 WIN clause (4): psi-hat - random's CI lower bound > 0. Reading "
+        "the ref contrast's bound instead drops the random floor from the wiring "
+        "(build review F4, M9).",
     ),
 )
 
