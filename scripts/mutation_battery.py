@@ -3983,24 +3983,26 @@ MUTATIONS: tuple[Mutation, ...] = (
         "seed pair; a same-seed check misses exactly that alias.",
     ),
     Mutation(
-        "e0d: C8 requires only the rho* ruling",
+        "e0d: C8 requires only the e0d-statistic rulings",
         "test_authority_refuses_without_each_ruling",
         "experiments/e0d/run.py",
         "        if not hits:\n",
-        '        if not hits and key == "rho_star":\n',
-        "PREREG §6 C8: R-*-retrieval-shown and R-*-sprint0-gate* must both exist "
-        "before any D_E0d document is loaded; ratifying rho* alone does not "
-        "authorise the run.",
+        '        if not hits and key == "e0d_statistic":\n',
+        "PREREG A2.13 (C8): R-*-retrieval-shown* and R-*-sprint0-gate* must both "
+        "exist, committed, beside both e0d-statistic rulings before any D_E0d "
+        "document is loaded. (Re-targeted 2026-09-29 from the A1-era 'C8 requires "
+        "only the rho* ruling': A2.13 replaced R-*-rho-star* by R-*-e0d-statistic*.)",
     ),
     Mutation(
-        "e0d: an unstated rho* defaults to the unratified 0.5",
+        "e0d: an unstated AUROC_STAR defaults to a typed value",
         "test_a_rho_ruling_that_states_no_value_is_refused",
         "experiments/e0d/run.py",
         "    if len(values) != 1:\n",
-        "    values = values or {RHO_STAR_PROPOSED}\n    if len(values) != 1:\n",
-        "PREREG §4: RHO_STAR = 0.5 is PROPOSED, NOT RATIFIED; no kill is read until "
-        "Brendan ratifies or replaces it. A ruling file that names no value must "
-        "not fall back to the model's proposal.",
+        "    values = values or {0.85}\n    if len(values) != 1:\n",
+        "PREREG A2.8 / A2.13: A* = AUROC_STAR is read from the C8 rulings, never "
+        "typed; rulings that state no value exit 3 rather than fall back. "
+        "(Re-targeted 2026-09-29 from the A1-era 'an unstated rho* defaults to the "
+        "unratified 0.5'.)",
     ),
     Mutation(
         "e0d: the D_E0d guard refuses only the exact range",
@@ -4113,6 +4115,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         '"flat": bool(med < LOO_FLAT_Q90)}',
         "PREREG A1.1: LOO flat is the A-cell median of Delta_resample < 1e-2 nats; "
         "the 0.1-nat rationale behind 1e-3 was >10x off and is withdrawn.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_an_undefined_primary_statistic_is_exit_3_unless_loo_flat",
+                "A2.4 'Undefined': the undefined-statistic test labels a LOO-flat "
+                "seed through the A1.1 rule; at the withdrawn 1e-3 scale that seed is "
+                "not flat, so it exits 3 instead -- the same rule, read by A2.",
+            ),
+        ),
     ),
     Mutation(
         "e0d: RECENCY_ONLY exits 1 again",
@@ -4122,6 +4132,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    "RECENCY_ONLY": 1,\n',
         "PREREG A1.2: AGREE_VIA_RANK / RECENCY_ONLY is not the §3.2.1 kill; exit 1 "
         "is reachable only from CONFOUND and CONFOUND_INVERTED.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_t13_classification_rows[AGREE_VIA_RANK-DISAGREE-INVERTED]",
+                "A2.8's section-8 tests (T13) pin the same CLASS_EXIT row: "
+                "RECENCY_ONLY is 2 and exit 1 only from CONFOUND / CONFOUND_INVERTED.",
+            ),
+            (
+                "tests/test_e0d.py::test_t13_every_section_8_row_is_reachable_and_exit_1_only_from_rows_3_4",
+                "A2.8's section-8 tests (T13) pin the same CLASS_EXIT row: "
+                "RECENCY_ONLY is 2 and exit 1 only from CONFOUND / CONFOUND_INVERTED.",
+            ),
+        ),
     ),
     Mutation(
         "e0d: a SystemExit escapes main with its own code",
@@ -4151,6 +4173,44 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    return (np.asarray(c["rank"]) != M) & ~(',
         "PREREG A1.3: the newest slot survives its own knockout through bos_ctx "
         "(loo.py's bos-copy path), so rank M-1 is excluded from the recomputation.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_a13_population_has_n_t_15_no_bin_1_no_gap_1_steps",
+                "A2.3/A2.4 read the A1.3 population: keeping rank M-1 puts 16 slots "
+                "in every Q-step, so each A2 test that pins n_t = 15, bin {1} "
+                "excluded, or a value computed on the A1.3 population reddens.",
+            ),
+            (
+                "tests/test_e0d.py::test_a_nan_donor_keeps_its_step_and_every_other_pct",
+                "A2.3/A2.4 read the A1.3 population: keeping rank M-1 puts 16 slots "
+                "in every Q-step, so each A2 test that pins n_t = 15, bin {1} "
+                "excluded, or a value computed on the A1.3 population reddens.",
+            ),
+            (
+                "tests/test_e0d.py::test_a_non_finite_r_on_an_eligible_slot_is_undefined",
+                "A2.3/A2.4 read the A1.3 population: keeping rank M-1 puts 16 slots "
+                "in every Q-step, so each A2 test that pins n_t = 15, bin {1} "
+                "excluded, or a value computed on the A1.3 population reddens.",
+            ),
+            (
+                "tests/test_e0d.py::test_pct_spans_zero_to_one_at_n_t_15",
+                "A2.3/A2.4 read the A1.3 population: keeping rank M-1 puts 16 slots "
+                "in every Q-step, so each A2 test that pins n_t = 15, bin {1} "
+                "excluded, or a value computed on the A1.3 population reddens.",
+            ),
+            (
+                "tests/test_e0d.py::test_t6_h_random_is_the_mean_of_k_over_n_t",
+                "A2.3/A2.4 read the A1.3 population: keeping rank M-1 puts 16 slots "
+                "in every Q-step, so each A2 test that pins n_t = 15, bin {1} "
+                "excluded, or a value computed on the A1.3 population reddens.",
+            ),
+            (
+                "tests/test_e0d.py::test_the_runner_reproduces_the_a24_table_on_set_e",
+                "A2.3/A2.4 read the A1.3 population: keeping rank M-1 puts 16 slots "
+                "in every Q-step, so each A2 test that pins n_t = 15, bin {1} "
+                "excluded, or a value computed on the A1.3 population reddens.",
+            ),
+        ),
     ),
     Mutation(
         "e0d: the exit follows the class without the bos-copy exclusions",
@@ -4160,6 +4220,945 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    labels = labs("gated_resample", "all")\n',
         "PREREG A1.3: if the class changes under the exclusions the report says "
         "BOS_SENSITIVE and the exit code follows the class WITH the exclusions.",
+    ),
+    # ----------------------------------------------------------------------- #
+    # E0d Amendment 2 (8c63ecd): AUROC_strat,pct, raw AUROC_strat (row 5b only),
+    # per-seed tau, the A2.8 table and section 8 with 4b, C8/C11/C12, the
+    # bootstrap's undefined resamples, and the B.1 calibration fixture.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "e0d A2: AUROC ties count 0 instead of 1/2",
+        "test_ties_count_half_in_the_auroc",
+        "experiments/e0d/run.py",
+        "weights=wp * (below + 0.5 * wn)",
+        "weights=wp * (below + 0.0 * wn)",
+        "PREREG A2.4 step 3: equal pct counts 1/2 in the Mann-Whitney pair count; "
+        "counting ties as 0 drags every tie-heavy bin (age-only scores) below 0.5.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_analyse_seed_reports_the_full_grid",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_calibration_fixture_expected_values",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_claims_json_is_written_only_by_a_real_run",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_exit_1_is_emitted_only_after_the_class_is_written",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_main_runs_the_amended_analysis_when_cleared",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_main_writes_the_a2_class_and_the_5b_booleans",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_t18_pure_step_concentration_is_half_on_pct_not_on_raw",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1c_continuous_perfect_matched_is_the_hand_ceiling_below_1",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_t2_within_step_shuffle_is_null",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_t3_age_only_scores_are_exactly_half[a13-age_only]",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_t3_age_only_scores_are_exactly_half[a13-recency]",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_t3_age_only_scores_are_exactly_half[all-age_only]",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_t3_age_only_scores_are_exactly_half[all-recency]",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_the_runner_reproduces_the_a24_table_on_set_e",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_unstratified_pct_is_a_single_bin",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+            (
+                "tests/test_e0d.py::test_w_a_is_the_positives_in_the_bin",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it; ties are everywhere in pct (age-only "
+                "scores tie inside every bin), so the end-to-end label and class "
+                "tests move too.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: pct by ordinal rank instead of midrank",
+        "test_pct_is_the_midrank_over_all_eligible_slots",
+        "experiments/e0d/run.py",
+        "    mr[order] = mid[gid]\n",
+        "    mr[order] = pos\n",
+        "PREREG A2.4 step 1: slots tied on r share the mean of the ranks they span; "
+        "ordinal ranks break ties by storage order and give tied slots different pct.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_calibration_fixture_expected_values",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_t18_pure_step_concentration_is_half_on_pct_not_on_raw",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1a_perfect_binary_proxy_is_exactly_1[independent-continuous]",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1a_perfect_binary_proxy_is_exactly_1[independent-tied]",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1a_perfect_binary_proxy_is_exactly_1[matched-continuous]",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1a_perfect_binary_proxy_is_exactly_1[matched-tied]",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_the_runner_reproduces_the_a24_table_on_set_e",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_ties_count_half_in_the_auroc",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: pct over labelled slots only (NaN donors leave n_t)",
+        "test_a_nan_donor_keeps_its_step_and_every_other_pct",
+        "experiments/e0d/run.py",
+        '    sel = strata(c)["Q"] & np.asarray(keep, dtype=bool)\n',
+        '    sel = strata(c)["Q"] & np.asarray(keep, dtype=bool)\n    sel &= '
+        '~np.isnan(np.asarray(c["d_resample"], dtype=np.float64))\n',
+        "PREREG A2.4 NaN donors: a slot whose Delta_resample is NaN still counts in "
+        "n_t and still receives a pct; a missing label never shifts another slot's "
+        "percentile.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_a13_population_has_n_t_15_no_bin_1_no_gap_1_steps",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_a_non_finite_r_on_an_eligible_slot_is_undefined",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_calibration_fixture_expected_values",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_graded_content_and_the_age_term",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_pct_spans_zero_to_one_at_n_t_15",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t17_m_a_and_pi_are_re_estimated_per_resample",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t17_pct_is_computed_once_not_per_resample",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t18_pure_step_concentration_is_half_on_pct_not_on_raw",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1a_perfect_binary_proxy_is_exactly_1[independent-continuous]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1a_perfect_binary_proxy_is_exactly_1[independent-tied]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1a_perfect_binary_proxy_is_exactly_1[matched-continuous]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1a_perfect_binary_proxy_is_exactly_1[matched-tied]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1b_continuous_perfect_one_per_step_is_exactly_1[independent]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1b_continuous_perfect_one_per_step_is_exactly_1[matched]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1c_continuous_perfect_matched_is_the_hand_ceiling_below_1",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t2_within_step_shuffle_is_null",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t3_age_only_scores_are_exactly_half[a13-age_only]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t3_age_only_scores_are_exactly_half[a13-recency]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t3_age_only_scores_are_exactly_half[all-age_only]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t3_age_only_scores_are_exactly_half[all-recency]",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t4a_pct_family_is_invariant_to_per_step_monotone_transforms",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t4b_raw_auroc_moves_under_rescaling",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_t6_h_random_is_the_mean_of_k_over_n_t",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_the_runner_reproduces_the_a24_table_on_set_e",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+            (
+                "tests/test_e0d.py::test_unstratified_pct_is_a_single_bin",
+                "C11 inside q_population refuses a population whose n_t varies, so "
+                "every test that builds the A1.3 population on a fixture with a NaN "
+                "donor reddens at C11: the guard firing, as designed.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: a step is dropped when any Delta is NaN",
+        "test_a_nan_donor_keeps_its_step_and_every_other_pct",
+        "experiments/e0d/run.py",
+        "    lab = has  # A2.4 step 2",
+        '    lab = has & (np.bincount(pop["step"], weights=~has, '
+        'minlength=pop["n_steps"]) == 0)[pop["step"]]  # A2.4 step 2',
+        "PREREG A2.4 step 2: a NaN Delta leaves only its own cell; the step stays "
+        "(the complete-step rule applies to the reported H only).",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_bins_without_both_classes_are_excluded_and_logged",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it on fixtures that hold NaN donors.",
+            ),
+            (
+                "tests/test_e0d.py::test_t17_m_a_and_pi_are_re_estimated_per_resample",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it on fixtures that hold NaN donors.",
+            ),
+            (
+                "tests/test_e0d.py::test_t1c_continuous_perfect_matched_is_the_hand_ceiling_below_1",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it on fixtures that hold NaN donors.",
+            ),
+            (
+                "tests/test_e0d.py::test_the_runner_reproduces_the_a24_table_on_set_e",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it on fixtures that hold NaN donors.",
+            ),
+            (
+                "tests/test_e0d.py::test_unstratified_pct_is_a_single_bin",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it on fixtures that hold NaN donors.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: pct recomputed per resample",
+        "test_t17_pct_is_computed_once_not_per_resample",
+        "experiments/e0d/run.py",
+        "        w_doc = W[k]\n        wl = w_doc[doc_l]\n",
+        "        w_doc = W[k]\n        pct = step_percentiles(s, pop)\n        wl = "
+        "w_doc[doc_l]\n",
+        "PREREG A2.4 Bootstrap / T17: pct is computed once per step on the original "
+        "data; documents are resampled whole, so a step's percentiles never change "
+        "within a resample.",
+    ),
+    Mutation(
+        "e0d A2: w_a counts every cell, not the positives",
+        "test_w_a_is_the_positives_in_the_bin",
+        "experiments/e0d/run.py",
+        "        wa = P[both]\n",
+        "        wa = (P + N)[both]\n",
+        "PREREG A2.4 step 4: w_a is the number of positives in bin a.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_t1c_continuous_perfect_matched_is_the_hand_ceiling_below_1",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_the_runner_reproduces_the_a24_table_on_set_e",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+            (
+                "tests/test_e0d.py::test_unstratified_pct_is_a_single_bin",
+                "every A2.4 family test (B.1 calibration T1-T4, T18, the set-E A2.4 "
+                "reproduction, the unstratified and ceiling checks) computes the "
+                "statistic through this one code path; a wrong statistic reddens each "
+                "test that pins a value of it.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: a bin lacking a class counts as 1/2",
+        "test_bins_without_both_classes_are_excluded_and_logged",
+        "experiments/e0d/run.py",
+        "        both = (P > 0) & (N > 0)\n        if not both.any():\n            "
+        "return math.nan\n        au = num[both] / (P[both] * N[both])\n",
+        "        both = P > 0\n        if not both.any():\n            return "
+        "math.nan\n        au = np.where(N[both] > 0, num[both] / np.maximum(P[both] "
+        "* N[both], 1e-300), 0.5)\n",
+        "PREREG A2.4 step 3: a bin without both classes is excluded and logged; it "
+        "never counts as 0 or 1/2.",
+    ),
+    Mutation(
+        "e0d A2: pct denominator M - 1 instead of n_t - 1",
+        "test_pct_spans_zero_to_one_at_n_t_15",
+        "experiments/e0d/run.py",
+        '    return (mr - 1.0) / (pop["n_t"][pop["step"]] - 1.0)',
+        '    return (mr - 1.0) / (pop["M"] - 1.0)',
+        "PREREG A2.4 step 1 / A2.3: under A1.3 n_t = M - 1 = 15, so pct = (midrank - "
+        "1) / 14 spans [0, 1]; dividing by M - 1 caps it at 14/15.",
+    ),
+    Mutation(
+        "e0d A2: the pass read from raw AUROC_strat",
+        "test_t12_a28_labels_first_match_in_order",
+        "experiments/e0d/run.py",
+        "    if lo >= a:  # row 4: the only pass, on the pct form\n",
+        "    if raw_lo >= a:  # row 4: the only pass, on the pct form\n",
+        "PREREG A2.5 / A2.8: raw AUROC_strat never produces a pass; row 4 reads "
+        "AUROC_strat,pct's CI lower bound only.",
+    ),
+    Mutation(
+        "e0d A2: H re-enters the label",
+        "test_t19_h_is_read_by_no_gate",
+        "experiments/e0d/run.py",
+        "    if lo >= a:  # row 4: the only pass, on the pct form\n",
+        '    if lo >= a and inp.get("H", 0.0) < 0.5:  # row 4: the only pass, on '
+        "the pct form\n",
+        "PREREG A2.1 / A2.6 (the amended ruling): H is reported as the argmin-hit "
+        "rate and no label, class or exit reads it.",
+    ),
+    Mutation(
+        "e0d A2: y uses >= tau",
+        "test_labels_use_each_seeds_own_tau_and_strict_greater",
+        "experiments/e0d/run.py",
+        "    y = has & (d > tau)\n",
+        "    y = has & (d >= tau)\n",
+        "PREREG A2.2: y = 1[Delta_resample > tau_s], strict >.",
+    ),
+    Mutation(
+        "e0d A2: seed 0's tau for every seed",
+        "test_labels_use_each_seeds_own_tau_and_strict_greater",
+        "experiments/e0d/run.py",
+        "    return table[seed]\n",
+        "    return table[0]\n",
+        "PREREG A2.2 / A2.10: each seed is labelled with its own frozen tau_s; seed "
+        "2's tau (0.488) differs from seed 0's (0.416).",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_analyse_seed_labels_with_that_seeds_frozen_tau[1]",
+                "the analysis and grid tests pin the recorded tau of seeds 1 and 2 "
+                "(and the zero column's) through tau_for, the one lookup.",
+            ),
+            (
+                "tests/test_e0d.py::test_analyse_seed_labels_with_that_seeds_frozen_tau[2]",
+                "the analysis and grid tests pin the recorded tau of seeds 1 and 2 "
+                "(and the zero column's) through tau_for, the one lookup.",
+            ),
+            (
+                "tests/test_e0d.py::test_analyse_seed_reports_the_full_grid",
+                "the analysis and grid tests pin the recorded tau of seeds 1 and 2 "
+                "(and the zero column's) through tau_for, the one lookup.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: the zero knockout reads TAU_RESAMPLE",
+        "test_labels_use_each_seeds_own_tau_and_strict_greater",
+        "experiments/e0d/run.py",
+        '        table = {"resample": TAU_RESAMPLE, "zero": TAU_ZERO}[knockout]\n',
+        '        table = {"resample": TAU_RESAMPLE, "zero": TAU_RESAMPLE}[knockout]\n',
+        "PREREG A2.7 item 1: the zero column uses TAU_ZERO[s].",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_analyse_seed_labels_with_that_seeds_frozen_tau[0]",
+                "the analysis and grid tests pin the zero column's recorded tau "
+                "through tau_for, the one lookup.",
+            ),
+            (
+                "tests/test_e0d.py::test_analyse_seed_labels_with_that_seeds_frozen_tau[1]",
+                "the analysis and grid tests pin the zero column's recorded tau "
+                "through tau_for, the one lookup.",
+            ),
+            (
+                "tests/test_e0d.py::test_analyse_seed_labels_with_that_seeds_frozen_tau[2]",
+                "the analysis and grid tests pin the zero column's recorded tau "
+                "through tau_for, the one lookup.",
+            ),
+            (
+                "tests/test_e0d.py::test_analyse_seed_reports_the_full_grid",
+                "the analysis and grid tests pin the zero column's recorded tau "
+                "through tau_for, the one lookup.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: tau recomputed on the run's cells",
+        "test_analyse_seed_labels_with_that_seeds_frozen_tau",
+        "experiments/e0d/run.py",
+        "    tau = {k: tau_for(seed, k) for k in KNOCKOUTS}\n",
+        '    _q = strata(c)["Q"] & ~np.asarray(c["a_cell"], dtype=bool)\n    tau '
+        '= {k: float(np.quantile(np.abs(np.asarray(c[f"d_{k}"], '
+        'dtype=np.float64)[_q & ~np.isnan(np.asarray(c[f"d_{k}"], '
+        "dtype=np.float64))]), TAU_Q)) for k in KNOCKOUTS}\n",
+        "PREREG A2.2: tau is a constant frozen on set E, not a rule re-run on D_E0d; "
+        "the runner never computes a quantile on run cells.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_an_undefined_primary_statistic_is_exit_3_unless_loo_flat",
+                "a tau computed from the run's own cells relabels every fixture: the "
+                "grid, C10' and undefined-statistic tests read those labels.",
+            ),
+            (
+                "tests/test_e0d.py::test_analyse_seed_reports_the_full_grid",
+                "a tau computed from the run's own cells relabels every fixture: the "
+                "grid, C10' and undefined-statistic tests read those labels.",
+            ),
+            (
+                "tests/test_e0d.py::test_c10_prime_control_is_true_demand_through_the_same_family",
+                "a tau computed from the run's own cells relabels every fixture: the "
+                "grid, C10' and undefined-statistic tests read those labels.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: CEILING counted as a would-be kill, not UNRESOLVED",
+        "test_t13_classification_rows",
+        "experiments/e0d/run.py",
+        '    ls = ["UNRESOLVED" if x == "CEILING" else x for x in labels]\n',
+        '    ls = ["DISAGREE" if x == "CEILING" else x for x in labels]\n',
+        "PREREG A2.8 section 8: CEILING counts as UNRESOLVED -- a seed whose "
+        "true_demand control could not pass never counts toward a kill. (Part B lists "
+        "'CEILING not counted as UNRESOLVED'; dropping the mapping alone is an "
+        "equivalent mutant, since an unmapped CEILING also falls to row 6, so the "
+        "defect is written as CEILING read as DISAGREE.)",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_c10_ceiling_counts_as_unresolved_in_section_8",
+                "A1's C10 section-8 test pins the same classify() mapping, which A2.8 "
+                "keeps.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: rows 5 and 6 swapped",
+        "test_t12_a28_labels_first_match_in_order",
+        "experiments/e0d/run.py",
+        '    if hi < a and un_lo >= a:  # row 5\n        return "AGREE_VIA_RANK"\n  '
+        '  if hi < a:  # row 6\n        return "DISAGREE"\n',
+        '    if hi < a:  # row 6\n        return "DISAGREE"\n    if hi < a and '
+        'un_lo >= a:  # row 5\n        return "AGREE_VIA_RANK"\n',
+        "PREREG A2.8 / A1.2: row 5 (AGREE_VIA_RANK, exit 2) precedes row 6 "
+        "(DISAGREE); agreement that exists only without age control is not the "
+        "section 3.2.1 kill.",
+    ),
+    Mutation(
+        "e0d A2: row 5b removed",
+        "test_t12_a28_labels_first_match_in_order",
+        "experiments/e0d/run.py",
+        '    if stat == "pct" and hi < a and raw_lo >= a:  # row 5b, ahead of row 3\n',
+        "    if False:  # row 5b removed\n",
+        "PREREG A2.8 row 5b (PM decision under delegation, 2026-09-29): pct DISAGREE "
+        "with raw AGREE is STEP_OR_AGE_AMBIGUOUS, exit 2 and a HALT, never a kill.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_step_sensitive_substitutes_raw_and_skips_5b",
+                "the STEP_SENSITIVE test asserts the gated label is "
+                "STEP_OR_AGE_AMBIGUOUS before comparing the raw-substituted one.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: row 5b evaluated after row 3",
+        "test_t12_a28_labels_first_match_in_order",
+        "experiments/e0d/run.py",
+        '    if stat == "pct" and hi < a and raw_lo >= a:  # row 5b, ahead of row '
+        "3\n        return STEP_OR_AGE\n    if hi < AUROC_INVERTED:  # row 3\n        "
+        'return "INVERTED"\n',
+        '    if hi < AUROC_INVERTED:  # row 3\n        return "INVERTED"\n    if '
+        'stat == "pct" and hi < a and raw_lo >= a:  # row 5b, ahead of row 3\n      '
+        "  return STEP_OR_AGE\n",
+        "PREREG A2.8: first match in the order 0, 1, 2, 5b, 3, 4, 5, 6, 7; a seed "
+        "matching 5b and row 3 is STEP_OR_AGE_AMBIGUOUS, never INVERTED.",
+    ),
+    Mutation(
+        "e0d A2: C10' CEILING row dropped from the A2.8 labels",
+        "test_t12_a28_labels_first_match_in_order",
+        "experiments/e0d/run.py",
+        "    if not pc_hi >= a:  # row 0: C10', the true_demand control\n",
+        "    if False:  # row 0: C10', the true_demand control\n",
+        "PREREG A2.8 row 0: if the true_demand control's AUROC_strat,pct CI upper is "
+        "< A*, the seed is CEILING whatever r_i scored.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_row5b_boolean_is_reported_whatever_the_label",
+                "the 5b-boolean test asserts that row 0 absorbs a 5b pattern "
+                "(CEILING) while the boolean still reports it.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: the C10' control scores r_i instead of true_demand",
+        "test_c10_prime_control_is_true_demand_through_the_same_family",
+        "experiments/e0d/run.py",
+        '    pc_fam = {k: fam(c["pc"], k, tau[k]) for k in KNOCKOUTS}\n',
+        '    pc_fam = {k: fam(c["r_gated"], k, tau[k]) for k in KNOCKOUTS}\n',
+        "PREREG A2.1 / A2.8 row 0: the CEILING control is true_demand (1 on the "
+        "A-cell); a control that re-scores r_i cannot show a perfect-structure score "
+        "could have passed.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_claims_json_is_written_only_by_a_real_run",
+                "end-to-end main() tests: with r_i as its own control, a bad score's "
+                "control cannot reach A*, so the seeds read CEILING and the class "
+                "moves to exit 2.",
+            ),
+            (
+                "tests/test_e0d.py::test_exit_1_is_emitted_only_after_the_class_is_written",
+                "end-to-end main() tests: with r_i as its own control, a bad score's "
+                "control cannot reach A*, so the seeds read CEILING and the class "
+                "moves to exit 2.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: a STEP_OR_AGE_AMBIGUOUS seed counts toward a kill",
+        "test_t13_classification_rows",
+        "experiments/e0d/run.py",
+        '    elif all(x in ("DISAGREE", "INVERTED") for x in ls):\n',
+        '    elif all(x in ("DISAGREE", "INVERTED", STEP_OR_AGE) for x in ls):\n',
+        "PREREG A2.8 section 8: a kill needs every seed in {DISAGREE, INVERTED}; a "
+        "STEP_OR_AGE_AMBIGUOUS seed never counts toward it (row 4b, exit 2).",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_halt_on_5b_names_the_seeds_and_exits_2[labels0]",
+                "classify_run's HALT guard (a STEP_OR_AGE_AMBIGUOUS seed must exit 2) "
+                "raises when classify() returns a kill: the second guard firing.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: the HALT names no seed",
+        "test_halt_on_5b_names_the_seeds_and_exits_2",
+        "experiments/e0d/run.py",
+        "    halt_seeds = [s for s, lab in zip(seeds, labels, strict=True) if lab == "
+        "STEP_OR_AGE]\n",
+        "    halt_seeds = []\n",
+        "PREREG A2.8 'HALT on row 5b': whenever a seed is STEP_OR_AGE_AMBIGUOUS the "
+        "report names the seed(s) and halts to Brendan.",
+    ),
+    Mutation(
+        "e0d A2: the 5b boolean hides a pattern rows 0-2 absorbed",
+        "test_row5b_boolean_is_reported_whatever_the_label",
+        "experiments/e0d/run.py",
+        '    return bool(inp["pct_ci"][1] < auroc_star and inp["raw_ci"][0] >= '
+        "auroc_star)\n",
+        '    return bool(inp["pct_ci"][1] < auroc_star and inp["raw_ci"][0] >= '
+        'auroc_star and inp["pc_pct_ci"][1] >= auroc_star)\n',
+        "PREREG A2.8: row 5b's condition is reported on every seed as a boolean, "
+        "whatever the label, so a 5b pattern absorbed by rows 0-2 stays visible.",
+    ),
+    Mutation(
+        "e0d A2: pooled across seeds gates",
+        "test_pooled_results_never_gate",
+        "experiments/e0d/run.py",
+        "    klass, code = classify(labels)\n",
+        '    klass, code = classify([pooled["label"]] * len(seeds) if pooled else '
+        "labels)\n",
+        "R-2026-09-27-e0d-statistic / A2.10: each seed separately; pooled results are "
+        "reported and never gate.",
+    ),
+    Mutation(
+        "e0d A2: C8 key anchored at line start",
+        "test_authority_passes_on_the_real_ruling_texts",
+        "experiments/e0d/run.py",
+        '    r"(?<![A-Za-z0-9_])[`*]*AUROC_STAR',
+        '    r"(?m)^\\s*[`*]*AUROC_STAR',
+        "PREREG A2.13 key form: unanchored, because in both real rulings the key sits "
+        "in a table cell or a numbered list item (Part D.2 item 5); the "
+        "_RHO_LINE-style anchor reads neither file and C8 would exit 3.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_a_rho_ruling_that_states_no_value_is_refused",
+                "every C8 test runs on copies of the two real ruling texts, which the "
+                "anchored form cannot read (Part D.2 item 5).",
+            ),
+            (
+                "tests/test_e0d.py::test_a_rho_star_ruling_neither_satisfies_nor_is_read",
+                "every C8 test runs on copies of the two real ruling texts, which the "
+                "anchored form cannot read (Part D.2 item 5).",
+            ),
+            (
+                "tests/test_e0d.py::test_authority_harm_ratio_star_is_not_required",
+                "every C8 test runs on copies of the two real ruling texts, which the "
+                "anchored form cannot read (Part D.2 item 5).",
+            ),
+            (
+                "tests/test_e0d.py::test_c8_committed_rulings_in_a_temp_repo",
+                "every C8 test runs on copies of the two real ruling texts, which the "
+                "anchored form cannot read (Part D.2 item 5).",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: C8 still requires HARM_RATIO_STAR",
+        "test_authority_harm_ratio_star_is_not_required",
+        "experiments/e0d/run.py",
+        "    (auroc,) = values\n",
+        "    (auroc,) = values\n    if not "
+        'any(re.search(r"HARM_RATIO_STAR[`*]*\\s*[:=]\\s*[0-9]", p.read_text())\n   '
+        '            for p in stat):\n        raise ControlFailed("C8", "no '
+        'HARM_RATIO_STAR value")\n',
+        "PREREG A2.13: HARM_RATIO_STAR is withdrawn as a gate (amended ruling); it is "
+        "not required and not read. (Narrowed 2026-09-29 to the key form: the amended "
+        "ruling's prose names HARM_RATIO_STAR, so a substring check added nothing.)",
+    ),
+    Mutation(
+        "e0d A2: C8 accepts an R-*-rho-star* ruling",
+        "test_a_rho_star_ruling_neither_satisfies_nor_is_read",
+        "experiments/e0d/run.py",
+        "        hits = [rulings_dir / n for n in names if fnmatch.fnmatch(n, pat)]\n",
+        "        hits = [rulings_dir / n for n in names if fnmatch.fnmatch(n, pat) or "
+        'fnmatch.fnmatch(n, "R-*-rho-star*")]\n',
+        "PREREG A2.13: every R-*-e0d-statistic* file replaces R-*-rho-star*, which is "
+        "neither required nor read.",
+    ),
+    Mutation(
+        "e0d A2: C8 accepts the first ruling alone",
+        "test_authority_refuses_without_each_ruling",
+        "experiments/e0d/run.py",
+        "    if not amended:\n",
+        "    if False:\n",
+        "PREREG A2.13: the first ruling alone names raw AUROC_strat and the H gate, "
+        "not A2.4's statistic; without R-*-e0d-statistic-amended* C8 exits 3.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_c8_committed_rulings_in_a_temp_repo",
+                "the temp-repo test, the real-rulings test and main()'s refusal all "
+                "pin that the first ruling alone is exit 3; main() under the mutant "
+                "passes C8 and reaches the test's C1 tripwire.",
+            ),
+            (
+                "tests/test_e0d.py::test_main_refuses_before_any_e0d_document_without_the_rulings",
+                "the temp-repo test, the real-rulings test and main()'s refusal all "
+                "pin that the first ruling alone is exit 3; main() under the mutant "
+                "passes C8 and reaches the test's C1 tripwire.",
+            ),
+            (
+                "tests/test_e0d.py::test_the_real_rulings_dir_authorises_e0d_iff_both_statistic_rulings",
+                "the temp-repo test, the real-rulings test and main()'s refusal all "
+                "pin that the first ruling alone is exit 3; main() under the mutant "
+                "passes C8 and reaches the test's C1 tripwire.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: C8 accepts the amended ruling alone",
+        "test_authority_refuses_without_each_ruling",
+        "experiments/e0d/run.py",
+        "    if not first:\n",
+        "    if False:\n",
+        "PREREG A2.13: both rulings must be present; the amended ruling alone exits 3.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_a_rho_star_ruling_neither_satisfies_nor_is_read",
+                "the temp-repo and rho-star tests each hold a directory without the "
+                "first ruling, which must exit 3.",
+            ),
+            (
+                "tests/test_e0d.py::test_c8_committed_rulings_in_a_temp_repo",
+                "the temp-repo and rho-star tests each hold a directory without the "
+                "first ruling, which must exit 3.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: C11 disabled",
+        "test_analyse_seed_runs_c11",
+        "experiments/e0d/run.py",
+        "    c11 = check_ages(c, M)  # C11\n",
+        '    c11 = {"ok": True}  # C11\n',
+        "PREREG A2.3 / A2.13 C11: every full-memory step holds one slot per age and "
+        "rank = M - age, asserted per seed, exit 3 on violation.",
+    ),
+    Mutation(
+        "e0d A2: C12 does not compare the tau tables",
+        "test_c12_tau_tables_equal_the_preregs_and_hold_exactly_seeds_0_1_2",
+        "experiments/e0d/run.py",
+        '    if problems:\n        raise ControlFailed("C12", "; ".join(problems))\n',
+        '    if False:\n        raise ControlFailed("C12", "; ".join(problems))\n',
+        "PREREG A2.13 C12: the runner's TAU tables hold exactly seeds {0, 1, 2} and "
+        "equal A2.2's values; a seed without a frozen tau is not run.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_c12_refuses_a_zero_tau_that_differs",
+                "the other C12 tests (the zero table, main() refusing before any "
+                "document) read the same comparison.",
+            ),
+            (
+                "tests/test_e0d.py::test_main_refuses_on_c12_before_any_document",
+                "the other C12 tests (the zero table, main() refusing before any "
+                "document) read the same comparison.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: an undefined resample makes the interval undefined",
+        "test_undefined_replicates_are_counted_and_the_ci_is_on_the_rest",
+        "experiments/e0d/run.py",
+        "    vals = vals[~np.isnan(vals)]\n    if not len(vals):\n",
+        "    if n_und:\n",
+        "PREREG A2.4 Bootstrap (review m-7): an undefined resample is counted and "
+        "reported, and the label is read on the defined resamples.",
+    ),
+    Mutation(
+        "e0d A2: a non-finite r is read as 0",
+        "test_a_non_finite_r_on_an_eligible_slot_is_undefined",
+        "experiments/e0d/run.py",
+        "    v = np.asarray(score, dtype=np.float64)\n    if not "
+        "np.all(np.isfinite(v)):\n",
+        "    v = np.nan_to_num(np.asarray(score, dtype=np.float64), nan=0.0, "
+        "posinf=0.0)\n    if not np.all(np.isfinite(v)):\n",
+        "PREREG A2.4 Score: a non-finite r on an eligible slot is "
+        "MeasurementUndefined, exit 3; it is never imputed.",
+        off_gate_allowed=(
+            (
+                "tests/test_e0d.py::test_a_non_finite_r_through_main_exits_3",
+                "main()'s exit-3 test on a non-finite r reaches the same "
+                "step_percentiles guard.",
+            ),
+        ),
+    ),
+    Mutation(
+        "e0d A2: an undefined primary statistic is labelled, not exit 3",
+        "test_an_undefined_primary_statistic_is_exit_3_unless_loo_flat",
+        "experiments/e0d/run.py",
+        '    if pops["bos_excluded"]["labels"][PRIMARY] == "UNDEFINED":\n',
+        "    if False:\n",
+        "PREREG A2.4 Undefined: no bin with both classes means no value, exit 3, "
+        "unless the LOO-flat rule already labelled the seed.",
+    ),
+    Mutation(
+        "e0d A2 calibration: the matched NaN mode is independent of y",
+        "test_calibration_nan_modes",
+        "experiments/e0d/calibration.py",
+        '        p_nan = np.where(c["a_cell"], NAN_A, NAN_OTHER)\n',
+        "        p_nan = np.full(n, NAN_OTHER)\n",
+        "PREREG Part B.1 (draft v3): under nan_mode='matched' a NaN d_resample is "
+        "about 2x more frequent on A-cells, so NaN depends on y, as on set E (11/663 "
+        "vs 105/13,481).",
     ),
     Mutation(
         "the battery drops the failure reason",
