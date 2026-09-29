@@ -4010,6 +4010,165 @@ MUTATIONS: tuple[Mutation, ...] = (
         "(same tensors, same documents, same simulate); a tolerance would hide a "
         "different reading of D.pt.",
     ),
+    # ------------------------------------------------------------------ #
+    # Expire-Span [P7] (spec §5.4, D-4, falsifier 6; release condition 3)
+    # ------------------------------------------------------------------ #
+    Mutation(
+        "expire-span: eviction takes the MOST remaining span",
+        "test_expire_span_evicts_the_slot_with_least_remaining_span",
+        "src/rsr/baselines/expire_span.py",
+        "            victim = int(r.argmin().item())",
+        "            victim = int(r.argmax().item())",
+        "§5.4: when TG's hard capacity forces an eviction, Expire-Span drops the "
+        "slot nearest (or furthest past) its own expiry. argmax keeps the dying "
+        "slot and evicts the one with the most life left.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_at_zero_weight_init_expire_span_evicts_exactly_fifo",
+                "at the zero-weight init every span is equal, so least-remaining IS "
+                "oldest; flipping the argmin turns FIFO into newest-first, which this "
+                "test exists to see.",
+            ),
+            (
+                "tests/test_expire_span.py::test_eviction_ignores_dead_slots",
+                "dead slots are masked to +inf so the argmin never picks them; an "
+                "argmax picks exactly those. Same line, same defect.",
+            ),
+            (
+                "tests/test_expire_span.py::test_span_resets_on_admission",
+                "the admission test ends by asserting the fresh newcomer is NOT the "
+                "victim; under argmax the freshest slot is the victim.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: newcomer inherits the row's oldest age",
+        "test_span_resets_on_admission",
+        "src/rsr/baselines/expire_span.py",
+        "        age = (step - mem_step).to(e.dtype)",
+        "        age = (step - mem_step.min(dim=-1, keepdim=True).values.clamp(min=0))"
+        ".to(e.dtype)",
+        "gauntlet 0.4: a new occupant's span must be its own, aged from its own "
+        "write. Aging every slot from the row's oldest tenant is the LRU-became-FIFO "
+        "defect in Expire-Span's shape -- the newcomer is born expired.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_memory_weight_is_zero_on_dead_slots_and_follows_age",
+                "the hand-computed mask pins age = step - written_at per slot; any "
+                "other age reddens it. The two tests state one invariant, once "
+                "from the admission side and once from the formula.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: predictor path leaks into the gestalt",
+        "test_predictor_path_trains_the_predictor_but_not_the_gestalt",
+        "src/rsr/baselines/expire_span.py",
+        "        return kv.detach()",
+        "        return kv",
+        "ADR-0010 q1: `predictor` must stop span gradient at w, b. Without the "
+        "detach it silently becomes `through_gestalt` -- span gradient into the "
+        "transformer and W_sent under a config that says otherwise.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_model_gradients_are_identical_under_none_and_predictor",
+                "the end-to-end form of the same guard: once the predictor path "
+                "reaches the gestalt, model gradients differ from `none`.",
+            ),
+            (
+                "tests/test_expire_span.py::test_through_gestalt_changes_the_model_gradients",
+                "`through_gestalt` is asserted to differ from `predictor`; with the "
+                "detach gone the two settings are the same setting.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: structured dropout never fires",
+        "test_structured_dropout_drops_whole_slots_in_training_only",
+        "src/rsr/baselines/expire_span.py",
+        "        if training and self.cfg.dropout > 0.0:",
+        "        if False and self.cfg.dropout > 0.0:",
+        "[P7] requires structured dropout (RESEARCH-CONTEXT B-3); a config that "
+        "sets a rate and a forward that never applies it is an untuned comparator "
+        "passing as a tuned one.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_structured_dropout_is_reproducible_under_its_seed",
+                "with no draws, two seeds give the same (all-ones) mask, and the "
+                "test asserts different seeds differ.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: construction draws from the global RNG",
+        "test_construction_does_not_consume_the_global_rng",
+        "src/rsr/baselines/expire_span.py",
+        "        self.weight = nn.Parameter(torch.zeros(d_model))",
+        "        self.weight = nn.Parameter(torch.randn(d_model) * 0.0)",
+        "tests/test_reduction.py's RNG trap: identical values, but the constructor "
+        "consumed global draws, shifting data order and dropout masks for every "
+        "arm built after it.",
+    ),
+    Mutation(
+        "model: Expire-Span mask never reaches cross-attention",
+        "test_a_zero_weight_slot_receives_no_attention_and_rows_renormalise",
+        "src/rsr/model/tg/model.py",
+        "            att = _reweight_attention(att, mem_weight)",
+        "            att = att",
+        "§5.4: the soft mask in attention is the only route by which the LM loss "
+        "trains the spans. Dropped, Expire-Span is hard eviction by an untrained "
+        "predictor.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_the_lm_loss_reaches_the_span_predictor_through_the_model",
+                "the end-to-end consequence: with alpha = 0 the LM loss is the only "
+                "source of gradient on w, and it arrives only through the mask.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_loop_passes_the_mask_to_the_model",
+                "fully-expired spans must change the loss versus FIFO; with the mask "
+                "ignored the forward IS FIFO's.",
+            ),
+        ),
+    ),
+    Mutation(
+        "loop: Expire-Span's span loss is dropped",
+        "test_the_loop_adds_the_span_loss",
+        "src/rsr/model/tg/policy_loop.py",
+        "            contrib = contrib + span_loss",
+        "            contrib = contrib",
+        "[P7]'s alpha term must enter the objective the arm trains on; a loop that "
+        "discards it runs alpha = 0 under a config stamped otherwise.",
+    ),
+    Mutation(
+        "expire-span: the mask ramp is not clamped at 1",
+        "test_the_mask_is_the_clamped_ramp",
+        "src/rsr/baselines/expire_span.py",
+        "        return (1.0 + remaining / self.cfg.ramp).clamp(0.0, 1.0)",
+        "        return (1.0 + remaining / self.cfg.ramp).clamp(0.0, None)",
+        "m = clamp(1 + r/R, 0, 1): unclamped above, an unexpired slot's weight "
+        "grows with its remaining span and the mask becomes a span-weighted "
+        "attention bias, not expiry.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_span_resets_on_admission",
+                "asserts the fresh newcomer's mask is exactly 1.",
+            ),
+            (
+                "tests/test_expire_span.py::test_structured_dropout_drops_whole_slots_in_training_only",
+                "asserts every undropped weight is exactly 1 at long spans.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: span loss charges every live slot every step",
+        "test_the_span_loss_charges_each_admission_once",
+        "src/rsr/baselines/expire_span.py",
+        "        new = ((mem_step == step - 1) & mem_valid).to(e.dtype)",
+        "        new = mem_valid.to(e.dtype)",
+        "ADR-0010 q3: each gestalt pays alpha·e_i once. Charging every step makes "
+        "the penalty span x lifetime, a different (and stronger) objective.",
+    ),
 )
 
 
