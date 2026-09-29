@@ -1,6 +1,6 @@
 # E0D - `r_i` validation against leave-one-out
 
-**Status: NOT RUN.**
+**Status: RUNNING (started 2026-09-29).**
 
 | | |
 |---|---|
@@ -56,10 +56,11 @@ threshold, a stratum, a label or an exit. Each is marked in `run.py`.
 
 | | |
 |---|---|
-| Command | _tbd_ |
-| Git SHA | _tbd_ |
-| Hardware | _tbd_ |
-| Date | _tbd_ |
+| Command | `PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 3 --job-id e0d-2026-09-29 -- .venv/bin/python experiments/e0d/run.py` (cwd `.worktrees/e0d`, detached with nohup) |
+| Git SHA | `2fd93683a33d98b8540ab572f39848dcc0dbb6f5` (PREREG base + A1 + A2 + A3 `f5a8752`; T0 record `2fd9368`) |
+| Hardware | Mac Studio, Apple M4 Max, 64 GB, macOS 26.6.2; device `cpu`, 3 threads (cpu-det lane, 3 slots) |
+| Date | started 2026-09-29, UTC 2026-09-29T20:11:43Z |
+| Inputs | arm B `ckpt-003000.pt`, seeds 0, 1, 2; documents `[262144, 263168)` |
 
 ## Numbers
 
