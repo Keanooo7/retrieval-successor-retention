@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -139,56 +140,168 @@ def test_constants_are_the_preregs(e0d):
 
 
 # --------------------------------------------------------------------------- #
-# C8 authority: three rulings, and a ratified rho*
+# C8 authority (PREREG A2.13): retrieval-shown, sprint0-gate, and BOTH
+# e0d-statistic rulings (the first and its amendment); AUROC_STAR read from them.
 # --------------------------------------------------------------------------- #
 
+RULINGS = ROOT / "docs" / "owner" / "rulings"
+FIRST_RULING = RULINGS / "R-2026-09-27-e0d-statistic.md"
+#: the amended ruling's text. Byte-identical to docs/owner/rulings/ at 4252408
+#: (night/2026-09-27); vendored so T14 runs on the real text on any branch.
+AMENDED_TEXT = (
+    ROOT / "experiments" / "e0d" / "amendment-2" / "owner-drafts"
+    / "R-2026-09-27-e0d-statistic-amended.md"
+)  # fmt: skip
+FIRST = "R-2026-09-27-e0d-statistic.md"
+AMENDED = "R-2026-09-27-e0d-statistic-amended.md"
+SHOWN = "R-2026-09-27-retrieval-shown.md"
+GATE = "R-2026-09-27-sprint0-gate-green.md"
 
-def _rulings(tmp_path, names, rho_text="RHO_STAR: 0.5\n"):
+
+def _rulings(tmp_path, bodies: dict[str, str]):
     d = tmp_path / "rulings"
     d.mkdir()
-    for n in names:
-        body = rho_text if "rho-star" in n else "ruling\n"
+    for n, body in bodies.items():
         (d / n).write_text(body)
     return d
 
 
-ALL3 = (
-    "R-2026-10-01-retrieval-shown.md",
-    "R-2026-10-01-sprint0-gate.md",
-    "R-2026-10-01-rho-star.md",
-)
+def _real_bodies(**over):
+    """Copies of the two real ruling texts, plus stand-ins for the other two."""
+    b = {
+        SHOWN: "ruling\n",
+        GATE: "ruling\n",
+        FIRST: FIRST_RULING.read_text(),
+        AMENDED: AMENDED_TEXT.read_text(),
+    }
+    b.update(over)
+    return {k: v for k, v in b.items() if v is not None}
 
 
-@pytest.mark.parametrize("missing", range(3))
+ALL4 = (SHOWN, GATE, FIRST, AMENDED)
+
+
+@pytest.mark.parametrize("missing", ALL4)
 def test_authority_refuses_without_each_ruling(e0d, tmp_path, missing):
-    names = [n for i, n in enumerate(ALL3) if i != missing]
-    d = _rulings(tmp_path, names)
+    """T14: each of the four rulings is required; the first ruling alone and the
+    amended ruling alone each exit 3 (A2.13 "Either alone exits 3")."""
+    d = _rulings(tmp_path, _real_bodies(**{missing: None}))
     with pytest.raises(e0d.ControlFailed) as ei:
         e0d.check_authority(d, require_committed=False)
     assert ei.value.control == "C8"
 
 
-def test_authority_passes_and_reads_the_ratified_rho(e0d, tmp_path):
-    d = _rulings(tmp_path, ALL3, rho_text="Ratified.\nRHO_STAR = 0.45\n")
+def test_authority_passes_on_the_real_ruling_texts(e0d, tmp_path):
+    """T14: the key sits in a table cell (first ruling) and in a list item
+    (amended); the unanchored A2.13 form reads 0.85 from both."""
+    assert "| **`AUROC_STAR: 0.85`**" in FIRST_RULING.read_text()
+    assert "2. **`AUROC_STAR: 0.85` now applies" in AMENDED_TEXT.read_text()
+    d = _rulings(tmp_path, _real_bodies())
     out = e0d.check_authority(d, require_committed=False)
-    assert out["rho_star"] == 0.45
-    assert set(out["rulings"]) == {"retrieval_shown", "sprint0_gate", "rho_star"}
+    assert out["auroc_star"] == 0.85
+    assert set(out["rulings"]) >= {"retrieval_shown", "sprint0_gate", "e0d_statistic",
+                                   "e0d_statistic_amended"}  # fmt: skip
+    # the line-anchored _RHO_LINE-style form matches neither real text (D.2 item 5)
+    anchored = re.compile(r"^\s*[`*]*AUROC_STAR[`*]*\s*[:=]\s*([0-9.]+)", re.M)
+    assert not anchored.findall(FIRST_RULING.read_text())
+    assert not anchored.findall(AMENDED_TEXT.read_text())
+
+
+def test_authority_harm_ratio_star_is_not_required(e0d, tmp_path):
+    """T14: HARM_RATIO_STAR is not required and not read (A2.13)."""
+    first = FIRST_RULING.read_text()
+    assert "HARM_RATIO_STAR" in first  # its presence is not an error
+    e0d.check_authority(_rulings(tmp_path, _real_bodies()), require_committed=False)
+    no_harm = "".join(ln for ln in first.splitlines(True) if "HARM_RATIO_STAR" not in ln)
+    d = _rulings(tmp_path / "b", _real_bodies(**{FIRST: no_harm}))
+    assert e0d.check_authority(d, require_committed=False)["auroc_star"] == 0.85
 
 
 def test_a_rho_ruling_that_states_no_value_is_refused(e0d, tmp_path):
-    d = _rulings(tmp_path, ALL3, rho_text="I ratify it.\n")
-    with pytest.raises(e0d.ControlFailed):
-        e0d.check_authority(d, require_committed=False)
-    (d / ALL3[2]).write_text("RHO_STAR: 0.5\nRHO_STAR: 0.7\n")  # two values
-    with pytest.raises(e0d.ControlFailed):
-        e0d.check_authority(d, require_committed=False)
+    """T14: no AUROC_STAR anywhere, two distinct values, or a value outside (0.5, 1)
+    exits 3; nothing falls back to a typed value."""
+    strip = "".join(
+        ln for ln in FIRST_RULING.read_text().splitlines(True) if "AUROC_STAR" not in ln
+    )
+    strip_a = "".join(
+        ln for ln in AMENDED_TEXT.read_text().splitlines(True) if "AUROC_STAR" not in ln
+    )
+    cases = {
+        "none": {FIRST: strip, AMENDED: strip_a},
+        "two": {AMENDED: AMENDED_TEXT.read_text() + "\nAUROC_STAR: 0.9\n"},
+        "half": {FIRST: strip + "AUROC_STAR: 0.5\n", AMENDED: strip_a},
+        "one": {FIRST: strip + "AUROC_STAR = 1\n", AMENDED: strip_a},
+        "low": {FIRST: strip + "AUROC_STAR: 0.3\n", AMENDED: strip_a},
+    }
+    for name, over in cases.items():
+        d = _rulings(tmp_path / name, _real_bodies(**over))
+        with pytest.raises(e0d.ControlFailed) as ei:
+            e0d.check_authority(d, require_committed=False)
+        assert ei.value.control == "C8", name
+    # one value stated in only one file is enough, if both files exist
+    d = _rulings(tmp_path / "single", _real_bodies(**{AMENDED: strip_a}))
+    assert e0d.check_authority(d, require_committed=False)["auroc_star"] == 0.85
 
 
-def test_the_real_rulings_dir_does_not_authorise_e0d_today(e0d):
-    """At this commit none of the three rulings exists (PREREG C8)."""
+def test_a_rho_star_ruling_neither_satisfies_nor_is_read(e0d, tmp_path):
+    """T14: `R-*-rho-star*` is neither required nor read. A rho-star file standing
+    in for the first ruling does not satisfy C8, even if it states AUROC_STAR."""
+    rho = "R-2026-10-01-rho-star.md"
+    d = _rulings(tmp_path, _real_bodies(**{FIRST: None, rho: "AUROC_STAR: 0.85\n"}))
     with pytest.raises(e0d.ControlFailed) as ei:
-        e0d.check_authority(ROOT / "docs" / "owner" / "rulings")
+        e0d.check_authority(d, require_committed=False)
     assert ei.value.control == "C8"
+    # beside the two real rulings it changes nothing and is not read
+    d = _rulings(tmp_path / "b", _real_bodies(**{rho: "AUROC_STAR: 0.6\n"}))
+    assert e0d.check_authority(d, require_committed=False)["auroc_star"] == 0.85
+
+
+def _git_repo(path, files):
+    import subprocess
+
+    g = "/opt/homebrew/bin/git"
+    d = path / "rulings"
+    d.mkdir(parents=True)
+    subprocess.run([g, "init", "-q"], cwd=d, check=True)
+    for n, body in files.items():
+        (d / n).write_text(body)
+    env_c = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"]
+    subprocess.run([g, "add", "."], cwd=d, check=True)
+    subprocess.run([g, *env_c, "commit", "-qm", "rulings"], cwd=d, check=True)
+    return d
+
+
+def test_c8_committed_rulings_in_a_temp_repo(e0d, tmp_path):
+    """Step 4's fixture: with the four rulings committed in a git repo, C8 passes
+    and reads 0.85; the first ruling alone, the amended ruling alone, and an
+    uncommitted edit each exit 3."""
+    d = _git_repo(tmp_path / "both", _real_bodies())
+    assert e0d.check_authority(d)["auroc_star"] == 0.85
+    (d / AMENDED).write_text(AMENDED_TEXT.read_text() + "\nedited\n")
+    with pytest.raises(e0d.ControlFailed):
+        e0d.check_authority(d)
+    for drop in (AMENDED, FIRST):
+        d = _git_repo(tmp_path / drop, _real_bodies(**{drop: None}))
+        with pytest.raises(e0d.ControlFailed) as ei:
+            e0d.check_authority(d)
+        assert ei.value.control == "C8"
+
+
+def test_the_real_rulings_dir_authorises_e0d_iff_both_statistic_rulings(e0d):
+    """A2.13 on this tree: C8 passes iff docs/owner/rulings holds, committed, both
+    the first e0d-statistic ruling and an `-amended` one. At run/e0d before the
+    amended ruling (4252408) is merged, that is exit 3."""
+    import fnmatch
+
+    names = [p.name for p in RULINGS.iterdir()]
+    have_amended = any(fnmatch.fnmatch(n, "R-*-e0d-statistic-amended*") for n in names)
+    if have_amended:
+        assert e0d.check_authority(RULINGS)["auroc_star"] == 0.85
+    else:
+        with pytest.raises(e0d.ControlFailed) as ei:
+            e0d.check_authority(RULINGS)
+        assert ei.value.control == "C8"
+        assert "e0d-statistic-amended" in str(ei.value)
 
 
 # --------------------------------------------------------------------------- #
@@ -506,7 +619,7 @@ def test_main_refuses_before_any_e0d_document_without_the_rulings(
 
 def test_main_ledgers_the_failing_control(e0d, monkeypatch, fake_ledger):
     monkeypatch.setattr(
-        e0d, "check_authority", lambda *a, **k: {"rho_star": 0.5, "rulings": {}}
+        e0d, "check_authority", lambda *a, **k: {"auroc_star": 0.85, "rulings": {}}
     )
 
     def c1(root):
@@ -733,7 +846,7 @@ def test_a_nan_replicate_makes_the_interval_nan(e0d):
 
 def test_c10_ceiling_scores_true_demand_through_the_identical_code(e0d):
     c = _cells(score="bad")
-    an = e0d.analyse_seed(c, M=4, n_docs=40, rho_star=0.5, n_boot=40)
+    an = e0d.analyse_seed(c, M=4, n_docs=40, seed=0, auroc_star=0.85, n_boot=40)
     Q = c["q_step"]
     for k in ("resample", "zero"):
         pc = an["populations"]["all"]["stats"]["pc"][k]
@@ -767,16 +880,34 @@ def test_c10_ceiling_counts_as_unresolved_in_section_8(e0d):
     )
 
 
+COMBOS = ("gated_resample", "ungated_resample", "gated_zero", "ungated_zero")
+
+
 def _an(label, *, all_label=None, ungated=None, zero=None, loo_flat=False,
-        r_flat=False, pc_rank_ceiling=False):  # fmt: skip
+        r_flat=False, pc_rank_ceiling=False, label_a1=None, row5b=False,
+        raw_label=None, tau_labels=None):  # fmt: skip
+    """A per-seed analysis as `classify_run` reads it (PREREG A2.8): A2 labels per
+    grid cell, `label_A1`, the 5b boolean, the raw-substituted label and the tau
+    sensitivity labels, per population."""
+
     def pop(lab):
+        labs = {
+            "gated_resample": lab,
+            "ungated_resample": ungated or lab,
+            "gated_zero": zero or lab,
+            "ungated_zero": zero or lab,
+        }
+        a1 = label_a1 or lab
         return {
-            "labels": {
-                "gated_resample": lab,
-                "ungated_resample": ungated or lab,
-                "gated_zero": zero or lab,
+            "labels": labs,
+            "labels_A1": {"gated_resample": a1, "ungated_resample": a1, "gated_zero": a1},
+            "sensitivity_A1": {"0.3": a1, "0.7": a1},
+            "row5b": dict.fromkeys(COMBOS, row5b),
+            "labels_raw_substituted": {c: raw_label or labs[c] for c in COMBOS},
+            "tau_sensitivity": {
+                q: dict.fromkeys(COMBOS, (tau_labels or {}).get(q, lab))
+                for q in ("0.99", "0.999")
             },
-            "sensitivity": {"0.3": lab, "0.7": lab},
             "flags": {
                 "loo_flat": loo_flat,
                 "r_flat": r_flat,
@@ -837,7 +968,7 @@ def test_loo_flatness_is_the_a_cell_median_at_1e_2(e0d):
 
 def test_analysis_reads_flatness_on_a_cells(e0d):
     c = _cells(a_delta=0.02, noise=1e-4, score="bad")
-    an = e0d.analyse_seed(c, M=4, n_docs=40, rho_star=0.5, n_boot=20)
+    an = e0d.analyse_seed(c, M=4, n_docs=40, seed=0, auroc_star=0.85, n_boot=20)
     pa = an["populations"]["all"]
     assert pa["flags"]["loo_flat"] is False
     assert pa["flatness"]["q90_abs_delta_resample"] < 1e-3
@@ -934,7 +1065,7 @@ def test_bos_exclusion_drops_rank_m_minus_1_and_gap_1_query_steps(e0d):
 
 def test_bos_exclusion_recomputes_every_decision_statistic(e0d):
     c = _cells(score="bad")
-    an = e0d.analyse_seed(c, M=4, n_docs=40, rho_star=0.5, n_boot=20)
+    an = e0d.analyse_seed(c, M=4, n_docs=40, seed=0, auroc_star=0.85, n_boot=20)
     keep = e0d.bos_keep(c, M=4)
     pe = an["populations"]["bos_excluded"]
     assert pe["n_cells"] == int(keep.sum())
@@ -1048,7 +1179,7 @@ def cleared(e0d, monkeypatch, fake_ledger, tmp_path):
     gen = []
     monkeypatch.setattr(e0d, "_generate_document", lambda i, cfg: gen.append(i))
     monkeypatch.setattr(
-        e0d, "check_authority", lambda *a, **k: {"rho_star": 0.5, "rulings": {}}
+        e0d, "check_authority", lambda *a, **k: {"auroc_star": 0.85, "rulings": {}}
     )
     monkeypatch.setattr(e0d, "check_substrate", lambda root: {})
     monkeypatch.setattr(
@@ -1057,13 +1188,15 @@ def cleared(e0d, monkeypatch, fake_ledger, tmp_path):
     monkeypatch.setattr(e0d, "used_ranges", lambda runs: [])
     monkeypatch.setattr(e0d, "substrate_recheck", lambda m, cwd: {"rc": 0})
     monkeypatch.setattr(e0d, "BOOT_N", 30)
-    state = {"score": "bad", "raise": None}
+    state = {"score": "bad", "raise": None, "post": None}
 
     def fake_measure(seed, **kw):
         if state["raise"] is not None:
             raise state["raise"]
-        return {"seed": seed, "M": 4, "n_docs": 40, "S": 16,
-                "cells": _cells(score=state["score"], seed=seed)}  # fmt: skip
+        c = _cells(score=state["score"], seed=seed)
+        if state.get("post") is not None:
+            state["post"](c)
+        return {"seed": seed, "M": 4, "n_docs": 40, "S": 16, "cells": c}
 
     monkeypatch.setattr(e0d, "measure_seed", fake_measure)
     state["gen"] = gen
@@ -1194,3 +1327,982 @@ def test_a_raise_before_the_ledger_exists_still_exits_3(e0d, monkeypatch, fake_l
     assert int(e0d.main(["--no-such-flag"])) == 3
     monkeypatch.setattr(_FakeLedger, "manifest", boom)
     assert int(e0d.main([])) == 3
+
+
+# =========================================================================== #
+# PREREG Amendment 2 (8c63ecd): AUROC_strat,pct (the single gate), raw
+# AUROC_strat (read only by row 5b), per-seed tau, the A2.8 table and §8 with
+# row 4b, C8/C11/C12, the bootstrap's undefined replicates, and Part B's
+# calibration fixture (`experiments/e0d/calibration.py`). Test ids are Part B's
+# (`experiments/e0d/amendment-2/E0D-AMENDMENT-2-FINAL-v3.md`).
+#
+# 🔴 No fixture here reads or generates a document of D_E0d. The calibration
+# fixture is numbers only. The provenance tests read the vendored set-E cells
+# ([64, 128), already inspected; PREREG A2.2).
+# =========================================================================== #
+
+A2 = PREREG.read_text().split("## Amendment 2", 1)[1]
+A_STAR = 0.85  # the ruled value, used only as a test input; the runner reads it (C8)
+CALIB = ROOT / "experiments" / "e0d" / "calibration.py"
+VEND = ROOT / "experiments" / "e0d" / "amendment-2" / "reviews"
+
+
+@pytest.fixture(scope="module")
+def cal():
+    spec = importlib.util.spec_from_file_location("e0d_calibration", CALIB)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["e0d_calibration"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _fam(e0d, c, r, *, tau=None, keep=None, n_boot=0, seed=11, delta=None, M=16, **kw):
+    """`auroc_family` on the A1.3 population (default), with a small bootstrap."""
+    keep = e0d.bos_keep(c, M) if keep is None else keep
+    n_docs = int(np.max(c["doc"])) + 1
+    W = e0d.bootstrap_doc_weights(n_docs, n_boot, seed)
+    d = c["d_resample"] if delta is None else delta
+    t = c.get("tau", e0d.TAU_RESAMPLE[0]) if tau is None else tau
+    return e0d.auroc_family(c, r, d, tau=t, keep=keep, W=W, M=M, **kw)
+
+
+def _ref_strat_auroc(pct, y, age):
+    """Brute-force A2.4 steps 3-4 over explicit positive-negative pairs."""
+    num = den = 0.0
+    for a in np.unique(age):
+        m = age == a
+        p, n = pct[m & y], pct[m & ~y]
+        if len(p) == 0 or len(n) == 0:
+            continue
+        au = ((p[:, None] > n[None, :]) + 0.5 * (p[:, None] == n[None, :])).mean()
+        num, den = num + len(p) * au, den + len(p)
+    return num / den
+
+
+def _grid_cells(D, R, *, q, gap, docs, ts=None, M=16, pc=None):
+    """Full-memory cells from `[n_steps, M]` Delta and r grids by write-order rank
+    (rank i holds sentence t - (M - i): one slot per age, rank = M - age)."""
+    D, R = np.asarray(D, float), np.asarray(R, float)
+    n = D.shape[0]
+    ts = np.arange(M, M + n) if ts is None else np.asarray(ts)
+    rows = {k: [] for k in ("doc", "t", "rank", "sentence", "q_step", "a_cell", "gap",
+                            "d_resample", "r")}  # fmt: skip
+    for j in range(n):
+        for i in range(M):
+            age = M - i
+            rows["doc"].append(docs[j])
+            rows["t"].append(ts[j])
+            rows["rank"].append(i)
+            rows["sentence"].append(ts[j] - age)
+            rows["q_step"].append(bool(q[j]))
+            rows["a_cell"].append(bool(q[j]) and age == gap[j])
+            rows["gap"].append(gap[j] if q[j] else -1)
+            rows["d_resample"].append(D[j, i])
+            rows["r"].append(R[j, i])
+    c = {k: np.asarray(v) for k, v in rows.items()}
+    c["n_live"] = np.full(len(c["doc"]), M)
+    c["full"] = np.ones(len(c["doc"]), dtype=bool)
+    c["d_zero"] = c["d_resample"].copy()
+    c["pc"] = c["a_cell"].astype(float) if pc is None else pc
+    return c
+
+
+# --------------------------------------------------------------------------- #
+# constants, tau (A2.2, C12), and their provenance in the vendored set-E cells
+# --------------------------------------------------------------------------- #
+
+
+def test_amendment_2_constants_are_the_preregs(e0d):
+    """Every A2 number the runner holds, read back out of the committed text."""
+    for s in (0, 1, 2):
+        assert repr(e0d.TAU_RESAMPLE[s]) in A2
+        assert repr(e0d.TAU_ZERO[s]) in A2
+        for q in ("0.99", "0.999"):
+            for k in ("resample", "zero"):
+                assert repr(e0d.TAU_SENSITIVITY[q][k][s]) in A2
+    assert "q = 0.995 quantile" in A2 and e0d.TAU_Q == 0.995
+    assert "`AUROC_strat,pct` CI upper < 0.5" in A2 and e0d.AUROC_INVERTED == 0.5
+    assert "exactly one distinct `AUROC_STAR` value, in (0.5, 1)" in A2
+    assert tuple(range(1, 17)) == e0d.AGE_BINS
+    assert "0, 1, 2, 5b, 3, 4, 5, 6, 7" in A2
+    assert e0d.LABEL_ORDER == ("0", "1", "2", "5b", "3", "4", "5", "6", "7")
+
+
+def test_c12_tau_tables_equal_the_preregs_and_hold_exactly_seeds_0_1_2(e0d, monkeypatch):
+    """C12 (A2.13): the runner's TAU tables hold exactly {0, 1, 2} and equal A2.2's
+    registered values, read from the PREREG text at run time; else exit 3."""
+    out = e0d.check_tau_tables()
+    assert out["seeds"] == [0, 1, 2]
+    bad = dict(e0d.TAU_RESAMPLE)
+    bad[2] = e0d.TAU_RESAMPLE[0]  # seed 0's tau for seed 2
+    monkeypatch.setattr(e0d, "TAU_RESAMPLE", bad)
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.check_tau_tables()
+    assert ei.value.control == "C12"
+    monkeypatch.setattr(e0d, "TAU_RESAMPLE", {0: bad[0], 1: bad[1]})
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.check_tau_tables()
+    assert ei.value.control == "C12"
+
+
+def test_c12_refuses_a_zero_tau_that_differs(e0d, monkeypatch):
+    z = dict(e0d.TAU_ZERO)
+    z[1] = z[1] + 1e-12
+    monkeypatch.setattr(e0d, "TAU_ZERO", z)
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.check_tau_tables()
+    assert ei.value.control == "C12"
+
+
+def _set_e(seed):
+    """Vendored set-E cells [64, 128) (PREREG A2.2), as `cells_from`-shaped arrays."""
+    p = (VEND / "e0d-a2" / "step1_cells.npz" if seed == 0
+         else VEND / "e0d-a2-final" / f"tau_cells_seed{seed}.npz")  # fmt: skip
+    z = dict(np.load(p))
+    return p, {
+        "doc": z["doc"], "t": z["t"], "rank": z["rank"], "sentence": z["sent"],
+        "q_step": z["q"].astype(bool), "a_cell": z["a"].astype(bool), "gap": z["gap"],
+        "full": z["tfull"].astype(bool), "n_live": np.where(z["tfull"], 16, 0),
+        "d_resample": z["dres"], "d_zero": z["dzero"],
+        "pc": (z["q"] & z["a"]).astype(float),
+    }  # fmt: skip
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_tau_is_the_q0995_of_off_a_q_cells_in_the_vendored_set_e_cells(e0d, seed):
+    """A2.2 provenance: each cells file has the registered sha256, and tau (both
+    knockouts, and the sensitivities) re-derives exactly from it by numpy's default
+    quantile. The runner never computes this on D_E0d; it reads the constant."""
+    import hashlib
+
+    p, c = _set_e(seed)
+    sha = hashlib.sha256(p.read_bytes()).hexdigest()
+    assert sha in A2
+    Q = c["full"] & c["q_step"]
+    A = Q & c["a_cell"]
+    for k, table in (("resample", e0d.TAU_RESAMPLE), ("zero", e0d.TAU_ZERO)):
+        d = c[f"d_{k}"]
+        ad = np.abs(d[Q & ~A & ~np.isnan(d)])
+        assert (ad == 0).sum() == 0
+        assert float(np.quantile(ad, 0.995)) == table[seed]
+        for q in ("0.99", "0.999"):
+            assert float(np.quantile(ad, float(q))) == e0d.TAU_SENSITIVITY[q][k][seed]
+
+
+def test_the_runner_reproduces_the_a24_table_on_set_e(e0d, cal):
+    """A2.4's table (m6_out_012.json) through the runner's own code: on real set-E
+    labels, the binary perfect proxy is 1.0, age-only and recency are exactly 0.5,
+    true_demand is 0.9672 / 0.9731 / 0.9750, and the continuous perfect proxy and
+    the pure step-concentration score (m6's own draws) match to 4 decimals."""
+    m6 = json.loads((VEND / "e0d-a2-final" / "m6_out_012.json").read_text())
+    for seed in (0, 1, 2):
+        _, c = _set_e(seed)
+        tau = e0d.TAU_RESAMPLE[seed]
+        keep = e0d.bos_keep(c, 16)
+        pop = e0d.q_population(c, keep, M=16)
+        # m6's grid order: steps by doc*49 + t, ranks 0..15; eps is its first draw
+        cases = m6[f"seed{seed}"]["cases"]
+        ns = pop["n_steps"]
+        rng = np.random.default_rng(1000 + seed)
+        eps = rng.standard_normal((ns, 16))
+        cell_eps = eps[pop["step"], np.asarray(c["rank"])[pop["idx"]]]
+        d = np.asarray(c["d_resample"])[pop["idx"]]
+        y = ~np.isnan(d) & (d > tau)
+        kt = np.bincount(pop["step"], weights=y, minlength=ns)
+        has = (kt >= 1)[pop["step"]]
+        full_r = np.zeros(len(c["doc"]))
+
+        def run(r_pop, c=c, pop=pop, tau=tau, keep=keep, full_r=full_r):
+            full_r = full_r.copy()
+            full_r[pop["idx"]] = r_pop
+            return e0d.auroc_family(c, full_r, c["d_resample"], tau=tau, keep=keep,
+                                    W=np.zeros((0, 64)), M=16)  # fmt: skip
+
+        def sm(x, pop=pop, ns=ns):
+            return cal.softmax_steps(x, pop["step"])
+
+        got = {
+            "perfect, binary y (tied)": run(y.astype(float)),
+            "true_demand (A-cell, C10 control)": run(np.asarray(c["pc"])[pop["idx"]]),
+            "recency -age": run(-pop["age"].astype(float)),
+            "perfect, softmax(10y+eps)": run(sm(10 * y + cell_eps)),
+            "pure step-concentration (flat on k>=1, peaked else)": run(
+                sm(np.where(has, 0.0, 50.0) * cell_eps)
+            ),
+        }
+        for name, fam in got.items():
+            assert round(fam["pct"], 4) == cases[name]["AUROC_strat_pct"], (seed, name)
+            assert round(fam["raw"], 4) == cases[name]["AUROC_strat_raw"], (seed, name)
+        assert got["perfect, binary y (tied)"]["pct"] == 1.0
+        assert got["recency -age"]["pct"] == 0.5 and got["recency -age"]["raw"] == 0.5
+        pos = m6[f"seed{seed}"]["positives"]
+        assert got["perfect, binary y (tied)"]["positives"] == pos
+        assert got["perfect, binary y (tied)"]["n_q_steps"] == m6[f"seed{seed}"][
+            "n_Q_steps_excl"]  # fmt: skip
+
+
+def test_labels_use_each_seeds_own_tau_and_strict_greater(e0d, monkeypatch):
+    """T11 / A2.2: y = 1[Delta > tau_s], strict; a NaN has no label; the labelling
+    path computes no quantile (np.quantile raises inside it)."""
+
+    def boom(*a, **k):
+        raise AssertionError("a quantile was computed in the labelling path")
+
+    for s in (0, 1, 2):
+        tau = e0d.tau_for(s, "resample")
+        assert tau == e0d.TAU_RESAMPLE[s]
+        assert e0d.tau_for(s, "zero") == e0d.TAU_ZERO[s]
+        d = np.array([tau, np.nextafter(tau, 1.0), tau - 0.1, np.nan, 5.0])
+        with monkeypatch.context() as m:
+            m.setattr(np, "quantile", boom)
+            has, y = e0d.critical_labels(d, tau)
+        assert has.tolist() == [True, True, True, False, True]
+        assert y.tolist() == [False, True, False, False, True]
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_analyse_seed_labels_with_that_seeds_frozen_tau(e0d, seed):
+    """T11: the analysis uses tau_s of the seed it analyses (never seed 0's for
+    all, never a quantile of the run's cells), and records it."""
+    c = _cells(score="good", a_delta=0.46, noise=1e-4)  # between tau_0,1 and tau_2
+    an = e0d.analyse_seed(c, M=4, n_docs=40, seed=seed, auroc_star=A_STAR, n_boot=4)
+    cell = an["populations"]["all"]["a2"]["gated_resample"]
+    assert cell["r"]["tau"] == e0d.TAU_RESAMPLE[seed]
+    assert an["tau"]["resample"] == e0d.TAU_RESAMPLE[seed]
+    assert an["tau"]["zero"] == e0d.TAU_ZERO[seed]
+    Q = c["q_step"]
+    want = int((Q & (c["d_resample"] > e0d.TAU_RESAMPLE[seed])).sum())
+    assert cell["r"]["positives"] == want
+    assert (want > 0) == (seed != 2)
+
+
+# --------------------------------------------------------------------------- #
+# A2.3 / C11 age strata, A1.3 population (T15, T16)
+# --------------------------------------------------------------------------- #
+
+
+def test_c11_one_slot_per_age_and_rank_is_m_minus_age(e0d):
+    c = _cells()
+    out = e0d.check_ages(c, M=4)
+    assert out["ok"] and out["n_full_steps"] > 0
+    bad = dict(c)
+    bad["sentence"] = c["sentence"].copy()
+    j = int(np.flatnonzero(c["full"])[1])
+    bad["sentence"][j] = bad["sentence"][j - 1]  # T15: a duplicated age at one step
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.check_ages(bad, M=4)
+    assert ei.value.control == "C11"
+    bad2 = dict(c)
+    bad2["rank"] = c["rank"][::-1].copy()  # rank != M - age
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.check_ages(bad2, M=4)
+    assert ei.value.control == "C11"
+
+
+def test_analyse_seed_runs_c11(e0d):
+    c = _cells()
+    c["sentence"] = c["sentence"].copy()
+    c["sentence"][1] = c["sentence"][0]
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.analyse_seed(c, M=4, n_docs=40, seed=0, auroc_star=A_STAR, n_boot=2)
+    assert ei.value.control == "C11"
+
+
+def test_a13_population_has_n_t_15_no_bin_1_no_gap_1_steps(e0d, cal):
+    """T16: under A1.3 every Q-step has n_t = 15, bin {1} is empty and logged as
+    excluded, and no gap-1 Q-step is present; all-cells has n_t = 16."""
+    c = cal.synthetic_ledger(3, 64)
+    pop = e0d.q_population(c, e0d.bos_keep(c, 16), M=16)
+    assert set(pop["n_t"].tolist()) == {15}
+    assert 1 not in set(pop["age"].tolist())
+    assert (np.asarray(c["gap"])[pop["idx"]] != 1).all()
+    assert ((np.asarray(c["gap"]) == 1) & c["q_step"] & c["full"]).any()
+    fam = _fam(e0d, c, cal.perfect_binary(c))
+    assert {b["bin"] for b in fam["pct_excluded_bins"]} >= {1}
+    assert fam["n_t_values"] == [15]
+    allc = e0d.q_population(c, np.ones(len(c["doc"]), dtype=bool), M=16)
+    assert set(allc["n_t"].tolist()) == {16}
+
+
+def test_the_a13_population_asserts_n_t_is_m_minus_1(e0d, cal):
+    """C11 under A1.3: n_t = M - 1 at every Q-step; a Q-step missing a slot is exit 3."""
+    c = cal.synthetic_ledger(4, 16)
+    j = int(np.flatnonzero(c["full"] & c["q_step"] & (c["rank"] == 3))[0])
+    drop = np.ones(len(c["doc"]), dtype=bool)
+    drop[j] = False
+    c2 = {k: (v[drop] if isinstance(v, np.ndarray) else v) for k, v in c.items()}
+    with pytest.raises(e0d.ControlFailed) as ei:
+        e0d.q_population(c2, e0d.bos_keep(c2, 16), M=16)
+    assert ei.value.control == "C11"
+
+
+# --------------------------------------------------------------------------- #
+# A2.4: the within-step percentile, labels, bins, NaN donors (T5, T8, T9, T10)
+# --------------------------------------------------------------------------- #
+
+
+def test_pct_is_the_midrank_over_all_eligible_slots(e0d):
+    """A2.4 step 1: pct = (midrank - 1) / (n_t - 1) over the step's eligible slots;
+    tied slots share the midrank (T8)."""
+    R = np.array([[5, 1, 3, 3, 9, 0, 2, 7, 7, 7, 4, 6, 8, 10, 11, 12.0]])
+    c = _grid_cells(np.zeros((1, 16)), R, q=[True], gap=[5], docs=[0])
+    keep = np.ones(16, dtype=bool)
+    pop = e0d.q_population(c, keep, M=16)
+    pct = e0d.step_percentiles(c["r"][pop["idx"]], pop)
+    want = (_ref_rank(R[0]) - 1) / 15
+    assert np.array_equal(pct, want[np.asarray(c["rank"])[pop["idx"]]])
+    assert pct[np.asarray(c["rank"])[pop["idx"]] == 2][0] == pct[
+        np.asarray(c["rank"])[pop["idx"]] == 3][0]  # fmt: skip
+
+
+def test_ties_count_half_in_the_auroc(e0d):
+    """T8: two slots tied in r, one critical: they share a pct, and the pair counts
+    1/2. Hand value on one step of 16 (all-cells population, one bin per age)."""
+    R = np.arange(16, dtype=float)[None, :].repeat(2, 0)
+    R[0, 3] = R[0, 4] = 3.5  # ranks 3 and 4 tied at step 0
+    D = np.zeros((2, 16))
+    D[0, 3] = 1.0  # critical, tied with the negative at rank 4
+    D[1, 4] = 1.0  # step 1: the positive at rank 4, same bin (age 12) as step 0's
+    c = _grid_cells(D, R, q=[True, True], gap=[13, 12], docs=[0, 1])
+    keep = np.ones(len(c["doc"]), dtype=bool)
+    fam = _fam(e0d, c, c["r"], tau=0.5, keep=keep)
+    pop = e0d.q_population(c, keep, M=16)
+    pct = e0d.step_percentiles(c["r"][pop["idx"]], pop)
+    y = np.asarray(c["d_resample"])[pop["idx"]] > 0.5
+    assert fam["pct"] == pytest.approx(_ref_strat_auroc(pct, y, pop["age"]), abs=0)
+    # bin of age 13 holds the step-0 positive (pct 3.5/15) and step-1's negative (3/15)
+    b13 = next(b for b in fam["pct_per_bin"] if b["bin"] == 13)
+    assert b13["auroc"] == 1.0 and b13["positives"] == 1 and b13["negatives"] == 1
+    # bin of age 12: step-0 negative tied (pct 3.5/15) vs step-1 positive (4/15)
+    b12 = next(b for b in fam["pct_per_bin"] if b["bin"] == 12)
+    assert b12["auroc"] == 1.0
+    # a pure tie inside one bin counts exactly 1/2
+    R2 = np.zeros((2, 16))
+    D2 = np.zeros((2, 16))
+    D2[0, 5] = 1.0
+    c2 = _grid_cells(D2, R2, q=[True, True], gap=[11, 11], docs=[0, 1])
+    fam2 = _fam(e0d, c2, c2["r"], tau=0.5, keep=np.ones(32, dtype=bool))
+    assert next(b for b in fam2["pct_per_bin"] if b["bin"] == 11)["auroc"] == 0.5
+
+
+def test_a_nan_donor_keeps_its_step_and_every_other_pct(e0d, cal):
+    """T9: a NaN Delta on one eligible slot leaves n_t at 15 and every other slot's
+    pct unchanged; only that cell leaves the AUROC; the step stays."""
+    c = cal.synthetic_ledger(5, 32, nan_mode="independent")
+    keep = e0d.bos_keep(c, 16)
+    r = cal.content(c, np.random.default_rng(1), 1.5)
+    filled = dict(c)
+    filled["d_resample"] = np.nan_to_num(c["d_resample"], nan=0.0)
+    pop = e0d.q_population(c, keep, M=16)
+    pop_f = e0d.q_population(filled, keep, M=16)
+    assert np.isnan(np.asarray(c["d_resample"])[pop["idx"]]).any()
+    assert np.array_equal(pop["idx"], pop_f["idx"]) and set(pop["n_t"]) == {15}
+    assert np.array_equal(e0d.step_percentiles(r[pop["idx"]], pop),
+                          e0d.step_percentiles(r[pop_f["idx"]], pop_f))  # fmt: skip
+    a, b = _fam(e0d, c, r), _fam(e0d, filled, r)
+    assert a["n_q_steps"] == b["n_q_steps"]
+    assert a["labelled"] == b["labelled"] - int(
+        np.isnan(np.asarray(c["d_resample"])[pop["idx"]]).sum()
+    )
+
+
+def test_a_non_finite_r_on_an_eligible_slot_is_undefined(e0d, cal):
+    """T10: a non-finite r on an eligible slot is MeasurementUndefined (exit 3)."""
+    c = cal.synthetic_ledger(6, 16)
+    r = cal.content(c, np.random.default_rng(0), 1.0)
+    pop = e0d.q_population(c, e0d.bos_keep(c, 16), M=16)
+    for bad in (np.nan, np.inf):
+        r2 = r.copy()
+        r2[pop["idx"][7]] = bad
+        with pytest.raises(e0d.MeasurementUndefined):
+            _fam(e0d, c, r2)
+    # a non-finite r OFF the population (rank 15, excluded by A1.3) is not read
+    r3 = r.copy()
+    r3[np.flatnonzero(c["full"] & c["q_step"] & (c["rank"] == 15))[0]] = np.nan
+    _fam(e0d, c, r3)
+
+
+def test_a_non_finite_r_through_main_exits_3(e0d, cleared, fake_ledger):
+    cleared["post"] = lambda c: c.__setitem__("r_gated", np.where(
+        c["q_step"] & (c["rank"] == 0), np.nan, c["r_gated"]))  # fmt: skip
+    assert int(e0d.main([])) == 3
+    assert _row(fake_ledger, "e0d.class") is None
+
+
+def test_bins_without_both_classes_are_excluded_and_logged(e0d):
+    """T5: a bin with positives but no negatives, and a bin with neither, are
+    excluded and logged with counts; w excludes them; the value is the hand value
+    on the rest."""
+    rng = np.random.default_rng(3)
+    n = 6
+    R = rng.random((n, 16))
+    D = np.zeros((n, 16))
+    D[:, 0] = 1.0  # age 16: positive in every step -> no negative in bin 16
+    D[0, 5] = 1.0
+    D[1, 7] = 1.0
+    c = _grid_cells(D, R, q=[True] * n, gap=[40] * n, docs=list(range(n)))
+    keep = np.ones(len(c["doc"]), dtype=bool)
+    # a bin with neither class: drop every age-3 cell's label (NaN Delta)
+    c["d_resample"] = np.where(c["rank"] == 13, np.nan, c["d_resample"])
+    fam = _fam(e0d, c, c["r"], tau=0.5, keep=keep)
+    ex = {b["bin"]: b for b in fam["pct_excluded_bins"]}
+    assert ex[16]["positives"] == n and ex[16]["negatives"] == 0
+    assert ex[3]["positives"] == 0 and ex[3]["negatives"] == 0
+    pop = e0d.q_population(c, keep, M=16)
+    pct = e0d.step_percentiles(c["r"][pop["idx"]], pop)
+    d = np.asarray(c["d_resample"])[pop["idx"]]
+    lab = ~np.isnan(d)
+    y = d[lab] > 0.5
+    ok = ~np.isin(pop["age"][lab], [16, 3])
+    want = _ref_strat_auroc(pct[lab][ok], y[ok], pop["age"][lab][ok])
+    assert fam["pct"] == pytest.approx(want, abs=1e-15)
+    used = {b["bin"]: b for b in fam["pct_per_bin"]}
+    assert 16 not in used and 3 not in used
+    assert sum(b["positives"] for b in used.values()) == 2
+
+
+def test_w_a_is_the_positives_in_the_bin(e0d):
+    """A2.4 step 4: w_a is the positive count, not the cell count."""
+    R = np.tile(np.arange(16.0), (4, 1))
+    D = np.zeros((4, 16))
+    D[0, 2] = D[1, 2] = D[2, 2] = 1.0  # bin 14: three positives, pct 2/15 (low)
+    D[3, 10] = 1.0  # bin 6: one positive, pct 10/15 (high)
+    R[3, 10] = 20.0
+    c = _grid_cells(D, R, q=[True] * 4, gap=[40] * 4, docs=[0, 1, 2, 3])
+    fam = _fam(e0d, c, c["r"], tau=0.5, keep=np.ones(64, dtype=bool))
+    b = {x["bin"]: x for x in fam["pct_per_bin"]}
+    want = (3 * b[14]["auroc"] + 1 * b[6]["auroc"]) / 4
+    assert fam["pct"] == pytest.approx(want, abs=1e-15)
+    assert b[14]["auroc"] == 0.5 and b[6]["auroc"] == 1.0
+
+
+def test_unstratified_pct_is_a_single_bin(e0d, cal):
+    c = cal.synthetic_ledger(7, 32)
+    r = cal.content(c, np.random.default_rng(2), 1.5)
+    fam = _fam(e0d, c, r)
+    pop = e0d.q_population(c, e0d.bos_keep(c, 16), M=16)
+    pct = e0d.step_percentiles(r[pop["idx"]], pop)
+    d = np.asarray(c["d_resample"])[pop["idx"]]
+    lab = ~np.isnan(d)
+    want = _ref_strat_auroc(pct[lab], d[lab] > c["tau"], np.zeros(lab.sum()))
+    assert fam["unstrat_pct"] == pytest.approx(want, abs=1e-12)
+    assert fam["raw"] == pytest.approx(
+        _ref_strat_auroc(r[pop["idx"]][lab], d[lab] > c["tau"], pop["age"][lab]),
+        abs=1e-12,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Part B.1 calibration (T1a, T1b, T1c, T2, T3, T4a, T4b, T7, T18)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("noise", ["continuous", "tied"])
+@pytest.mark.parametrize("nan_mode", ["matched", "independent"])
+def test_t1a_perfect_binary_proxy_is_exactly_1(e0d, cal, noise, nan_mode):
+    c = cal.synthetic_ledger(0, 64, noise=noise, nan_mode=nan_mode)
+    fam = _fam(e0d, c, cal.perfect_binary(c))
+    assert fam["pct"] == 1.0 and fam["raw"] == 1.0
+
+
+@pytest.mark.parametrize("nan_mode", ["matched", "independent"])
+def test_t1b_continuous_perfect_one_per_step_is_exactly_1(e0d, cal, nan_mode):
+    c = cal.synthetic_ledger(1, 64, k_profile="one_per_step", nan_mode=nan_mode)
+    fam = _fam(e0d, c, cal.perfect_continuous(c, np.random.default_rng(1)))
+    assert fam["pct"] == 1.0
+
+
+def test_t1c_continuous_perfect_matched_is_the_hand_ceiling_below_1(e0d, cal):
+    """T1c: on the matched profile the k = 0 steps' pct = 1 negatives tie or beat
+    positives, so the continuous perfect proxy sits below 1 at the brute-force
+    value (A2.4: about 0.987 on set E)."""
+    c = cal.synthetic_ledger(2, 64)
+    r = cal.perfect_continuous(c, np.random.default_rng(2))
+    fam = _fam(e0d, c, r)
+    pop = e0d.q_population(c, e0d.bos_keep(c, 16), M=16)
+    pct = e0d.step_percentiles(r[pop["idx"]], pop)
+    d = np.asarray(c["d_resample"])[pop["idx"]]
+    lab = ~np.isnan(d)
+    want = _ref_strat_auroc(pct[lab], d[lab] > c["tau"], pop["age"][lab])
+    assert fam["pct"] == pytest.approx(want, abs=1e-12)
+    assert 0.97 < fam["pct"] < 1.0
+    print(f"T1c continuous perfect proxy AUROC_strat,pct = {fam['pct']:.4f}")
+
+
+def _sd(e0d, c, r, n_boot=200):
+    fam = _fam(e0d, c, r, n_boot=n_boot, replicates=True)
+    reps = fam["_replicates"]["pct"]
+    return fam, float(np.nanstd(reps))
+
+
+def test_t2_within_step_shuffle_is_null(e0d, cal):
+    """T2: |pct - 0.5| < 4 sd and C_ws within 4 sd of 0, sd at the fixture's own n
+    (D.2 item 6), 1024 documents."""
+    c = cal.synthetic_ledger(8, 1024)
+    r = cal.shuffle(c, np.random.default_rng(8))
+    fam = _fam(e0d, c, r, n_boot=100, replicates=True)
+    sd = float(np.std(fam["_replicates"]["pct"]))
+    sd_c = float(np.std(fam["_replicates"]["c_ws"]))
+    assert abs(fam["pct"] - 0.5) < 4 * sd, (fam["pct"], sd)
+    assert abs(fam["c_ws"]) < 4 * sd_c, (fam["c_ws"], sd_c)
+    print(f"T2 shuffle pct = {fam['pct']:.4f} (sd {sd:.4f}); C_ws = {fam['c_ws']:.4f}")
+
+
+@pytest.mark.parametrize("which", ["age_only", "recency"])
+@pytest.mark.parametrize("population", ["a13", "all"])
+def test_t3_age_only_scores_are_exactly_half(e0d, cal, which, population):
+    """T3: an age-only score gives AUROC_strat,pct == 0.5 and raw == 0.5 exactly,
+    C_ws == 0 within 1e-12 and R_H == 1.0 exactly, in both populations."""
+    c = cal.synthetic_ledger(9, 64)
+    r = getattr(cal, which)(c)
+    keep = None if population == "a13" else np.ones(len(c["doc"]), dtype=bool)
+    fam = _fam(e0d, c, r, keep=keep)
+    assert fam["pct"] == 0.5 and fam["raw"] == 0.5
+    assert abs(fam["c_ws"]) < 1e-12
+    assert fam["R_H"] == 1.0
+    print(
+        f"T3 {which} [{population}]: pct {fam['pct']}, raw {fam['raw']}, R_H {fam['R_H']}"
+    )
+
+
+def test_t4a_pct_family_is_invariant_to_per_step_monotone_transforms(e0d, cal):
+    """T4a: rescaled c_t r and step temperature leave pct, C_ws, H and the argmins
+    unchanged, bit for bit."""
+    c = cal.synthetic_ledger(10, 64)
+    eps = np.random.default_rng(10).standard_normal(len(c["doc"]))
+    base = cal.softmax_steps(2.0 * cal._crit(c) + eps, cal.step_ids(c))
+    temp = cal.step_temperature(c, None, 2.0, eps=eps)
+    temp_r = cal.step_temperature(c, None, 2.0, reverse=True, eps=eps)
+    resc = cal.rescaled(c, np.random.default_rng(11), base)
+    pop = e0d.q_population(c, e0d.bos_keep(c, 16), M=16)
+    f0 = _fam(e0d, c, base)
+    for r in (temp, temp_r, resc):
+        f = _fam(e0d, c, r)
+        for k in ("pct", "c_ws", "H", "unstrat_pct"):
+            assert f[k] == f0[k], k
+        assert np.array_equal(e0d.tied_minima(r[pop["idx"]], pop),
+                              e0d.tied_minima(base[pop["idx"]], pop))  # fmt: skip
+
+
+def test_t4b_raw_auroc_moves_under_rescaling(e0d, cal):
+    """T4b: raw AUROC_strat is not invariant to per-step rescaling (the pinned
+    counter-example), so STEP_SENSITIVE is computable."""
+    c = cal.synthetic_ledger(10, 64)
+    base = cal.content(c, np.random.default_rng(12), 2.0)
+    resc = cal.rescaled(c, np.random.default_rng(13), base)
+    a, b = _fam(e0d, c, base), _fam(e0d, c, resc)
+    assert a["pct"] == b["pct"] and a["raw"] != b["raw"]
+
+
+def test_t7_spearman_of_a_binary_proxy_is_capped(e0d, cal):
+    """T7 / A2.12: against continuous Delta a perfect binary score's Spearman is at
+    most sqrt(3 p (1 - p)) (+ 0.01)."""
+    c = cal.synthetic_ledger(14, 256)
+    Q = c["full"] & c["q_step"] & ~np.isnan(c["d_resample"])
+    y = c["crit"][Q].astype(float)
+    p = y.mean()
+    rho = e0d.spearman(y, c["d_resample"][Q])
+    assert rho <= math.sqrt(3 * p * (1 - p)) + 0.01
+    assert rho > 0
+
+
+def test_t18_pure_step_concentration_is_half_on_pct_not_on_raw(e0d, cal):
+    """T18: pure step-level signal (no within-step content) gives pct within 4 sd
+    of 0.5, while raw AUROC_strat sits in (0.55, 0.70)."""
+    c = cal.synthetic_ledger(15, 256)
+    r = cal.step_concentration(c, np.random.default_rng(15))
+    fam, sd = _sd(e0d, c, r, n_boot=100)
+    assert abs(fam["pct"] - 0.5) < 4 * sd, (fam["pct"], sd)
+    assert 0.55 < fam["raw"] < 0.70, fam["raw"]
+    print(
+        f"T18 step-concentration: pct {fam['pct']:.4f} (sd {sd:.4f}), "
+        f"raw {fam['raw']:.4f}"
+    )
+
+
+def test_graded_content_and_the_age_term(e0d, cal):
+    """A2.11's shape on the fixture: pct rises with content strength a, and an
+    age term u(age) lowers pct while raw does not fall (D.2 item 3)."""
+    c = cal.synthetic_ledger(16, 256)
+    vals = [_fam(e0d, c, cal.content(c, np.random.default_rng(16), a))["pct"]
+            for a in (0.5, 1.0, 1.5, 2.0, 3.0)]  # fmt: skip
+    assert vals == sorted(vals) and vals[0] > 0.55 and vals[-1] > 0.95
+    plain = _fam(e0d, c, cal.content(c, np.random.default_rng(17), 2.0))
+    aged = _fam(e0d, c, cal.age_steered(c, np.random.default_rng(17), 2.0))
+    assert aged["pct"] < plain["pct"]
+
+
+def test_calibration_fixture_expected_values(e0d, cal):
+    """The §6A / B.1 calibration values, each printed for the report: the pct
+    artefact (pure step-concentration) is about 0.5, age-only is 0.5 exactly, the
+    binary perfect proxy is 1.0 exactly, and the continuous perfect proxy is about
+    0.987; under both NaN modes."""
+    for nan_mode in ("matched", "independent"):
+        c = cal.synthetic_ledger(21, 1024, nan_mode=nan_mode)
+        rng = np.random.default_rng(21)
+        got = {
+            "pct artefact (step-concentration)": _fam(
+                e0d, c, cal.step_concentration(c, rng))["pct"],
+            "age-only": _fam(e0d, c, cal.age_only(c))["pct"],
+            "perfect binary": _fam(e0d, c, cal.perfect_binary(c))["pct"],
+            "perfect continuous": _fam(e0d, c, cal.perfect_continuous(c, rng))["pct"],
+        }  # fmt: skip
+        print(f"calibration [{nan_mode}]: "
+              + ", ".join(f"{k} = {v:.4f}" for k, v in got.items()))  # fmt: skip
+        assert abs(got["pct artefact (step-concentration)"] - 0.5) < 0.01
+        assert got["age-only"] == 0.5
+        assert got["perfect binary"] == 1.0
+        assert 0.98 < got["perfect continuous"] < 0.995
+
+
+# --------------------------------------------------------------------------- #
+# A2.6 H (reported), C_ws, and the bootstrap (T6, T17, m-7)
+# --------------------------------------------------------------------------- #
+
+
+def test_t6_h_random_is_the_mean_of_k_over_n_t(e0d):
+    """T6: H_random == mean(k_t / n_t) exactly over Q_crit, n_t = 16 all-cells and
+    15 under A1.3; a step with a NaN eligible slot leaves Q_crit and is counted."""
+    rng = np.random.default_rng(4)
+    ks = [1, 2, 3, 1, 2]
+    D = np.zeros((6, 16))
+    for j, k in enumerate(ks):
+        D[j, 1 : 1 + k] = 1.0  # ranks 1..k (never rank 15)
+    D[5, 2] = 1.0
+    D[5, 6] = np.nan  # the sixth step has a NaN eligible slot
+    R = rng.random((6, 16))
+    c = _grid_cells(D, R, q=[True] * 6, gap=[40] * 6, docs=list(range(6)))
+    for keep, n_t in ((np.ones(96, dtype=bool), 16), (e0d.bos_keep(c, 16), 15)):
+        fam = _fam(e0d, c, c["r"], tau=0.5, keep=keep)
+        assert fam["n_q_crit"] == 5 and fam["n_q_crit_dropped_nan"] == 1
+        assert fam["H_random"] == float(np.mean(np.array(ks) / n_t))
+
+
+def test_h_is_the_critical_share_of_the_tied_minima(e0d):
+    """A2.6: h_t is the fraction of the step's tied minima of r that are critical
+    (1/2 for a two-way tie with one critical); FIFO and the age oracle as defined."""
+    R = np.ones((3, 16))
+    D = np.zeros((3, 16))
+    R[0, 4] = 0.0
+    D[0, 4] = 1.0  # unique argmin, critical: h = 1
+    R[1, 4] = R[1, 7] = 0.0
+    D[1, 7] = 1.0  # two-way tie, one critical: h = 1/2
+    R[2, 9] = 0.0
+    D[2, 0] = 1.0  # argmin not critical: h = 0; the critical cell is the oldest
+    c = _grid_cells(D, R, q=[True] * 3, gap=[40] * 3, docs=[0, 1, 2])
+    fam = _fam(e0d, c, c["r"], tau=0.5, keep=np.ones(48, dtype=bool))
+    assert fam["H"] == pytest.approx(0.5)  # (1 + 1/2 + 0) / 3
+    assert fam["H_FIFO"] == pytest.approx(1 / 3)
+    assert fam["H_age_oracle"] == 0.0
+
+
+def test_t17_one_bootstrap_matrix_per_seed(e0d, monkeypatch):
+    """T17: one W for every statistic of a seed."""
+    calls = []
+    real = e0d.bootstrap_doc_weights
+
+    def counting(*a, **k):
+        calls.append(a)
+        return real(*a, **k)
+
+    monkeypatch.setattr(e0d, "bootstrap_doc_weights", counting)
+    e0d.analyse_seed(_cells(), M=4, n_docs=40, seed=0, auroc_star=A_STAR, n_boot=3)
+    assert len(calls) == 1
+
+
+def test_t17_pct_is_computed_once_not_per_resample(e0d, cal, monkeypatch):
+    """T17: pct is computed once per step on the original data; a resample never
+    recomputes it (a document's steps are resampled whole)."""
+    c = cal.synthetic_ledger(17, 32)
+    r = cal.content(c, np.random.default_rng(0), 1.5)
+    counts = {}
+    real = e0d.step_percentiles
+    for n_boot in (2, 9):
+        calls = []
+
+        def counting(*a, _calls=calls, **k):
+            _calls.append(1)
+            return real(*a, **k)
+
+        monkeypatch.setattr(e0d, "step_percentiles", counting)
+        _fam(e0d, c, r, n_boot=n_boot)
+        counts[n_boot] = len(calls)
+    assert counts[2] == counts[9] >= 1
+
+
+def test_t17_m_a_and_pi_are_re_estimated_per_resample(e0d, cal):
+    """T17: C_ws's m_a and H_age-random's pi are re-estimated in each resample (the
+    replicate equals the hand value from the weighted sample, not from fixed m_a)."""
+    c = cal.synthetic_ledger(18, 24)
+    r = cal.content(c, np.random.default_rng(18), 1.0)
+    keep = e0d.bos_keep(c, 16)
+    w_doc = np.random.default_rng(5).integers(0, 4, 24).astype(float)
+    fam = e0d.auroc_family(c, r, c["d_resample"], tau=c["tau"], keep=keep,
+                           W=w_doc[None, :], M=16, replicates=True)  # fmt: skip
+    pop = e0d.q_population(c, keep, M=16)
+    pct = e0d.step_percentiles(r[pop["idx"]], pop)
+    d = np.asarray(c["d_resample"])[pop["idx"]]
+    lab = ~np.isnan(d)
+    y = lab & (d > c["tau"])
+    wc = w_doc[pop["doc"]]
+    m_a = {}
+    for a in np.unique(pop["age"]):
+        sel = lab & (pop["age"] == a)
+        m_a[a] = np.sum((wc * pct)[sel]) / np.sum(wc[sel])
+    num = den = 0.0
+    for s in range(pop["n_steps"]):
+        m = (pop["step"] == s) & y
+        if not m.any():
+            continue
+        v = np.mean([pct[j] - m_a[pop["age"][j]] for j in np.flatnonzero(m)])
+        ws = w_doc[pop["step_doc"][s]]
+        num, den = num + ws * v, den + ws
+    assert fam["_replicates"]["c_ws"][0] == pytest.approx(num / den, abs=1e-12)
+    fixed = fam["c_ws"]
+    assert fam["_replicates"]["c_ws"][0] != pytest.approx(fixed, abs=1e-6)
+    # pi from the weighted sample of r's own tied minima on Q_crit
+    assert np.isfinite(fam["_replicates"]["H_age_random"][0])
+
+
+def test_undefined_replicates_are_counted_and_the_ci_is_on_the_rest(e0d):
+    """m-7 / A2.4: a resample in which the statistic is undefined is counted and
+    reported; the label reads the CI over the defined resamples."""
+    lo, hi, n_und = e0d.percentile_ci_defined(np.array([0.1, np.nan, 0.3, 0.2]))
+    assert n_und == 1
+    assert (lo, hi) == e0d.percentile_ci(np.array([0.1, 0.3, 0.2]))
+    lo, hi, n_und = e0d.percentile_ci_defined(np.array([np.nan, np.nan]))
+    assert n_und == 2 and np.isnan(lo) and np.isnan(hi)
+    # in the family: a resample that draws only documents with no positive
+    R = np.random.default_rng(0).random((4, 16))
+    D = np.zeros((4, 16))
+    D[0, 3] = 1.0
+    c = _grid_cells(D, R, q=[True] * 4, gap=[40] * 4, docs=[0, 1, 2, 3])
+    W = np.array([[4.0, 0, 0, 0], [0, 4.0, 0, 0], [1.0, 1, 1, 1]])
+    fam = e0d.auroc_family(c, c["r"], c["d_resample"], tau=0.5,
+                           keep=np.ones(64, dtype=bool), W=W, M=16)  # fmt: skip
+    assert fam["pct_n_undefined"] == 1
+    assert np.isfinite(fam["pct_ci"][0]) and np.isfinite(fam["pct_ci"][1])
+
+
+def test_an_undefined_primary_statistic_is_exit_3_unless_loo_flat(e0d):
+    """A2.4 "Undefined": no bin with both classes -> MeasurementUndefined (exit 3),
+    unless the LOO-flat rule labels the seed. PREREG-OPEN: the control shares the
+    labels, so it is undefined too; rows 1-2 then label directly."""
+    c = _cells(a_delta=0.3, noise=1e-5)  # every Delta below every tau: no positive
+    with pytest.raises(e0d.MeasurementUndefined):
+        e0d.analyse_seed(c, M=4, n_docs=40, seed=0, auroc_star=A_STAR, n_boot=3)
+    flat = _cells(a_delta=1e-3, noise=1e-5)  # LOO flat (A-cell median < 1e-2)
+    an = e0d.analyse_seed(flat, M=4, n_docs=40, seed=0, auroc_star=A_STAR, n_boot=3)
+    lab = an["populations"]["bos_excluded"]["labels"]["gated_resample"]
+    assert lab in ("DEGENERATE", "LOO_UNINFORMATIVE")
+
+
+# --------------------------------------------------------------------------- #
+# A2.8 labels (T12), row 5b's boolean, STEP_SENSITIVE, T19
+# --------------------------------------------------------------------------- #
+
+
+def _inp(pct, raw=(0.3, 0.4), unstrat=(0.3, 0.4), pc=(0.95, 0.97), lf=False, rf=False,
+         **kw):  # fmt: skip
+    return {"pc_pct_ci": pc, "loo_flat": lf, "r_flat": rf, "pct_ci": pct,
+            "raw_ci": raw, "unstrat_ci": unstrat, **kw}  # fmt: skip
+
+
+T12 = [
+    # (name, inp, label)
+    ("row0 ceiling beats everything", _inp((0.9, 0.95), pc=(0.8, 0.849), lf=True),
+     "CEILING"),
+    ("row0 boundary pc_hi == A* is not ceiling", _inp((0.9, 0.95), pc=(0.8, 0.85)),
+     "AGREE"),
+    ("row1 degenerate", _inp((0.9, 0.95), lf=True, rf=True), "DEGENERATE"),
+    ("row2 loo uninformative", _inp((0.9, 0.95), lf=True), "LOO_UNINFORMATIVE"),
+    ("row5b", _inp((0.6, 0.8), raw=(0.86, 0.9), unstrat=(0.5, 0.6)),
+     "STEP_OR_AGE_AMBIGUOUS"),
+    ("row5b boundary raw_lo == A*", _inp((0.6, 0.8), raw=(0.85, 0.9)),
+     "STEP_OR_AGE_AMBIGUOUS"),
+    ("row5b tuple with raw lo < A* is DISAGREE", _inp((0.6, 0.8), raw=(0.849, 0.9)),
+     "DISAGREE"),
+    ("5b beats 3 (INVERTED)", _inp((0.3, 0.45), raw=(0.9, 0.95)),
+     "STEP_OR_AGE_AMBIGUOUS"),
+    ("5b beats 5 (AGREE_VIA_RANK)",
+     _inp((0.6, 0.8), raw=(0.9, 0.95), unstrat=(0.9, 0.95)),
+     "STEP_OR_AGE_AMBIGUOUS"),
+    ("row3 inverted", _inp((0.3, 0.45)), "INVERTED"),
+    ("row3 boundary pct_hi == 0.5 is not inverted", _inp((0.3, 0.5)), "DISAGREE"),
+    ("row4 agree", _inp((0.86, 0.9), raw=(0.6, 0.8)), "AGREE"),
+    ("row4 boundary pct_lo == A*", _inp((0.85, 0.9)), "AGREE"),
+    ("row4 is not read from raw", _inp((0.8, 0.9), raw=(0.86, 0.95)), "UNRESOLVED"),
+    ("row5 agree via rank", _inp((0.6, 0.8), unstrat=(0.86, 0.9)), "AGREE_VIA_RANK"),
+    ("row5 boundary unstrat_lo == A*", _inp((0.6, 0.8), unstrat=(0.85, 0.9)),
+     "AGREE_VIA_RANK"),
+    ("row6 disagree; raw CI containing A* does not block",
+     _inp((0.6, 0.8), raw=(0.8, 0.9)),
+     "DISAGREE"),
+    ("row7 unresolved", _inp((0.8, 0.9)), "UNRESOLVED"),
+    ("row7 boundary pct_hi == A*", _inp((0.8, 0.85)), "UNRESOLVED"),
+]  # fmt: skip
+
+
+@pytest.mark.parametrize("name, inp, want", T12, ids=[x[0] for x in T12])
+def test_t12_a28_labels_first_match_in_order(e0d, name, inp, want):
+    assert e0d.seed_label_a2(inp, auroc_star=A_STAR) == want
+
+
+def test_row5b_boolean_is_reported_whatever_the_label(e0d):
+    """A2.8: the 5b condition (pct CI upper < A*, raw CI lower >= A*) is reported as
+    a boolean on every seed, even when rows 0-2 absorb it."""
+    absorbed = _inp((0.6, 0.8), raw=(0.9, 0.95), pc=(0.5, 0.6))
+    assert e0d.seed_label_a2(absorbed, auroc_star=A_STAR) == "CEILING"
+    assert e0d.row5b(absorbed, auroc_star=A_STAR) is True
+    assert e0d.row5b(_inp((0.86, 0.9), raw=(0.9, 0.95)), auroc_star=A_STAR) is False
+    an = e0d.analyse_seed(_cells(score="bad"), M=4, n_docs=40, seed=0,
+                          auroc_star=A_STAR, n_boot=4)  # fmt: skip
+    for p in an["populations"].values():
+        assert set(p["row5b"]) == set(COMBOS)
+        assert all(isinstance(v, bool) for v in p["row5b"].values())
+
+
+def test_step_sensitive_substitutes_raw_and_skips_5b(e0d):
+    """A2.5: the raw-substituted label replaces AUROC_strat,pct by raw AUROC_strat
+    and skips row 5b; STEP_SENSITIVE flags a difference and moves no exit."""
+    inp = _inp((0.6, 0.8), raw=(0.86, 0.9))
+    assert e0d.seed_label_a2(inp, auroc_star=A_STAR) == "STEP_OR_AGE_AMBIGUOUS"
+    assert e0d.seed_label_a2(inp, auroc_star=A_STAR, stat="raw") == "AGREE"
+    ans = {s: _an("DISAGREE", raw_label="AGREE") for s in range(3)}
+    out = e0d.classify_run(ans)
+    assert out["step_sensitive"] == {"0": True, "1": True, "2": True}
+    assert (out["class"], out["exit"]) == ("CONFOUND", 1)
+
+
+def test_t19_h_is_read_by_no_gate(e0d):
+    """T19: H = 0 and H = 1 with the same AUROC_strat,pct CI give the identical
+    label, class and exit (A2.1, A2.6)."""
+    for pct in ((0.86, 0.9), (0.6, 0.8), (0.3, 0.4), (0.8, 0.9)):
+        a = _inp(pct, H=0.0, H_ci=(0.0, 0.0), R_H=0.0, R_H_ci=(0.0, 0.0))
+        b = _inp(pct, H=1.0, H_ci=(1.0, 1.0), R_H=9.0, R_H_ci=(9.0, 9.0))
+        assert e0d.seed_label_a2(a, auroc_star=A_STAR) == e0d.seed_label_a2(
+            b, auroc_star=A_STAR)  # fmt: skip
+
+
+# --------------------------------------------------------------------------- #
+# §8 classification (T13), HALT on 5b, pooled never gates
+# --------------------------------------------------------------------------- #
+
+SA = "STEP_OR_AGE_AMBIGUOUS"
+T13 = [
+    (["AGREE"] * 3, ("AGREE", 0)),
+    (["INVERTED"] * 3, ("CONFOUND_INVERTED", 1)),
+    (["DISAGREE", "INVERTED", "DISAGREE"], ("CONFOUND", 1)),
+    (["DISAGREE", "DISAGREE", SA], (SA, 2)),
+    (["AGREE_VIA_RANK", "INVERTED", SA], (SA, 2)),
+    ([SA] * 3, (SA, 2)),
+    (["AGREE_VIA_RANK", "DISAGREE", "INVERTED"], ("RECENCY_ONLY", 2)),
+    (["AGREE", "AGREE", "DISAGREE"], ("MIXED_UNRESOLVED", 2)),
+    (["AGREE", "AGREE", SA], ("MIXED_UNRESOLVED", 2)),
+    (["DEGENERATE", "LOO_UNINFORMATIVE", SA], ("DEGENERATE_UNINFORMATIVE", 2)),
+    (["CEILING", "DISAGREE", "DISAGREE"], ("MIXED_UNRESOLVED", 2)),
+    (["CEILING", "INVERTED", "INVERTED"], ("MIXED_UNRESOLVED", 2)),
+    (["CEILING", "AGREE", "AGREE"], ("MIXED_UNRESOLVED", 2)),
+    (["UNRESOLVED", "DISAGREE", "DISAGREE"], ("MIXED_UNRESOLVED", 2)),
+]
+
+
+@pytest.mark.parametrize("labels, want", T13, ids=["-".join(x[0]) for x in T13])
+def test_t13_classification_rows(e0d, labels, want):
+    assert e0d.classify(labels) == want
+
+
+def test_t13_every_section_8_row_is_reachable_and_exit_1_only_from_rows_3_4(e0d):
+    got = {e0d.classify(ls)[0] for ls, _ in T13}
+    got.add(e0d.classify(["DEGENERATE", "DEGENERATE", "AGREE"])[0])
+    assert got == set(e0d.CLASS_EXIT)
+    assert {k for k, v in e0d.CLASS_EXIT.items() if v == 1} == {
+        "CONFOUND",
+        "CONFOUND_INVERTED",
+    }
+    assert e0d.CLASS_EXIT[SA] == 2
+
+
+@pytest.mark.parametrize(
+    "labels",
+    [
+        ["DISAGREE", "DISAGREE", SA],
+        ["AGREE", "AGREE", SA],
+        ["DEGENERATE", "LOO_UNINFORMATIVE", SA],
+    ],
+)
+def test_halt_on_5b_names_the_seeds_and_exits_2(e0d, labels):
+    """A2.8 "HALT on row 5b": any STEP_OR_AGE_AMBIGUOUS seed -> exit 2, the report
+    names the seed(s) and halts to Brendan; never 1."""
+    ans = {s: _an(lab, row5b=lab == SA) for s, lab in enumerate(labels)}
+    out = e0d.classify_run(ans)
+    assert out["exit"] == 2 and out["halt"] is True
+    assert out["halt_seeds"] == [2]
+    assert out["row5b"] == {"0": False, "1": False, "2": True}
+    ok = e0d.classify_run({s: _an("DISAGREE") for s in range(3)})
+    assert ok["halt"] is False and ok["halt_seeds"] == []
+
+
+def test_pooled_results_never_gate(e0d):
+    """The ruling: each seed separately; pooled results are reported and never
+    gate (A2.7, A2.10)."""
+    ans = {0: _an("AGREE"), 1: _an("AGREE"), 2: _an("DISAGREE")}
+    out = e0d.classify_run(ans, pooled={"label": "AGREE", "pct": 0.9})
+    assert (out["class"], out["exit"]) == ("MIXED_UNRESOLVED", 2)
+    assert out["pooled"]["label"] == "AGREE"
+    out = e0d.classify_run({s: _an("DISAGREE") for s in range(3)},
+                           pooled={"label": "AGREE"})  # fmt: skip
+    assert (out["class"], out["exit"]) == ("CONFOUND", 1)
+
+
+def test_tau_sensitivity_and_label_a1_are_reported_never_the_exit(e0d):
+    ans = {s: _an("DISAGREE", label_a1="AGREE", tau_labels={"0.99": "AGREE"})
+           for s in range(3)}  # fmt: skip
+    out = e0d.classify_run(ans)
+    assert (out["class"], out["exit"]) == ("CONFOUND", 1)
+    assert out["class_A1"] == "AGREE"
+    assert out["tau_sensitivity"]["0.99"]["class"] == "AGREE"
+    assert out["tau_sensitivity"]["0.999"]["class"] == "CONFOUND"
+
+
+def test_analyse_seed_reports_the_full_grid(e0d):
+    """A2.7 item 1: the 2x2 grid, every family statistic and the A2.8 label in each
+    cell; the zero column uses TAU_ZERO; label_A1 is reported."""
+    an = e0d.analyse_seed(_cells(score="good"), M=4, n_docs=40, seed=1,
+                          auroc_star=A_STAR, n_boot=5)  # fmt: skip
+    for p in an["populations"].values():
+        assert set(p["a2"]) == set(COMBOS) and set(p["labels"]) == set(COMBOS)
+        assert p["a2"]["gated_zero"]["r"]["tau"] == e0d.TAU_ZERO[1]
+        for k in ("pct", "pct_ci", "raw", "raw_ci", "unstrat_pct", "c_ws", "H",
+                  "H_random", "R_H_uniform"):  # fmt: skip
+            assert k in p["a2"]["gated_resample"]["r"], k
+        assert "pct_ci" in p["a2"]["gated_resample"]["pc"]
+        assert set(p["tau_sensitivity"]) == {"0.99", "0.999"}
+        assert "gated_resample" in p["labels_A1"]
+    assert an["populations"]["bos_excluded"]["labels"]["gated_resample"] == "AGREE"
+
+
+def test_main_writes_the_a2_class_and_the_5b_booleans(e0d, cleared, fake_ledger):
+    cleared["score"] = "good"
+    assert int(e0d.main([])) == 0
+    assert _row(fake_ledger, "e0d.class") == "AGREE"
+    assert _row(fake_ledger, "e0d.row5b") == {"0": False, "1": False, "2": False}
+    assert _row(fake_ledger, "e0d.halt") is False
+    assert _row(fake_ledger, "c12_tau_tables") is not None
+    assert _row(fake_ledger, "e0d.pooled") is not None
+    assert fake_ledger.last.rows["primary.AUROC_strat_pct"] == [1.0, 1.0, 1.0]
+
+
+def test_main_refuses_on_c12_before_any_document(e0d, cleared, fake_ledger, monkeypatch):
+    monkeypatch.setattr(e0d, "TAU_RESAMPLE", {0: 0.4, 1: 0.4, 2: 0.4})
+    assert int(e0d.main([])) == 3
+    assert fake_ledger.last.rows["control_failed"]["control"] == "C12"
+    assert cleared["gen"] == []
+
+
+def test_sink_probe_reports_share_by_kind(e0d):
+    """A2.7 item 8: the r_i share by sentence kind at Q-steps (reported only)."""
+    an = e0d.analyse_seed(_cells(score="good"), M=4, n_docs=40, seed=0,
+                          auroc_star=A_STAR, n_boot=2)  # fmt: skip
+    sp = an["populations"]["all"]["sink_probe"]["gated"]
+    assert set(sp["mean_r_by_kind_Q"]) >= {"pending_assert", "filler"}
