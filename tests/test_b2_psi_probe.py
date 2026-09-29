@@ -186,7 +186,7 @@ def test_p_and_n_f_follow_the_amended_rule(b2):
     assert b2.n_f(16640) == 264  # A1.15: ceil(10 p / 632)
     assert b2.u_rows(48) == 1128
     assert b2.c_rows(48, 16) == 632
-    assert b2.N_E is None  # TBD-3: written by diff only before EVAL
+    assert b2.N_E == 1024  # TBD-3, written by diff (3a90fce) before any EVAL doc
 
 
 # --------------------------------------------------------------------------- #
