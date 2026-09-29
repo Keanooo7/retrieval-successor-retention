@@ -4120,7 +4120,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "experiments/b2-psi-probe/run.py",
         "            _flush(pending)  # F1: every unit reaches disk before the next "
         "document runs\n",
-        "",
+        "            pass  # units wait in `pending` until the tier ends\n",
         "B2 build review F1 (BLOCKER): EVAL's per-eviction logs are about 1 kB a "
         "record; held in RAM for a tier they reach tens of GB at the N_E cap. Each "
         "document's unit must be on disk before the next runs, which is also what "
