@@ -1,0 +1,124 @@
+{
+  "age_bins": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "auroc_star_source": "C8: every R-*-e0d-statistic* ruling (A2.13)",
+  "b5_t_cap_max": 16123,
+  "batch": 16,
+  "bootstrap": {
+    "level": 0.95,
+    "n": 2000,
+    "seed": 20260927
+  },
+  "ckpt_name": "ckpt-003000.pt",
+  "ckpt_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B",
+  "ckpt_sha256": {
+    "0": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+    "1": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+    "2": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8"
+  },
+  "class_exit": {
+    "AGREE": 0,
+    "CONFOUND": 1,
+    "CONFOUND_INVERTED": 1,
+    "DEGENERATE_UNINFORMATIVE": 2,
+    "MIXED_UNRESOLVED": 2,
+    "RECENCY_ONLY": 2,
+    "STEP_OR_AGE_AMBIGUOUS": 2
+  },
+  "device": "cpu",
+  "documents": [
+    262144,
+    263168
+  ],
+  "expected": "PREREG \u00a79 (scored per A1.8 and A2.14): class CONFOUND, second most likely MIXED, scored against class_A1 (A1's \u00a78 on label_A1) only; no class prediction is registered for the A2.8 classification. Numeric parts on the rho secondaries -- pooled gated rho_resample 0.1-0.4 with CI upper < 0.5 on every seed; rho_rank below rho_pool; bottom-1 above 1/16 but under 0.3.",
+  "experiment": "experiments/e0d/run.py",
+  "falsifier": "spec \u00a76 E0d kill gate / \u00a73.2.1: 'If not, LOO is truth and r_i is a confound.' Gated on AUROC_strat,pct (A2.12 declares the departure from the named Spearman rho).",
+  "label_order": [
+    "0",
+    "1",
+    "2",
+    "5b",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7"
+  ],
+  "live_tol": 1e-06,
+  "loo": "rsr.metrics.loo.loo_delta_loss (resample primary, zero secondary)",
+  "loo_flat_a": 0.01,
+  "loo_flat_q90_secondary": 0.001,
+  "policy": "fifo (no RSRPolicy, no b, nu = 0, no shadow)",
+  "prereg": "experiments/e0d/PREREG.md",
+  "prereg_amendment": "Amendment 1 (84e21c5), erratum (268b947), Amendment 2 (8c63ecd)",
+  "r_flat": 0.05,
+  "r_i": "rsr.retention.reward.retrieval_demand (gated primary), eval mode, own capture forward (A1.6)",
+  "resample_min_coverage": 0.8,
+  "rho_star_proposed_A1_secondary": 0.5,
+  "rulings_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/e0d/docs/owner/rulings",
+  "run_id": "e0d",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "sensitivity_rho": [
+    0.3,
+    0.7
+  ],
+  "t0_record": "/Users/keanooo7/retrieval-successor-retention/.worktrees/e0d/runs/t0-substrate/manifest.json",
+  "tau_q": 0.995,
+  "tau_resample": {
+    "0": 0.4157434984576128,
+    "1": 0.4315741845071321,
+    "2": 0.4884946896703897
+  },
+  "tau_sensitivity": {
+    "0.99": {
+      "resample": {
+        "0": 0.3109549731015192,
+        "1": 0.310573765520007,
+        "2": 0.3491311189141148
+      },
+      "zero": {
+        "0": 0.24913927197480037,
+        "1": 0.24216222953796368,
+        "2": 0.2818768095970196
+      }
+    },
+    "0.999": {
+      "resample": {
+        "0": 0.7129988655444408,
+        "1": 0.7854374831784502,
+        "2": 0.7694723016164862
+      },
+      "zero": {
+        "0": 0.5874972405433865,
+        "1": 0.6492233513593663,
+        "2": 0.6450255164741889
+      }
+    }
+  },
+  "tau_zero": {
+    "0": 0.3447678400575726,
+    "1": 0.3300262098312375,
+    "2": 0.386515489417143
+  },
+  "underfull_max": 0.01
+}

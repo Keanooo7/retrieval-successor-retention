@@ -1,0 +1,47 @@
+[
+  {
+    "claim": "E0d's \u00a78 class (gated x resample, A1.3-excluded) is AGREE",
+    "command": ".venv/bin/python -c \"import json; r=json.load(open('runs/e0d/ledger.json'))['rows']; print(([x['value'] for x in r if x['key']=='e0d.class'][-1]))\"",
+    "expected": "AGREE"
+  },
+  {
+    "claim": "the run exited 0",
+    "command": ".venv/bin/python -c \"import json; print(json.load(open('runs/e0d/ledger.json'))['commands'][-1]['exit_code'])\"",
+    "expected": "0"
+  },
+  {
+    "claim": "the per-seed A2.8 labels are ['AGREE', 'AGREE', 'AGREE']",
+    "command": ".venv/bin/python -c \"import json; r=json.load(open('runs/e0d/ledger.json'))['rows']; print(json.dumps([x['value'] for x in r if x['key']=='e0d.labels'][-1]))\"",
+    "expected": "[\"AGREE\", \"AGREE\", \"AGREE\"]"
+  },
+  {
+    "claim": "the class recomputes from the ledger's labels as AGREE",
+    "command": ".venv/bin/python -c \"import importlib.util as u, json; s=u.spec_from_file_location('e0d_run', 'experiments/e0d/run.py'); m=u.module_from_spec(s); s.loader.exec_module(m); r=json.load(open('runs/e0d/ledger.json'))['rows']; print(m.classify([x['value'] for x in r if x['key']=='e0d.labels'][-1])[0])\"",
+    "expected": "AGREE"
+  },
+  {
+    "claim": "seeds actually run: [0, 1, 2]",
+    "command": ".venv/bin/python -c \"import json; print(json.load(open('runs/e0d/ledger.json'))['seeds_actually_run'])\"",
+    "expected": "[0, 1, 2]"
+  },
+  {
+    "claim": "the class without the bos-copy exclusions is AGREE",
+    "command": ".venv/bin/python -c \"import json; r=json.load(open('runs/e0d/ledger.json'))['rows']; print(([x['value'] for x in r if x['key']=='e0d.class_all_cells'][-1]))\"",
+    "expected": "AGREE"
+  },
+  {
+    "claim": "the row-5b booleans per seed are {'0': False, '1': False, '2': False} and HALT is False",
+    "command": ".venv/bin/python -c \"import json; r=json.load(open('runs/e0d/ledger.json'))['rows']; print(json.dumps([x['value'] for x in r if x['key']=='e0d.row5b'][-1]))\"",
+    "expected": "{\"0\": false, \"1\": false, \"2\": false}"
+  },
+  {
+    "claim": "the T0 substrate manifest still verifies (C1, end)",
+    "command": "cd /Users/keanooo7/retrieval-successor-retention && shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256 > /dev/null 2>&1; echo $?",
+    "expected": "0"
+  },
+  {
+    "claim": "re-running the experiment reproduces exit 0",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 3 -- .venv/bin/python experiments/e0d/run.py --run-id e0d-reverify > /dev/null 2>&1; echo $?",
+    "expected": "0"
+  }
+]
