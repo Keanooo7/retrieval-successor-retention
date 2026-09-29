@@ -518,6 +518,20 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "state; moving it into MemoryState.accum is exactly what that test "
                 "is checking cannot happen",
             ),
+            (
+                "tests/test_on_write_slot.py::test_lru_state_is_per_batch_row",
+                "2026-09-29: with recency in the per-step accum no record survives "
+                "to select_eviction, so row B falls back to write order and the "
+                "per-row assertion fails -- LRU losing all cross-step state, seen "
+                "from the per-row test",
+            ),
+            (
+                "tests/test_on_write_slot.py::"
+                "test_lru_recency_follows_the_occupant_through_compaction",
+                "2026-09-29: the step-3 use of occupant 1 is forgotten by step 4, "
+                "so LRU evicts it as FIFO would -- the same lost cross-step state, "
+                "seen from the compaction test",
+            ),
         ),
     ),
     Mutation(
