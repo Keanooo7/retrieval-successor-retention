@@ -273,6 +273,19 @@ def _masked_softmax(logits: Tensor, allowed: Tensor, out_dtype) -> Tensor:
     return torch.softmax(logits, dim=-1).to(out_dtype)
 
 
+def _reweight_attention(att: Tensor, weight: Tensor) -> Tensor:
+    """Expire-Span's masked attention [P7]: `a_i = m_i p_i / sum_j m_j p_j`, where
+    `p = softmax(s)` -- algebraically `m_i exp(s_i) / sum_j m_j exp(s_j)`.
+
+    float32 like `_masked_softmax`. A row whose every weight is 0 (all memories
+    expired) attends to nothing and contributes exactly zero, rather than dividing
+    by zero. `weight` is `[B, M]`, broadcast over heads and query positions.
+    """
+    a = att.to(torch.float32) * weight.to(torch.float32)[:, None, None, :]
+    total = a.sum(dim=-1, keepdim=True)
+    return (a / total.clamp(min=torch.finfo(torch.float32).tiny)).to(att.dtype)
+
+
 class SelfAttention(nn.Module):
     """Causal self-attention over the tokens of one sentence."""
 
@@ -317,7 +330,13 @@ class CrossAttention(nn.Module):
         """Set on every forward, for the `r_i` capture (§3.2.1). Not a buffer --
         it carries graph and must not be checkpointed."""
 
-    def forward(self, x: Tensor, mem_kv: Tensor, mem_valid: Tensor) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        mem_kv: Tensor,
+        mem_valid: Tensor,
+        mem_weight: Tensor | None = None,
+    ) -> Tensor:
         cfg = self.cfg
         keys_src = mem_kv
         if cfg.stm_cross_pos_mode == "sinusoidal":
@@ -331,7 +350,13 @@ class CrossAttention(nn.Module):
         v = self.value(mem_kv)
         att = torch.einsum("bqhd,bkhd->bhqk", q, k)
         allowed = mem_valid.view(mem_valid.shape[0], 1, 1, -1).expand_as(att)
-        att = self.attn_drop(_masked_softmax(att, allowed, x.dtype))
+        att = _masked_softmax(att, allowed, x.dtype)
+        if mem_weight is not None:
+            # Expire-Span [P7] (spec §5.4): `a_i ∝ m_i · exp(s_i)`. `None` -- every
+            # policy but Expire-Span -- skips this entirely, so TG's forward is
+            # unchanged op for op (test_fidelity.py, E0b).
+            att = _reweight_attention(att, mem_weight)
+        att = self.attn_drop(att)
         self.last_attention = att
         out = torch.einsum("bhqk,bkhd->bqhd", att, v)
         out = self.attn_out_proj(out)
@@ -390,11 +415,18 @@ class Block(nn.Module):
         self.mlp = Mlp(cfg)
         self.drop = nn.Dropout(cfg.dropout)
 
-    def forward(self, x: Tensor, key_pad: Tensor, mem_kv: Tensor, mem_valid: Tensor):
+    def forward(
+        self,
+        x: Tensor,
+        key_pad: Tensor,
+        mem_kv: Tensor,
+        mem_valid: Tensor,
+        mem_weight: Tensor | None = None,
+    ):
         if self.block_type == "S":
             x = x + self.drop(self.self_attn(self.ln_self(x), key_pad))
         else:
-            m = self.cross_attn(self.ln_mem(x), mem_kv, mem_valid)
+            m = self.cross_attn(self.ln_mem(x), mem_kv, mem_valid, mem_weight)
             x = x + self.drop(self.memory_gate * m)
         return x + self.mlp(self.ln_ffn(x))
 
@@ -493,7 +525,10 @@ class TGModel(nn.Module):
         bos_ctx_valid: Tensor,
         *,
         capture: bool = False,
+        mem_weight: Tensor | None = None,
     ) -> StepOutput:
+        """`mem_weight` (`[B, M]`, optional) is Expire-Span's soft mask [P7]; see
+        `CrossAttention`. Omitted, the forward is the transcription's exactly."""
         cfg = self.cfg
         tok = self.embed(ids)
 
@@ -513,7 +548,7 @@ class TGModel(nn.Module):
         activations = []
         cross = []
         for i, block in enumerate(self.blocks):
-            h = block(h, key_pad, mem_kv, mem_valid)
+            h = block(h, key_pad, mem_kv, mem_valid, mem_weight)
             if capture:
                 activations.append(h)
                 if block.block_type == "C":
