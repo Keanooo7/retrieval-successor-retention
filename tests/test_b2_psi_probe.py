@@ -500,6 +500,43 @@ def test_age_decodability_is_raw_mse_lambda_and_r2_on_fit_val(b2, caps):
     assert out["r2"] <= 1.0
 
 
+def _independent_r2(b2, caps, rowset, feature, arm, gamma, w, *, full_memory_only):
+    """R² = 1 − SSE/SST recomputed from scratch: FIT_VAL rows, the fitted `w`, the
+    raw target and its own mean. Shares nothing with fit_heads's accumulators."""
+    preds, ys = [], []
+    for cap in caps:
+        t, i = b2.row_index(cap, rowset, TM)
+        if full_memory_only:
+            keep = t >= TM
+            t, i = t[keep], i[keep]
+        preds.append(b2.design(cap, t, i, feature) @ w.to(torch.float64))
+        ys.append(b2.target_matrix(cap, arm, gamma)[t, i])
+    p, y = torch.cat(preds), torch.cat(ys)
+    return 1.0 - float(((p - y) ** 2).sum()) / float(((y - y.mean()) ** 2).sum())
+
+
+def test_val_r2_raw_is_one_minus_sse_over_sst(b2, caps):
+    """§6 / §8.1: the logged FIT_VAL R² of the selected λ equals an independent
+    1 − SSE/SST, for a demeaned-selection head (full-memory rows) and for the
+    age-decodability predictor (all rows). The phase-A ledger logged
+    1 − n_val·SSE/SST (an SSE already summed, multiplied by n again): values near
+    −2e5 where 0.83 was right, and every E0h seed read UNINFORMATIVE (A1.3)."""
+    fit = b2.fit_heads(
+        caps["train"], caps["val"], "U", "bilinear", [("U", 0.0)], m=TM
+    )[("U", 0.0)]
+    got = fit["val_r2_raw"][fit["selected"]]
+    want = _independent_r2(
+        b2, caps["val"], "U", "bilinear", "U", 0.0, fit["w"], full_memory_only=True
+    )
+    assert got == pytest.approx(want, rel=1e-9, abs=1e-9)
+    dec = b2.age_decodability(caps["train"], caps["val"], "U", m=TM)
+    want_age = _independent_r2(
+        b2, caps["val"], "U", "bilinear", "age", None, dec["w"], full_memory_only=False
+    )
+    assert dec["r2"] == pytest.approx(want_age, rel=1e-9, abs=1e-9)
+    assert -1.0 < dec["r2"] <= 1.0  # the wrong form sits near −n_val here
+
+
 def test_age_decodability_split_by_index_partitions_the_fit_val_rows(b2, caps):
     """Build review F11: the i < M / i ≥ M split covers every FIT_VAL row once, and
     is recomputed from the same w (a perfect predictor gives R² = 1 on both)."""
