@@ -278,6 +278,17 @@ def test_a_suite_on_another_checkouts_venv_did_not_run(stub, tmp_path):
     assert _worktrees(stub) == {stub}
 
 
+def test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite(
+    stub, tmp_path
+):
+    proc = _run(stub, tmp_path / "pool", ["proven"], "--check", mode="foreign-src")
+    assert proc.returncode == 3, proc.stdout + proc.stderr
+    assert "its python resolves rsr to" in proc.stderr
+    assert "PROVEN" not in proc.stdout
+    assert _porcelain(stub) == ""
+    assert _worktrees(stub) == {stub}
+
+
 def test_a_mutation_whose_suite_reports_no_probe_did_not_run(stub, tmp_path):
     out = tmp_path / "rows.json"
     proc = _run(stub, tmp_path / "pool", ["proven", "no-probe"], "--json", str(out))

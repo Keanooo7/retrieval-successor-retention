@@ -12,9 +12,11 @@ The stub venv is a plain ``python -m venv`` whose ``.pth`` puts the shard's
 path: that directory's own ``.pth`` files -- the host's editable ``rsr`` -- are
 not processed, so ``rsr`` resolves under the shard or nowhere.
 
-``MODE``: ``good``, or ``foreign-pytest`` -- the shard's ``pytest`` runs on THIS
+``MODE``: ``good``; ``foreign-pytest`` -- the shard's ``pytest`` runs on THIS
 tree's interpreter, so the suite imports the host's ``rsr``: the 2026-09-27
-split-brain (a suite on another checkout's venv), reproduced.
+split-brain (a suite on another checkout's venv), reproduced; ``foreign-src`` --
+the shard venv's own python resolves ``rsr`` to THIS tree's ``src`` (an editable
+install pointing at another checkout).
 """
 
 from __future__ import annotations
@@ -113,8 +115,10 @@ def stub_sync(mode: str):
             capture_output=True,
         )
         (site,) = (venv / "lib").glob("python3*/site-packages")
-        (site / "_stub.pth").write_text(f"{shard_root / 'src'}\n{host_site}\n")
-        target = venv / "bin" / "python" if mode == "good" else Path(sys.executable)
+        src = HERE.parent / "src" if mode == "foreign-src" else shard_root / "src"
+        (site / "_stub.pth").write_text(f"{src}\n{host_site}\n")
+        foreign = mode == "foreign-pytest"
+        target = Path(sys.executable) if foreign else venv / "bin" / "python"
         pytest = venv / "bin" / "pytest"
         pytest.write_text(f'#!/bin/sh\nexec "{target}" -m pytest "$@"\n')
         pytest.chmod(pytest.stat().st_mode | stat.S_IEXEC)

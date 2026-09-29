@@ -287,6 +287,7 @@ def make_shard(source: Path, pool: Path, index: int, sha: str) -> Shard:
     sync_venv(path)
     t2 = time.perf_counter()
     verify_clean(shard)
+    check_interpreter(shard, shard_env(shard, dict(os.environ)))
     shard.timings = {"worktree_s": t1 - t0, "sync_s": t2 - t1}
     return shard
 
