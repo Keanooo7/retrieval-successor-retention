@@ -1581,3 +1581,11 @@ def test_only_the_named_ruling_ratifies_e0h(b2, tmp_path, monkeypatch):
 def test_n_e_is_the_preregs_tbd_3(b2):
     """PREREG "Addendum: TBD-3, N_E": the floor 1024 binds."""
     assert b2.N_E == 1024 == b2.N_E_MIN
+
+
+def test_the_tbd_2_cost_is_the_preregs_and_the_ceiling_does_not_bind(b2):
+    """PREREG "Addendum: TBD-2": 0.156 s per arm-document; A1.4's 72 h Tier 1
+    ceiling and 24 h Tier 2 ceiling do not bind at N_E."""
+    assert b2.SEC_PER_ARM_DOC == 0.156
+    c1 = b2.compute_ceiling(b2.N_E, sec_per_arm_doc=0.156, arms=12, seeds=3, parallel=3)
+    assert c1["N_E"] == b2.N_E and not c1["reduced"]

@@ -3421,8 +3421,11 @@ def write_claims(path: Path, claims: list[dict]) -> Path:
 
 
 #: TBD-2 (A1.4 item 7): the measured seconds per Tier 1 arm-document, written
-#: here only after the PREREG diff that records it. `None` makes phase B refuse.
-SEC_PER_ARM_DOC: float | None = None
+#: here only after the PREREG diff that records it ("Addendum: TBD-2": 1.870 s per
+#: (document, seed) over 12 arms, "0.156 s per arm-document"; sizing run at
+#: 9b76963, 1 thread, six children). It only feeds A1.4's ceiling, which does not
+#: bind at N_E = 1024. `None` makes phase B refuse.
+SEC_PER_ARM_DOC: float | None = 0.156
 FIT_RUN_ID = "b2-psi-probe-fit"
 #: Measured by the sizing run (runs/b2-psi-probe-sizing, gram.peak_rss_gb = 9.6 GB
 #: for one Gram + eigh at p = 16,640): six concurrent phase-A children would need
