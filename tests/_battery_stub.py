@@ -13,8 +13,10 @@ path: that directory's own ``.pth`` files -- the host's editable ``rsr`` -- are
 not processed, so ``rsr`` resolves under the shard or nowhere.
 
 ``MODE``: ``good``; ``foreign-pytest`` -- the shard's ``pytest`` runs on THIS
-tree's interpreter, so the suite imports the host's ``rsr``: the 2026-09-27
-split-brain (a suite on another checkout's venv), reproduced; ``foreign-src`` --
+tree's interpreter: the stub conftest puts the shard's src first, so the suite
+itself is green, but every child it spawns imports the host's ``rsr`` -- the
+2026-09-27 split-brain (a suite on another checkout's venv), reproduced with a
+green baseline; ``foreign-src`` --
 the shard venv's own python resolves ``rsr`` to THIS tree's ``src`` (an editable
 install pointing at another checkout).
 """
@@ -54,7 +56,16 @@ def test_other():
     assert calc.OTHER == 2
 """
 
-CONFTEST = """from _battery_probe import write_probe
+# Like the real suite's test files, the stub puts its own src first in sys.path.
+# So under ``foreign-pytest`` the pytest process imports the SHARD's rsr and the
+# baseline is green -- only a child of pytest reaches the host's rsr. That is the
+# 09-27 topology, and it is what the child clause of the path assertion is for.
+CONFTEST = """import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from _battery_probe import write_probe  # noqa: E402
 
 
 def pytest_sessionfinish(session, exitstatus):

@@ -4102,6 +4102,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    for key in ("in_process",):',
         "I1: a test's sys.path.insert can put the shard's src first in the pytest "
         "process while every child it spawns imports another checkout's rsr.",
+        off_gate_allowed=tuple(
+            (f"tests/test_battery_isolation.py::{t}", _I1_E2E_WIRING)
+            for t in ("test_a_suite_on_another_checkouts_venv_did_not_run",)
+        ),
     ),
     Mutation(
         "i1: a missing probe is accepted",

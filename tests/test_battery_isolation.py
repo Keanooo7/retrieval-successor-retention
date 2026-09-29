@@ -316,10 +316,15 @@ def test_check_still_fails_on_an_unproven_gate(stub, tmp_path):
 
 
 def test_a_suite_on_another_checkouts_venv_did_not_run(stub, tmp_path):
-    """The 09-27 split-brain: the shard's pytest imports the HOST's rsr."""
+    """The 09-27 split-brain: the shard's pytest runs on the HOST's interpreter.
+
+    The suite itself is green (the stub conftest puts the shard's src first), so
+    without the path assertion this scores PROVEN; only the child clause sees it.
+    """
     proc = _run(stub, tmp_path / "pool", ["proven"], "--check", mode="foreign-pytest")
     assert proc.returncode == 3, proc.stdout + proc.stderr
-    assert "is not under" in proc.stderr
+    assert "(child)" in proc.stderr and "is not under" in proc.stderr
+    assert "not green" not in proc.stderr
     assert "PROVEN" not in proc.stdout
     assert _porcelain(stub) == ""
     assert _worktrees(stub) == {stub}
