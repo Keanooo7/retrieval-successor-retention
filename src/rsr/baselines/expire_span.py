@@ -209,7 +209,13 @@ class ExpireSpanPolicy(nn.Module):
         live = mem_valid.to(e.dtype)
         weight = m * live
         if training and self.cfg.dropout > 0.0:
-            keep = torch.rand(weight.shape, generator=self._gen) >= self.cfg.dropout
+            # CPU on purpose: the private generator is a CPU generator (E0b trap:
+            # never the global stream), so the draw is identical on CPU and CUDA
+            # and is then moved to the memory's device.
+            keep = (
+                torch.rand(weight.shape, generator=self._gen, device="cpu")
+                >= self.cfg.dropout
+            )
             weight = weight * keep.to(device=weight.device, dtype=weight.dtype)
         new = ((mem_step == step - 1) & mem_valid).to(e.dtype)
         aux = self.cfg.loss_coef * (e * new).sum() / mem_kv.shape[0]
