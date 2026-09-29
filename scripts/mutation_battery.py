@@ -4230,6 +4230,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            pass\n",
         "I1: the second layer under PYTHONDONTWRITEBYTECODE, for caches written by "
         "anything that sets its own env.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_isolation.py::"
+                "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+                "I1: a kept shard is re-entered through the same purge; the reuse test "
+                "asserts it on a real worktree, the unit test on a bare directory.",
+            ),
+        ),
     ),
     Mutation(
         "i1: the shard interpreter is not checked",
@@ -4259,6 +4267,9 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite",
                 "tests/test_battery_isolation.py::"
                 "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+                "tests/test_battery_isolation.py::"
+                "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+                "tests/test_battery_isolation.py::test_two_batteries_never_share_a_pool",
             )
         ),
     ),
