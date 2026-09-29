@@ -4087,6 +4087,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "(Q2, outside the truth table) is reported with the N_E that results.",
     ),
     Mutation(
+        "b2-psi-probe: the FIT_VAL R² multiplies a summed SSE by n_val again",
+        "test_val_r2_raw_is_one_minus_sse_over_sst",
+        "experiments/b2-psi-probe/run.py",
+        '            "val_r2_raw": [1.0 - float(x) / sst if sst > 0 else None'
+        " for x in sse_raw[j]],\n",
+        '            "val_r2_raw": [1.0 - float(x) * n_val / sst if sst > 0 else None'
+        " for x in sse_raw[j]],\n",
+        "PREREG §6 / §8.1, A1.3: phase A (280a2ad) logged 1 - n_val*SSE/SST, so every "
+        "pooled R² read near -2e5 and E0h's R² > 0 informativeness gate read every "
+        "seed UNINFORMATIVE. The old test asserted only r2 <= 1 and passed on it.",
+    ),
+    Mutation(
         "b2-psi-probe: the E0h pre-hook changes the forward pass",
         "test_the_logit_prehook_does_not_change_the_forward",
         "experiments/b2-psi-probe/run.py",
