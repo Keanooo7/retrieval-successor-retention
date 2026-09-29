@@ -2336,3 +2336,30 @@ def test_sink_probe_reports_share_by_kind(e0d):
                           auroc_star=A_STAR, n_boot=2)  # fmt: skip
     sp = an["populations"]["all"]["sink_probe"]["gated"]
     assert set(sp["mean_r_by_kind_Q"]) >= {"pending_assert", "filler"}
+
+
+def test_c10_prime_control_is_true_demand_through_the_same_family(e0d):
+    """A2.8 row 0 (C10'): the control is `true_demand` (1 on the A-cell), run through
+    the identical family, labels and bootstrap as r_i; it never re-scores r_i."""
+    c = _cells(score="bad")
+    an = e0d.analyse_seed(c, M=4, n_docs=40, seed=0, auroc_star=A_STAR, n_boot=6)
+    p = an["populations"]["bos_excluded"]
+    W = e0d.bootstrap_doc_weights(40, 6, e0d.BOOT_SEED)
+    for k in ("resample", "zero"):
+        want = e0d.auroc_family(c, c["pc"], c[f"d_{k}"], tau=e0d.tau_for(0, k),
+                                keep=e0d.bos_keep(c, 4), W=W, M=4)  # fmt: skip
+        got = p["a2"][f"gated_{k}"]["pc"]
+        assert got["pct"] == want["pct"] and got["pct_ci"] == want["pct_ci"]
+    assert p["a2"]["gated_resample"]["pc"]["pct"] != p["a2"]["gated_resample"]["r"]["pct"]
+
+
+def test_calibration_nan_modes(cal):
+    """B.1: under nan_mode="matched" a NaN d_resample is about 2x more frequent on
+    A-cells (1.7 %) than elsewhere (0.8 %), so it depends on y; "independent" keeps
+    0.8 % regardless of y."""
+    m = cal.synthetic_ledger(20, 2048, nan_mode="matched")
+    i = cal.synthetic_ledger(20, 2048, nan_mode="independent")
+    for c, lo, hi in ((m, 1.5, 3.0), (i, 0.6, 1.5)):
+        a = np.isnan(c["d_resample"][c["a_cell"]]).mean()
+        o = np.isnan(c["d_resample"][~c["a_cell"]]).mean()
+        assert lo < a / o < hi, (a, o)
