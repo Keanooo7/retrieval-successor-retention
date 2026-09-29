@@ -37,7 +37,11 @@ from rsr.mup.param_groups import build_param_groups  # noqa: E402
 from rsr.train.loop import build_vocab, encode, lm_loss  # noqa: E402
 
 SMOKE_ONLY = dict(
-    max_span=16.0, ramp=4.0, loss_coef=1e-3, dropout=0.1, init_span_fraction=0.5
+    max_span=16.0,
+    ramp=4.0,
+    loss_coef=1e-3,
+    structured_dropout=True,
+    init_span_fraction=0.25,
 )
 
 
@@ -66,7 +70,9 @@ def main() -> Exit:
     )
     model = TGModel(cfg).to(a.device).train()
     policy = ExpireSpanPolicy(
-        ExpireSpanConfig(grad_path=a.grad_path, seed=seed, **SMOKE_ONLY), d_model=d
+        ExpireSpanConfig(grad_path=a.grad_path, seed=seed, **SMOKE_ONLY),
+        d_model=d,
+        n_layers=sum(b == "C" for b in cfg.block_config),
     ).to(a.device)
     groups = build_param_groups(model, None, base_lr=1e-3, d_model=d, base_width=128)
     groups.append({"params": list(policy.parameters()), "lr": 1e-3})  # q9 placeholder
@@ -121,7 +127,9 @@ def main() -> Exit:
         "loss_finite": bool(torch.isfinite(loss.detach())),
         "evictions_in_stream_all_rows": len(policy.victims),
         "predictor_weight_grad_norm": w_grad,
-        "span_at_zero_input_after_step": float(spans.reshape(-1)[0]),
+        "span_per_layer_at_zero_input_after_step": [
+            round(float(x), 4) for x in spans.reshape(-1)
+        ],
         "wall_s_forward": round(t_fwd, 3),
         "wall_s_forward_backward_step": round(t_total, 3),
     }
