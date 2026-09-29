@@ -501,7 +501,7 @@ def test_age_decodability_is_raw_mse_lambda_and_r2_on_fit_val(b2, caps):
 
 
 def _independent_r2(b2, caps, rowset, feature, arm, gamma, w, *, full_memory_only):
-    """R² = 1 − SSE/SST recomputed from scratch: FIT_VAL rows, the fitted `w`, the
+    """R² = 1 - SSE/SST recomputed from scratch: FIT_VAL rows, the fitted `w`, the
     raw target and its own mean. Shares nothing with fit_heads's accumulators."""
     preds, ys = [], []
     for cap in caps:
@@ -517,13 +517,13 @@ def _independent_r2(b2, caps, rowset, feature, arm, gamma, w, *, full_memory_onl
 
 def test_val_r2_raw_is_one_minus_sse_over_sst(b2, caps):
     """§6 / §8.1: the logged FIT_VAL R² of the selected λ equals an independent
-    1 − SSE/SST, for a demeaned-selection head (full-memory rows) and for the
+    1 - SSE/SST, for a demeaned-selection head (full-memory rows) and for the
     age-decodability predictor (all rows). The phase-A ledger logged
-    1 − n_val·SSE/SST (an SSE already summed, multiplied by n again): values near
-    −2e5 where 0.83 was right, and every E0h seed read UNINFORMATIVE (A1.3)."""
-    fit = b2.fit_heads(
-        caps["train"], caps["val"], "U", "bilinear", [("U", 0.0)], m=TM
-    )[("U", 0.0)]
+    1 - n_val·SSE/SST (an SSE already summed, multiplied by n again): values near
+    -2e5 where 0.83 was right, and every E0h seed read UNINFORMATIVE (A1.3)."""
+    fit = b2.fit_heads(caps["train"], caps["val"], "U", "bilinear", [("U", 0.0)], m=TM)[
+        ("U", 0.0)
+    ]
     got = fit["val_r2_raw"][fit["selected"]]
     want = _independent_r2(
         b2, caps["val"], "U", "bilinear", "U", 0.0, fit["w"], full_memory_only=True
@@ -534,7 +534,7 @@ def test_val_r2_raw_is_one_minus_sse_over_sst(b2, caps):
         b2, caps["val"], "U", "bilinear", "age", None, dec["w"], full_memory_only=False
     )
     assert dec["r2"] == pytest.approx(want_age, rel=1e-9, abs=1e-9)
-    assert -1.0 < dec["r2"] <= 1.0  # the wrong form sits near −n_val here
+    assert -1.0 < dec["r2"] <= 1.0  # the wrong form sits near -n_val here
 
 
 def test_age_decodability_split_by_index_partitions_the_fit_val_rows(b2, caps):
@@ -886,6 +886,27 @@ def test_e0h_without_its_fits_or_on_an_exception_exits_3(b2, tmp_path):
         (ev / f"ckpt3000-seed{s}.e0h.pt").write_text("not a checkpoint")
     assert b2.e0h_main(args) == 3
     assert "Traceback" in (fits / "e0h_traceback.txt").read_text()
+
+
+def test_e0h_reads_a_pre_fix_r2_only_through_its_erratum(b2, tmp_path):
+    """Erratum P0.2: a phase-A payload logged 1 - n*SSE/SST and carries no
+    ``val_r2_form``. E0h must not gate on that value raw; it reads the sidecar's
+    corrected value, and with no sidecar it refuses (exit 3 via e0h_main)."""
+    n, true_r2 = 1000, 0.66
+    logged = 1.0 - n * (1.0 - true_r2)
+    assert b2.r2_from_logged_n_val_form(logged, n) == pytest.approx(true_r2, abs=1e-12)
+    legacy = {"val_r2_raw": [logged], "selected": 0, "n_val_rows": n}
+    with pytest.raises(b2.ControlFailure):
+        b2.selected_val_r2(legacy, tmp_path, 3000, 0, "U@0.0")
+    side = b2.r2_sidecar_path(tmp_path, 3000, 0)
+    row = {"original": logged, "corrected": b2.r2_from_logged_n_val_form(logged, n)}
+    side.write_text(json.dumps({"heads": {"U@0.0": row}}))
+    assert b2.selected_val_r2(legacy, tmp_path, 3000, 0, "U@0.0") == row["corrected"]
+    stale = dict(legacy, val_r2_raw=[logged + 1.0])  # sidecar for another payload
+    with pytest.raises(b2.ControlFailure):
+        b2.selected_val_r2(stale, tmp_path, 3000, 0, "U@0.0")
+    fixed = {"val_r2_raw": [0.5], "selected": 0, "val_r2_form": b2.R2_FORM}
+    assert b2.selected_val_r2(fixed, tmp_path, 3000, 0, "U@0.0") == 0.5
 
 
 def test_no_e0h_ruling_exists_so_e0h_is_unratified(b2):

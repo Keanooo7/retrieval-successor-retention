@@ -1060,9 +1060,11 @@ def fit_heads(
             "path": [{kk: v for kk, v in pt.items() if kk != "w"} for pt in paths[j]],
             "val_mse_demeaned": dm,
             "val_mse_raw": raw,
-            "val_r2_raw": [
-                1.0 - float(x) * n_val / sst if sst > 0 else None for x in sse_raw[j]
-            ],
+            # §6 / §8.1: sse_raw is already a sum over the n_val rows, so R² is
+            # 1 - SSE/SST. Phase A (280a2ad) logged 1 - n_val*SSE/SST; its stored
+            # values are corrected by erratum sidecar, never by a refit (P0.2).
+            "val_r2_raw": [1.0 - float(x) / sst if sst > 0 else None for x in sse_raw[j]],
+            "val_r2_form": R2_FORM,
             "n_train_rows": G.n,
             "n_val_rows": n_val,
             "train_range": "FIT_TRAIN",
@@ -1668,6 +1670,38 @@ def e0h_main(argv: list[str] | None = None) -> int:
         return 3
 
 
+R2_FORM = "1-sse/sst"
+"""The FIT_VAL R² form a fit payload carries. A payload without it predates the fix
+(phase A, 280a2ad: ``1 - n_val*SSE/SST``) and is read only through its erratum."""
+
+
+def r2_from_logged_n_val_form(logged: float | None, n_val: int) -> float | None:
+    """Erratum P0.2, exact: logged = 1 - n·SSE/SST, so R² = 1 - (1 - logged)/n."""
+    return None if logged is None else 1.0 - (1.0 - float(logged)) / n_val
+
+
+def r2_sidecar_path(fits: Path, label: int, seed: int) -> Path:
+    return fits / f"ckpt{label}-seed{seed}.r2-corrected.json"
+
+
+def selected_val_r2(head: dict, fits: Path, label: int, seed: int, key: str):
+    """The selected λ's FIT_VAL R² of one head, correct whichever code wrote it: a
+    payload carrying ``val_r2_form`` is read as is; a legacy one only through its
+    erratum sidecar (the logged value is never read raw). Neither: ControlFailure,
+    so E0h exits 3 rather than gate on a wrong R²."""
+    if head.get("val_r2_form") == R2_FORM:
+        return head["val_r2_raw"][head["selected"]]
+    side = r2_sidecar_path(fits, label, seed)
+    if not side.exists():
+        raise ControlFailure(
+            f"{key} at ckpt{label} seed {seed} has a pre-fix R² and no erratum {side}"
+        )
+    row = json.loads(side.read_text())["heads"][key]
+    if row["original"] != head["val_r2_raw"][head["selected"]]:
+        raise ControlFailure(f"erratum {side} does not match its payload for {key}")
+    return row["corrected"]
+
+
 def e0h_compute(fits: Path, eval_dir: Path, label: int) -> dict:
     """§10 per seed: within-step R² (primary) and pooled R² (secondary) of each E0h
     head and of the gamma = 0 target on the logits; the proposed class; the rc."""
@@ -1682,7 +1716,7 @@ def e0h_compute(fits: Path, eval_dir: Path, label: int) -> dict:
             for k, v in vals.items()
         }
         head = torch.load(fits / f"ckpt{label}-seed{seed}.pt")["heads"]["U@0.0"]
-        val_r2 = head["val_r2_raw"][head["selected"]]
+        val_r2 = selected_val_r2(head, fits, label, seed, "U@0.0")
         w = per[seed]["U@0.0"]["within"]
         r2[seed] = w if (val_r2 is not None and val_r2 > 0 and w is not None) else None
     cls = e0h_classify(r2)
