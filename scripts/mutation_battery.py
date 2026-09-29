@@ -1022,10 +1022,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a red baseline exits 1 again",
         "test_a_red_baseline_exits_3",
         "scripts/mutation_battery.py",
-        "        refuse(\n"
-        "            Exit.DID_NOT_RUN,\n"
-        '            f"the suite is not green',
-        '        refuse(\n            Exit.FAIL,\n            f"the suite is not green',
+        # 📌 Re-anchored 2026-09-29 (I1): the baseline now runs inside the shard's
+        # `with`, four columns deeper. Same edit.
+        "            refuse(\n"
+        "                Exit.DID_NOT_RUN,\n"
+        '                f"the suite is not green',
+        "            refuse(\n"
+        "                Exit.FAIL,\n"
+        '                f"the suite is not green',
         "S0-05: a suite red before mutating means no mutation ran.",
     ),
     Mutation(
@@ -3946,10 +3950,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the battery drops the failure reason",
         "test_a_mutation_row_carries_the_failure_reasons",
         "scripts/mutation_battery.py",
-        # 📌 split so this literal is not itself the first match in this file
-        '                "failure_reasons": {f: reasons[f] '
-        + "for f in sorted(reasons)},",
-        '                "failure_reasons": dict.fromkeys(' + "sorted(reasons)),",
+        # 📌 split so this literal is not itself the first match in this file.
+        # Re-anchored 2026-09-29 (I1): the row is built in `_row`, eight columns
+        # shallower. Same edit.
+        '        "failure_reasons": {f: reasons[f] ' + "for f in sorted(reasons)},",
+        '        "failure_reasons": dict.fromkeys(' + "sorted(reasons)),",
         "I5: the 09-26 dispatch red left only a node id because the battery ran "
         "--tb=no. A row whose reasons are all null is that blindness back.",
     ),
@@ -4021,6 +4026,153 @@ MUTATIONS: tuple[Mutation, ...] = (
         "B0 PREREG §6 C3: the reproduction of lookahead-room-r2's U.hit keys is exact "
         "(same tensors, same documents, same simulate); a tolerance would hide a "
         "different reading of D.pt.",
+    ),
+    # ------------------------------------------------------------------ I1
+    # P1.1 (2026-09-29): battery isolation. Each guard in
+    # scripts/battery_isolation.py and in this file's shard wiring, disabled.
+    # 📌 anchors in THIS file are split so the table's own text never matches.
+    Mutation(
+        "i1: the battery mutates the invoking tree again",
+        "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+        "scripts/mutation_battery.py",
+        "            original = apply(m, " + "shard.root)",
+        "            original = apply(" + "m)",
+        "I1: the live checkout the battery is invoked from is never mutated; a "
+        "stopped battery left mutated loop.py and lanes.py behind twice.",
+    ),
+    Mutation(
+        "i1: the path assertion accepts any rsr",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        "        if not is_under(probe.get(key), root):",
+        "        if False:",
+        "I1: rsr must resolve under the shard or the suite DID NOT RUN; the 09-27 "
+        "suite ran on the main checkout's venv (DIGEST cycle 16b).",
+    ),
+    Mutation(
+        "i1: the path assertion skips the pytest child",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '    for key in ("in_process", "child"):',
+        '    for key in ("in_process",):',
+        "I1: a test's sys.path.insert can put the shard's src first in the pytest "
+        "process while every child it spawns imports another checkout's rsr.",
+    ),
+    Mutation(
+        "i1: a missing probe is accepted",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '        return "no probe: the suite did not report where it imported rsr from"',
+        "        return None",
+        "I1: a suite that says nothing about where it imported rsr from has not "
+        "shown that it ran in the shard.",
+    ),
+    Mutation(
+        "i1: run_suite never reads the probe",
+        "test_a_suite_on_another_checkouts_venv_did_not_run",
+        "scripts/mutation_battery.py",
+        "        problem = iso.probe_problem(iso.read_probe("
+        + "shard.probe), shard.root)",
+        "        problem = None",
+        "I1: the path assertion exists only if the battery consults it.",
+    ),
+    Mutation(
+        "i1: a killed pytest is scored as a verdict",
+        "test_a_killed_pytest_is_did_not_run_not_a_failure",
+        "scripts/mutation_battery.py",
+        "        if proc.returncode " + "< 0:",
+        "        if False:",
+        "I1: a pytest killed by a signal became a '<collection/exit -9>' failure and "
+        "was scored LEAKS or ADDS NOTHING; it is DID NOT RUN.",
+    ),
+    Mutation(
+        "i1: a DID_NOT_RUN row exits 0",
+        "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+        "scripts/mutation_battery.py",
+        '    if any(r["verdict"] == "DID_NOT_' + 'RUN" for r in rows):',
+        "    if False:",
+        "I1 / exit-code protocol: a mutation that did not run is not a table entry; "
+        "'did not run' never becomes exit 0.",
+    ),
+    Mutation(
+        "i1: RSR_ORCH_ROOT is not the shard's",
+        "test_the_suite_env_is_the_shards_own",
+        "scripts/battery_isolation.py",
+        '    env["RSR_ORCH_ROOT"] = str(shard.root)\n',
+        "",
+        "I1: without it an orchestrator write from a test resolves the MAIN "
+        "checkout (lanes.orch_root), the stray-write class of 2026-09-27.",
+    ),
+    Mutation(
+        "i1: a dirty invoking tree is battery'd at HEAD",
+        "test_a_dirty_invoking_tree_is_refused",
+        "scripts/battery_isolation.py",
+        '    if dirty.strip():\n        raise Unisolated(\n            f"{root} has',
+        '    if False:\n        raise Unisolated(\n            f"{root} has',
+        "I1: a shard is a commit; uncommitted edits in the invoking tree would not "
+        "be in it, and the record would certify a tree the battery never ran.",
+    ),
+    Mutation(
+        "i1: a shard pool inside the invoking tree is accepted",
+        "test_a_pool_inside_the_invoking_tree_is_refused",
+        "scripts/battery_isolation.py",
+        "    if is_under(pool, source):",
+        "    if False:",
+        "I1: shards live outside the invoking tree, so no path under it is written.",
+    ),
+    Mutation(
+        "i1: the shard reset leaves untracked files",
+        "test_reset_restores_the_pinned_tree",
+        "scripts/battery_isolation.py",
+        '    _ok(git(shard.root, "clean", "-fdq"), f"git clean -fdq in {shard.root}")\n',
+        "",
+        "I1: a file one mutated suite created must not be in the next one's tree.",
+    ),
+    Mutation(
+        "i1: a shard suite writes bytecode again",
+        "test_a_shard_suite_writes_no_bytecode",
+        "scripts/battery_isolation.py",
+        '    env["PYTHONDONTWRITEBYTECODE"] = "1"\n',
+        "",
+        "I1: a same-size mutation restored within one second passes the .pyc "
+        "mtime+size check, so the next suite ran the previous mutation's code "
+        "(observed on the stub battery, 2026-09-29).",
+    ),
+    Mutation(
+        "i1: the reset keeps __pycache__",
+        "test_reset_purges_bytecode_outside_the_venv",
+        "scripts/battery_isolation.py",
+        '            shutil.rmtree(Path(dirpath) / "__pycache__", ignore_errors=True)\n',
+        "",
+        "I1: the second layer under PYTHONDONTWRITEBYTECODE, for caches written by "
+        "anything that sets its own env.",
+    ),
+    Mutation(
+        "i1: the shard interpreter is not checked",
+        "test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite",
+        "scripts/battery_isolation.py",
+        "    check_interpreter(shard, shard_env(shard, dict(os.environ)))\n",
+        "",
+        "I1: an editable install pointing at another checkout is refused before the "
+        "first (multi-minute) suite, not after it.",
+    ),
+    Mutation(
+        "i1: the shard pool is never torn down",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean",
+        "scripts/battery_isolation.py",
+        "            if not keep:",
+        "            if keep:",
+        "I1: a finished or stopped battery leaves no worktree registration behind.",
+    ),
+    Mutation(
+        "i1: no SIGTERM/SIGHUP handler",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean",
+        "scripts/mutation_battery.py",
+        "    old = {s: signal.signal(s, _raise_"
+        + "signalled) for s in _HANDLED_SIGNALS}",
+        "    old = {}",
+        "I1 defence in depth: a stopped battery kills its pytest child and tears its "
+        "shards down; without the handler both outlive it.",
     ),
 )
 
