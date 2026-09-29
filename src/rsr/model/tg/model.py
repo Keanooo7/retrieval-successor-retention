@@ -527,9 +527,18 @@ class TGModel(nn.Module):
         capture: bool = False,
         mem_weight: Tensor | None = None,
     ) -> StepOutput:
-        """`mem_weight` (`[B, M]`, optional) is Expire-Span's soft mask [P7]; see
-        `CrossAttention`. Omitted, the forward is the transcription's exactly."""
+        """`mem_weight` (`[n_C, B, M]`, optional) is Expire-Span's soft mask [P7],
+        one layer per cross-attention block in order -- [P7] computes spans
+        "independently for each layer" (P7:L81-82). See `CrossAttention`. Omitted,
+        the forward is the transcription's exactly."""
         cfg = self.cfg
+        if mem_weight is not None:
+            n_c = sum(b.block_type == "C" for b in self.blocks)
+            if mem_weight.dim() != 3 or mem_weight.shape[0] != n_c:
+                raise ValueError(
+                    f"mem_weight must be [n_C={n_c}, B, M], one mask per "
+                    f"cross-attention layer; got {tuple(mem_weight.shape)}"
+                )
         tok = self.embed(ids)
 
         if cfg.bos_replacement_mode == "copy":
@@ -547,8 +556,13 @@ class TGModel(nn.Module):
         h_srep = None
         activations = []
         cross = []
+        c_idx = 0
         for i, block in enumerate(self.blocks):
-            h = block(h, key_pad, mem_kv, mem_valid, mem_weight)
+            layer_weight = None
+            if mem_weight is not None and block.block_type == "C":
+                layer_weight = mem_weight[c_idx]
+                c_idx += 1
+            h = block(h, key_pad, mem_kv, mem_valid, layer_weight)
             if capture:
                 activations.append(h)
                 if block.block_type == "C":
