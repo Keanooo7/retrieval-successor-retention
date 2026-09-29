@@ -329,6 +329,16 @@ NOT_CONVERTED = {
         "merge. :190 exits 1 via `raise SystemExit(msg)` on a corpus precondition, "
         "and argparse's usage error is 2 -- needs its own brief"
     ),
+    "experiments/e0d/amendment-2/reviews/e0d-a2-final/m5_tau_seeds.py": (
+        "vendored byte copy (2026-09-29) of the script that measured E0d PREREG A2.2's "
+        "frozen tau; the record of what was run, never re-run from the repo, and "
+        "editing it would edit the provenance (experiments/e0d/amendment-2/README.md)"
+    ),
+    "experiments/e0d/amendment-2/reviews/e0d-a2-final/m6_pct_calib_power.py": (
+        "vendored byte copy (2026-09-29) of the script behind E0d PREREG A2.4 / A2.11's "
+        "tables; the record of what was run, never re-run from the repo "
+        "(experiments/e0d/amendment-2/README.md)"
+    ),
     "experiments/s0-02/measure_qtok_collapse.py": (
         "not in S0-05's files in scope; three precondition refusals exit 1 via bare "
         "`raise SystemExit(msg)` -- filed as a brief error"
