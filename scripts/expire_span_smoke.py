@@ -17,7 +17,6 @@ The predictor's optimizer group is likewise a placeholder (ADR-0010 q9).
 
 from __future__ import annotations
 
-import argparse
 import json
 import subprocess
 import sys
@@ -31,6 +30,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from rsr.baselines.expire_span import ExpireSpanConfig, ExpireSpanPolicy  # noqa: E402
 from rsr.data.synthetic import SyntheticConfig, generate  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, run_main  # noqa: E402
 from rsr.model.tg import TGConfig, TGModel  # noqa: E402
 from rsr.model.tg.policy_loop import run_policy_loop  # noqa: E402
 from rsr.mup.param_groups import build_param_groups  # noqa: E402
@@ -41,8 +41,8 @@ SMOKE_ONLY = dict(
 )
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
+def main() -> Exit:
+    ap = ArgumentParser()
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--grad-path", default="predictor")
     ap.add_argument("--out", type=Path, default=None)
@@ -128,8 +128,8 @@ def main() -> int:
     print(json.dumps(rec, indent=2))
     if a.out:
         a.out.write_text(json.dumps(rec, indent=2) + "\n")
-    return 0 if rec["loss_finite"] else 1
+    return Exit.OK if rec["loss_finite"] else Exit.FAIL
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_main(main)
