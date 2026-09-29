@@ -1,20 +1,33 @@
 """E0d -- `r_i` against leave-one-out delta-loss (spec §3.2.1, §6 kill gate).
 
 Pre-registration: `experiments/e0d/PREREG.md`, committed alone at 5357ad2, ahead of
-this file, and **Amendment 1** (84e21c5, erratum 268b947), which governs wherever
-the two differ. They fix the substrate, the documents, every statistic, every
-threshold, the controls and the classification. This file implements them; it
-chooses none. Where they left a detail open, the choice is marked `PREREG-OPEN:`
-below and listed in RESULTS.md.
+this file; **Amendment 1** (84e21c5, erratum 268b947); and **Amendment 2** (8c63ecd),
+which governs wherever they differ. They fix the substrate, the documents, every
+statistic, every threshold, the controls and the classification. This file
+implements them; it chooses none. Where they left a detail open, the choice is
+marked `PREREG-OPEN:` below and listed in RESULTS.md. Amendment 2's cited material
+(Part B's tests, the m1-m7 scripts and logs, the tau cells files) is vendored in
+`experiments/e0d/amendment-2/`; its calibration fixture is `calibration.py`.
 
     uv run python experiments/e0d/run.py            # the run: runs/e0d/
     uv run python experiments/e0d/run.py --help
 
-🔴 **Blocked at this commit on three owner rulings (PREREG §6 C8)** and on the T0
-record (A1.7). Without `R-*-retrieval-shown`, `R-*-sprint0-gate*` and a ruling that
-ratifies or replaces `RHO_STAR`, `main()` exits 3 **before it generates a single
-document of `D_E0d = [262144, 263168)`**. `e0d_documents()` refuses that range
-unless the caller has cleared C8, C1 and C2.
+🔴 **C8 (A2.13) blocks the run until `docs/owner/rulings/` holds, committed and
+unmodified, `R-*-retrieval-shown*`, `R-*-sprint0-gate*`, the first
+`R-*-e0d-statistic*` ruling AND an `R-*-e0d-statistic-amended*` ruling**, with
+exactly one `AUROC_STAR` across the last two (read from the files, never typed).
+Then C12 checks the frozen per-seed tau tables against A2.2's text, and C1 needs
+the T0 record (A1.7). Any refusal exits 3 **before a single document of
+`D_E0d = [262144, 263168)` is generated**. `e0d_documents()` refuses that range
+unless the caller has cleared C8, C12, C1 and C2.
+
+Amendment 2 in one paragraph: per seed, the single gate is `AUROC_strat,pct` (the
+age-stratified AUROC of each slot's within-step percentile of gated `r_i`, against
+`y = 1[Delta_resample > tau_s]`), read through its 95 % document-bootstrap CI against
+`AUROC_STAR`. Raw `AUROC_strat` is read by one row only (A2.8 row 5b): it can turn a
+would-be kill into exit 2 and a HALT to Brendan, and never produces a pass. H (the
+argmin-hit rate), every rho statistic (`label_A1`) and the pooled result are
+reported and never gate.
 
 What one run does, per seed of fresh-stream arm B's frozen `ckpt-003000` (read only):
 
@@ -26,14 +39,16 @@ What one run does, per seed of fresh-stream arm B's frozen `ckpt-003000` (read o
    mode -- corrections 17, 20) from its **own** FIFO capture forward (A1.6), and
    `rsr.metrics.loo.loo_delta_loss` in `resample` (primary) and `zero` mode. C4
    alignment and C9 FIFO per batch; C7 determinism on the first batch.
-4. C5 fill, C6 resample coverage. Then A1.1's strata (Q-steps, A-cells, N-steps,
-   by document structure), rho_Q (primary) and rho_Q,rank (decision-bearing) with
-   the per-document cluster bootstrap, the secondaries, C10's positive control
-   (`true_demand` as the score) and the amended §5 flatness -- on all cells and,
-   once more, with A1.3's bos-copy exclusions (rank M-1, gap-1 Q-steps).
-5. §8 over the 3 seeds (A1.1/A1.2 labels; the exit follows gated x resample on
-   the excluded population; BOS_SENSITIVE, GATE_SENSITIVE and the zero knockout
-   are reported). C1 again at the end.
+4. C5 fill, C6 resample coverage, C11 age strata (A2.3). Then, on all cells and
+   once more with A1.3's bos-copy exclusions (rank M-1, gap-1 Q-steps): the A2.4
+   family (`AUROC_strat,pct`, raw `AUROC_strat`, `AUROC_unstrat,pct`, `C_ws`, H) for
+   gated/ungated `r_i` x resample/zero, with `true_demand` as C10' (row 0), the
+   amended §5 flatness, the A2.8 labels, the 5b boolean, the raw-substituted label
+   (STEP_SENSITIVE), the tau sensitivity labels, and A1's rho statistics and
+   `label_A1` as secondaries. One bootstrap matrix per seed.
+5. §8 over the 3 seeds (A2.8, row 4b; the exit follows gated x resample on the
+   excluded population; HALT on 5b; BOS_SENSITIVE, GATE_SENSITIVE, the zero
+   knockout and the pooled result are reported). C1 again at the end.
 6. A1.4: any exception exits 3 with its traceback in the ledger; an exit code
    leaves only after `e0d.class` is read back from the written ledger.
    `runs/<run_id>/claims.json` is written only by a run that reached a class.
@@ -153,16 +168,52 @@ CKPT_SHA256 = {
 T0_RECORD = Path("t0-substrate") / "manifest.json"
 DEFAULT_SUBSTRATE_CWD = Path("/Users/keanooo7/retrieval-successor-retention")
 
-#: §6 C8. PREREG-OPEN: the PREREG names the first two patterns and does not name
-#: the rho* ruling's file; `R-*-rho-star*` is this runner's choice, and the ruling
-#: must state its value as a `RHO_STAR: <x>` (or `=`) line.
+#: §6 C8 as replaced by A2.13: `R-*-e0d-statistic*` (every such file: the first
+#: ruling and its amendment) replaces `R-*-rho-star*`, which is neither required
+#: nor read. At least one non-amended and at least one amended statistic ruling must
+#: be present; either alone exits 3.
 RULING_PATTERNS = {
     "retrieval_shown": "R-*-retrieval-shown*",
     "sprint0_gate": "R-*-sprint0-gate*",
-    "rho_star": "R-*-rho-star*",
+    "e0d_statistic": "R-*-e0d-statistic*",
 }
+AMENDED_PATTERN = "R-*-e0d-statistic-amended*"
 DEFAULT_RULINGS_DIR = ROOT / "docs" / "owner" / "rulings"
-_RHO_LINE = re.compile(r"^\s*[`*]*RHO_STAR[`*]*\s*[:=]\s*([0-9]*\.?[0-9]+)", re.M)
+#: A2.13 key form, **not** anchored at line start: in both rulings the key sits in a
+#: table cell or a numbered list item (Part D.2 item 5).
+_AUROC_KEY = re.compile(
+    r"(?<![A-Za-z0-9_])[`*]*AUROC_STAR[`*]*\s*[:=]\s*([0-9]*\.?[0-9]+)"
+)
+
+# --------------------------------------------------------------------------- #
+# 🔒 Amendment 2 constants. tests/test_e0d.py reads each back out of the PREREG,
+# and C12 re-checks the tau tables against A2.2's text at run time.
+# --------------------------------------------------------------------------- #
+
+#: A2.2: tau_s = the q = 0.995 quantile (numpy default, type 7) of |Delta| over
+#: full-memory non-A Q-step cells with a value, on set E [64, 128), frozen per seed.
+#: The runner reads these; it never computes a quantile on D_E0d cells.
+TAU_Q = 0.995
+TAU_RESAMPLE = {0: 0.4157434984576128, 1: 0.4315741845071321, 2: 0.4884946896703897}
+TAU_ZERO = {0: 0.3447678400575726, 1: 0.3300262098312375, 2: 0.386515489417143}
+#: A2.2 "Sensitivities (reported, never gating)"; A2.7 item 3.
+TAU_SENSITIVITY = {
+    "0.99": {
+        "resample": {0: 0.3109549731015192, 1: 0.310573765520007, 2: 0.3491311189141148},
+        "zero": {0: 0.24913927197480037, 1: 0.24216222953796368, 2: 0.2818768095970196},
+    },
+    "0.999": {
+        "resample": {0: 0.7129988655444408, 1: 0.7854374831784502, 2: 0.7694723016164862},
+        "zero": {0: 0.5874972405433865, 1: 0.6492233513593663, 2: 0.6450255164741889},
+    },
+}
+#: A2.3: 16 bins, one per age {1}, ..., {16}, fixed before data.
+AGE_BINS = tuple(range(1, PREREG_M + 1))
+#: A2.8 row 3: `AUROC_strat,pct` CI upper < 0.5 is INVERTED.
+AUROC_INVERTED = 0.5
+#: A2.8: first matching row wins, in this order (row 5b after row 2, ahead of 3).
+LABEL_ORDER = ("0", "1", "2", "5b", "3", "4", "5", "6", "7")
+STEP_OR_AGE = "STEP_OR_AGE_AMBIGUOUS"
 
 #: §2.2's table: every range C2 checks, read from the committed manifests at run
 #: time. `(run, dotted key)`; a value is `[a, b]`, a dict of those, or (for
@@ -203,9 +254,11 @@ RANGE_SOURCES = (
 CONTENT_KINDS = ("pending_assert", "spent_assert", "unpaired_assert", "query", "filler")
 
 EXPECTED = (
-    "PREREG §9 (scored per A1.8): class CONFOUND, second most likely MIXED; numeric "
-    "parts on the secondaries -- pooled gated rho_resample 0.1-0.4 with CI upper < "
-    "0.5 on every seed; rho_rank below rho_pool; bottom-1 above 1/16 but under 0.3."
+    "PREREG §9 (scored per A1.8 and A2.14): class CONFOUND, second most likely MIXED, "
+    "scored against class_A1 (A1's §8 on label_A1) only; no class prediction is "
+    "registered for the A2.8 classification. Numeric parts on the rho secondaries -- "
+    "pooled gated rho_resample 0.1-0.4 with CI upper < 0.5 on every seed; rho_rank "
+    "below rho_pool; bottom-1 above 1/16 but under 0.3."
 )
 
 
@@ -229,7 +282,11 @@ def _git(*args: str, cwd: Path) -> int:
 
 
 def check_authority(rulings_dir: Path, *, require_committed: bool = True) -> dict:
-    """C8: the three rulings exist (committed, unmodified) and rho* has a value."""
+    """C8 (A2.13): retrieval-shown, sprint0-gate, the first e0d-statistic ruling
+    and its amendment exist, committed and unmodified; across every
+    `R-*-e0d-statistic*` file exactly one distinct `AUROC_STAR`, in (0.5, 1).
+    `HARM_RATIO_STAR` is not required and not read; `R-*-rho-star*` is neither
+    required nor read."""
     rulings_dir = Path(rulings_dir)
     names = sorted(p.name for p in rulings_dir.iterdir()) if rulings_dir.is_dir() else []
     found: dict[str, list[Path]] = {}
@@ -237,9 +294,24 @@ def check_authority(rulings_dir: Path, *, require_committed: bool = True) -> dic
         hits = [rulings_dir / n for n in names if fnmatch.fnmatch(n, pat)]
         if not hits:
             raise ControlFailed(
-                "C8", f"no ruling matching {pat!r} in {rulings_dir} (PREREG §6 C8)"
+                "C8", f"no ruling matching {pat!r} in {rulings_dir} (PREREG A2.13)"
             )
         found[key] = hits
+    stat = found["e0d_statistic"]
+    amended = [p for p in stat if fnmatch.fnmatch(p.name, AMENDED_PATTERN)]
+    first = [p for p in stat if p not in amended]
+    if not amended:
+        raise ControlFailed(
+            "C8", f"no ruling matching {AMENDED_PATTERN!r} in {rulings_dir}: the first "
+            f"e0d-statistic ruling alone names raw AUROC_strat and the H gate, not "
+            f"A2.4's statistic (PREREG A2.13; either ruling alone exits 3)"
+        )  # fmt: skip
+    if not first:
+        raise ControlFailed(
+            "C8", f"no first (non-amended) R-*-e0d-statistic* ruling in {rulings_dir}: "
+            f"the amended ruling alone exits 3 (PREREG A2.13)"
+        )  # fmt: skip
+    found["e0d_statistic_amended"] = amended
     if require_committed:
         for hits in found.values():
             for p in hits:
@@ -249,26 +321,92 @@ def check_authority(rulings_dir: Path, *, require_committed: bool = True) -> dic
                     raise ControlFailed(
                         "C8",
                         f"{p} is not a committed, unmodified ruling (tracked rc "
-                        f"{tracked}, diff rc {clean}); PREREG §4: committed before "
-                        f"the run starts",
+                        f"{tracked}, diff rc {clean}); PREREG A2.13: committed and "
+                        f"unmodified before the run starts",
                     )
     values = set()
-    for p in found["rho_star"]:
-        values |= {float(v) for v in _RHO_LINE.findall(p.read_text())}
+    for p in stat:
+        values |= {float(v) for v in _AUROC_KEY.findall(p.read_text())}
     if len(values) != 1:
         raise ControlFailed(
             "C8",
-            f"the rho* ruling(s) {[p.name for p in found['rho_star']]} state "
-            f"{sorted(values) or 'no'} RHO_STAR value(s); exactly one is required",
+            f"the e0d-statistic ruling(s) {[p.name for p in stat]} state "
+            f"{sorted(values) or 'no'} AUROC_STAR value(s); exactly one is required "
+            f"(PREREG A2.13)",
         )
-    (rho,) = values
-    if not 0.0 < rho < 1.0:
-        raise ControlFailed("C8", f"RHO_STAR = {rho} is not in (0, 1)")
+    (auroc,) = values
+    if not AUROC_INVERTED < auroc < 1.0:
+        raise ControlFailed("C8", f"AUROC_STAR = {auroc} is not in (0.5, 1) (A2.13)")
     return {
         "rulings": {k: [str(p) for p in v] for k, v in found.items()},
-        "rho_star": rho,
-        "rho_star_proposed": RHO_STAR_PROPOSED,
+        "auroc_star": auroc,
     }
+
+
+def check_tau_tables(prereg: Path | None = None) -> dict:
+    """C12 (A2.13): `TAU_RESAMPLE` and `TAU_ZERO` (and the sensitivity tables) hold
+    exactly seeds {0, 1, 2} and equal A2.2's registered values, parsed from the
+    committed PREREG text; a seed without a frozen tau is not run. Exit 3 else."""
+    text = Path(ROOT / PREREG_PATH if prereg is None else prereg).read_text()
+    try:
+        a22 = text.split("## Amendment 2", 1)[1].split("### A2.2", 1)[1]
+        a22 = a22.split("### A2.3", 1)[0]
+    except IndexError as e:
+        raise ControlFailed("C12", "PREREG has no Amendment 2 §A2.2") from e
+    frozen = re.findall(
+        r"^\s*\|\s*(\d)\s*\|\s*`[^`|]*`\s*\|\s*\*\*([0-9.]+)\*\*\s*\|[^|]*\|"
+        r"\s*([0-9.]+)\s*\|",
+        a22,
+        re.M,
+    )
+    sens = re.findall(
+        r"^\s*\|\s*(\d)\s*\|\s*([0-9.]+)\s*\|\s*([0-9.]+)\s*\|\s*([0-9.]+)\s*\|"
+        r"\s*([0-9.]+)\s*\|\s*$",
+        a22,
+        re.M,
+    )
+    reg_res = {int(s): float(r) for s, r, _ in frozen}
+    reg_zero = {int(s): float(z) for s, _, z in frozen}
+    reg_sens = {
+        "0.99": {"resample": {int(r[0]): float(r[1]) for r in sens},
+                 "zero": {int(r[0]): float(r[3]) for r in sens}},
+        "0.999": {"resample": {int(r[0]): float(r[2]) for r in sens},
+                  "zero": {int(r[0]): float(r[4]) for r in sens}},
+    }  # fmt: skip
+    want = set(SEEDS)
+    problems = []
+    for name, table, reg in (
+        ("TAU_RESAMPLE", TAU_RESAMPLE, reg_res),
+        ("TAU_ZERO", TAU_ZERO, reg_zero),
+        *(
+            (f"TAU_SENSITIVITY[{q}][{k}]", TAU_SENSITIVITY[q][k], reg_sens[q][k])
+            for q in ("0.99", "0.999")
+            for k in ("resample", "zero")
+        ),
+    ):
+        if set(table) != want or set(reg) != want:
+            problems.append(f"{name}: seeds {sorted(table)} vs registered {sorted(reg)}")
+            continue
+        bad = {s: (table[s], reg[s]) for s in want if table[s] != reg[s]}
+        if bad:
+            problems.append(f"{name} differs from A2.2: {bad}")
+    if problems:
+        raise ControlFailed("C12", "; ".join(problems))
+    return {
+        "seeds": sorted(want),
+        "tau_resample": {str(s): TAU_RESAMPLE[s] for s in sorted(want)},
+        "tau_zero": {str(s): TAU_ZERO[s] for s in sorted(want)},
+        "source": f"{PREREG_PATH} A2.2 (parsed at run time)",
+    }
+
+
+def tau_for(seed: int, knockout: str, q: str | None = None) -> float:
+    """A2.2: the frozen tau of `seed` for `knockout` (`q` a sensitivity quantile)."""
+    if q is None:
+        table = {"resample": TAU_RESAMPLE, "zero": TAU_ZERO}[knockout]
+    else:
+        table = TAU_SENSITIVITY[q][knockout]
+    return table[seed]
 
 
 def sha256(path: Path) -> str:
@@ -672,7 +810,7 @@ def cells_from(batches: list[dict], docs_per_batch: list, M: int) -> dict:
     cols: dict[str, list] = {k: [] for k in (
         "doc", "t", "rank", "sentence", "n_live", "d_resample", "d_zero", "r_gated",
         "r_ungated", "layer_gated", "layer_ungated", "pre_share_gated",
-        "pre_share_ungated", "kind", "q_step", "a_cell", "gap", "pc",
+        "pre_share_ungated", "kind", "q_step", "a_cell", "gap", "pc", "query_of",
     )}  # fmt: skip
     names = {v: k for k, v in KIND.items()}
     offset = 0
@@ -716,6 +854,7 @@ def cells_from(batches: list[dict], docs_per_batch: list, M: int) -> dict:
         cols["pre_share_gated"].append(m["pre_share_gated"][b, t].numpy())
         cols["pre_share_ungated"].append(m["pre_share_ungated"][b, t].numpy())
         cols["kind"].append(np.array(labels, dtype=object))
+        cols["query_of"].append(q.numpy())  # A2.7 item 8 (sink/inversion probe)
         offset += B
     out = {k: np.concatenate(v) for k, v in cols.items()}
     out["full"] = out["n_live"] == M
@@ -862,6 +1001,18 @@ def percentile_ci(vals, *, level: float = CI_LEVEL) -> tuple[float, float]:
         return (math.nan, math.nan)
     a = (1.0 - level) / 2.0
     return (float(np.quantile(vals, a)), float(np.quantile(vals, 1.0 - a)))
+
+
+def percentile_ci_defined(vals, *, level: float = CI_LEVEL) -> tuple[float, float, int]:
+    """A2.4 "Bootstrap" (review m-7): a resample in which the statistic is undefined
+    is counted and reported, and the interval is read over the defined resamples.
+    Returns `(lo, hi, n_undefined)`; no defined resample at all is `(nan, nan, n)`."""
+    vals = np.asarray(vals, dtype=np.float64)
+    n_und = int(np.isnan(vals).sum())
+    vals = vals[~np.isnan(vals)]
+    if not len(vals):
+        return (math.nan, math.nan, n_und)
+    return (*percentile_ci(vals, level=level), n_und)
 
 
 def strata(c: dict) -> dict:
@@ -1042,7 +1193,9 @@ def r_flat(r_grid) -> dict:
 
 
 def seed_label(inp: dict, *, rho_star: float) -> str:
-    """§7 as replaced by A1.1, first match wins, on 95 % CIs, never a point.
+    """A1's §7 (A1.1), first match wins, on 95 % CIs, never a point. Retired from
+    gating by A2.1: reported as `label_A1` (at the PREREG's proposed rho* = 0.5 and
+    the {0.3, 0.7} sensitivities), and scored against §9's prediction (A2.14).
     PREREG-OPEN: a PC CI that is undefined (NaN) cannot reach rho*, so it reads
     CEILING; an undefined r_i CI falls through to UNRESOLVED."""
     pc_hi = inp["pc_rho_Q_ci"][1]
@@ -1065,22 +1218,425 @@ def seed_label(inp: dict, *, rho_star: float) -> str:
     return "UNRESOLVED"
 
 
-#: §8 rows 1-6 -> exit (A1.2: RECENCY_ONLY is 2; exit 1 only from rows 3 and 4).
+# --------------------------------------------------------------------------- #
+# Amendment 2: C11, the Q-step population, the within-step percentile, the
+# critical label, the AUROC family, C_ws and H (A2.2-A2.6)
+# --------------------------------------------------------------------------- #
+
+
+def critical_labels(delta, tau: float) -> tuple[np.ndarray, np.ndarray]:
+    """A2.2: `y = 1[Delta > tau_s]`, strict. A NaN Delta (no resample donor) has no
+    label. Returns `(has, y)`. Computes no quantile: tau is the frozen constant."""
+    d = np.asarray(delta, dtype=np.float64)
+    has = ~np.isnan(d)
+    y = has & (d > tau)
+    return has, y
+
+
+def check_ages(c: dict, M: int) -> dict:
+    """C11 (A2.3, A2.13): at every full-memory step the slots hold exactly one slot
+    per age 1..M, and write-order rank = M - age. Any violation is exit 3."""
+    full = np.asarray(c["full"], dtype=bool)
+    age = (np.asarray(c["t"]) - np.asarray(c["sentence"]))[full]
+    rank = np.asarray(c["rank"])[full]
+    if not len(age):
+        raise ControlFailed("C11", "no full-memory step to check")
+    bad_rank = int((rank != M - age).sum())
+    key = _step_key(c)[full]
+    uniq, inv, cnt = np.unique(key, return_inverse=True, return_counts=True)
+    in_range = (age >= 1) & (age <= M)
+    pairs = inv.astype(np.int64) * (M + 2) + np.clip(age, 0, M + 1)
+    dup = len(pairs) - len(np.unique(pairs))
+    short = int((cnt != M).sum())
+    if bad_rank or dup or short or not in_range.all():
+        raise ControlFailed(
+            "C11", f"age strata broken at full-memory steps: {bad_rank} cells with "
+            f"rank != M - age, {dup} duplicated ages, {short} steps without {M} "
+            f"slots, {int((~in_range).sum())} ages outside 1..{M} (PREREG A2.3)"
+        )  # fmt: skip
+    return {"ok": True, "n_full_steps": len(uniq), "n_cells": len(age)}
+
+
+def q_population(c: dict, keep, *, M: int) -> dict:
+    """A2.4 "Population": the cells of A1.1's Q-steps (full memory, sentence t a
+    query) that `keep` retains (A1.3's exclusions for the operative population).
+    Every such cell is an eligible slot, whether or not its Delta has a value.
+
+    C11 under the population: every step holds the same number of eligible slots,
+    M (all cells) or M - 1 (A1.3: rank M - 1 out); anything else is exit 3."""
+    sel = strata(c)["Q"] & np.asarray(keep, dtype=bool)
+    idx = np.flatnonzero(sel)
+    key = _step_key(c)[idx]
+    _, step, n_t = np.unique(key, return_inverse=True, return_counts=True)
+    doc = np.asarray(c["doc"])[idx]
+    step_doc = np.zeros(len(n_t), dtype=np.int64)
+    step_doc[step] = doc
+    age = (np.asarray(c["t"]) - np.asarray(c["sentence"]))[idx]
+    vals = sorted({int(x) for x in n_t})
+    if len(vals) > 1 or (vals and vals[0] not in (M, M - 1)):
+        raise ControlFailed(
+            "C11", f"eligible slots per Q-step {vals}, expected one of {M} (all "
+            f"cells) or {M - 1} (A1.3) at every step (PREREG A2.4, A2.13)"
+        )  # fmt: skip
+    order = np.argsort(step, kind="stable")
+    return {
+        "idx": idx[order],
+        "step": step[order],
+        "n_steps": len(n_t),
+        "n_t": n_t,
+        "doc": doc[order],
+        "step_doc": step_doc,
+        "age": age[order],
+        "M": M,
+    }
+
+
+def step_percentiles(score, pop: dict) -> np.ndarray:
+    """A2.4 step 1: at each step, over ALL its eligible slots (a NaN-Delta slot
+    included), the midrank of r (rank 1 = smallest, ties share the mean rank) and
+    `pct = (midrank - 1) / (n_t - 1)`. A non-finite r on an eligible slot is
+    `MeasurementUndefined` (exit 3)."""
+    v = np.asarray(score, dtype=np.float64)
+    if not np.all(np.isfinite(v)):
+        raise MeasurementUndefined(
+            f"A2.4: {int((~np.isfinite(v)).sum())} eligible slot(s) with a non-finite r"
+        )
+    step = pop["step"]
+    n = len(v)
+    order = np.lexsort((v, step))
+    vs, ss = v[order], step[order]
+    start = np.zeros(pop["n_steps"], dtype=np.int64)
+    start[1:] = np.cumsum(pop["n_t"])[:-1]
+    pos = np.arange(n, dtype=np.float64) - start[ss] + 1.0
+    new = np.ones(n, dtype=bool)
+    new[1:] = (vs[1:] != vs[:-1]) | (ss[1:] != ss[:-1])
+    gid = np.cumsum(new) - 1
+    mid = np.bincount(gid, weights=pos) / np.bincount(gid)
+    mr = np.empty(n)
+    mr[order] = mid[gid]
+    return (mr - 1.0) / (pop["n_t"][pop["step"]] - 1.0)
+
+
+def tied_minima(score, pop: dict) -> np.ndarray:
+    """A2.6: the step's tied minima of r over its eligible slots."""
+    v = np.asarray(score, dtype=np.float64)
+    mn = np.full(pop["n_steps"], np.inf)
+    np.minimum.at(mn, pop["step"], v)
+    return v == mn[pop["step"]]
+
+
+class StratAUROC:
+    """A2.4 steps 3-4 on labelled cells: per bin, the Mann-Whitney probability that
+    a positive's value exceeds a negative's (equal values count 1/2), over every
+    positive-negative pair in the bin; bins lacking a class are excluded (never 0,
+    never 1/2); the bins are averaged with weight `w_a` = the positives in the bin.
+    `__call__(w)` evaluates it on a sample in which cell j appears `w[j]` times."""
+
+    def __init__(self, values, y, bins, all_bins=()) -> None:
+        self.all_bins = tuple(int(x) for x in all_bins)
+        v = np.asarray(values, dtype=np.float64)
+        b = np.asarray(bins, dtype=np.int64)
+        self.y = np.asarray(y, dtype=bool)
+        self.n = len(v)
+        order = np.lexsort((v, b))
+        vs, bs = v[order], b[order]
+        new = np.ones(self.n, dtype=bool)
+        new[1:] = (vs[1:] != vs[:-1]) | (bs[1:] != bs[:-1])
+        gsorted = np.cumsum(new) - 1
+        self.gid = np.empty(self.n, dtype=np.int64)
+        self.gid[order] = gsorted
+        self.G = int(gsorted[-1]) + 1 if self.n else 0
+        gbin = bs[new]
+        self.bins, self.gbin = np.unique(gbin, return_inverse=True)
+        self.nb = len(self.bins)
+        self.bin_first = np.searchsorted(self.gbin, np.arange(self.nb))
+
+    def per_bin(self, w=None):
+        w = np.ones(self.n) if w is None else np.asarray(w, dtype=np.float64)
+        yp, yn = self.y, ~self.y
+        wp = np.bincount(self.gid[yp], weights=w[yp], minlength=self.G)
+        wn = np.bincount(self.gid[yn], weights=w[yn], minlength=self.G)
+        cn = np.cumsum(wn)
+        before = np.concatenate([[0.0], cn])[self.bin_first]
+        below = cn - wn - before[self.gbin]
+        num = np.bincount(self.gbin, weights=wp * (below + 0.5 * wn), minlength=self.nb)
+        P = np.bincount(self.gbin, weights=wp, minlength=self.nb)
+        N = np.bincount(self.gbin, weights=wn, minlength=self.nb)
+        return num, P, N
+
+    def __call__(self, w=None) -> float:
+        if not self.n:
+            return math.nan
+        num, P, N = self.per_bin(w)
+        both = (P > 0) & (N > 0)
+        if not both.any():
+            return math.nan
+        au = num[both] / (P[both] * N[both])
+        wa = P[both]
+        return float((wa * au).sum() / wa.sum())
+
+    def detail(self) -> tuple[list, list]:
+        """Per-bin AUROC with its counts, and the excluded bins with theirs (A2.4
+        step 3, A2.7 item 4). A registered bin with no labelled cell at all (bin {1}
+        under A1.3, A2.3) is logged as excluded with 0 / 0."""
+        used, excluded = [], []
+        seen = set()
+        if self.n:
+            num, P, N = self.per_bin()
+            for j, b in enumerate(self.bins.tolist()):
+                seen.add(int(b))
+                row = {"bin": int(b), "positives": int(P[j]), "negatives": int(N[j])}
+                if P[j] > 0 and N[j] > 0:
+                    used.append({**row, "auroc": float(num[j] / (P[j] * N[j]))})
+                else:
+                    excluded.append(row)
+        for b in self.all_bins:
+            if b not in seen:
+                excluded.append({"bin": b, "positives": 0, "negatives": 0})
+        return used, sorted(excluded, key=lambda r: r["bin"])
+
+
+def _wavg(x: np.ndarray, w: np.ndarray) -> float:
+    den = w.sum()
+    return float((w * x).sum() / den) if den > 0 else math.nan
+
+
+class WithinStepC:
+    """A2.5 `C_ws`: `m_a` = the mean pct over the labelled Q-step cells of age a;
+    `v_t` = the mean over a step's critical cells of `pct - m_a`; `C_ws` = the mean
+    of `v_t` over steps with at least one critical cell. `m_a` is re-estimated in
+    every resample (T17)."""
+
+    def __init__(self, pct, y, lab, pop) -> None:
+        self.lab = np.asarray(lab, dtype=bool)
+        self.pct = np.asarray(pct, dtype=np.float64)
+        self.age = pop["age"]
+        self.doc = pop["doc"]
+        self.ages = np.unique(self.age[self.lab]) if self.lab.any() else np.array([])
+        self.aix = np.searchsorted(self.ages, self.age)
+        crit = np.asarray(y, dtype=bool)
+        k = np.bincount(pop["step"], weights=crit, minlength=pop["n_steps"])
+        self.steps = np.flatnonzero(k > 0)
+        sidx = np.searchsorted(self.steps, pop["step"])
+        on = crit
+        self.k = k[self.steps]
+        self.S = np.bincount(sidx[on], weights=self.pct[on], minlength=len(self.steps))
+        # counts of critical cells by (step, age), to subtract m_a
+        self.C = np.zeros((len(self.steps), len(self.ages)))
+        np.add.at(self.C, (sidx[on], self.aix[on]), 1.0)
+        self.step_doc = pop["step_doc"][self.steps]
+
+    def __call__(self, w_doc=None) -> float:
+        if not len(self.steps) or not len(self.ages):
+            return math.nan
+        wc = (np.ones(len(self.pct)) if w_doc is None else w_doc[self.doc])[self.lab]
+        num = np.bincount(self.aix[self.lab], weights=wc * self.pct[self.lab],
+                          minlength=len(self.ages))  # fmt: skip
+        den = np.bincount(self.aix[self.lab], weights=wc, minlength=len(self.ages))
+        with np.errstate(invalid="ignore", divide="ignore"):
+            m_a = num / den
+        v = (self.S - self.C @ np.nan_to_num(m_a)) / self.k
+        ws = np.ones(len(v)) if w_doc is None else w_doc[self.step_doc]
+        return _wavg(v, ws)
+
+
+class ArgminHit:
+    """A2.6, reported and never gating. `Q_crit` = Q-steps with k_t >= 1 critical
+    cells whose every eligible slot has a Delta value (steps dropped for a missing
+    value are counted). `h_t` = the critical share of the step's tied minima of r.
+    H, H_random (k_t / n_t), H_age-random (pi from r's own tied minima on Q_crit,
+    re-estimated per resample), R_H, R_H,uniform, H_FIFO (the oldest slot) and
+    H_age-oracle (the best fixed age)."""
+
+    def __init__(self, score, y, has, pop) -> None:
+        ns, step = pop["n_steps"], pop["step"]
+        y = np.asarray(y, dtype=bool)
+        k = np.bincount(step, weights=y, minlength=ns)
+        complete = np.bincount(step, weights=~np.asarray(has), minlength=ns) == 0
+        self.dropped = int(((k >= 1) & ~complete).sum())
+        qc = np.flatnonzero((k >= 1) & complete)
+        self.steps = qc
+        tm = tied_minima(score, pop)
+        ages = np.arange(1, pop["M"] + 1)
+        sidx = np.searchsorted(qc, step)
+        on = np.isin(step, qc)
+        nq = len(qc)
+        self.Y = np.zeros((nq, len(ages)))
+        self.T = np.zeros((nq, len(ages)))
+        ai = pop["age"] - 1
+        self.Y[sidx[on], ai[on]] = y[on]
+        self.T[sidx[on], ai[on]] = tm[on]
+        n_min = self.T.sum(1)
+        self.T = self.T / np.where(n_min > 0, n_min, 1.0)[:, None]
+        self.h = (self.T * self.Y).sum(1)
+        self.kn = k[qc] / pop["n_t"][qc]
+        self.step_doc = pop["step_doc"][qc]
+        self.fifo = self.Y[:, pop["M"] - 1] if nq else np.zeros(0)
+
+    def __call__(self, w_doc=None) -> dict:
+        nq = len(self.steps)
+        if not nq:
+            return {"H": math.nan, "H_random": math.nan, "H_age_random": math.nan,
+                    "R_H": math.nan, "R_H_uniform": math.nan, "H_FIFO": math.nan,
+                    "H_age_oracle": math.nan}  # fmt: skip
+        w = np.ones(nq) if w_doc is None else w_doc[self.step_doc]
+        H = _wavg(self.h, w)
+        H_random = _wavg(self.kn, w)
+        W = w.sum()
+        pi = (w[:, None] * self.T).sum(0) / W if W > 0 else np.full(self.T.shape[1], 0.0)
+        h_ar = _wavg((self.Y * pi[None, :]).sum(1), w)
+        by_age = (w[:, None] * self.Y).sum(0) / W if W > 0 else self.Y.sum(0) * math.nan
+        return {
+            "H": H,
+            "H_random": H_random,
+            "H_age_random": h_ar,
+            "R_H": H / h_ar if h_ar > 0 else math.nan,
+            "R_H_uniform": H / H_random if H_random > 0 else math.nan,
+            "H_FIFO": _wavg(self.fifo, w),
+            "H_age_oracle": float(np.min(by_age)),
+        }
+
+
+def auroc_family(c: dict, score, delta, *, tau: float, keep, W, M: int,
+                 replicates: bool = False) -> dict:  # fmt: skip
+    """Every A2.4-A2.6 statistic of one score against one knockout's Delta on the
+    population `keep`, each with its interval from the same bootstrap matrix `W`
+    (`[n_boot, n_docs]` document counts): `AUROC_strat,pct` (the gate), raw
+    `AUROC_strat` (read by A2.8 row 5b only), `AUROC_unstrat,pct` (row 5 only),
+    `C_ws`, and H with its baselines (reported). pct is computed once per step on
+    the original data (a document's steps are resampled whole); `m_a` and pi are
+    re-estimated per resample. Undefined resamples are counted (m-7)."""
+    pop = q_population(c, keep, M=M)
+    s = np.asarray(score, dtype=np.float64)[pop["idx"]]
+    pct = step_percentiles(s, pop)
+    d = np.asarray(delta, dtype=np.float64)[pop["idx"]]
+    has, y = critical_labels(d, tau)
+    lab = has  # A2.4 step 2: a NaN Delta leaves only its own cell; the step stays
+    yl, al = y[lab], pop["age"][lab]
+    bins = range(1, M + 1)  # A2.3: one bin per age, {1}, ..., {M}
+    f = {
+        "pct": StratAUROC(pct[lab], yl, al, bins),
+        "raw": StratAUROC(s[lab], yl, al, bins),
+        "unstrat_pct": StratAUROC(pct[lab], yl, np.zeros(int(lab.sum()), np.int64)),
+    }
+    cws = WithinStepC(pct, y & lab, lab, pop)
+    hit = ArgminHit(s, y, has, pop)
+    doc_l = pop["doc"][lab]
+    out: dict = {"tau": float(tau)}
+    reps: dict[str, list] = {k: [] for k in (*f, "c_ws", "H", "H_age_random", "R_H")}
+    W = np.asarray(W, dtype=np.float64)
+    for k in range(len(W)):
+        w_doc = W[k]
+        wl = w_doc[doc_l]
+        for nm, fn in f.items():
+            reps[nm].append(fn(wl))
+        reps["c_ws"].append(cws(w_doc))
+        hk = hit(w_doc)
+        for nm in ("H", "H_age_random", "R_H"):
+            reps[nm].append(hk[nm])
+    for nm, fn in f.items():
+        lo, hi, n_und = percentile_ci_defined(reps[nm])
+        out[nm] = fn()
+        out[f"{nm}_ci"] = (lo, hi)
+        out[f"{nm}_n_undefined"] = n_und
+    for nm in ("pct", "raw"):
+        out[f"{nm}_per_bin"], out[f"{nm}_excluded_bins"] = f[nm].detail()
+    out["c_ws"] = cws()
+    lo, hi, n_und = percentile_ci_defined(reps["c_ws"])
+    out["c_ws_ci"], out["c_ws_n_undefined"] = (lo, hi), n_und
+    out.update(hit())
+    for nm in ("H", "R_H"):
+        lo, hi, n_und = percentile_ci_defined(reps[nm])
+        out[f"{nm}_ci"], out[f"{nm}_n_undefined"] = (lo, hi), n_und
+    # A2.6: R_H is undefined if H_age-random is 0 in the point or any resample
+    ar = np.asarray(reps["H_age_random"], dtype=np.float64)
+    out["R_H_defined"] = bool(
+        out["H_age_random"] > 0 and not (len(ar) and (ar[~np.isnan(ar)] <= 0).any())
+    )
+    out.update(
+        n_q_steps=int(pop["n_steps"]),
+        n_cells=len(s),
+        labelled=int(lab.sum()),
+        unlabelled=int((~has).sum()),
+        positives=int(yl.sum()),
+        negatives=int((~yl).sum()),
+        n_t_values=sorted({int(x) for x in pop["n_t"]}),
+        n_q_crit=len(hit.steps),
+        n_q_crit_dropped_nan=hit.dropped,
+        n_boot=len(W),
+    )
+    if replicates:
+        out["_replicates"] = {k: np.asarray(v, dtype=np.float64) for k, v in reps.items()}
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# A2.8 per-seed labels, the 5b boolean, §8 classification (row 4b, HALT)
+# --------------------------------------------------------------------------- #
+
+
+def seed_label_a2(inp: dict, *, auroc_star: float, stat: str = "pct") -> str:
+    """A2.8, first matching row wins, in the order 0, 1, 2, 5b, 3, 4, 5, 6, 7, on
+    95 % CIs, never a point. `A* = auroc_star` is read from the C8 rulings.
+
+    `stat="raw"` is A2.5's raw-substituted label (STEP_SENSITIVE): raw
+    `AUROC_strat` (and the control's raw) in place of `AUROC_strat,pct`, with row
+    5b skipped. PREREG-OPEN: an undefined (NaN) control CI cannot reach A*, so it
+    reads CEILING, as A1's C10 did."""
+    a = auroc_star
+    if stat == "pct":
+        lo, hi = inp["pct_ci"]
+        pc_hi = inp["pc_pct_ci"][1]
+    else:
+        lo, hi = inp["raw_ci"]
+        pc_hi = inp.get("pc_raw_ci", inp["pc_pct_ci"])[1]
+    raw_lo = inp["raw_ci"][0]
+    un_lo = inp["unstrat_ci"][0]
+    if not pc_hi >= a:  # row 0: C10', the true_demand control
+        return "CEILING"
+    if inp["loo_flat"] and inp["r_flat"]:  # row 1
+        return "DEGENERATE"
+    if inp["loo_flat"]:  # row 2
+        return "LOO_UNINFORMATIVE"
+    if stat == "pct" and hi < a and raw_lo >= a:  # row 5b, ahead of row 3
+        return STEP_OR_AGE
+    if hi < AUROC_INVERTED:  # row 3
+        return "INVERTED"
+    if lo >= a:  # row 4: the only pass, on the pct form
+        return "AGREE"
+    if hi < a and un_lo >= a:  # row 5
+        return "AGREE_VIA_RANK"
+    if hi < a:  # row 6
+        return "DISAGREE"
+    return "UNRESOLVED"  # row 7
+
+
+def row5b(inp: dict, *, auroc_star: float) -> bool:
+    """A2.8: whether row 5b's condition (pct CI upper < A* and raw CI lower >= A*)
+    holds, reported on every seed whatever its label (rows 0-2 may absorb it)."""
+    return bool(inp["pct_ci"][1] < auroc_star and inp["raw_ci"][0] >= auroc_star)
+
+
+#: §8 rows 1-6 and 4b -> exit (A1.2: RECENCY_ONLY is 2; exit 1 only from rows 3, 4).
 CLASS_EXIT = {
     "DEGENERATE_UNINFORMATIVE": 2,
     "AGREE": 0,
     "CONFOUND_INVERTED": 1,
     "CONFOUND": 1,
+    STEP_OR_AGE: 2,
     "RECENCY_ONLY": 2,
     "MIXED_UNRESOLVED": 2,
 }
 CLASS_KEY = "e0d.class"
+#: §8 row 4b's label set (A2.8).
+ROW_4B = ("DISAGREE", "INVERTED", "AGREE_VIA_RANK", STEP_OR_AGE)
 
 
 def classify(labels) -> tuple[str, int]:
-    """§8 rows 1-6 over the 3 seeds' labels (row 0 -- any control failing or
-    anything raising -- is exit 3 in `main`). A1.1: CEILING counts as UNRESOLVED.
-    A1.2: row 5 (AGREE_VIA_RANK / RECENCY_ONLY) exits 2."""
+    """§8 as replaced by A2.8, rows 1-6 with 4b, over the 3 seeds' labels (row 0 --
+    any control failing or anything raising -- is exit 3 in `main`). CEILING counts
+    as UNRESOLVED. A STEP_OR_AGE_AMBIGUOUS seed never counts toward a kill. Also
+    classifies A1's labels (which never hold 5b) for `class_A1` (A2.14)."""
     ls = ["UNRESOLVED" if x == "CEILING" else x for x in labels]
     if len(ls) != len(SEEDS):
         raise ValueError(f"§8 classifies {len(SEEDS)} seeds, got {len(ls)} labels")
@@ -1092,6 +1648,8 @@ def classify(labels) -> tuple[str, int]:
         k = "CONFOUND_INVERTED"
     elif all(x in ("DISAGREE", "INVERTED") for x in ls):
         k = "CONFOUND"
+    elif STEP_OR_AGE in ls and all(x in ROW_4B for x in ls):  # row 4b
+        k = STEP_OR_AGE
     elif all(x in ("DISAGREE", "INVERTED", "AGREE_VIA_RANK") for x in ls) and (
         "AGREE_VIA_RANK" in ls
     ):
@@ -1107,11 +1665,64 @@ def classify(labels) -> tuple[str, int]:
 
 KNOCKOUTS = ("resample", "zero")
 SCORES = (("gated", "r_gated"), ("ungated", "r_ungated"), ("pc", "pc"))
+COMBOS = tuple(f"{g}_{k}" for g in ("gated", "ungated") for k in KNOCKOUTS)
+PRIMARY = "gated_resample"
+TAU_SENS_Q = ("0.99", "0.999")
 
 
-def _population(c: dict, keep: np.ndarray, *, M: int, W, rho_star: float,
-                descriptive: bool) -> dict:  # fmt: skip
+def _a2_label(inp: dict, *, auroc_star: float, stat: str = "pct") -> str:
+    """A2.8 with A2.4's "Undefined" rule: if no bin has both classes, the statistic
+    has no value; the LOO-flat rule may still label the seed (rows 1-2), else the
+    label is UNDEFINED (the primary cell turns that into exit 3 in analyse_seed).
+    PREREG-OPEN: the control shares the labels, so it is undefined too; row 0 is
+    then not evaluable and rows 1-2 label directly."""
+    if math.isnan(inp["pct"]):
+        if inp["loo_flat"]:
+            return "DEGENERATE" if inp["r_flat"] else "LOO_UNINFORMATIVE"
+        return "UNDEFINED"
+    return seed_label_a2(inp, auroc_star=auroc_star, stat=stat)
+
+
+def sink_probe(c: dict, score, keep) -> dict:
+    """A2.7 item 8 (reported): the mean r by sentence kind at Q-steps, and at
+    full-memory steps where a fact's assert and its already-read query are both
+    resident, the fraction with r_assert > r_query."""
+    score = np.asarray(score, dtype=np.float64)
     st = strata(c)
+    keep = np.asarray(keep, dtype=bool)
+    Q = st["Q"] & keep
+    kind = np.asarray(c.get("kind", np.full(len(score), "", dtype=object)))
+    by_kind = {
+        str(k): {"mean_r": float(score[Q & (kind == k)].mean()),
+                 "n": int((Q & (kind == k)).sum())}
+        for k in sorted({str(x) for x in kind[Q]})
+    }  # fmt: skip
+    out = {"mean_r_by_kind_Q": by_kind, "assert_above_read_query": None}
+    qo = c.get("query_of")
+    if qo is None:
+        return out
+    qo = np.asarray(qo)
+    full = st["full"] & keep
+    t, sent = np.asarray(c["t"]), np.asarray(c["sentence"])
+    base = _step_key(c) * (int(np.max(sent)) + int(np.max(t)) + 2)
+    key = base + sent
+    order = np.argsort(key[full])
+    fk, fr = key[full][order], score[full][order]
+    a = np.flatnonzero(full & (qo >= 0) & (qo < t))
+    want = base[a] + qo[a]
+    j = np.searchsorted(fk, want)
+    hit = (j < len(fk)) & (fk[np.minimum(j, len(fk) - 1)] == want)
+    if hit.any():
+        above = score[a][hit] > fr[j[hit]]
+        out["assert_above_read_query"] = {"fraction": float(above.mean()),
+                                          "n_pairs": int(hit.sum())}  # fmt: skip
+    return out
+
+
+def _population(c: dict, keep: np.ndarray, *, M: int, W, auroc_star: float,
+                tau: dict, descriptive: bool) -> dict:  # fmt: skip
+    st = strata(c)
+    # ---- A1's rho statistics and label_A1 (A2.1: reported, never gating) -------
     stats = {
         sc: {k: score_stats(c, c[col], c[f"d_{k}"], keep=keep, W=W, M=M)
              for k in KNOCKOUTS}
@@ -1139,7 +1750,7 @@ def _population(c: dict, keep: np.ndarray, *, M: int, W, rho_star: float,
             float(pre[~step_q].sum() / pre.sum()) if pre.sum() else math.nan
         )
 
-    def inp(g: str, k: str) -> dict:
+    def inp_a1(g: str, k: str) -> dict:
         return {
             "pc_rho_Q_ci": stats["pc"][k]["rho_Q_ci"],
             "loo_flat": lf[k]["flat"],
@@ -1148,18 +1759,66 @@ def _population(c: dict, keep: np.ndarray, *, M: int, W, rho_star: float,
             "rho_Q_rank_ci": stats[g][k]["rho_Q_rank_ci"],
         }
 
-    labels = {
-        "gated_resample": seed_label(inp("gated", "resample"), rho_star=rho_star),
-        "ungated_resample": seed_label(inp("ungated", "resample"), rho_star=rho_star),
-        "gated_zero": seed_label(inp("gated", "zero"), rho_star=rho_star),
+    rho0 = RHO_STAR_PROPOSED
+    labels_a1 = {
+        "gated_resample": seed_label(inp_a1("gated", "resample"), rho_star=rho0),
+        "ungated_resample": seed_label(inp_a1("ungated", "resample"), rho_star=rho0),
+        "gated_zero": seed_label(inp_a1("gated", "zero"), rho_star=rho0),
     }
+
+    # ---- Amendment 2: the AUROC family, the A2.8 labels -------------------------
+    def fam(score, k, t):
+        return auroc_family(c, score, c[f"d_{k}"], tau=t, keep=keep, W=W, M=M)
+
+    def inp_a2(r_fam: dict, pc_fam: dict, g: str, k: str) -> dict:
+        return {
+            "pc_pct_ci": pc_fam["pct_ci"],
+            "pc_raw_ci": pc_fam["raw_ci"],
+            "loo_flat": lf[k]["flat"],
+            "r_flat": rf[g]["flat"],
+            "pct": r_fam["pct"],
+            "pct_ci": r_fam["pct_ci"],
+            "raw_ci": r_fam["raw_ci"],
+            "unstrat_ci": r_fam["unstrat_pct_ci"],
+            "H": r_fam["H"],
+            "R_H": r_fam["R_H"],
+        }
+
+    pc_fam = {k: fam(c["pc"], k, tau[k]) for k in KNOCKOUTS}
+    a2, labels, raw_sub, b5 = {}, {}, {}, {}
+    for g in ("gated", "ungated"):
+        for k in KNOCKOUTS:
+            combo = f"{g}_{k}"
+            r_fam = fam(c[f"r_{g}"], k, tau[k])
+            a2[combo] = {"r": r_fam, "pc": pc_fam[k]}
+            inp = inp_a2(r_fam, pc_fam[k], g, k)
+            labels[combo] = _a2_label(inp, auroc_star=auroc_star)
+            raw_sub[combo] = _a2_label(inp, auroc_star=auroc_star, stat="raw")
+            b5[combo] = row5b(inp, auroc_star=auroc_star)
+    tau_sens = {}
+    for q in TAU_SENS_Q:
+        tq = tau["sensitivity"][q]
+        pcq = {k: fam(c["pc"], k, tq[k]) for k in KNOCKOUTS}
+        tau_sens[q] = {}
+        for g in ("gated", "ungated"):
+            for k in KNOCKOUTS:
+                rq = fam(c[f"r_{g}"], k, tq[k])
+                tau_sens[q][f"{g}_{k}"] = _a2_label(
+                    inp_a2(rq, pcq[k], g, k), auroc_star=auroc_star
+                )
     out = {
         "n_cells": int(np.asarray(keep).sum()),
+        "a2": a2,
+        "labels": labels,
+        "row5b": b5,
+        "labels_raw_substituted": raw_sub,
+        "step_sensitive": {k: raw_sub[k] != labels[k] for k in COMBOS},
+        "tau_sensitivity": tau_sens,
         "stats": stats,
         "flatness": flat,
-        "labels": labels,
-        "sensitivity": {
-            str(x): seed_label(inp("gated", "resample"), rho_star=x)
+        "labels_A1": labels_a1,
+        "sensitivity_A1": {
+            str(x): seed_label(inp_a1("gated", "resample"), rho_star=x)
             for x in SENSITIVITY_RHO
         },
         "flags": {
@@ -1167,10 +1826,11 @@ def _population(c: dict, keep: np.ndarray, *, M: int, W, rho_star: float,
             "r_flat": rf["gated"]["flat"],
             "r_flat_flag": bool(rf["gated"]["flat"] and not lf["resample"]["flat"]),
             "pc_rank_ceiling": bool(
-                not stats["pc"]["resample"]["rho_Q_rank_ci"][1] >= rho_star
+                not stats["pc"]["resample"]["rho_Q_rank_ci"][1] >= rho0
             ),
             "pc_rho_Q_rank_ci": stats["pc"]["resample"]["rho_Q_rank_ci"],
         },
+        "sink_probe": {g: sink_probe(c, c[f"r_{g}"], keep) for g in ("gated", "ungated")},
     }
     if descriptive:  # §3.1 items 5-6, unchanged by A1.1, on full-memory cells
         full = st["full"]
@@ -1193,52 +1853,120 @@ def _population(c: dict, keep: np.ndarray, *, M: int, W, rho_star: float,
     return out
 
 
-def analyse_seed(c: dict, *, M: int, n_docs: int, rho_star: float,
+def analyse_seed(c: dict, *, seed: int, M: int, n_docs: int, auroc_star: float,
                  n_boot: int | None = None) -> dict:  # fmt: skip
-    """Every A1.1 statistic for {gated, ungated, PC (C10)} x {resample, zero}, the
-    amended §5 flatness and §7 labels -- on all cells and, as one recomputation,
-    with A1.3's bos-copy exclusions. The exit reads the excluded population."""
+    """One seed, under Amendment 2: C11, then every A2.4-A2.7 statistic and the
+    A2.8 labels for gated/ungated `r_i` x resample/zero with `true_demand` as the
+    C10' control, at the seed's own frozen tau (A2.2, A2.10), plus A1's rho
+    statistics and `label_A1` -- on all cells and, as one recomputation, with
+    A1.3's bos-copy exclusions. One bootstrap matrix for every statistic of the
+    seed (T17). The exit reads gated x resample on the excluded population."""
+    c11 = check_ages(c, M)  # C11
     n_boot = BOOT_N if n_boot is None else n_boot
     W = bootstrap_doc_weights(n_docs, n_boot, BOOT_SEED)
+    tau = {k: tau_for(seed, k) for k in KNOCKOUTS}
+    tau["sensitivity"] = {q: {k: tau_for(seed, k, q) for k in KNOCKOUTS}
+                          for q in TAU_SENS_Q}  # fmt: skip
     n = len(np.asarray(c["t"]))
+    kw = dict(M=M, W=W, auroc_star=auroc_star, tau=tau)
+    pops = {
+        "all": _population(c, np.ones(n, dtype=bool), descriptive=True, **kw),
+        "bos_excluded": _population(c, bos_keep(c, M), descriptive=False, **kw),
+    }
+    if pops["bos_excluded"]["labels"][PRIMARY] == "UNDEFINED":
+        raise MeasurementUndefined(
+            f"A2.4: seed {seed}'s AUROC_strat,pct has no value (no age bin holds both "
+            f"a critical and a non-critical cell) and LOO is not flat: exit 3"
+        )
     return {
-        "populations": {
-            "all": _population(
-                c, np.ones(n, dtype=bool), M=M, W=W, rho_star=rho_star, descriptive=True
-            ),
-            "bos_excluded": _population(
-                c, bos_keep(c, M), M=M, W=W, rho_star=rho_star, descriptive=False
-            ),
-        },
-        "rho_star": rho_star,
+        "populations": pops,
+        "seed": seed,
+        "auroc_star": auroc_star,
+        "tau": tau,
+        "c11": c11,
         "n_boot": n_boot,
         "bootstrap_seed": BOOT_SEED,
     }
 
 
-def classify_run(analyses: dict) -> dict:
-    """§8 over the seeds. The exit follows gated x resample on the A1.3-excluded
-    population; every other table is reported and moves no exit."""
+def pooled_primary(cells_by_seed: dict, *, M: int, n_docs: dict, auroc_star: float,
+                   n_boot: int) -> dict:  # fmt: skip
+    """A2.7 (reported, never gating): the primary cell pooled over seeds, each
+    seed's cells labelled with its own tau and ranked within its own steps, with a
+    seed-stratified bootstrap (each seed's documents resampled by its own W)."""
+    parts = {nm: [] for nm in ("pct", "raw", "pc", "y", "age", "doc")}
+    Ws, off = [], 0
+    for s in sorted(cells_by_seed):
+        c = cells_by_seed[s]
+        pop = q_population(c, bos_keep(c, M), M=M)
+        r = np.asarray(c["r_gated"], dtype=np.float64)[pop["idx"]]
+        pc = np.asarray(c["pc"], dtype=np.float64)[pop["idx"]]
+        has, y = critical_labels(np.asarray(c["d_resample"])[pop["idx"]],
+                                 tau_for(s, "resample"))  # fmt: skip
+        parts["pct"].append(step_percentiles(r, pop)[has])
+        parts["raw"].append(r[has])
+        parts["pc"].append(step_percentiles(pc, pop)[has])
+        parts["y"].append(y[has])
+        parts["age"].append(pop["age"][has])
+        parts["doc"].append(pop["doc"][has] + off)
+        Ws.append(bootstrap_doc_weights(n_docs[s], n_boot, BOOT_SEED))
+        off += n_docs[s]
+    cat = {k: np.concatenate(v) for k, v in parts.items()}
+    W = np.concatenate(Ws, axis=1)
+    f = {
+        "pct": StratAUROC(cat["pct"], cat["y"], cat["age"]),
+        "raw": StratAUROC(cat["raw"], cat["y"], cat["age"]),
+        "unstrat_pct": StratAUROC(cat["pct"], cat["y"], np.zeros(len(cat["y"]), int)),
+        "pc_pct": StratAUROC(cat["pc"], cat["y"], cat["age"]),
+    }
+    out = {}
+    for nm, fn in f.items():
+        reps = [fn(W[k][cat["doc"]]) for k in range(len(W))]
+        lo, hi, n_und = percentile_ci_defined(reps)
+        out[nm], out[f"{nm}_ci"], out[f"{nm}_n_undefined"] = fn(), (lo, hi), n_und
+    out["label"] = seed_label_a2(
+        {"pc_pct_ci": out["pc_pct_ci"], "loo_flat": False, "r_flat": False,
+         "pct_ci": out["pct_ci"], "raw_ci": out["raw_ci"],
+         "unstrat_ci": out["unstrat_pct_ci"]},
+        auroc_star=auroc_star,
+    )  # fmt: skip
+    out["note"] = "reported only; never gates (ruling: each seed separately)"
+    return out
+
+
+def classify_run(analyses: dict, pooled: dict | None = None) -> dict:
+    """§8 (A2.8) over the seeds. The exit follows gated x resample on the
+    A1.3-excluded population; HALT on any STEP_OR_AGE_AMBIGUOUS seed (exit 2, the
+    seeds named, the next E0d action is Brendan's). Every other table -- all
+    cells, ungated, zero, raw-substituted, tau sensitivity, label_A1, pooled -- is
+    reported and moves no exit."""
     seeds = sorted(analyses)
 
     def pop(s, p="bos_excluded"):
         return analyses[s]["populations"][p]
 
-    def labs(combo, p="bos_excluded"):
-        return [pop(s, p)["labels"][combo] for s in seeds]
+    def labs(combo, p="bos_excluded", key="labels"):
+        return [pop(s, p)[key][combo] for s in seeds]
 
     labels = labs("gated_resample")
     klass, code = classify(labels)
+    halt_seeds = [s for s, lab in zip(seeds, labels, strict=True) if lab == STEP_OR_AGE]
+    if halt_seeds and code != 2:  # A2.8 "HALT on row 5b": exit 2, never a kill
+        raise RuntimeError(f"HALT seeds {halt_seeds} but class {klass} exits {code}")
     labels_all = labs("gated_resample", "all")
     klass_all, _ = classify(labels_all)
     klass_u, _ = classify(labs("ungated_resample"))
     klass_z, _ = classify(labs("gated_zero"))
     flags = [pop(s)["flags"] for s in seeds]
+    labels_a1 = labs("gated_resample", key="labels_A1")
     lf_seeds = [s for s, f in zip(seeds, flags, strict=True) if f["loo_flat"]]
-    return {
+    out = {
         "class": klass,
         "exit": code,
         "labels": labels,
+        "row5b": {str(s): bool(pop(s)["row5b"][PRIMARY]) for s in seeds},
+        "halt": bool(halt_seeds),
+        "halt_seeds": halt_seeds,
         "class_all_cells": klass_all,
         "labels_all_cells": labels_all,
         "bos_sensitive": klass_all != klass,
@@ -1249,30 +1977,47 @@ def classify_run(analyses: dict) -> dict:
         "labels_zero": labs("gated_zero"),
         "class_ungated_all_cells": classify(labs("ungated_resample", "all"))[0],
         "class_zero_all_cells": classify(labs("gated_zero", "all"))[0],
+        "labels_raw_substituted": labs(PRIMARY, key="labels_raw_substituted"),
+        "step_sensitive": {
+            str(s): pop(s)["labels_raw_substituted"][PRIMARY] != lab
+            for s, lab in zip(seeds, labels, strict=True)
+        },
+        "tau_sensitivity": {
+            q: {
+                "labels": (ls := [pop(s)["tau_sensitivity"][q][PRIMARY] for s in seeds]),
+                "class": classify(ls)[0],
+            }
+            for q in TAU_SENS_Q
+        },
+        "labels_A1": labels_a1,
+        "class_A1": classify(labels_a1)[0],
         "sensitivity": {
             str(x): {
-                "labels": (ls := [pop(s)["sensitivity"][str(x)] for s in seeds]),
+                "labels": (ls := [pop(s)["sensitivity_A1"][str(x)] for s in seeds]),
                 "class": classify(ls)[0],
             }
             for x in SENSITIVITY_RHO
         },
         "rank_ceiling_seeds": [
             s
-            for s, f, lab in zip(seeds, flags, labels, strict=True)
+            for s, f, lab in zip(seeds, flags, labels_a1, strict=True)
             if f["pc_rank_ceiling"] and lab == "AGREE_VIA_RANK"
         ],
         "seed_flatness": {
             str(s): {"loo_flat": f["loo_flat"], "r_flat": f["r_flat"]}
             for s, f in zip(seeds, flags, strict=True)
         },
-        # A1.1 author's note: >= 2 seeds meet §8 row 1's condition while one of
-        # them is labelled CEILING, so row 1 was pre-empted. Reporting only.
+        # A1.1 author's note, kept under A2.8 (row 0 still precedes rows 1-2):
+        # >= 2 seeds meet §8 row 1's condition while one is labelled CEILING.
         "degenerate_under_ceiling": bool(
             len(lf_seeds) >= 2
             and any(labels[seeds.index(s)] == "CEILING" for s in lf_seeds)
             and klass != "DEGENERATE_UNINFORMATIVE"
         ),
     }
+    if pooled is not None:
+        out["pooled"] = pooled
+    return out
 
 
 def written_class(ledger_path: Path) -> str | None:
@@ -1425,7 +2170,7 @@ def write_claims(path: Path, *, ledger_path: Path, run_id: str, out: dict,
          "command": f"{py} -c \"import json; print(json.load(open('{led}'))"
                     "['commands'][-1]['exit_code'])\"",
          "expected": str(code)},
-        {"claim": f"the per-seed §7 labels are {out['labels']}",
+        {"claim": f"the per-seed A2.8 labels are {out['labels']}",
          "command": row.format(k="e0d.labels"),
          "expected": json.dumps(out["labels"])},
         {"claim": f"the class recomputes from the ledger's labels as {out['class']}",
@@ -1444,6 +2189,10 @@ def write_claims(path: Path, *, ledger_path: Path, run_id: str, out: dict,
                   f"{out['class_all_cells']}",
          "command": row.format(k="e0d.class_all_cells").replace("json.dumps(", "(", 1),
          "expected": out["class_all_cells"]},
+        {"claim": f"the row-5b booleans per seed are {out['row5b']} and HALT is "
+                  f"{out['halt']}",
+         "command": row.format(k="e0d.row5b"),
+         "expected": json.dumps(out["row5b"])},
         {"claim": "the T0 substrate manifest still verifies (C1, end)",
          "command": f"cd {t0['cwd']} && shasum -a 256 -c {t0['manifest']} "
                     "> /dev/null 2>&1; echo $?",
@@ -1460,7 +2209,9 @@ def write_claims(path: Path, *, ledger_path: Path, run_id: str, out: dict,
 
 def _measure_and_classify(a, led, argv_s: str) -> Exit:
     auth = check_authority(a.rulings_dir)  # C8 -- before anything is read
-    led.note("c8_authority", _jsonable(auth), how="docs/owner/rulings, committed")
+    led.note("c8_authority", _jsonable(auth), how="docs/owner/rulings (A2.13)")
+    c12 = check_tau_tables()  # C12 -- a seed without a frozen tau is not run
+    led.note("c12_tau_tables", c12, how="PREREG A2.2 parsed at run time (A2.13)")
     led.note("c1_substrate_start", check_substrate(a.ckpt_root), how="sha256")
     t0 = t0_manifest(a.runs_dir)  # C1 (A1.7): no T0 record, no documents
     led.note("c1_t0_record", _jsonable(t0), how="runs/t0-substrate (A1.7)")
@@ -1475,8 +2226,8 @@ def _measure_and_classify(a, led, argv_s: str) -> Exit:
             s, ckpt_root=a.ckpt_root, doc_range=D_E0D, batch=BATCH, cleared=True
         )
         analyses[s] = analyse_seed(
-            per_seed[s]["cells"], M=per_seed[s]["M"], n_docs=per_seed[s]["n_docs"],
-            rho_star=auth["rho_star"], n_boot=BOOT_N,
+            per_seed[s]["cells"], seed=s, M=per_seed[s]["M"],
+            n_docs=per_seed[s]["n_docs"], auroc_star=auth["auroc_star"], n_boot=BOOT_N,
         )  # fmt: skip
     end = substrate_recheck(t0["manifest"], cwd=t0["cwd"])  # C1, end
     led.note("c1_substrate_end", end, how="shasum -a 256 -c (PLAN-v4 T0, A1.7)")
@@ -1487,25 +2238,41 @@ def _measure_and_classify(a, led, argv_s: str) -> Exit:
         meas = {k: v for k, v in per_seed[s].items() if k != "cells"}
         led.note(f"seed{s}.controls", _jsonable(meas), how="measure_seed")
         led.note(f"seed{s}.analysis", _jsonable(analyses[s]), how="analyse_seed")
-    out = classify_run(analyses)
+    pooled = pooled_primary(
+        {s: per_seed[s]["cells"] for s in seeds}, M=per_seed[seeds[0]]["M"],
+        n_docs={s: per_seed[s]["n_docs"] for s in seeds},
+        auroc_star=auth["auroc_star"], n_boot=BOOT_N,
+    )  # fmt: skip
+    out = classify_run(analyses, pooled=pooled)
     for k, v in out.items():
         if k not in ("class", "exit"):
-            led.note(f"e0d.{k}", _jsonable(v), how="§8 (A1.1-A1.3), classify_run")
+            led.note(f"e0d.{k}", _jsonable(v), how="§8 (A2.8), classify_run")
+    prim = {s: analyses[s]["populations"]["bos_excluded"] for s in seeds}
+    for key in ("pct", "raw", "unstrat_pct", "c_ws", "H"):
+        name = {"pct": "AUROC_strat_pct", "raw": "AUROC_strat_raw",
+                "unstrat_pct": "AUROC_unstrat_pct"}.get(key, key)  # fmt: skip
+        led.stat(
+            f"primary.{name}",
+            [prim[s]["a2"][PRIMARY]["r"][key] for s in seeds],
+            how="gated r_i x resample LOO, A1.3-excluded, per seed (spread over 3)",
+        )
     for key in ("rho_Q", "rho_Q_rank", "rho_pool"):
         led.stat(
-            f"primary.{key}",
-            [analyses[s]["populations"]["bos_excluded"]["stats"]["gated"]["resample"]
-             [key] for s in seeds],
-            how="gated r_i x resample LOO, A1.3-excluded, per seed (spread over 3)",
-        )  # fmt: skip
+            f"secondary.{key}",
+            [prim[s]["stats"]["gated"]["resample"][key] for s in seeds],
+            how="A1 rho statistic, reported only (A2.1)",
+        )
+    if out["halt"]:
+        print(f"HALT to Brendan (A2.8 row 5b): seeds {out['halt_seeds']}", flush=True)
     code = int(out["exit"])
-    led.note(CLASS_KEY, out["class"], how="§8 first matching row (A1.4: before exit)")
+    led.note(CLASS_KEY, out["class"], how="§8 (A2.8) first matching row (A1.4)")
     led.status(_STATUS[code])
     led.verdict(
         falsifier="spec §6 E0d / §3.2.1: 'If not, LOO is truth and r_i is a confound'",
         outcome=_OUTCOME[code],
         detail=f"class {out['class']} (all cells {out['class_all_cells']}, ungated "
-        f"{out['class_ungated']}, zero {out['class_zero']}); labels {out['labels']}",
+        f"{out['class_ungated']}, zero {out['class_zero']}); labels {out['labels']}; "
+        f"row5b {out['row5b']}; halt {out['halt_seeds']}",
     )
     led.command(argv_s, exit_code=code)
     path = led.write()
@@ -1541,14 +2308,15 @@ def _main(argv: list[str] | None) -> Exit:
     led = ledger_mod.Ledger(
         a.run_id,
         question="E0d (§3.2.1, §6 kill gate): does r_i rank memory slots the way "
-        "leave-one-out delta next-sentence loss does, on query steps and within "
-        "write-order rank, gated and ungated (correction 17; PREREG A1.1)?",
+        "leave-one-out delta next-sentence loss does: AUROC_strat,pct of gated r_i "
+        "against y = 1[Delta_resample > tau_s], per seed (PREREG Amendment 2)?",
     )
     led.manifest(
         {
             "experiment": EXPERIMENT,
             "prereg": PREREG_PATH,
-            "prereg_amendment": "Amendment 1 (84e21c5) and erratum (268b947)",
+            "prereg_amendment": "Amendment 1 (84e21c5), erratum (268b947), "
+            "Amendment 2 (8c63ecd)",
             "run_id": a.run_id,
             "seeds": list(SEEDS),
             "ckpt_root": str(a.ckpt_root),
@@ -1556,8 +2324,14 @@ def _main(argv: list[str] | None) -> Exit:
             "ckpt_sha256": {str(k): v for k, v in CKPT_SHA256.items()},
             "documents": list(D_E0D),
             "batch": BATCH,
-            "rho_star_proposed": RHO_STAR_PROPOSED,
-            "rho_star_source": "the C8 ruling (R-*-rho-star*)",
+            "rho_star_proposed_A1_secondary": RHO_STAR_PROPOSED,
+            "auroc_star_source": "C8: every R-*-e0d-statistic* ruling (A2.13)",
+            "tau_q": TAU_Q,
+            "tau_resample": {str(k): v for k, v in TAU_RESAMPLE.items()},
+            "tau_zero": {str(k): v for k, v in TAU_ZERO.items()},
+            "tau_sensitivity": _jsonable(TAU_SENSITIVITY),
+            "age_bins": list(AGE_BINS),
+            "label_order": list(LABEL_ORDER),
             "loo_flat_a": LOO_FLAT_A,
             "loo_flat_q90_secondary": LOO_FLAT_Q90,
             "r_flat": R_FLAT,
@@ -1576,8 +2350,9 @@ def _main(argv: list[str] | None) -> Exit:
             "policy": "fifo (no RSRPolicy, no b, nu = 0, no shadow)",
             "device": "cpu",
             "expected": EXPECTED,
-            "falsifier": "spec §6 E0d kill gate: 'High rho. If not, LOO is truth and "
-            "r_i is a confound.'",
+            "falsifier": "spec §6 E0d kill gate / §3.2.1: 'If not, LOO is truth and "
+            "r_i is a confound.' Gated on AUROC_strat,pct (A2.12 declares the "
+            "departure from the named Spearman rho).",
         }
     )
     led.run_meta(device="cpu")
