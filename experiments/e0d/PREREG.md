@@ -1059,3 +1059,50 @@ No new class prediction is registered. §9's class prediction (CONFOUND; second 
 is scored against the class that A1's §8 gives from `label_A1` only; no class prediction is
 registered for the A2.8 classification. Its numeric parts are scored against
 the ρ secondaries, as A1.8 arranged.
+
+## Amendment 3 (pre-data): three runner readings that can move the class or the exit
+
+Choices made by the PM under delegation, 2026-09-29: A3.1 as drafted; A3.2 option (i), matching the runner, which can only move an exit toward 3; A3.3 as drafted; A3.4 adopted.
+
+**Append-only.** Nothing above this heading is edited. At this commit no document of
+`D_E0d = [262144, 263168)` has been generated, run or inspected, and no E0d measurement exists.
+Where this section and the text above disagree, this section governs.
+
+### A3.1 An undefined primary statistic on a LOO-flat seed (A2.4 "Undefined", A2.8 row 0)
+
+If no age bin holds both a positive and a negative labelled cell, `AUROC_strat,pct` has no value.
+The `true_demand` control is computed on the same cells with the same labels, so it has no value
+either, and A2.8 row 0 cannot be read. In that case, and only in that case, rows 1 and 2 label
+the seed directly: `DEGENERATE` if `r_i` is flat (§5), else `LOO_UNINFORMATIVE`. If the seed is
+not LOO-flat, the run is `inconclusive`, exit 3 (A2.4, unchanged).
+
+Where `AUROC_strat,pct` has a value but the control's 95% CI is undefined (every resample
+undefined), row 0 reads `CEILING`.
+
+Neither case can change the exit code: each label is exit 2 in every §8 row it can reach. They
+can change `e0d.class` (`DEGENERATE_UNINFORMATIVE` versus `MIXED_UNRESOLVED`), which is why this
+is registered here.
+
+### A3.2 Secondary measurements that cannot be computed
+
+(i) Any statistic the runner computes, gating or reported, whose computation cannot proceed is
+`MeasurementUndefined` and exit 3 (§8 row 0: "any measurement raises"). This covers:
+- a non-finite ungated `r_i` or `true_demand` value on an eligible slot, in either population;
+- no A-cell with a `Δ_zero` (the zero-knockout LOO-flat rule);
+- no full-memory step with two ungated `r_i` values (the ungated `R_FLAT`).
+
+### A3.3 The bootstrap generator and the interval
+
+The cluster bootstrap's indices are
+`torch.randint(n_docs, (2000, n_docs), generator=torch.Generator().manual_seed(20260927))`, drawn
+once per seed and converted to per-document counts. Every seed uses the same generator seed.
+Each seed's documents differ, so the indices refer to different documents.
+
+The 95% percentile interval is `numpy.quantile(values, [0.025, 0.975])` with numpy's default
+(`linear`, type 7) method, over the defined resamples (A2.4, review m-7).
+
+### A3.4 (optional) `label_A1` for scoring §9
+
+`label_A1` and `class_A1`, against which §9's class prediction is scored (A2.14), are computed at
+the PREREG's proposed ρ\* = 0.5, with the {0.3, 0.7} sensitivities reported. ρ\* is not ratified
+and gates nothing.
