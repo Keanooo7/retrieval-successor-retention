@@ -35,6 +35,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import importlib.util
+import io
 import json
 import math
 import os
@@ -45,6 +46,7 @@ import subprocess
 import sys
 import time
 import traceback
+from array import array
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -528,11 +530,11 @@ class Logged:
 
     def select_eviction(self, slots, context, step: int) -> int:
         if not bool(slots.live.all()):
-            raise AssertionError(f"step {step}: asked to evict from a non-full memory")
+            raise ControlFailure(f"step {step}: asked to evict from a non-full memory")
         n_before = len(getattr(self.inner, "log", []))
         k = int(self.inner.select_eviction(slots, context, step))
         if not bool(slots.live[k]):
-            raise AssertionError(f"step {step}: {self.arm} returned a dead slot {k}")
+            raise ControlFailure(f"step {step}: {self.arm} returned a dead slot {k}")
         inner_log = getattr(self.inner, "log", None)
         if inner_log is not None and len(inner_log) == n_before + 1:
             rec = inner_log[-1]
@@ -622,9 +624,10 @@ class CheckedOracle(OraclePolicy):
     def __init__(self, doc, gamma: float, demand) -> None:
         want = discounted_demand(doc, gamma)
         got = [[float(x) for x in row] for row in demand]
-        assert got == want, (
-            f"oracle demand is not document {doc.doc_id}'s at gamma={gamma}"
-        )
+        if got != want:  # §11 control 6: exit 3 (review F5), and never stripped by -O
+            raise ControlFailure(
+                f"oracle demand is not document {doc.doc_id}'s at gamma={gamma}"
+            )
         super().__init__(demand)
         self.doc_id = doc.doc_id
         self.gamma = gamma
@@ -698,7 +701,7 @@ class _CaptureRecorder(FIFOPolicy):
         if len(live) == self.m:
             self.sum_worst = max(self.sum_worst, abs(float(r.sum()) - 1.0))
             if written != list(range(step - self.m, step)):
-                raise AssertionError(f"step {step}: FIFO memory is {written}")
+                raise ControlFailure(f"step {step}: FIFO memory is {written}")
             if self.probes:
                 self._probe(step, r)
         return None
@@ -790,7 +793,7 @@ def capture_doc(model, doc, *, vmap, S: int, m: int, L: int, ranks=RANKS) -> Doc
         h.remove()
         model.train(was)
     if sorted(rec.gest) != list(range(S)) or sorted(ctx) != list(range(S)):
-        raise AssertionError(f"doc {doc.doc_id}: not every sentence was written")
+        raise ControlFailure(f"doc {doc.doc_id}: not every sentence was written")
     return DocCapture(
         doc_id=doc.doc_id,
         gest=torch.stack([rec.gest[i] for i in range(S)]),
@@ -1144,7 +1147,7 @@ def run_arm(model, doc, policy, *, vmap, S: int, m: int, L: int, check_sum=True)
     wrapper asserts the document it was built for is the one being run (§11.6), and
     in-loop residency must equal the model-free replay of its victims (§11.7)."""
     if getattr(policy, "doc_id", None) != doc.doc_id:
-        raise AssertionError(
+        raise ControlFailure(
             f"policy built for document {getattr(policy, 'doc_id', None)} run on "
             f"document {doc.doc_id}"
         )
@@ -1493,10 +1496,17 @@ def e0h_classify(r2: dict[int, float | None]) -> str:
     return "INTERMEDIATE"
 
 
+#: A1.3 / build review F10: the ruling that ratifies (or replaces) the E0h
+#: thresholds, named here by an explicit edit once Brendan has written it (a path
+#: relative to the repo root). A filename glob would let a ruling that REJECTS the
+#: thresholds enable rc 1 with the old numbers. None: unratified, E0h exits 2.
+E0H_RULING: str | None = None
+
+
 def e0h_ratified(root: Path = ROOT) -> bool:
-    """A1.3: a ruling ratifying (or replacing) the E0h thresholds. None exists at
-    this build; until one does, E0h exits 2 whatever the R² values are."""
-    return any((root / "docs" / "owner" / "rulings").glob("R-*e0h*.md"))
+    """A1.3: E0H_RULING names a ruling file that exists. None does at this build;
+    until one does, E0h exits 2 whatever the R² values are."""
+    return E0H_RULING is not None and (root / E0H_RULING).is_file()
 
 
 def e0h_rc(cls: str, *, ratified: bool) -> int:
@@ -1569,17 +1579,74 @@ class R2Acc:
             setattr(a, k, v)
         return a
 
+    def merge(self, other: R2Acc) -> R2Acc:
+        """Add another accumulator's statistics (documents are disjoint groups).
+        Folding per-document accumulators in document order performs the same
+        floating-point additions, in the same order, as one accumulator fed those
+        documents one `add` each (build review F1: EVAL is streamed per document)."""
+        if self.k == 0:
+            self.k = other.k
+            self.xx = torch.zeros_like(other.xx)
+            self.xy = torch.zeros_like(other.xy)
+            self.px = torch.zeros_like(other.px)
+            self.py = torch.zeros_like(other.py)
+        self.xx += other.xx
+        self.xy += other.xy
+        self.yy += other.yy
+        self.px += other.px
+        self.py += other.py
+        self.pyy += other.pyy
+        self.ys += other.ys
+        self.n += other.n
+        return self
+
 
 E0H_HEADS = ("U@0.0", "U+@0.0", "C@0.0")  # headline, A1.2 companion, reported
 E0H_TARGET = "target_D"  # the reference: the gamma = 0 target D[i][t] itself
 
 
-def fifo_with_e0h(model, doc, w_heads: dict[str, Tensor], *, vmap, S, m, L) -> dict:
+E0H_SOURCES = ("prehook_logit", "log_alpha")  # A1.5: `e0h.regressor_source`
+
+
+def e0h_source_for(model) -> str:
+    """A1.5: "prehook_logit" when the forward pre-hook can be built on this model
+    (at least one C block's `cross_attn` takes it), else "log_alpha"."""
+    try:
+        hook = LogitHook(model)
+    except Exception:
+        return "log_alpha"
+    n = len(hook.handles)
+    hook.remove()
+    return "prehook_logit" if n else "log_alpha"
+
+
+def _alpha_wrap(step_fn, sink: list):
+    """The log-alpha path's step_fn: hands each step's captured alpha to `sink`."""
+
+    def f(t, out, ids_t, mask_t, row_valid):
+        sink.append((t, None, out.cross_attention, mask_t))
+        return step_fn(t, out, ids_t, mask_t, row_valid)
+
+    return f
+
+
+def fifo_with_e0h(
+    model, doc, w_heads: dict[str, Tensor], *, vmap, S, m, L, source="prehook_logit"
+) -> dict:
     """The FIFO arm's rollout of one EVAL document, instrumented for E0h (A1.4:
     E0h needs no arm-run of its own). Returns `run_arm`'s fields plus, per
     full-memory step, the E0h rows: the 6·H mean-collapsed pre-hook logits
     (A1.5) of every FIFO-resident slot, ψ̂ of each head in `w_heads` on
-    `(s_i, c_t)`, and FIFO's own `r_i(t)` (the gamma = 0 target)."""
+    `(s_i, c_t)`, and FIFO's own `r_i(t)` (the gamma = 0 target).
+
+    ``source="log_alpha"`` (A1.5, only when the hook cannot be built): the
+    regressors are the per-token `log alpha` collapsed by the same mean. Per query
+    token `log alpha = logit - logsumexp`, and the second term is constant over
+    slots, so within-step demeaning makes the primary exact; the pooled
+    secondary is DID NOT RUN (`e0h_compute`). There is no logit control on this
+    path (`logit_control_worst` is None)."""
+    if source not in E0H_SOURCES:
+        raise ValueError(f"source={source!r}")
     ids, mask = encode([doc], vmap, max_tokens=L, steps=S)
     tm, _ = answer_targets([doc], vmap, max_tokens=L, steps=S)
     gap_of = {q: q - a for a, q in doc.pairs}
@@ -1588,7 +1655,8 @@ def fifo_with_e0h(model, doc, w_heads: dict[str, Tensor], *, vmap, S, m, L) -> d
     answers: list = []
     ctx: dict[int, Tensor] = {}
     steps: list = []
-    hook = LogitHook(model)
+    sink = _answer_sink(tm, gap_of, answers, ctx)
+    hook = LogitHook(model) if source == "prehook_logit" else None
     model.eval()
     try:
         with torch.no_grad():
@@ -1598,19 +1666,30 @@ def fifo_with_e0h(model, doc, w_heads: dict[str, Tensor], *, vmap, S, m, L) -> d
                 mask,
                 torch.full((1,), S),
                 inst,
-                step_fn=hook.wrap(_answer_sink(tm, gap_of, answers, ctx), steps),
+                step_fn=hook.wrap(sink, steps) if hook else _alpha_wrap(sink, steps),
                 observe=True,
             )
     finally:
-        hook.remove()
-    worst = 0.0
+        if hook is not None:
+            hook.remove()
+    worst: float | None = 0.0 if hook is not None else None
+    error = None
     rows = {"X": [], "groups": [], **{k: [] for k in w_heads}, E0H_TARGET: []}
     for t, lg, att, mask_t in steps:
         if t < m:
             continue
-        worst = max(worst, logit_control(lg, att, mask_t))
-        Lc, _B, H, Q, Mm = lg["logits"].shape
-        col = collapse_mean(lg["logits"][:, 0].reshape(1, Lc * H, Q, Mm), mask_t)[0]
+        if lg is not None:
+            worst = max(worst, logit_control(lg, att, mask_t))
+            reg = lg["logits"]
+        else:
+            real = (mask_t != 0).view(1, mask_t.shape[0], 1, -1, 1)
+            la = torch.stack([a.to(torch.float64) for a in att]).log()
+            if not bool(torch.isfinite(la.masked_select(real.expand_as(la))).all()):
+                error = f"doc {doc.doc_id} step {t}: log alpha is not finite"
+                break
+            reg = la.masked_fill(~real.expand_as(la), 0.0)
+        Lc, _B, H, Q, Mm = reg.shape
+        col = collapse_mean(reg[:, 0].reshape(1, Lc * H, Q, Mm), mask_t)[0]
         i_idx = torch.arange(t - m, t)  # FIFO memory at t, oldest first
         rows["X"].append(col.T)  # [m, Lc*H]
         rows["groups"].append(torch.full((m,), t))
@@ -1631,9 +1710,21 @@ def fifo_with_e0h(model, doc, w_heads: dict[str, Tensor], *, vmap, S, m, L) -> d
         "sum_worst": inst.sum_worst,
         "log": inst.log,
         "logit_control_worst": worst,
+        "e0h_error": error,
     }
-    out["e0h"] = {k: torch.cat(v) for k, v in rows.items()} if rows["X"] else None
+    ok = rows["X"] and error is None
+    out["e0h"] = {k: torch.cat(v) for k, v in rows.items()} if ok else None
     return out
+
+
+def e0h_parser() -> ArgumentParser:
+    """Build review F2: phase A writes `runs/b2-psi-probe-fit/phaseA`
+    (FIT_RUN_ID) and phase B writes `runs/b2-psi-probe/phaseB` (RUN_ID)."""
+    ap = ArgumentParser(prog="run.py e0h")
+    ap.add_argument("--fits", type=Path, default=ROOT / "runs" / FIT_RUN_ID / "phaseA")
+    ap.add_argument("--eval-dir", type=Path, default=ROOT / "runs" / RUN_ID / "phaseB")
+    ap.add_argument("--checkpoint", type=int, default=HEADLINE)
+    return ap
 
 
 def e0h_main(argv: list[str] | None = None) -> int:
@@ -1641,11 +1732,7 @@ def e0h_main(argv: list[str] | None = None) -> int:
     E0h accumulators the EVAL phase wrote from the Tier 1 FIFO rollout, and B2's
     FIT_VAL R² for ψ̂-U(gamma=0) (UNINFORMATIVE if ≤ 0). Either absent: exit 3. Any
     exception: exit 3, traceback kept. Exit 1 only as COLLINEAR under a ruling."""
-    ap = ArgumentParser(prog="run.py e0h")
-    ap.add_argument("--fits", type=Path, default=ROOT / "runs" / RUN_ID / "phaseA")
-    ap.add_argument("--eval-dir", type=Path, default=ROOT / "runs" / RUN_ID / "phaseB")
-    ap.add_argument("--checkpoint", type=int, default=HEADLINE)
-    a = ap.parse_args(argv)
+    a = e0h_parser().parse_args(argv)
     try:
         need = [a.fits / f"ckpt{a.checkpoint}-seed{s}.pt" for s in SEEDS] + [
             a.eval_dir / f"ckpt{a.checkpoint}-seed{s}.e0h.pt" for s in SEEDS
@@ -1662,9 +1749,9 @@ def e0h_main(argv: list[str] | None = None) -> int:
     except Exception:
         tb = traceback.format_exc()
         print(tb, file=sys.stderr)
-        try:
-            a.fits.mkdir(parents=True, exist_ok=True)
-            (a.fits / "e0h_traceback.txt").write_text(tb)
+        try:  # beside the EVAL outputs; the phase-A record is never written to
+            a.eval_dir.mkdir(parents=True, exist_ok=True)
+            (a.eval_dir / "e0h_traceback.txt").write_text(tb)
         except OSError:
             pass
         return 3
@@ -1705,14 +1792,28 @@ def selected_val_r2(head: dict, fits: Path, label: int, seed: int, key: str):
 def e0h_compute(fits: Path, eval_dir: Path, label: int) -> dict:
     """§10 per seed: within-step R² (primary) and pooled R² (secondary) of each E0h
     head and of the gamma = 0 target on the logits; the proposed class; the rc."""
-    per, r2 = {}, {}
+    per, r2, sources = {}, {}, {}
     for seed in SEEDS:
         acc = torch.load(eval_dir / f"ckpt{label}-seed{seed}.e0h.pt")
-        if acc["logit_control_worst"] > LOGIT_TOL:
-            return {"rc": 3, "why": f"A1.5 logit control failed on seed {seed}"}
+        src = acc.get("regressor_source", "prehook_logit")
+        sources[seed] = src
+        if src not in E0H_SOURCES:
+            return {"rc": 3, "why": f"seed {seed}: unknown regressor source {src!r}"}
+        if acc.get("errors"):
+            return {"rc": 3, "why": f"seed {seed}: E0h rows failed: {acc['errors'][:3]}"}
+        worst = acc["logit_control_worst"]
+        if src == "prehook_logit" and (worst is None or worst > LOGIT_TOL):
+            return {
+                "rc": 3,
+                "why": f"A1.5 logit control failed on seed {seed}: worst {worst}",
+            }
         vals = {k: R2Acc.from_state(st) for k, st in acc["acc"].items()}
-        per[seed] = {
-            k: {"within": v.within(), "pooled": v.pooled(), "n": v.n}
+        per[seed] = {  # A1.5: on log alpha only the within-step primary runs
+            k: {
+                "within": v.within(),
+                "pooled": v.pooled() if src == "prehook_logit" else None,
+                "n": v.n,
+            }
             for k, v in vals.items()
         }
         head = torch.load(fits / f"ckpt{label}-seed{seed}.pt")["heads"]["U@0.0"]
@@ -1733,7 +1834,14 @@ def e0h_compute(fits: Path, eval_dir: Path, label: int) -> dict:
         "e0h.ratified": ratified,
         "e0h.per_seed": per,
         "e0h.r2_headline": r2,
-        "e0h.regressor_source": "prehook_logit",
+        "e0h.regressor_source": (
+            sources[SEEDS[0]] if len(set(sources.values())) == 1 else sources
+        ),
+        "e0h.pooled": (
+            "ran"
+            if set(sources.values()) == {"prehook_logit"}
+            else "DID NOT RUN (log alpha, A1.5)"
+        ),
         "e0h.k0_inherited_seeds": inherited,
         "rc": e0h_rc(cls, ratified=ratified),
     }
@@ -1810,6 +1918,15 @@ def t0_verify(record: Path = T0_RECORD) -> dict:
         "n_bad": len(bad),
         "manifest": str(manifest),
     }
+
+
+def t0_checked(record: Path = T0_RECORD) -> dict:
+    """`t0_verify` that reports a missing or unreadable T0 record as a failed check
+    (the caller exits 3) instead of an uncaught exception (exit 1; review F5)."""
+    try:
+        return t0_verify(record)
+    except (ControlFailure, OSError, ValueError, subprocess.CalledProcessError) as e:
+        return {"ok": False, "why": str(e)}
 
 
 def preflight() -> list[str]:
@@ -2485,34 +2602,368 @@ def fit_core(model, train_docs, val_docs, *, seed, vmap, S, m, L) -> dict:
     }
 
 
-def eval_core(
-    model, docs, fits: dict, *, seed, label, vmap, S, m, L, n_tier2: int
+# --------------------------------------------------------------------------- #
+# EVAL, streamed (build review F1) and resumable: one unit = one (gamma, tier,
+# document) of one (checkpoint, seed), written atomically before the next runs
+# --------------------------------------------------------------------------- #
+
+UNIT_FORMAT = 1
+
+
+def unit_path(out_dir: Path, g: float, tier: str, doc_id: int) -> Path:
+    return Path(out_dir) / "units" / f"g{g}.{tier}" / f"{doc_id}.pt.gz"
+
+
+def save_unit(u: dict, path: Path) -> None:
+    """Atomic: a temp file in the same directory, fsync, `os.replace`. A kill
+    mid-write leaves only a `*.tmp<pid>` file, which a restart never reads."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    buf = io.BytesIO()
+    torch.save(u, buf)
+    tmp = path.parent / f"{path.name}.tmp{os.getpid()}"
+    with open(tmp, "wb") as f:
+        f.write(gzip.compress(buf.getvalue(), compresslevel=1))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def load_unit(path: Path) -> dict:
+    try:
+        raw = gzip.decompress(Path(path).read_bytes())
+        return torch.load(io.BytesIO(raw), weights_only=True)
+    except Exception as e:  # a unit that exists must be readable: exit 3, not a rerun
+        raise ControlFailure(f"unreadable EVAL unit {path}: {e!r}") from e
+
+
+def unit_logs(out_dir: Path, g: float, tier: str, doc_ids, arm: str) -> list[dict]:
+    """One arm's per-eviction log over `doc_ids`, read back from the units."""
+    out: list[dict] = []
+    for d in doc_ids:
+        out += load_unit(unit_path(out_dir, g, tier, d))["logs"][arm]
+    return out
+
+
+def _flush(pending: list) -> None:
+    while pending:
+        path, u = pending.pop(0)
+        save_unit(u, path)
+
+
+def code_sha256() -> str:
+    """sha256 of this file: a unit written by other code is never resumed."""
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
+class AttributionAcc:
+    """`attribution` (truth-table row 1's source, §4), accumulated online."""
+
+    def __init__(self, S: int) -> None:
+        self.S = S
+        self.age = [0] * (S - 1)
+        self.rank = [0] * (S - 1)
+        self.kinds: dict[str, int] = {}
+        self.margins = array("d")
+        self.shifts: dict[int, int] = {}
+
+    def add(self, log: list[dict]) -> AttributionAcc:
+        for r in log:
+            self.age[r["age"] - 1] += 1
+            if 1 <= r["rank"] <= self.S - 1:
+                self.rank[r["rank"] - 1] += 1
+            k = r["kind"] if r["status"] is None else f"assert:{r['status']}"
+            self.kinds[k] = self.kinds.get(k, 0) + 1
+            if r["margin"] is not None:
+                self.margins.append(r["margin"])
+            sh = r["rank_shift"][1]
+            self.shifts[sh] = self.shifts.get(sh, 0) + 1
+        return self
+
+    def result(self) -> dict:
+        return {
+            "age_hist": list(self.age),
+            "rank_hist": list(self.rank),
+            "kind_status": dict(self.kinds),
+            "margin": LR.summary(list(self.margins)),
+            "rank_shift": dict(sorted(self.shifts.items())),
+        }
+
+
+class PsiAgeAcc:
+    """`psi_age_corr_in_loop` (§8.2), accumulated online: fp64 arrays, not dicts."""
+
+    def __init__(self) -> None:
+        self.psi = array("d")
+        self.age = array("d")
+
+    def add(self, log: list[dict]) -> PsiAgeAcc:
+        for r in log:
+            if r["psi"] is not None:
+                self.psi.extend(r["psi"])
+                self.age.extend(r["live_ages"])
+        return self
+
+    def result(self) -> dict:
+        if not self.psi:
+            return {"pearson": None, "spearman": None, "n": 0}
+        p = torch.tensor(self.psi.tolist(), dtype=torch.float64)
+        a = torch.tensor(self.age.tolist(), dtype=torch.float64)
+        return {
+            "pearson": _pearson(p, a),
+            "spearman": _pearson(_ranks(p), _ranks(a)),
+            "n": len(p),
+        }
+
+
+def run_unit(
+    model, doc, makers: dict, *, vmap, S, m, L, e0h_heads=None, e0h_source=None
 ) -> dict:
-    """Phase B's measurement for one (checkpoint, seed) on EVAL, IO-free, per
-    A1.4's tiers. The FIFO rollout carries E0h's instrument (A1.4, A1.5)."""
+    """Every arm of one tier on one document: counts per bucket, §11 controls 5
+    and 7, the per-eviction logs, and (with `e0h_heads`) this document's E0h
+    statistics from the FIFO rollout (A1.4, A1.5)."""
+    u: dict[str, Any] = {
+        "doc_id": doc.doc_id,
+        "counts": {},
+        "logs": {},
+        "residency_ok": True,
+        "sum_worst": 0.0,
+        "logit_control_worst": None,
+        "e0h": None,
+        "e0h_error": None,
+    }
+    for a, mk in makers.items():
+        if a == "fifo" and e0h_heads is not None:
+            r = fifo_with_e0h(
+                model, doc, e0h_heads, vmap=vmap, S=S, m=m, L=L, source=e0h_source
+            )
+            u["logit_control_worst"] = r["logit_control_worst"]
+            u["e0h_error"] = r["e0h_error"]
+            rows = r["e0h"]
+            if rows is not None:
+                st = {}
+                for k in (*e0h_heads, E0H_TARGET):
+                    acc = R2Acc(rows["X"].shape[1])
+                    acc.add(rows[k], rows["X"], rows["groups"])
+                    st[k] = acc.state()
+                u["e0h"] = st
+        else:
+            r = run_arm(
+                model,
+                doc,
+                mk(doc),
+                vmap=vmap,
+                S=S,
+                m=m,
+                L=L,
+                check_sum=a.startswith(("psi", "age")),
+            )
+        u["counts"][a] = {b: list(counts(r["answers"], b)) for b in BUCKETS}
+        u["logs"][a] = r["log"]
+        u["residency_ok"] = bool(u["residency_ok"] and r["residency_ok"])
+        u["sum_worst"] = max(u["sum_worst"], r["sum_worst"])
+    return u
+
+
+class TierAgg:
+    """Folds units, in document order, into what `run_arms` returned (counts
+    `[D, 2]` per arm and bucket, controls, E0h accumulators) plus the attribution
+    and ψ̂-age statistics. Holds no per-eviction record (build review F1)."""
+
+    def __init__(self, arms, S: int, e0h_source: str | None) -> None:
+        self.arms = list(arms)
+        self.per = {a: {b: [] for b in BUCKETS} for a in self.arms}
+        self.attr = {a: AttributionAcc(S) for a in self.arms}
+        self.corr = {a: PsiAgeAcc() for a in self.arms if a.startswith(("psi", "age"))}
+        self.e0h_source = e0h_source
+        self.ctrl = {
+            "residency_ok": True,
+            "sum_worst": 0.0,
+            "logit_control_worst": None if e0h_source == "log_alpha" else 0.0,
+            "doc_ids": [],
+        }
+        self.e0h: dict[str, R2Acc] | None = None
+        self.e0h_errors: list[str] = []
+
+    def add(self, u: dict) -> None:
+        for a in self.arms:
+            for b in BUCKETS:
+                self.per[a][b].append(tuple(u["counts"][a][b]))
+            self.attr[a].add(u["logs"][a])
+            if a in self.corr:
+                self.corr[a].add(u["logs"][a])
+        c = self.ctrl
+        c["residency_ok"] = bool(c["residency_ok"] and u["residency_ok"])
+        c["sum_worst"] = max(c["sum_worst"], u["sum_worst"])
+        c["doc_ids"].append(u["doc_id"])
+        if u["logit_control_worst"] is not None and c["logit_control_worst"] is not None:
+            c["logit_control_worst"] = max(
+                c["logit_control_worst"], u["logit_control_worst"]
+            )
+        if u["e0h_error"]:
+            self.e0h_errors.append(u["e0h_error"])
+        if u["e0h"] is not None:
+            if self.e0h is None:
+                self.e0h = {k: R2Acc(0) for k in u["e0h"]}
+            for k, st in u["e0h"].items():
+                self.e0h[k].merge(R2Acc.from_state(st))
+
+    def result(self) -> dict:
+        return {
+            "counts": {
+                a: {
+                    b: torch.tensor(v, dtype=torch.long).reshape(-1, 2)
+                    for b, v in bb.items()
+                }
+                for a, bb in self.per.items()
+            },
+            "controls": self.ctrl,
+            "e0h": self.e0h,
+            "e0h_source": self.e0h_source,
+            "e0h_errors": self.e0h_errors,
+            "attribution": {a: v.result() for a, v in self.attr.items()},
+            "psi_age_corr": {a: v.result() for a, v in self.corr.items()},
+        }
+
+
+def eval_tier(
+    model,
+    docs,
+    makers: dict,
+    *,
+    g: float,
+    tier: str,
+    out_dir: Path,
+    key: dict,
+    vmap,
+    S,
+    m,
+    L,
+    e0h_heads=None,
+    e0h_source=None,
+    progress=None,
+) -> dict:
+    """One tier of one (checkpoint, seed), a document at a time. A document whose
+    unit is on disk (written under the same `key`) is read, not run: a killed
+    child loses at most the document it was running. §11 controls 5 and 7 are
+    checked per document (exit 3 at once, not after the tier)."""
+    agg = TierAgg(makers, S, e0h_source)
+    pending: list = []
+    n_resumed, n_run, t_run = 0, 0, 0.0
+    for j, d in enumerate(docs):
+        path = unit_path(out_dir, g, tier, d.doc_id)
+        want = dict(key, doc_id=d.doc_id)
+        if path.exists():
+            u = load_unit(path)
+            if u.get("key") != want:
+                raise ControlFailure(
+                    f"{path} was written under another configuration: "
+                    f"{u.get('key')} != {want}"
+                )
+            n_resumed += 1
+            sec = None
+        else:
+            t0 = time.perf_counter()
+            u = run_unit(
+                model,
+                d,
+                makers,
+                vmap=vmap,
+                S=S,
+                m=m,
+                L=L,
+                e0h_heads=e0h_heads,
+                e0h_source=e0h_source,
+            )
+            u["key"] = want
+            if not u["residency_ok"] or u["sum_worst"] > SUM_TOL:
+                raise ControlFailure(
+                    f"EVAL controls at gamma={g} {tier}, document {d.doc_id}: "
+                    f"residency_ok={u['residency_ok']} sum_worst={u['sum_worst']}"
+                )
+            pending.append((path, u))
+            _flush(pending)  # F1: every unit reaches disk before the next document runs
+            sec = time.perf_counter() - t0
+            t_run += sec
+            n_run += 1
+        agg.add(u)
+        del u
+        if progress is not None:
+            progress(g, tier, j + 1, len(docs), sec)
+    _flush(pending)
+    out = agg.result()
+    out["n_docs"] = len(docs)
+    out["n_resumed"] = n_resumed
+    out["seconds"] = {"run": t_run, "n_run": n_run}
+    return out
+
+
+def eval_core(
+    model,
+    docs,
+    fits: dict,
+    *,
+    seed,
+    label,
+    vmap,
+    S,
+    m,
+    L,
+    n_tier2: int,
+    out_dir: Path,
+    fits_id: str,
+    progress=None,
+) -> dict:
+    """Phase B's measurement for one (checkpoint, seed) on EVAL, per A1.4's tiers,
+    streamed to `out_dir` a document at a time and resumable (`eval_tier`). The
+    FIFO rollout carries E0h's instrument (A1.4, A1.5). An E0h control failure
+    is recorded for `run.py e0h` (exit 3 there), never raised here: A1.3, "B2's
+    rc covers B2 alone" (build review F3)."""
     require_range([d.doc_id for d in docs], "EVAL")
     kw = {"vmap": vmap, "S": S, "m": m, "L": L}
     e0h_heads = {k: fits["heads"][k]["w"] for k in E0H_HEADS}
+    source = e0h_source_for(model)
+    base = {
+        "format": UNIT_FORMAT,
+        "label": label,
+        "seed": seed,
+        "fits_id": fits_id,
+        "code_sha256": code_sha256(),
+        "e0h_source": source,
+        "S": S,
+        "m": m,
+        "L": L,
+    }
     out: dict[str, Any] = {}
     for (g, tier), names in tier_plan(label).items():
         ds = docs if tier == "tier1" else docs[:n_tier2]
         want_e0h = "fifo" in names
-        r = run_arms(
+        out[f"{g}.{tier}"] = eval_tier(
             model,
             ds,
             arm_makers(fits, seed, g, S, names),
-            **kw,
+            g=g,
+            tier=tier,
+            out_dir=out_dir,
+            key=dict(base, gamma=g, tier=tier, arms=list(names)),
             e0h_heads=e0h_heads if want_e0h else None,
+            e0h_source=source if want_e0h else None,
+            progress=progress,
+            **kw,
         )
-        c = r["controls"]
-        if (
-            not c["residency_ok"]
-            or c["sum_worst"] > SUM_TOL
-            or c["logit_control_worst"] > LOGIT_TOL
-        ):
-            raise ControlFailure(f"EVAL controls at gamma={g} {tier}: {c}")
-        out[f"{g}.{tier}"] = r
     return out
+
+
+def e0h_payload(out: dict) -> dict:
+    """What `run.py e0h` reads (`ckpt{c}-seed{s}.e0h.pt`): the tier whose FIFO
+    rollout carried the instrument."""
+    r = next(r for r in out.values() if r["e0h_source"] is not None)
+    return {
+        "acc": {k: v.state() for k, v in (r["e0h"] or {}).items()},
+        "logit_control_worst": r["controls"]["logit_control_worst"],
+        "regressor_source": r["e0h_source"],
+        "errors": list(r["e0h_errors"]),
+        "n_docs": r["n_docs"],
+    }
 
 
 def contrasts_for(ref: dict[str, str]) -> dict[str, tuple[str, str]]:
@@ -2606,6 +3057,37 @@ def classification(per_seed: dict[int, dict]) -> dict:
     return out
 
 
+def classify_all(per: dict[int, dict[int, dict]]) -> dict:
+    """Build review F6: every summary is classified. §9.6: the headline is
+    ckpt3000 gamma = 0.9 Tier 1 (gating); ckpt2500 is reported, never gating, and a
+    class that differs from the headline's is flagged **moving**. A1.2: the
+    (U⁺, C⁺) companion at the headline (its arms are Tier 2), non-gating. §9.8:
+    gamma = 0's class per checkpoint, labelled secondary."""
+    by_key = {
+        f"ckpt{c}.{key}": classification({s: per[c][s][key] for s in SEEDS})
+        for c in per
+        for key in per[c][SEEDS[0]]
+    }
+    head = dict(by_key[f"ckpt{HEADLINE}.0.9.tier1"], gating=True)
+    out: dict[str, Any] = {
+        "headline": head,
+        "companion": by_key.get(f"ckpt{HEADLINE}.0.9.tier2", {}).get("companion"),
+        "gamma0_secondary": {
+            c: dict(by_key[f"ckpt{c}.0.0.tier2"], label="secondary")
+            for c in per
+            if f"ckpt{c}.0.0.tier2" in by_key
+        },
+        "by_key": by_key,
+    }
+    others = [c for c in per if c != HEADLINE]
+    for c in others:
+        out[f"ckpt{c}"] = dict(
+            by_key[f"ckpt{c}.0.9.tier2"], label="reported, never gating"
+        )
+    out["moving"] = any(out[f"ckpt{c}"]["class"] != head["class"] for c in others)
+    return out
+
+
 def merge_counts(*runs: dict) -> dict:
     """Union of per-arm counts from runs over the SAME documents (paired)."""
     out: dict = {}
@@ -2661,36 +3143,13 @@ def eviction_age_histogram(log: list[dict], S: int) -> list[int]:
 
 def psi_age_corr_in_loop(log: list[dict]) -> dict:
     """§8.2 in the arm's own EVAL rollout: over live slots at full-memory steps."""
-    psi = [x for r in log if r["psi"] is not None for x in r["psi"]]
-    age = [x for r in log if r["psi"] is not None for x in r["live_ages"]]
-    if not psi:
-        return {"pearson": None, "spearman": None, "n": 0}
-    p, a = torch.tensor(psi, dtype=torch.float64), torch.tensor(age, dtype=torch.float64)
-    return {
-        "pearson": _pearson(p, a),
-        "spearman": _pearson(_ranks(p), _ranks(a)),
-        "n": len(p),
-    }
+    return PsiAgeAcc().add(log).result()
 
 
 def attribution(log: list[dict], S: int) -> dict:
     """Truth-table row 1's attribution source (§4): victim age / rank, ψ̂ margin,
     rank shift and kind / status of the victims."""
-    kinds: dict[str, int] = {}
-    for r in log:
-        k = r["kind"] if r["status"] is None else f"assert:{r['status']}"
-        kinds[k] = kinds.get(k, 0) + 1
-    margins = [r["margin"] for r in log if r["margin"] is not None]
-    shifts: dict[int, int] = {}
-    for r in log:
-        shifts[r["rank_shift"][1]] = shifts.get(r["rank_shift"][1], 0) + 1
-    return {
-        "age_hist": eviction_age_histogram(log, S),
-        "rank_hist": [sum(1 for r in log if r["rank"] == k) for k in range(1, S)],
-        "kind_status": kinds,
-        "margin": LR.summary(margins),
-        "rank_shift": dict(sorted(shifts.items())),
-    }
+    return AttributionAcc(S).add(log).result()
 
 
 # --------------------------------------------------------------------------- #
@@ -2825,19 +3284,64 @@ def n_e_from_phase_a(phase_a: dict[int, dict]) -> dict:
     return n_eval(sig, deltas, N_V)
 
 
+def _progress(tag: str):
+    """One flushed line per EVAL document in the child's log (review F8: the
+    per-document cost is measured as the run goes, not projected)."""
+
+    def f(g, tier, j, n, sec):
+        what = "resumed" if sec is None else f"{sec:.2f}s"
+        print(
+            f"{time.strftime('%H:%M:%S')} {tag} {g}.{tier} {j}/{n} {what} "
+            f"peak_rss_gb={_peak_rss_gb():.2f}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    return f
+
+
+def write_logs_jsonl(unit_dir: Path, path: Path, label: int, docs, n_tier2: int) -> int:
+    """§4's per-eviction logs of every arm, one JSON line per eviction, streamed
+    from the units (never held in RAM; review F1). Atomic. -> records written."""
+    tmp = path.with_name(path.name + f".tmp{os.getpid()}")
+    n = 0
+    with gzip.open(tmp, "wt") as f:
+        for (g, tier), names in tier_plan(label).items():
+            ds = docs if tier == "tier1" else docs[:n_tier2]
+            for d in ds:
+                u = load_unit(unit_path(unit_dir, g, tier, d.doc_id))
+                for a in names:
+                    for rec in u["logs"][a]:
+                        f.write(json.dumps({"gamma": g, "tier": tier, **rec}) + "\n")
+                        n += 1
+    os.replace(tmp, path)
+    return n
+
+
+def _atomic_torch_save(obj, path: Path) -> None:
+    tmp = path.with_name(path.name + f".tmp{os.getpid()}")
+    torch.save(obj, tmp)
+    os.replace(tmp, path)
+
+
 def phase_eval_child(
     label, seed, source: Path, fits_dir: Path, out_dir: Path, n_e: int, n_tier2: int
 ) -> int:  # pragma: no cover
-    """Phase B for one (checkpoint, seed)."""
+    """Phase B for one (checkpoint, seed). Units stream to
+    `out_dir/ckpt{c}-seed{s}/units/`; a rerun resumes from them."""
     torch.set_num_threads(int(os.environ.get("RSR_B2_THREADS", "1")))
+    wall0 = time.time()
+    tag = f"ckpt{label}-seed{seed}"
     try:
         model, vmap = load_checked(source, label, seed)
-        fits = torch.load(fits_dir / f"ckpt{label}-seed{seed}.pt")
+        fpath = fits_dir / f"{tag}.pt"
+        fits = torch.load(fpath)
         n = n_e if label == HEADLINE else n_tier2
         docs = docs_in(seed, "EVAL", n)
         clos = vocabulary_closure(docs, vmap)
         if not clos["ok"]:
             raise ControlFailure(f"closure {clos}")
+        out_dir.mkdir(parents=True, exist_ok=True)
         out = eval_core(
             model,
             docs,
@@ -2849,47 +3353,46 @@ def phase_eval_child(
             m=M_STEPS,
             L=L_TOKENS,
             n_tier2=n_tier2,
+            out_dir=out_dir / tag,
+            fits_id=LR.sha256(fpath),
+            progress=_progress(tag),
         )
     except (ControlFailure, RangeError) as e:
         print(f"CONTROL FAILED (exit 3): {e}", file=sys.stderr)
         return 3
-    out_dir.mkdir(parents=True, exist_ok=True)
-    e0h = next(r["e0h"] for k, r in out.items() if r["e0h"] is not None)
-    torch.save(
-        {
-            "acc": {k: v.state() for k, v in e0h.items()},
-            "logit_control_worst": max(
-                r["controls"]["logit_control_worst"] for r in out.values()
-            ),
-        },
-        out_dir / f"ckpt{label}-seed{seed}.e0h.pt",
-    )
+    _atomic_torch_save(e0h_payload(out), out_dir / f"{tag}.e0h.pt")
     summ = summarise_eval(out, fits["decisions"], seed, label, n_tier2)
-    attr = {
-        f"{k}.{a}": attribution(lg, S_STEPS)
-        for k, r in out.items()
-        for a, lg in r["logs"].items()
-    }
-    corr = {
-        f"{k}.{a}": psi_age_corr_in_loop(lg)
-        for k, r in out.items()
-        for a, lg in r["logs"].items()
-        if a.startswith(("psi", "age"))
-    }
-    with gzip.open(out_dir / f"ckpt{label}-seed{seed}.logs.json.gz", "wt") as f:
-        json.dump({k: r["logs"] for k, r in out.items()}, f)
-    torch.save(
+    n_logs = write_logs_jsonl(
+        out_dir / tag, out_dir / f"{tag}.logs.jsonl.gz", label, docs, n_tier2
+    )
+    _atomic_torch_save(
         {
             "summary": summ,
-            "attribution": attr,
-            "psi_age_corr": corr,
+            "attribution": {
+                f"{k}.{a}": v for k, r in out.items() for a, v in r["attribution"].items()
+            },
+            "psi_age_corr": {
+                f"{k}.{a}": v
+                for k, r in out.items()
+                for a, v in r["psi_age_corr"].items()
+            },
             "counts": {k: r["counts"] for k, r in out.items()},
             "controls": {
                 k: {kk: vv for kk, vv in r["controls"].items() if kk != "doc_ids"}
                 for k, r in out.items()
             },
+            "e0h_source": e0h_payload(out)["regressor_source"],
+            "n_log_records": n_logs,
+            "n_docs": {k: r["n_docs"] for k, r in out.items()},
+            "n_resumed": {k: r["n_resumed"] for k, r in out.items()},
+            "seconds": {
+                **{k: r["seconds"] for k, r in out.items()},
+                "child_wall": time.time() - wall0,
+            },
+            "threads": torch.get_num_threads(),
+            "peak_rss_gb": _peak_rss_gb(),
         },
-        out_dir / f"ckpt{label}-seed{seed}.pt",
+        out_dir / f"{tag}.pt",
     )
     return 0
 
@@ -2931,7 +3434,7 @@ def _children(argvs: dict, root: Path, parallel: int, led) -> dict:  # pragma: n
     while jobs or running:
         while jobs and len(running) < parallel:
             j = jobs.pop(0)
-            log = open(root / "logs" / f"{j}.log", "w")  # noqa: SIM115
+            log = open(root / "logs" / f"{j}.log", "a")  # noqa: SIM115 (a rerun appends)
             running[j] = subprocess.Popen(
                 argvs[j], stdout=log, stderr=subprocess.STDOUT, cwd=ROOT
             )
@@ -2943,6 +3446,17 @@ def _children(argvs: dict, root: Path, parallel: int, led) -> dict:  # pragma: n
                 del running[j]
         time.sleep(2)
     return rcs
+
+
+def parent_rc(rcs: dict, *, t0_ok: bool) -> Exit:
+    """A child's 1 (a measurement defect) is the parent's 1; any other failure,
+    or T0 failing, is DID NOT RUN (PREREG §12; review F5: rc 1 was mapped to 3)."""
+    bad = {k: v for k, v in rcs.items() if v != 0}
+    if any(v == 1 for v in bad.values()):
+        return Exit.FAIL
+    if bad or not t0_ok:
+        return Exit.DID_NOT_RUN
+    return Exit.OK
 
 
 def _child_argv(cmd: str, c: int, s: int, source: Path, out: Path, extra=()) -> list[str]:
@@ -2991,10 +3505,7 @@ def run_fit(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: no
             "falsifier": FALSIFIER,
         }
     )
-    try:
-        t0 = t0_verify()
-    except ControlFailure as e:
-        t0 = {"ok": False, "why": str(e)}
+    t0 = t0_checked()
     led.note("T0.start", t0, how="run.py::t0_verify")
     if not t0["ok"]:
         led.status("failed")
@@ -3006,15 +3517,10 @@ def run_fit(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: no
         for s in SEEDS
     }
     rcs = _children(argvs, root, min(parallel, FIT_MAX_PARALLEL), led)
-    t0e = t0_verify()
+    t0e = t0_checked()
     led.note("T0.end", t0e, how="run.py::t0_verify")
-    bad = {k: v for k, v in rcs.items() if v != 0}
-    if any(v == 1 for v in bad.values()):
-        rc = Exit.FAIL
-    elif bad or not t0e["ok"]:
-        rc = Exit.DID_NOT_RUN
-    else:
-        rc = Exit.OK
+    rc = parent_rc(rcs, t0_ok=t0e["ok"])
+    if rc == Exit.OK:
         a3 = {
             s: torch.load(root / "phaseA" / f"ckpt{HEADLINE}-seed{s}.pt") for s in SEEDS
         }
@@ -3044,12 +3550,25 @@ def run_fit(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: no
 
 
 def run_eval(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: no cover
-    """Phase B (parent): refuses unless N_E (TBD-3) and the TBD-2 cost are set;
-    applies A1.4's ceiling; runs the children; classifies; writes claims.json."""
+    """Phase B (parent): refuses unless N_E (TBD-3) and the TBD-2 cost are set and
+    N_E is what phase A's files give (review F10); applies A1.4's ceiling; runs
+    the children (each resumes from its units, so relaunching this command after a
+    kill loses no completed document); classifies every summary (review F6)."""
     from ledger import Ledger
 
     if N_E is None or SEC_PER_ARM_DOC is None:
         return did_not_run("N_E (TBD-3) or the TBD-2 cost is not in the PREREG yet")
+    fits = runs_root / FIT_RUN_ID / "phaseA"
+    try:
+        a3 = {s: torch.load(fits / f"ckpt{HEADLINE}-seed{s}.pt") for s in SEEDS}
+    except OSError as e:
+        return did_not_run(f"phase-A fits unreadable: {e}")
+    ne_a = n_e_from_phase_a(a3)
+    del a3
+    if ne_a["N_E"] != N_E:
+        return did_not_run(
+            f"N_E = {N_E} in run.py, but phase A's files give {ne_a['N_E']} (§9.4)"
+        )
     ceil1 = compute_ceiling(
         N_E,
         sec_per_arm_doc=SEC_PER_ARM_DOC,
@@ -3072,6 +3591,12 @@ def run_eval(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: n
     )
     n2 = ceil2["N_E"]
     root = runs_root / RUN_ID
+    prev = root / "manifest.json"
+    resumed_from = None
+    if prev.exists():  # a relaunch: the earlier manifest is kept, never overwritten
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        resumed_from = root / f"manifest.before-{stamp}.json"
+        resumed_from.write_bytes(prev.read_bytes())
     led = Ledger(RUN_ID, question=QUESTION, runs_root=runs_root)
     led.run_meta(device="cpu", steps_requested=0, steps_done=0)
     led.manifest(
@@ -3081,20 +3606,31 @@ def run_eval(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: n
             "prereg_commits": PREREG_COMMITS,
             "N_E_prereg": N_E,
             "N_E_run": n_e,
+            "N_E_phase_a": ne_a,
             "N_tier2": n2,
             "ceiling": [ceil1, ceil2],
             "seeds": SEEDS,
             "checkpoints": list(CHECKPOINTS),
             "source": str(source),
+            "fits": str(fits),
+            "threads_per_child": os.environ.get("RSR_B2_THREADS", "1"),
+            "parallel": parallel,
+            "resume": "units under phaseB/ckpt{c}-seed{s}/units are read, not rerun, "
+            "when their key (format, fits sha256, run.py sha256, arms, gamma, tier, "
+            "document) matches; any other key is exit 3",
             "expected": EXPECTED,
             "falsifier": FALSIFIER,
         }
     )
-    if preflight() or not t0_verify()["ok"]:
+    if resumed_from is not None:
+        led.note("resumed", str(resumed_from), how="run.py::run_eval (relaunch)")
+    probs = preflight()
+    t0 = t0_checked()
+    led.note("T0.start", t0, how="run.py::t0_verify")
+    if probs or not t0["ok"]:
         led.status("failed")
         led.write()
-        return did_not_run("preflight or T0")
-    fits = runs_root / FIT_RUN_ID / "phaseA"
+        return did_not_run(f"preflight {probs} or T0 {t0}")
     argvs = {
         f"ckpt{c}-seed{s}": _child_argv(
             "eval-child",
@@ -3108,27 +3644,46 @@ def run_eval(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: n
         for s in SEEDS
     }
     rcs = _children(argvs, root, parallel, led)
-    t0e = t0_verify()
+    t0e = t0_checked()
     led.note("T0.end", t0e, how="run.py::t0_verify")
-    if any(v != 0 for v in rcs.values()) or not t0e["ok"]:
+    rc = parent_rc(rcs, t0_ok=t0e["ok"])
+    if rc != Exit.OK:
+        led.run_meta(seeds_actually_run=[])
         led.status("failed")
+        led.verdict(falsifier=FALSIFIER, outcome="inconclusive", detail=f"children {rcs}")
         led.write()
-        return Exit.DID_NOT_RUN
+        return rc
     per = {
         c: {s: torch.load(root / "phaseB" / f"ckpt{c}-seed{s}.pt") for s in SEEDS}
         for c in CHECKPOINTS
     }
-    head = classification({s: per[HEADLINE][s]["summary"]["0.9.tier1"] for s in SEEDS})
+    cls = classify_all({c: {s: per[c][s]["summary"] for s in SEEDS} for c in CHECKPOINTS})
+    head = cls["headline"]
     head["underpowered"] = ceil1["reduced"] or N_E >= N_E_MAX
     led.note(
-        "classification", head, how="run.py::classification (§9.6), ckpt3000 gamma=0.9"
+        "classification", head, how="run.py::classify_all (§9.6), ckpt3000 gamma=0.9"
     )
+    for k in ("companion", "moving", "gamma0_secondary", "by_key"):
+        led.note(f"classification.{k}", cls[k], how="run.py::classify_all")
     for c in CHECKPOINTS:
+        if c != HEADLINE:
+            led.note(
+                f"classification.ckpt{c}", cls[f"ckpt{c}"], how="run.py::classify_all"
+            )
         for key in per[c][SEEDS[0]]["summary"]:
             led.note(
                 f"ckpt{c}.{key}",
                 {s: per[c][s]["summary"][key]["outcome"] for s in SEEDS},
                 how="run.py::summarise_eval",
+            )
+        for s in SEEDS:
+            led.note(
+                f"ckpt{c}.seed{s}.cost",
+                {
+                    k: per[c][s][k]
+                    for k in ("seconds", "peak_rss_gb", "threads", "n_resumed")
+                },
+                how=f"phaseB/ckpt{c}-seed{s}.pt",
             )
     led.run_meta(seeds_actually_run=SEEDS)
     led.status("ok")
@@ -3147,6 +3702,9 @@ def run_eval(source: Path, runs_root: Path, parallel: int) -> Exit:  # pragma: n
 
 
 def main(argv: list[str] | None = None) -> Exit:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] == ["e0h"]:  # build review F2: every e0h argument reaches e0h_main
+        return status(e0h_main(argv[1:]))
     ap = ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument(
         "cmd",
@@ -3175,8 +3733,6 @@ def main(argv: list[str] | None = None) -> Exit:
     ap.add_argument("--parallel", type=int, default=6)
     ap.add_argument("--runs-root", type=Path, default=ROOT / "runs")
     a, rest = ap.parse_known_args(argv)
-    if a.cmd == "e0h":
-        return status(e0h_main(rest))
     if rest:
         return did_not_run(f"unknown arguments {rest}")
     if a.cmd == "check":
