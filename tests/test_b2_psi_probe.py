@@ -646,16 +646,16 @@ def test_fact_filler_is_w6s_rule_with_its_seed(b2):
 def test_the_oracle_wrapper_refuses_another_documents_demand(b2):
     d0, d1 = _tiny_docs([940000, 940001])
     b2.CheckedOracle(d0, 0.9, discounted_demand(d0, 0.9))
-    with pytest.raises(AssertionError):
+    with pytest.raises(b2.ControlFailure):
         b2.CheckedOracle(d0, 0.9, discounted_demand(d1, 0.9))
-    with pytest.raises(AssertionError):
+    with pytest.raises(b2.ControlFailure):
         b2.CheckedOracle(d0, 0.9, discounted_demand(d0, 0.0))
 
 
 def test_one_document_one_policy_and_residency_equals_the_replay(b2, tiny):
     d0, d1 = tiny["eval"]
     kw = {"vmap": tiny["vmap"], "S": TS, "m": TM, "L": TL}
-    with pytest.raises(AssertionError, match="document"):
+    with pytest.raises(b2.ControlFailure, match="document"):
         b2.run_arm(tiny["model"], d0, b2.random_policy(0, 0, d1.doc_id), **kw)
     r = b2.run_arm(tiny["model"], d0, b2.random_policy(0, 0, d0.doc_id), **kw)
     assert r["residency_ok"] is True and r["sum_worst"] <= b2.SUM_TOL
@@ -885,7 +885,8 @@ def test_e0h_without_its_fits_or_on_an_exception_exits_3(b2, tmp_path):
         (fits / f"ckpt3000-seed{s}.pt").write_text("not a checkpoint")
         (ev / f"ckpt3000-seed{s}.e0h.pt").write_text("not a checkpoint")
     assert b2.e0h_main(args) == 3
-    assert "Traceback" in (fits / "e0h_traceback.txt").read_text()
+    assert "Traceback" in (ev / "e0h_traceback.txt").read_text()
+    assert not (fits / "e0h_traceback.txt").exists()  # the phase-A record is read only
 
 
 def test_e0h_reads_a_pre_fix_r2_only_through_its_erratum(b2, tmp_path):
@@ -918,8 +919,10 @@ def test_no_e0h_ruling_exists_so_e0h_is_unratified(b2):
 # --------------------------------------------------------------------------- #
 
 
-def test_eval_refuses_while_n_e_is_not_in_the_prereg(b2):
+def test_eval_refuses_while_n_e_is_not_in_the_prereg(b2, monkeypatch):
+    monkeypatch.setattr(b2, "N_E", None)
     assert b2.main(["eval"]) == 3
+    assert b2.main(["eval-child", "--checkpoint", "3000", "--seed", "0"]) == 3
 
 
 def test_the_claims_writer_requires_claim_command_expected(b2, tmp_path):
@@ -961,18 +964,27 @@ def test_the_streamed_r2_equals_the_direct_r2(b2):
 
 
 @pytest.fixture(scope="module")
-def phase(b2, tiny):
+def phase(b2, tiny, tmp_path_factory):
     kw = {"vmap": tiny["vmap"], "S": TS, "m": TM, "L": TL}
     a = b2.fit_core(tiny["model"], tiny["train"], tiny["val"], seed=0, **kw)
     fits = {"heads": a["fits"]["heads"], "class_means": a["fits"]["class_means"]}
+    out = tmp_path_factory.mktemp("phaseB")
     e = b2.eval_core(
-        tiny["model"], tiny["eval"], fits, seed=0, label=3000, n_tier2=1, **kw
+        tiny["model"],
+        tiny["eval"],
+        fits,
+        seed=0,
+        label=3000,
+        n_tier2=1,
+        out_dir=out,
+        fits_id="tiny",
+        **kw,
     )
-    return a, e
+    return a, e, out, fits
 
 
 def test_phase_a_core_fits_decides_on_fit_val_and_passes_its_controls(b2, phase):
-    a, _e = phase
+    a, _e = phase[:2]
     heads = a["fits"]["heads"]
     for k in ("U@0.9", "C@0.9", "U+@0.0", "C+@0.9", "U3@0.9", "age_U@0.9", "age_C@0.0"):
         assert heads[k]["val_range"] == "FIT_VAL"
@@ -986,7 +998,7 @@ def test_phase_a_core_fits_decides_on_fit_val_and_passes_its_controls(b2, phase)
 
 
 def test_phase_a_rows_carry_lambda_residual_age_split_and_threads(b2, phase):
-    a, _e = phase
+    a, _e = phase[:2]
     saved = {
         "heads": a["fits"]["heads"],
         **{k: v for k, v in a.items() if k != "fits"},
@@ -1007,7 +1019,7 @@ def test_phase_a_rows_carry_lambda_residual_age_split_and_threads(b2, phase):
 
 
 def test_phase_b_core_runs_every_tier_and_streams_e0h(b2, phase):
-    _a, e = phase
+    _a, e = phase[:2]
     assert set(e) == {"0.9.tier1", "0.9.tier2", "0.0.tier2"}
     t1 = e["0.9.tier1"]
     assert set(t1["counts"]) == set(b2.TIER1)
@@ -1019,10 +1031,13 @@ def test_phase_b_core_runs_every_tier_and_streams_e0h(b2, phase):
     assert acc["U@0.0"].k == 6 * 2  # six C layers x H = 2
     assert acc["U@0.0"].n == 2 * (TS - TM) * TM
     assert t1["controls"]["logit_control_worst"] <= b2.LOGIT_TOL
+    assert t1["e0h_source"] == "prehook_logit"
+    for r in e.values():  # F1: no per-eviction record is held in RAM
+        assert "logs" not in r
 
 
 def test_phase_b_summary_reads_ref_and_delta_from_phase_a(b2, phase):
-    a, e = phase
+    a, e = phase[:2]
     s = b2.summarise_eval(e, a["decisions"], 0, 3000, n_tier2=1)
     assert set(s) == {"0.9.tier1", "0.9.tier2", "0.0.tier2"}
     t1 = s["0.9.tier1"]
@@ -1036,15 +1051,528 @@ def test_phase_b_summary_reads_ref_and_delta_from_phase_a(b2, phase):
     for v in t1["outcome"].values():
         assert v["label"].removeprefix("Q2-") in ("WIN", "EQUIV", "LOSS", "UNRESOLVED")
     cls = b2.classification({k: t1 for k in (0, 1, 2)})
-    assert cls["row"] in range(1, 7) and "companion" not in cls
+    assert cls["row"] in range(1, 7) and "companion" not in cls  # no U+/C+ in Tier 1
+    t2 = b2.classification({k: s["0.9.tier2"] for k in (0, 1, 2)})
+    assert t2["companion"]["label"] == "non-gating, companion"  # review F6
 
 
-def test_the_attribution_source_has_row_1s_fields(b2, phase):
-    _a, e = phase
-    log = e["0.9.tier1"]["logs"]["psiU"]
+def test_the_attribution_source_has_row_1s_fields(b2, tiny, phase):
+    _a, e, out, _f = phase
+    ids = [d.doc_id for d in tiny["eval"]]
+    log = b2.unit_logs(out, 0.9, "tier1", ids, "psiU")
     att = b2.attribution(log, TS)
+    # review F1: computed online while streaming, equal to the batch computation
+    assert e["0.9.tier1"]["attribution"]["psiU"] == att
+    assert e["0.9.tier1"]["psi_age_corr"]["psiU"] == b2.psi_age_corr_in_loop(log)
     assert sum(att["age_hist"]) == len(log) == 2 * (TS - TM)
     assert set(att) == {"age_hist", "rank_hist", "kind_status", "margin", "rank_shift"}
     assert all(r["psi"] is not None and len(r["live_ages"]) == TM for r in log)
     corr = b2.psi_age_corr_in_loop(log)
     assert corr["n"] == len(log) * TM
+
+
+# --------------------------------------------------------------------------- #
+# build review F1: EVAL streams per document to disk and resumes
+# --------------------------------------------------------------------------- #
+
+
+def _eval(b2, tiny, fits, out, *, n_tier2=2, fits_id="tiny"):
+    kw = {"vmap": tiny["vmap"], "S": TS, "m": TM, "L": TL}
+    return b2.eval_core(
+        tiny["model"],
+        tiny["eval"],
+        fits,
+        seed=0,
+        label=3000,
+        n_tier2=n_tier2,
+        out_dir=out,
+        fits_id=fits_id,
+        **kw,
+    )
+
+
+def _same_eval(a, b):
+    assert set(a) == set(b)
+    for k in a:
+        for arm, bb in a[k]["counts"].items():
+            for bucket, v in bb.items():
+                assert torch.equal(v, b[k]["counts"][arm][bucket]), (k, arm, bucket)
+        assert a[k]["attribution"] == b[k]["attribution"]
+        assert a[k]["psi_age_corr"] == b[k]["psi_age_corr"]
+        assert a[k]["controls"] == b[k]["controls"]
+        if a[k]["e0h"] is not None:
+            for h, acc in a[k]["e0h"].items():
+                other = b[k]["e0h"][h]
+                assert acc.n == other.n and torch.equal(acc.xx, other.xx)
+                assert acc.within() == other.within()
+
+
+def test_eval_units_reach_disk_before_the_next_document_runs(
+    b2, tiny, phase, tmp_path, monkeypatch
+):
+    """Review F1 (BLOCKER): a document's unit (counts, controls, E0h statistics and
+    its per-eviction logs) is on disk before the next document runs, so the logs of
+    a 21 h run never accumulate in RAM."""
+    fits = phase[3]
+    d0, d1 = (d.doc_id for d in tiny["eval"])
+    seen: list[tuple[int, frozenset]] = []
+
+    def snap(doc):
+        have = frozenset(str(p.relative_to(tmp_path)) for p in tmp_path.rglob("*.pt.gz"))
+        seen.append((doc.doc_id, have))
+
+    real_arm, real_fifo = b2.run_arm, b2.fifo_with_e0h
+
+    def run_arm(model, doc, *a, **k):
+        snap(doc)
+        return real_arm(model, doc, *a, **k)
+
+    def fifo(model, doc, *a, **k):
+        snap(doc)
+        return real_fifo(model, doc, *a, **k)
+
+    monkeypatch.setattr(b2, "run_arm", run_arm)
+    monkeypatch.setattr(b2, "fifo_with_e0h", fifo)
+    e = _eval(b2, tiny, fits, tmp_path)
+    tiers = list(b2.tier_plan(3000))
+    firsts = [
+        have for j, (doc, have) in enumerate(seen) if doc == d1 and seen[j - 1][0] == d0
+    ]
+    assert len(firsts) == len(tiers)
+    for (g, tier), have in zip(tiers, firsts, strict=True):
+        want = str(b2.unit_path(tmp_path, g, tier, d0).relative_to(tmp_path))
+        assert want in have, f"{g}.{tier}: doc {d0}'s unit not on disk when {d1} ran"
+    for r in e.values():
+        assert "logs" not in r
+    for g, tier in tiers:
+        u = b2.load_unit(b2.unit_path(tmp_path, g, tier, d1))
+        assert set(u["logs"]) == set(b2.tier_plan(3000)[(g, tier)])
+
+
+def test_a_restart_skips_completed_units_and_reproduces_the_result(
+    b2, tiny, phase, tmp_path, monkeypatch
+):
+    """Crash safety: a killed EVAL child loses no completed document. A rerun on the
+    same directory runs only the units that are missing, and the result is
+    identical to an uninterrupted run."""
+    fits = phase[3]
+    full = _eval(b2, tiny, fits, tmp_path)
+    calls: list[int] = []
+
+    def boom(model, doc, *a, **k):
+        calls.append(doc.doc_id)
+        raise RuntimeError("a completed unit was run again")
+
+    with monkeypatch.context() as mp:
+        mp.setattr(b2, "run_arm", boom)
+        mp.setattr(b2, "fifo_with_e0h", boom)
+        again = _eval(b2, tiny, fits, tmp_path)
+    assert calls == []
+    _same_eval(full, again)
+    assert all(r["n_resumed"] == r["n_docs"] for r in again.values())
+
+    d1 = tiny["eval"][1].doc_id
+    b2.unit_path(tmp_path, 0.9, "tier1", d1).unlink()  # the unit a kill interrupted
+    (b2.unit_path(tmp_path, 0.9, "tier1", d1).parent / "x.pt.gz.tmp99").write_bytes(
+        b"torn write"
+    )
+    real_arm, real_fifo = b2.run_arm, b2.fifo_with_e0h
+
+    def count_arm(model, doc, *a, **k):
+        calls.append(doc.doc_id)
+        return real_arm(model, doc, *a, **k)
+
+    def count_fifo(model, doc, *a, **k):
+        calls.append(doc.doc_id)
+        return real_fifo(model, doc, *a, **k)
+
+    monkeypatch.setattr(b2, "run_arm", count_arm)
+    monkeypatch.setattr(b2, "fifo_with_e0h", count_fifo)
+    resumed = _eval(b2, tiny, fits, tmp_path)
+    assert calls == [d1] * len(b2.TIER1)  # that one unit, every Tier 1 arm, once
+    _same_eval(full, resumed)
+    assert resumed["0.9.tier1"]["n_resumed"] == 1
+
+
+def test_a_unit_from_another_configuration_is_refused(b2, tiny, phase, tmp_path):
+    """A unit written under other fits (or other code) is never folded into a
+    resumed run; the child exits 3 instead of mixing two configurations."""
+    fits = phase[3]
+    _eval(b2, tiny, fits, tmp_path, n_tier2=1)
+    with pytest.raises(b2.ControlFailure, match="another configuration"):
+        _eval(b2, tiny, fits, tmp_path, n_tier2=1, fits_id="other fits")
+
+
+# --------------------------------------------------------------------------- #
+# build review F2: `run.py e0h` reaches e0h_main with its arguments and paths
+# --------------------------------------------------------------------------- #
+
+
+def test_e0h_routes_through_main_with_every_argument(b2, monkeypatch):
+    got = {}
+
+    def fake(argv):
+        got["argv"] = argv
+        return 2
+
+    monkeypatch.setattr(b2, "e0h_main", fake)
+    argv = ["--fits", "/x", "--checkpoint", "2500", "--eval-dir", "/y"]
+    assert b2.main(["e0h", *argv]) == 2
+    assert got["argv"] == argv
+
+
+def test_e0h_defaults_are_the_real_run_dirs(b2):
+    a = b2.e0h_parser().parse_args([])
+    assert a.fits == b2.ROOT / "runs" / "b2-psi-probe-fit" / "phaseA"
+    assert a.fits == b2.ROOT / "runs" / b2.FIT_RUN_ID / "phaseA"
+    assert a.eval_dir == b2.ROOT / "runs" / b2.RUN_ID / "phaseB"
+    assert a.checkpoint == b2.HEADLINE
+
+
+# --------------------------------------------------------------------------- #
+# build review F3: an E0h control failure is E0h's alone; the log alpha fallback
+# --------------------------------------------------------------------------- #
+
+
+def _e0h_dirs(b2, phase, e, tmp_path):
+    """Phase A's heads as a post-fix payload for every seed, and E0h payloads."""
+    a = phase[0]
+    fits_dir, ev = tmp_path / "fits", tmp_path / "evalB"
+    fits_dir.mkdir()
+    ev.mkdir()
+    heads = {}
+    for k, h in a["fits"]["heads"].items():
+        heads[k] = dict(h, val_r2_form=b2.R2_FORM)
+    for s in b2.SEEDS:
+        torch.save({"heads": heads}, fits_dir / f"ckpt3000-seed{s}.pt")
+        torch.save(b2.e0h_payload(e), ev / f"ckpt3000-seed{s}.e0h.pt")
+    return fits_dir, ev
+
+
+def test_a_failed_logit_control_is_e0h_exit_3_and_b2_still_completes(
+    b2, tiny, phase, tmp_path, monkeypatch
+):
+    """A1.3 / A1.5: 'a failed control is E0h exit 3'; 'B2's rc covers B2 alone'.
+    The EVAL child must finish and record the control, not raise."""
+    monkeypatch.setattr(b2, "logit_control", lambda *a, **k: 1.0)
+    e = _eval(b2, tiny, phase[3], tmp_path / "units", n_tier2=1)
+    assert e["0.9.tier1"]["controls"]["logit_control_worst"] == 1.0
+    assert b2.e0h_payload(e)["logit_control_worst"] == 1.0
+    s = b2.summarise_eval(e, phase[0]["decisions"], 0, 3000, n_tier2=1)
+    assert "psiU" in s["0.9.tier1"]["outcome"]  # B2's own reading exists
+    fits_dir, ev = _e0h_dirs(b2, phase, e, tmp_path)
+    res = b2.e0h_compute(fits_dir, ev, 3000)
+    assert res["rc"] == 3 and "logit control" in res["why"]
+
+
+def test_the_log_alpha_fallback_when_the_hook_cannot_be_built(
+    b2, tiny, phase, tmp_path, monkeypatch
+):
+    """A1.5: if the pre-hook cannot be built, the within-step primary uses the
+    per-token log alpha (exact after within-step demeaning), the pooled secondary is
+    DID NOT RUN, and the ledger says `e0h.regressor_source = "log_alpha"`."""
+    ref = phase[1]["0.9.tier1"]["e0h"]
+
+    class NoHook:
+        def __init__(self, model):
+            raise RuntimeError("no pre-hook on this build")
+
+    monkeypatch.setattr(b2, "LogitHook", NoHook)
+    e = _eval(b2, tiny, phase[3], tmp_path / "units", n_tier2=1)
+    t1 = e["0.9.tier1"]
+    assert t1["e0h_source"] == "log_alpha"
+    assert t1["controls"]["logit_control_worst"] is None
+    for k, acc in t1["e0h"].items():
+        assert acc.n == ref[k].n
+        assert acc.within() == pytest.approx(ref[k].within(), abs=1e-5), k
+    fits_dir, ev = _e0h_dirs(b2, phase, e, tmp_path)
+    res = b2.e0h_compute(fits_dir, ev, 3000)
+    assert res["e0h.regressor_source"] == "log_alpha"
+    assert res["rc"] == 2  # unratified, and not DID NOT RUN
+    for s in b2.SEEDS:
+        for v in res["e0h.per_seed"][s].values():
+            assert v["pooled"] is None and v["within"] is not None
+
+
+def test_the_prehook_source_is_recorded_when_the_hook_builds(b2, tiny, phase, tmp_path):
+    e = phase[1]
+    fits_dir, ev = _e0h_dirs(b2, phase, e, tmp_path)
+    res = b2.e0h_compute(fits_dir, ev, 3000)
+    assert res["e0h.regressor_source"] == "prehook_logit"
+    assert res["rc"] == 2
+    assert all(
+        v["pooled"] is not None for s in b2.SEEDS for v in res["e0h.per_seed"][s].values()
+    )
+
+
+# --------------------------------------------------------------------------- #
+# build review F4: the wiring of the gating decision, on hand-built counts
+# --------------------------------------------------------------------------- #
+
+_D = 400
+
+
+def _bern(p: float, seed: int, n: int = 10) -> torch.Tensor:
+    g = torch.Generator().manual_seed(seed)
+    c = (torch.rand(_D, n, generator=g) < p).sum(1)
+    return torch.stack([torch.full((_D,), n), c], 1)
+
+
+def _arms(b2, spec: dict, base: int = 0) -> dict:
+    """arm -> bucket -> [D, 2]; `spec[arm]` is p for every bucket or a dict with
+    an 'all' default and per-bucket overrides."""
+    out = {}
+    for a_i, (arm, ps) in enumerate(spec.items()):
+        ps = ps if isinstance(ps, dict) else {"all": ps}
+        out[arm] = {
+            b: _bern(ps.get(b, ps["all"]), base + 97 * a_i + b_i)
+            for b_i, b in enumerate(b2.BUCKETS)
+        }
+    return out
+
+
+def _labels(res):
+    return {k: v["label"] for k, v in res["outcome"].items()}
+
+
+def test_win_needs_non_inferiority_on_gap_2_to_m(b2):
+    """§9.5: WIN needs the gap_2_to_M CI lower bound above -δ. Here ψ̂-U is far
+    ahead on all queries and far behind on gap_2_to_M; ψ̂-C is ahead on both."""
+    rnd = {f"random{k}": 0.5 for k in range(5)}
+    c = _arms(
+        b2,
+        {
+            "psiU": {"all": 0.9, "gap_2_to_M": 0.2},
+            "psiC": 0.9,
+            "fifo": {"all": 0.7, "gap_2_to_M": 0.8},
+            "ageU": 0.5,
+            "ageC": 0.5,
+            **rnd,
+            "kind": 0.5,
+        },
+    )
+    res = b2.outcomes_for(c, {"U": "fifo", "C": "fifo"}, 0.05, seed=0)
+    lab = _labels(res)
+    assert lab["psiU"] == "UNRESOLVED"
+    assert lab["psiC"] == "WIN"
+    assert res["boot"]["gap_2_to_M"]["psiU_minus_refU"]["lo"] < -0.05
+    assert res["boot"]["all"]["psiU_minus_refU"]["lo"] > 0
+
+
+def test_win_needs_the_random_floor_not_the_ref(b2):
+    """§9.5: WIN's last clause is the ψ̂ - random CI lower bound > 0."""
+    c = _arms(
+        b2,
+        {
+            "psiU": 0.9,
+            "psiC": 0.9,
+            "fifo": 0.7,
+            "ageU": 0.5,
+            "ageC": 0.5,
+            **{f"random{k}": 0.95 for k in range(5)},
+            "kind": 0.5,
+        },
+        base=5,
+    )
+    res = b2.outcomes_for(c, {"U": "fifo", "C": "fifo"}, 0.05, seed=1)
+    assert res["boot"]["all"]["psiU_minus_refU"]["lo"] > 0
+    assert res["boot"]["all"]["psiU_minus_random"]["lo"] < 0
+    assert _labels(res)["psiU"] == "UNRESOLVED"
+
+
+def test_loss_equiv_and_the_ref_arm_follow_ref(b2):
+    """LOSS against ref = age reads ageU, not FIFO; an arm identical to its ref is
+    EQUIV."""
+    c = _arms(
+        b2,
+        {
+            "psiU": 0.5,
+            "fifo": 0.3,
+            "ageU": 0.8,
+            "ageC": 0.5,
+            **{f"random{k}": 0.4 for k in range(5)},
+            "kind": 0.5,
+        },
+        base=11,
+    )
+    c["psiC"] = {b: v.clone() for b, v in c["fifo"].items()}
+    res = b2.outcomes_for(c, {"U": "age", "C": "fifo"}, 0.05, seed=2)
+    lab = _labels(res)
+    assert lab["psiU"] == "LOSS" and lab["psiC"] == "EQUIV"
+    pu = res["boot"]["all"]["psiU_minus_refU"]["point"]
+    assert pu == pytest.approx(
+        b2.pooled_acc(c["psiU"]["all"]) - b2.pooled_acc(c["ageU"]["all"])
+    )
+
+
+def test_val_decisions_delta_is_a_quarter_of_oracle_minus_fifo(b2):
+    """§9.3: δ = 0.25 (acc_oracle - acc_FIFO) on FIT_VAL; gamma = 0 reuses it (A1.11);
+    ref per (arm, gamma) is the better of FIFO and its age head."""
+    arms09 = _arms(
+        b2,
+        {
+            "psiU": 0.6,
+            "psiC": 0.62,
+            "fifo": 0.7,
+            "ageU": 0.78,
+            "ageC": 0.62,
+            **{f"random{k}": 0.5 + 0.02 * k for k in range(5)},
+            "oracle": 0.9,
+            "kind": 0.65,
+        },
+        base=21,
+    )
+    arms0 = _arms(b2, {"fifo": 0.7, "ageU": 0.6, "ageC": 0.75}, base=41)
+    arms0["fifo"] = arms09["fifo"]
+    ids = list(range(936000, 936000 + _D))
+    dec = b2.val_decisions({0.9: {"counts": arms09}, 0.0: {"counts": arms0}}, 0, ids)
+    acc = {a: b2.pooled_acc(v["all"]) for a, v in arms09.items()}
+    want = 0.25 * (acc["oracle"] - acc["fifo"])
+    assert dec["delta"][0.9] == pytest.approx(want, abs=1e-15)
+    assert dec["delta"][0.0] == dec["delta"][0.9]
+    assert dec["ref"] == {
+        "U@0.9": "age",
+        "C@0.9": "fifo",
+        "U@0.0": "fifo",
+        "C@0.0": "age",
+    }
+    assert set(b2.GATING_CONTRASTS) <= set(dec["sigma"])
+
+
+def test_the_gamma_zero_contrasts_use_the_gamma_zero_ref(b2):
+    """§9.8: gamma = 0 uses its own ref (and δ from gamma = 0.9, A1.11)."""
+    names09 = (*b2.TIER1, *b2.TIER2_G09)
+    spec09 = {a: 0.6 for a in names09}
+    t09 = _arms(b2, spec09, base=51)
+    spec0 = {a: 0.6 for a in b2.TIER2_G0}
+    spec0["ageU"] = 0.9
+    spec0["ageC"] = 0.9
+    t0 = _arms(b2, spec0, base=71)
+    t0["psiU"] = {b: v.clone() for b, v in t09["fifo"].items()}  # = FIFO exactly
+    ev = {"0.9.tier2": {"counts": t09}, "0.0.tier2": {"counts": t0}}
+    dec = {
+        "ref": {"U@0.9": "fifo", "C@0.9": "fifo", "U@0.0": "age", "C@0.0": "age"},
+        "delta": {0.9: 0.05, 0.0: 0.05},
+    }
+    s = b2.summarise_eval(ev, dec, 0, 2500, n_tier2=_D)
+    assert s["0.0.tier2"]["ref"] == {"U": "age", "C": "age"}
+    assert s["0.9.tier2"]["ref"] == {"U": "fifo", "C": "fifo"}
+    assert s["0.0.tier2"]["outcome"]["psiU"]["label"] == "LOSS"  # vs ageU, not FIFO
+
+
+def test_the_bootstrap_is_seeded_and_leaves_the_global_rng_alone(b2):
+    """§9.2: `torch.Generator(20260927 + seed)`; the global RNG is never drawn."""
+    c = _arms(b2, {"a": 0.7, "b": 0.6}, base=81)
+    per = {k: v["all"] for k, v in c.items()}
+    con = {"a_minus_b": ("a", "b")}
+    torch.manual_seed(1)
+    st = torch.get_rng_state()
+    x = b2.paired_bootstrap(per, con, seed=3, n_boot=300)
+    assert torch.equal(torch.get_rng_state(), st)
+    torch.manual_seed(999)
+    assert b2.paired_bootstrap(per, con, seed=3, n_boot=300) == x
+    assert b2.paired_bootstrap(per, con, seed=4, n_boot=300) != x
+
+
+def test_e0h_rows_pair_each_slot_with_its_own_sentence(b2, tiny, phase):
+    """§10 / A1.4: at full-memory step t, FIFO slot j holds sentence t - m + j;
+    its E0h row carries ψ̂(s_{t-m+j}, c_t) and D[t, t-m+j], recomputed here from an
+    independent capture of the same document."""
+    a = phase[0]
+    kw = {"vmap": tiny["vmap"], "S": TS, "m": TM, "L": TL}
+    doc = tiny["eval"][0]
+    heads = {k: a["fits"]["heads"][k]["w"] for k in b2.E0H_HEADS}
+    rows = b2.fifo_with_e0h(tiny["model"], doc, heads, **kw)["e0h"]
+    cap = b2.capture_doc(tiny["model"], doc, **kw)
+    want = {k: [] for k in heads}
+    want_d, want_g = [], []
+    for t in range(TM, TS):
+        for j in range(TM):
+            i = t - TM + j
+            f = b2.bilinear_features(cap.gest[i].unsqueeze(0), cap.ctx[t].unsqueeze(0))
+            for k, w in heads.items():
+                want[k].append(float((f @ w.to(torch.float64))[0]))
+            want_d.append(float(cap.D[0][t, i]))
+            want_g.append(t)
+    for k in heads:
+        got = rows[k].tolist()
+        assert got == pytest.approx(want[k], abs=1e-9), k
+        assert len(set(round(x, 9) for x in got[:TM])) == TM  # slots are distinguishable
+    assert rows[b2.E0H_TARGET].tolist() == pytest.approx(want_d, abs=1e-12)
+    assert rows["groups"].tolist() == want_g
+
+
+# --------------------------------------------------------------------------- #
+# build review F5, F6, F10
+# --------------------------------------------------------------------------- #
+
+
+def test_a_child_rc_1_is_a_parent_fail_not_a_did_not_run(b2):
+    assert b2.parent_rc({"a": 0, "b": 0}, t0_ok=True) == b2.Exit.OK
+    assert b2.parent_rc({"a": 0, "b": 1}, t0_ok=True) == b2.Exit.FAIL
+    assert b2.parent_rc({"a": 3, "b": 1}, t0_ok=True) == b2.Exit.FAIL
+    assert b2.parent_rc({"a": 3, "b": 0}, t0_ok=True) == b2.Exit.DID_NOT_RUN
+    assert b2.parent_rc({"a": 0}, t0_ok=False) == b2.Exit.DID_NOT_RUN
+
+
+def test_a_missing_t0_record_is_a_failed_check_not_a_crash(b2, tmp_path):
+    r = b2.t0_checked(tmp_path / "absent" / "RESTORE.md")
+    assert r["ok"] is False and "no T0 record" in r["why"]
+
+
+def _summ(u, c, up=None, cp=None):
+    out = {"psiU": {"label": u}, "psiC": {"label": c}}
+    if up is not None:
+        out["psiU+"] = {"label": up}
+        out["psiC+"] = {"label": cp}
+    return {"outcome": out}
+
+
+def test_every_summary_is_classified_and_a_checkpoint_disagreement_is_moving(b2):
+    """§9.6 (ckpt2500 reported, 'moving' when the classes differ), §9.8 (gamma = 0
+    secondary), A1.2 (the (U⁺, C⁺) companion, non-gating)."""
+    per = {
+        3000: {
+            s: {
+                "0.9.tier1": _summ("WIN", "WIN"),
+                "0.9.tier2": _summ("WIN", "WIN", "LOSS", "EQUIV"),
+                "0.0.tier2": _summ("EQUIV", "EQUIV"),
+            }
+            for s in b2.SEEDS
+        },
+        2500: {
+            s: {"0.9.tier2": _summ("EQUIV", "EQUIV"), "0.0.tier2": _summ("LOSS", "WIN")}
+            for s in b2.SEEDS
+        },
+    }
+    out = b2.classify_all(per)
+    assert out["headline"]["class"] == "NOT RULED OUT, CENSORED"
+    assert out["headline"]["gating"] is True
+    assert out["companion"]["class"] == "HARMFUL"
+    assert out["companion"]["label"] == "non-gating, companion"
+    assert out["ckpt2500"]["class"] == "NOT LEARNABLE, offline"
+    assert out["moving"] is True
+    assert out["gamma0_secondary"][3000]["class"] == "NOT LEARNABLE, offline"
+    assert out["gamma0_secondary"][2500]["class"] == "HARMFUL"
+    assert out["gamma0_secondary"][3000]["label"] == "secondary"
+    same = {
+        3000: per[3000],
+        2500: {
+            s: dict(per[2500][s], **{"0.9.tier2": _summ("WIN", "WIN")}) for s in b2.SEEDS
+        },
+    }
+    assert b2.classify_all(same)["moving"] is False
+
+
+def test_only_the_named_ruling_ratifies_e0h(b2, tmp_path, monkeypatch):
+    """Review F10: a ruling that merely mentions e0h (for example one rejecting the
+    thresholds) does not ratify them; only the ruling named in E0H_RULING does."""
+    rul = tmp_path / "docs" / "owner" / "rulings"
+    rul.mkdir(parents=True)
+    (rul / "R-2026-10-01-e0h-thresholds-rejected.md").write_text("rejected\n")
+    assert b2.E0H_RULING is None
+    assert b2.e0h_ratified(tmp_path) is False
+    monkeypatch.setattr(b2, "E0H_RULING", "docs/owner/rulings/R-2026-10-02-e0h.md")
+    assert b2.e0h_ratified(tmp_path) is False  # named, but absent
+    (rul / "R-2026-10-02-e0h.md").write_text("ratified\n")
+    assert b2.e0h_ratified(tmp_path) is True
