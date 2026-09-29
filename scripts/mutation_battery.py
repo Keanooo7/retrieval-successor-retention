@@ -3965,7 +3965,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "b2-psi-probe: the ridge lambda is chosen on whatever rows it is handed",
         "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
         "experiments/b2-psi-probe/run.py",
+        # fit_heads's pair: r2_split_by_index (review F11) repeats the FIT_VAL line alone,
+        # so the FIT_TRAIN line above it keeps this anchor unique (--check-anchors).
+        '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n'
         '    require_range([c.doc_id for c in val_caps], "FIT_VAL")\n',
+        '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n'
         "    pass\n",
         "PREREG §6 / A1.7: lambda minimises the FIT_VAL validation MSE. Without the "
         "range guard an EVAL capture selects lambda silently -- a fit tuned on the "
