@@ -4099,7 +4099,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_the_suite_env_is_the_shards_own",
         "scripts/battery_isolation.py",
         '    env["RSR_ORCH_ROOT"] = str(shard.root)\n',
-        "",
+        "    pass\n",
         "I1: without it an orchestrator write from a test resolves the MAIN "
         "checkout (lanes.orch_root), the stray-write class of 2026-09-27.",
     ),
@@ -4125,7 +4125,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_reset_restores_the_pinned_tree",
         "scripts/battery_isolation.py",
         '    _ok(git(shard.root, "clean", "-fdq"), f"git clean -fdq in {shard.root}")\n',
-        "",
+        "    pass\n",
         "I1: a file one mutated suite created must not be in the next one's tree.",
     ),
     Mutation(
@@ -4133,7 +4133,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_a_shard_suite_writes_no_bytecode",
         "scripts/battery_isolation.py",
         '    env["PYTHONDONTWRITEBYTECODE"] = "1"\n',
-        "",
+        "    pass\n",
         "I1: a same-size mutation restored within one second passes the .pyc "
         "mtime+size check, so the next suite ran the previous mutation's code "
         "(observed on the stub battery, 2026-09-29).",
@@ -4143,7 +4143,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_reset_purges_bytecode_outside_the_venv",
         "scripts/battery_isolation.py",
         '            shutil.rmtree(Path(dirpath) / "__pycache__", ignore_errors=True)\n',
-        "",
+        "            pass\n",
         "I1: the second layer under PYTHONDONTWRITEBYTECODE, for caches written by "
         "anything that sets its own env.",
     ),
@@ -4152,7 +4152,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite",
         "scripts/battery_isolation.py",
         "    check_interpreter(shard, shard_env(shard, dict(os.environ)))\n",
-        "",
+        "    pass\n",
         "I1: an editable install pointing at another checkout is refused before the "
         "first (multi-minute) suite, not after it.",
     ),
