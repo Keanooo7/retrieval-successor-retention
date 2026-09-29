@@ -415,6 +415,27 @@ _LIVENESS_BATCH_STAMP_COUPLING = (
     "test that reads it reddens: the default-path config, seen from liveness."
 )
 
+_I1_E2E_WIRING = (
+    "I1: the end-to-end stub tests run the real battery; each depends on the "
+    "guard this mutation disables for its own assertion, so one edit reddens the "
+    "unit gate and every end-to-end path through the same guard. Asserted both "
+    "ways on purpose: a unit test alone would pass a guard that is never called."
+)
+_I1_SHARD_MUTATION = (
+    "I1: every end-to-end stub test either asserts the invoking tree stays clean "
+    "mid-run and after, or needs the mutation to land in the shard to get its "
+    "verdict; a battery that mutates the invoking tree breaks each by construction."
+)
+_I1_TEARDOWN = (
+    "I1: every end-to-end stub test that finishes or stops a battery asserts no "
+    "worktree registration is left; a pool never torn down leaves one in each."
+)
+_I1_DIRTY = (
+    "I1: tracked edits and untracked files are the two halves of 'dirty'; one "
+    "check covers both, so one edit reddens both tests."
+)
+
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -4039,6 +4060,23 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            original = apply(" + "m)",
         "I1: the live checkout the battery is invoked from is never mutated; a "
         "stopped battery left mutated loop.py and lanes.py behind twice.",
+        off_gate_allowed=tuple(
+            (n, _I1_SHARD_MUTATION)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_check_still_fails_on_an_unproven_gate",
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+                "tests/test_battery_isolation.py::"
+                "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGTERM]",
+                "tests/test_battery_isolation.py::"
+                "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGHUP]",
+                "tests/test_battery_isolation.py::"
+                "test_a_sigkilled_battery_leaves_only_shards_and_prune_removes_them",
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        ),
     ),
     Mutation(
         "i1: the path assertion accepts any rsr",
@@ -4048,6 +4086,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        if False:",
         "I1: rsr must resolve under the shard or the suite DID NOT RUN; the 09-27 "
         "suite ran on the main checkout's venv (DIGEST cycle 16b).",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_suite_on_another_checkouts_venv_did_not_run",
+            )
+        ),
     ),
     Mutation(
         "i1: the path assertion skips the pytest child",
@@ -4066,6 +4111,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        return None",
         "I1: a suite that says nothing about where it imported rsr from has not "
         "shown that it ran in the shard.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+            )
+        ),
     ),
     Mutation(
         "i1: run_suite never reads the probe",
@@ -4075,6 +4127,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         + "shard.probe), shard.root)",
         "        problem = None",
         "I1: the path assertion exists only if the battery consults it.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+            )
+        ),
     ),
     Mutation(
         "i1: a killed pytest is scored as a verdict",
@@ -4084,6 +4143,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        if False:",
         "I1: a pytest killed by a signal became a '<collection/exit -9>' failure and "
         "was scored LEAKS or ADDS NOTHING; it is DID NOT RUN.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        ),
     ),
     Mutation(
         "i1: a DID_NOT_RUN row exits 0",
@@ -4093,6 +4159,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if False:",
         "I1 / exit-code protocol: a mutation that did not run is not a table entry; "
         "'did not run' never becomes exit 0.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        ),
     ),
     Mutation(
         "i1: RSR_ORCH_ROOT is not the shard's",
@@ -4111,6 +4184,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    if False:\n        raise Unisolated(\n            f"{root} has',
         "I1: a shard is a commit; uncommitted edits in the invoking tree would not "
         "be in it, and the record would certify a tree the battery never ran.",
+        off_gate_allowed=tuple(
+            (n, _I1_DIRTY)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_an_untracked_file_in_the_invoking_tree_is_refused",
+            )
+        ),
     ),
     Mutation(
         "i1: a shard pool inside the invoking tree is accepted",
@@ -4163,6 +4243,20 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            if not keep:",
         "            if keep:",
         "I1: a finished or stopped battery leaves no worktree registration behind.",
+        off_gate_allowed=tuple(
+            (n, _I1_TEARDOWN)
+            for n in (
+                "tests/test_battery_isolation.py::test_reset_restores_the_pinned_tree",
+                "tests/test_battery_isolation.py::"
+                "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+                "tests/test_battery_isolation.py::"
+                "test_a_suite_on_another_checkouts_venv_did_not_run",
+                "tests/test_battery_isolation.py::"
+                "test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite",
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        ),
     ),
     Mutation(
         "i1: no SIGTERM/SIGHUP handler",
@@ -4252,6 +4346,11 @@ def _markdown(rows: list[dict]) -> str:
         "present reddens under every mutation by construction — it made all 32 score "
         "`LEAKS` the first time clause 2 was enforced. `apply()` raises on a stale "
         "anchor instead.",
+        "- **The probe writer (`tests/_battery_probe.py`) cannot be mutated here.** "
+        "A suite that writes no probe, or a wrong one, is `DID_NOT_RUN` by design "
+        "(I1), so its mutation could never score `PROVEN`. Proved on a stub "
+        "repository instead: `test_a_mutation_whose_suite_reports_no_probe_did_not_run` "
+        "and `test_a_suite_on_another_checkouts_venv_did_not_run`.",
         "",
     ]
     return "\n".join(out)
