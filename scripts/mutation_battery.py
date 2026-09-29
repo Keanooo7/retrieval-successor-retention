@@ -30,15 +30,26 @@ table stood at "17/17, 11 off-gate" from 0a9f5d8 while the suite had grown to 19
 off-gate on that same mutation, and a record that has to be retyped is a record
 that goes stale.
 
-The source tree is restored after every mutation, including on failure.
+🔴 **The tree you run this from is never mutated** (I1, 2026-09-29). Every suite
+run -- the baseline and each mutation -- happens in a shard: a git worktree of the
+invoking tree's HEAD (which must be clean) with its own venv, outside the invoking
+tree (`scripts/battery_isolation.py`). A suite whose `rsr` does not resolve under
+its shard, in the pytest process or in a child of it, is `DID_NOT_RUN` -- never
+`PROVEN` or `LEAKS`. After a SIGKILL, which no handler sees, the only leftovers
+are shard worktrees:
+
+    uv run python scripts/mutation_battery.py --prune-shards
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import signal
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,9 +57,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import battery_isolation as iso  # noqa: E402
 from orchestrator import lanes  # noqa: E402
 
-from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main, status  # noqa: E402
 
 PYTEST = ROOT / ".venv" / "bin" / "pytest"
 
@@ -4176,17 +4188,33 @@ the width, and drops it altogether when the node id alone fills 80 columns."""
 _SUMMARY_HEADER = "short test summary info"
 
 
-def run_suite() -> dict[str, str | None]:
+class SuiteDidNotRun(Exception):
+    """This suite run is not evidence: killed by a signal, or not isolated (I1)."""
+
+
+def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     """Return ``{failing node id: one-line reason}`` (``None`` if pytest printed none).
+
+    🔴 I1: with a ``shard``, the suite runs there on the shard's own pytest, and
+    raises ``SuiteDidNotRun`` if pytest was killed by a signal or if its probe does
+    not put ``rsr`` under the shard root (`battery_isolation.probe_problem`). A
+    killed pytest used to become a ``<collection/exit -9>`` "failure" and be scored.
 
     📌 I5 (PLAN-v4 §4): this ran ``--tb=no`` until 2026-09-27, so the 09-26 red on
     ``test_submit_launches_the_slot_detached_at_the_pinned_sha`` left only a node
     id. The reason is recorded on the verdict row; it never enters a verdict --
     the node set is parsed exactly as before (`parse_failures`).
     """
+    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    root, pytest = ROOT, PYTEST
+    if shard is not None:
+        root, pytest = shard.root, shard.root / ".venv" / "bin" / "pytest"
+        env = iso.shard_env(shard, env)
+        with contextlib.suppress(FileNotFoundError):
+            shard.probe.unlink()
     proc = subprocess.run(
         [
-            str(PYTEST),
+            str(pytest),
             "-p",
             "no:cacheprovider",
             "-rfE",
@@ -4194,11 +4222,19 @@ def run_suite() -> dict[str, str | None]:
             "-q",
             "--no-header",
         ],
-        cwd=ROOT,
+        cwd=root,
         capture_output=True,
         text=True,
-        env={**_suite_env(), "COLUMNS": REASON_COLUMNS},
+        env=env,
     )
+    if shard is not None:
+        if proc.returncode < 0:
+            raise SuiteDidNotRun(
+                f"pytest was killed by signal {-proc.returncode} in {shard.root}"
+            )
+        problem = iso.probe_problem(iso.read_probe(shard.probe), shard.root)
+        if problem:
+            raise SuiteDidNotRun(problem)
     return parse_failures(proc.stdout + proc.stderr, proc.returncode)
 
 
@@ -4254,8 +4290,9 @@ def anchor_problems() -> list[str]:
     return out
 
 
-def apply(mutation: Mutation) -> str:
-    path = ROOT / mutation.path
+def apply(mutation: Mutation, root: Path | None = None) -> str:
+    """Write ``mutation`` into ``root`` (a shard; ``ROOT`` only for the anchor tests)."""
+    path = (ROOT if root is None else root) / mutation.path
     original = path.read_text()
     if mutation.old not in original:
         # 🔴 DID NOT RUN (3), not 1: nothing was mutated, so nothing was tested.
@@ -4268,6 +4305,49 @@ def apply(mutation: Mutation) -> str:
         )
     path.write_text(original.replace(mutation.old, mutation.new, 1))
     return original
+
+
+_HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGHUP)
+
+
+class _Signalled(BaseException):
+    """Raised by the SIGTERM/SIGHUP handler so every ``finally`` runs."""
+
+    def __init__(self, signum: int):
+        super().__init__(signum)
+        self.signum = signum
+
+
+def _raise_signalled(signum, _frame):
+    # One signal is enough: ignore repeats so the teardown is not interrupted too.
+    for s in _HANDLED_SIGNALS:
+        signal.signal(s, signal.SIG_IGN)
+    raise _Signalled(signum)
+
+
+@contextlib.contextmanager
+def signal_handlers():
+    """Defence in depth (I1). The live tree does not depend on these -- no suite
+    ever runs in it. They let a stopped battery kill its pytest child
+    (``subprocess.run`` does on any exception) and tear its shards down. The
+    previous handlers come back on exit, so an in-process ``main()`` (the unit
+    tests) leaves its host's handlers as it found them."""
+    old = {s: signal.signal(s, _raise_signalled) for s in _HANDLED_SIGNALS}
+    try:
+        yield
+    finally:
+        for s, h in old.items():
+            signal.signal(s, h)
+
+
+def open_workspace(args) -> contextlib.AbstractContextManager[list[iso.Shard]]:
+    """The shard(s) every suite run happens in: HEAD of the clean invoking tree."""
+    sha = iso.pinned_sha(ROOT)
+    return iso.open_pool(ROOT, sha, n=1, pool=args.shard_dir, keep=args.keep_shards)
+
+
+def reset(shard: iso.Shard) -> None:
+    iso.reset_shard(shard)
 
 
 def main() -> Exit:
@@ -4288,7 +4368,35 @@ def main() -> Exit:
         default=None,
         help="regenerate docs/mutation-battery.md from this run",
     )
+    ap.add_argument(
+        "--shard-dir",
+        type=Path,
+        default=None,
+        help="where the shard worktrees live (default ~/.cache/rsr-battery/<repo>); "
+        "must be outside this tree",
+    )
+    ap.add_argument(
+        "--keep-shards",
+        action="store_true",
+        help="leave the shard worktrees for reuse instead of removing them",
+    )
+    ap.add_argument(
+        "--prune-shards",
+        action="store_true",
+        help="only remove this repo's shard worktrees under --shard-dir (the cleanup "
+        "after a SIGKILL); exit 3 if any could not be removed",
+    )
     args = ap.parse_args()
+
+    if args.prune_shards:
+        pool = (args.shard_dir or iso.default_pool_dir(ROOT)).resolve()
+        errors = iso.prune_shards(ROOT, pool)
+        for e in errors:
+            print(e, file=sys.stderr)
+        if errors:
+            return Exit.DID_NOT_RUN
+        print(f"no shard worktrees registered under {pool}")
+        return Exit.OK
 
     if not MUTATIONS:
         # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has no
@@ -4320,55 +4428,104 @@ def main() -> Exit:
             f"{len(problems)} stale anchor(s); nothing was mutated. Fix the anchors "
             f"(`--check-anchors`), do not drop the mutations.",
         )
-    baseline = run_suite()
-    if baseline:
-        # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
-        # `raise SystemExit(msg)` (S0-05).
-        refuse(
-            Exit.DID_NOT_RUN,
-            f"the suite is not green before mutating: {sorted(baseline)}",
-        )
 
-    rows = []
-    for m in MUTATIONS:
-        path = ROOT / m.path
-        original = apply(m)
-        try:
-            failing = run_suite()
-        finally:
-            path.write_text(original)
-        reasons = _reasons(failing)
-        on_gate = sorted(f for f in failing if m.gate in f)
-        off_gate = sorted(f for f in failing if m.gate not in f)
-        declared = {node for node, _reason in m.off_gate_allowed}
-        leaked = [f for f in off_gate if f not in declared]
-        if on_gate and leaked:
-            verdict = "LEAKS"
-        elif on_gate:
-            verdict = "PROVEN"
-        else:
-            verdict = "ADDS NOTHING"
-        rows.append(
-            {
-                "mutation": m.name,
-                "gate": m.gate,
-                "why": m.why,
-                "reddened_gate": bool(on_gate),
-                "n_on_gate": len(on_gate),
-                "off_gate": off_gate,
-                "off_gate_allowed": [list(x) for x in m.off_gate_allowed],
-                "off_gate_undeclared": leaked,
-                "verdict": verdict,
-                # I5: one line per failing node. Data, never a verdict input.
-                "failure_reasons": {f: reasons[f] for f in sorted(reasons)},
-            }
-        )
+    try:
+        with signal_handlers():
+            return status(_run_isolated(args))
+    except iso.Unisolated as e:
+        refuse(Exit.DID_NOT_RUN, f"not isolated: {e}")
+    except _Signalled as e:
+        name = signal.Signals(e.signum).name
         print(
-            f"{rows[-1]['verdict']:13s} {m.name:42s} "
-            f"-> {len(on_gate)} on gate, {len(off_gate)} off "
-            f"({len(leaked)} undeclared)"
+            f"INTERRUPTED by {name}: shards torn down, no verdicts; the invoking "
+            f"tree was never mutated",
+            file=sys.stderr,
         )
+        raise SystemExit(128 + e.signum) from None
 
+
+def _run_isolated(args) -> Exit:
+    with open_workspace(args) as shards:
+        shard = shards[0]
+        print(
+            f"shard: {shard.root} at {shard.sha[:12]} "
+            + " ".join(f"{k}={v:.2f}" for k, v in shard.timings.items())
+        )
+        try:
+            baseline = run_suite(shard)
+        except SuiteDidNotRun as e:
+            refuse(Exit.DID_NOT_RUN, f"the baseline suite did not run: {e}")
+        if baseline:
+            # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
+            # `raise SystemExit(msg)` (S0-05).
+            refuse(
+                Exit.DID_NOT_RUN,
+                f"the suite is not green before mutating: {sorted(baseline)}",
+            )
+
+        rows = []
+        resets: list[float] = []
+        for m in MUTATIONS:
+            path = shard.root / m.path
+            original = apply(m, shard.root)
+            did_not_run = None
+            try:
+                failing = run_suite(shard)
+            except SuiteDidNotRun as e:
+                failing, did_not_run = {}, str(e)
+            finally:
+                path.write_text(original)
+                t0 = time.perf_counter()
+                reset(shard)
+                resets.append(time.perf_counter() - t0)
+            rows.append(_row(m, failing, did_not_run))
+            print(
+                f"{rows[-1]['verdict']:13s} {m.name:42s} "
+                f"-> {rows[-1]['n_on_gate']} on gate, {len(rows[-1]['off_gate'])} off "
+                f"({len(rows[-1]['off_gate_undeclared'])} undeclared)"
+            )
+        if resets:
+            print(
+                f"shard reset: {len(resets)} x, mean {sum(resets) / len(resets):.3f} s, "
+                f"max {max(resets):.3f} s"
+            )
+    return _report(args, rows)
+
+
+def _row(m: Mutation, failing, did_not_run: str | None) -> dict:
+    reasons = _reasons(failing)
+    on_gate = sorted(f for f in failing if m.gate in f)
+    off_gate = sorted(f for f in failing if m.gate not in f)
+    declared = {node for node, _reason in m.off_gate_allowed}
+    leaked = [f for f in off_gate if f not in declared]
+    if did_not_run is not None:
+        # 🔴 I1: not isolated, or killed. Nothing here is evidence either way.
+        verdict = "DID_NOT_RUN"
+    elif on_gate and leaked:
+        verdict = "LEAKS"
+    elif on_gate:
+        verdict = "PROVEN"
+    else:
+        verdict = "ADDS NOTHING"
+    row = {
+        "mutation": m.name,
+        "gate": m.gate,
+        "why": m.why,
+        "reddened_gate": bool(on_gate),
+        "n_on_gate": len(on_gate),
+        "off_gate": off_gate,
+        "off_gate_allowed": [list(x) for x in m.off_gate_allowed],
+        "off_gate_undeclared": leaked,
+        "verdict": verdict,
+        # I5: one line per failing node. Data, never a verdict input.
+        "failure_reasons": {f: reasons[f] for f in sorted(reasons)},
+    }
+    if did_not_run is not None:
+        row["did_not_run"] = did_not_run
+    return row
+
+
+def _report(args, rows: list[dict]) -> Exit:
     if args.json:
         args.json.write_text(json.dumps(rows, indent=2) + "\n")
     if args.markdown:
@@ -4379,7 +4536,11 @@ def main() -> Exit:
     if bad:
         print("UNPROVEN:")
         for r in bad:
-            if not r["reddened_gate"]:
+            if r["verdict"] == "DID_NOT_RUN":
+                print(
+                    f"  {r['gate']}  ({r['mutation']}) -- DID NOT RUN: {r['did_not_run']}"
+                )
+            elif not r["reddened_gate"]:
                 print(f"  {r['gate']}  ({r['mutation']}) -- reddens nothing")
             else:
                 print(
@@ -4394,6 +4555,10 @@ def main() -> Exit:
             "that reddens tests it did not declare has not isolated the defect. "
             "Declare the coupling with a reason, or narrow the mutation."
         )
+    # 🔴 I1: a mutation that did not run is not a table entry, with or without
+    # --check. "Did not run" never becomes exit 0.
+    if any(r["verdict"] == "DID_NOT_RUN" for r in rows):
+        return Exit.DID_NOT_RUN
     # Without --check this is the table renderer and exits 0 once the table is
     # rendered; --check is the gate. Documented in the module docstring, and
     # decided in S0-05's RESULTS.md.

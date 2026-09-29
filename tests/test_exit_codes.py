@@ -41,6 +41,7 @@ import ledger as ledger_mod  # noqa: E402
 import mutation_battery  # noqa: E402
 import render_scoreboard  # noqa: E402
 
+from _battery_fakes import use_fake_shard  # noqa: E402
 from rsr.exit_codes import Exit, status  # noqa: E402
 
 PY = sys.executable
@@ -189,7 +190,7 @@ def test_a_stale_battery_anchor_exits_3():
     assert exc.value.code == 3
 
 
-def test_a_red_baseline_exits_3(monkeypatch):
+def test_a_red_baseline_exits_3(monkeypatch, tmp_path):
     """A suite red before mutating means no mutation ran.
 
     ⚠️ The anchor check is bypassed here on purpose. Under the battery, the mutation
@@ -199,7 +200,8 @@ def test_a_red_baseline_exits_3(monkeypatch):
     test is about the baseline path only; the anchor check has its own tests
     (tests/test_battery_anchors.py)."""
     monkeypatch.setattr(mutation_battery, "anchor_problems", lambda: [])
-    monkeypatch.setattr(mutation_battery, "run_suite", lambda: {"tests/t.py::t"})
+    use_fake_shard(monkeypatch, mutation_battery, tmp_path)
+    monkeypatch.setattr(mutation_battery, "run_suite", lambda *a: {"tests/t.py::t"})
     monkeypatch.setattr(sys, "argv", ["mutation_battery.py", "--check"])
     with pytest.raises(SystemExit) as exc:
         mutation_battery.main()
