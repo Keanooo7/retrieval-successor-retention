@@ -13,20 +13,34 @@ the main checkout's venv from inside ``_mgr`` -- the editable install imported
    which must be clean), with its own ``.venv`` from ``uv sync --frozen --extra
    dev``. The pool lives OUTSIDE the invoking tree (``default_pool_dir``), so no
    path under it is ever written. Between mutations a shard is reset with
-   ``git checkout -- .`` and ``git clean -fdq`` (never ``-x``: the ``.venv`` and
-   other ignored files stay) and must then show an empty ``git status
-   --porcelain`` at the pinned SHA, or the battery refuses.
+   ``git checkout -- .`` and ``git clean -ffdxq -e /.venv/`` -- ignored files
+   INCLUDED, only the venv kept -- and must then show nothing but ``.venv/`` in
+   ``git status --porcelain --ignored`` at the pinned SHA, or the battery refuses.
+   (Review MAJOR-2: without ``-x`` an ignored ``runs/`` or ``.orchestrator/``
+   file one mutation's suite wrote changed the next mutation's verdict.)
 2. **Path assertion.** The shard's pytest writes a probe (``tests/_battery_probe.py``,
    env ``RSR_BATTERY_PROBE``) recording where ``rsr`` resolves in the pytest
    process itself, in a child it spawns with ``sys.executable``, and in the
    ``python`` on its ``PATH``. ``probe_problem`` refuses any of them outside the
    shard root -- and a missing probe. A refused probe makes that suite run
-   ``DID_NOT_RUN``: never ``PROVEN``, never ``LEAKS``.
+   ``DID_NOT_RUN``: never ``PROVEN``, never ``LEAKS``. So is a suite that did
+   not complete: pytest killed by a signal, or exiting 2 (interrupted), 3
+   (internal error) or 4 (usage) -- by its process status or by the
+   ``exitstatus`` the probe records (``suite_problem``; review MAJOR-1).
 3. **Per-shard state.** ``RSR_ORCH_ROOT`` is the shard root in the suite env, so
    an orchestrator write from a test lands in the shard, not the main checkout.
-4. Signal handlers (SIGTERM, SIGHUP) remain only as defence in depth: they tear the
-   pool down. The live tree does not depend on them -- SIGKILL cannot be handled,
-   and it leaves only shard worktrees, which ``--prune-shards`` removes.
+4. Signal handlers (SIGTERM, SIGHUP, SIGINT) remain only as defence in depth: they
+   kill the suite's whole process group and tear the pool down. The live tree does
+   not depend on them -- SIGKILL cannot be handled, and it leaves only shard
+   worktrees, which ``--prune-shards`` removes (under the pool lock).
+
+**Pool policy.** The default pool is ONE per repository (``default_pool_dir`` is
+keyed on the git common dir), so every worktree of the repo shares it, and its
+``flock`` admits one battery at a time: a second battery on the default pool exits
+3 ("another battery holds the shard pool"). Concurrent batteries -- I2's shards,
+or two worktrees' subsets -- must each pass their own ``--shard-dir``
+(``scripts/battery_subset.py`` passes it through). ``--prune-shards`` takes the same
+lock, so it can never remove a running battery's shard (review MAJOR-3).
 
 Shards are the tool's own scratch at a pinned, committed SHA: removing one loses
 nothing that is not in git. ``--keep-shards`` leaves them for reuse.
@@ -55,6 +69,19 @@ SYNC_ARGV = ("uv", "sync", "--frozen", "--extra", "dev")
 ``orchestrator.dispatch.sync_venv`` uses the same line."""
 
 _VENV_ENV = ("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT", "CONDA_PREFIX", "PYTHONHOME")
+
+_SUITE_STRIP = ("PYTHONPATH", "PYTHONPYCACHEPREFIX")
+"""Never inherited by a shard's suite: ``PYTHONPATH`` can put another checkout's
+``scripts/`` or ``experiments/`` ahead of the shard's with ``rsr`` still passing the
+probe, and ``PYTHONPYCACHEPREFIX`` moves bytecode outside the shard, where the
+reset cannot remove it (review MINOR-1)."""
+
+COMPLETED_EXIT = (0, 1)
+"""pytest exit statuses of a suite that ran to the end: all passed, or some failed."""
+
+CLEAN_ARGV = ("clean", "-ffdxq", "-e", "/.venv/")
+"""The shard reset's clean: untracked AND ignored files, nested repos, only the
+venv kept (review MAJOR-2)."""
 
 
 class Unisolated(Exception):
@@ -151,6 +178,8 @@ def sync_venv(shard_root: Path) -> None:
 def shard_env(shard: Shard, base: dict[str, str]) -> dict[str, str]:
     """The suite's environment in ``shard``: its venv first, its own orch root."""
     env = {k: v for k, v in base.items() if k not in _VENV_ENV}
+    for k in _SUITE_STRIP:
+        env.pop(k, None)
     venv = shard.root / ".venv"
     path = [
         p
@@ -180,6 +209,11 @@ def probe_problem(probe: dict | None, root: Path) -> str | None:
     """
     if probe is None:
         return "no probe: the suite did not report where it imported rsr from"
+    if probe.get("exitstatus") not in COMPLETED_EXIT:
+        return (
+            f"pytest's own exit status was {probe.get('exitstatus')!r} (2 interrupted, "
+            f"3 internal error, 4 usage error): the suite did not complete"
+        )
     for key in ("in_process", "child"):
         if not is_under(probe.get(key), root):
             return f"rsr.__file__ ({key}) = {probe.get(key)!r} is not under {root}"
@@ -187,6 +221,23 @@ def probe_problem(probe: dict | None, root: Path) -> str | None:
     if other is not None and not is_under(other, root):
         return f"rsr.__file__ (path_python) = {other!r} is not under {root}"
     return None
+
+
+def suite_problem(returncode: int, probe: dict | None, root: Path) -> str | None:
+    """Why this suite run is not evidence, or None. Review MAJOR-1.
+
+    A pytest killed by a signal, or one that exited 2/3/4, did not run the suite
+    to the end: a SIGINT that lands after the gate test failed would otherwise
+    score PROVEN with every later test -- every possible leak -- unrun.
+    """
+    if returncode < 0:
+        return f"pytest was killed by signal {-returncode}"
+    if returncode not in COMPLETED_EXIT:
+        return (
+            f"pytest exited {returncode} (2 interrupted, 3 internal error, 4 usage "
+            f"error): the suite did not complete"
+        )
+    return probe_problem(probe, root)
 
 
 def read_probe(path: Path) -> dict | None:
@@ -218,14 +269,14 @@ def check_interpreter(shard: Shard, env: dict[str, str]) -> None:
 
 
 def reset_shard(shard: Shard) -> None:
-    """Back to the pinned tree: tracked files restored, untracked files removed.
+    """Back to the pinned tree: tracked files restored, untracked AND ignored removed.
 
-    ``git clean`` without ``-x``: ignored files (``.venv``, ``__pycache__``,
-    ``runs/`` scratch) are kept. Verified, not assumed: HEAD is the pinned SHA and
-    ``git status --porcelain`` is empty, or the battery refuses.
+    Only ``.venv/`` survives (``CLEAN_ARGV``). Verified, not assumed: HEAD is the
+    pinned SHA and ``git status --porcelain --ignored`` lists nothing but
+    ``.venv/``, or the battery refuses.
     """
     _ok(git(shard.root, "checkout", "--", "."), f"git checkout -- . in {shard.root}")
-    _ok(git(shard.root, "clean", "-fdq"), f"git clean -fdq in {shard.root}")
+    _ok(git(shard.root, *CLEAN_ARGV), f"git clean in {shard.root}")
     purge_bytecode(shard.root)
     verify_clean(shard)
 
@@ -248,9 +299,13 @@ def verify_clean(shard: Shard) -> None:
     head = _ok(git(shard.root, "rev-parse", "HEAD"), "git rev-parse HEAD").strip()
     if head != shard.sha:
         raise Unisolated(f"shard {shard.root} is at {head[:12]}, not {shard.sha[:12]}")
-    dirty = _ok(git(shard.root, "status", "--porcelain"), "git status --porcelain")
-    if dirty.strip():
-        raise Unisolated(f"shard {shard.root} is not clean:\n{dirty.rstrip()}")
+    out = _ok(
+        git(shard.root, "status", "--porcelain", "--ignored"),
+        "git status --porcelain --ignored",
+    )
+    dirty = [ln for ln in out.splitlines() if ln.strip() and ln != "!! .venv/"]
+    if dirty:
+        raise Unisolated(f"shard {shard.root} is not clean:\n" + "\n".join(dirty))
 
 
 def _registered(source: Path) -> set[Path]:
@@ -276,7 +331,7 @@ def make_shard(source: Path, pool: Path, index: int, sha: str) -> Shard:
         if path not in _registered(source):
             raise Unisolated(f"{path} exists and is not a worktree of {source}")
         _ok(git(path, "checkout", "--detach", "--force", sha), f"checkout in {path}")
-        _ok(git(path, "clean", "-fdq"), f"git clean -fdq in {path}")
+        _ok(git(path, *CLEAN_ARGV), f"git clean in {path}")
         purge_bytecode(path)
     else:
         _ok(
@@ -300,13 +355,38 @@ def remove_shard(source: Path, path: Path) -> str | None:
     return None
 
 
-def prune_shards(source: Path, pool: Path) -> list[str]:
-    """Remove every worktree of this repo registered under ``pool``.
+@contextlib.contextmanager
+def pool_lock(pool: Path) -> Iterator[None]:
+    """Exclusive ``flock`` on ``pool/pool.lock``, or ``Unisolated``. Dies with the
+    process, so a SIGKILLed battery never wedges the pool."""
+    pool.mkdir(parents=True, exist_ok=True)
+    lock = (pool / "pool.lock").open("w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock.close()
+        raise Unisolated(f"another battery holds the shard pool {pool}") from None
+    try:
+        yield
+    finally:
+        lock.close()
 
-    The documented cleanup after a SIGKILL (which no handler can see). Touches
-    only registrations under ``pool`` -- ``git worktree prune`` would also prune
-    other people's stale registrations, so it is not used.
+
+def prune_shards(source: Path, pool: Path) -> list[str]:
+    """Remove every worktree of this repo registered under ``pool`` -- under its lock.
+
+    The documented cleanup after a SIGKILL (which no handler can see). Refused
+    (``Unisolated``) while a battery holds the pool: the default pool is shared by
+    every worktree of the repo, so an unlocked prune would delete another
+    battery's live shard mid-suite (review MAJOR-3).
     """
+    pool = pool.resolve()
+    with pool_lock(pool):
+        return _prune_unlocked(source, pool)
+
+
+def _prune_unlocked(source: Path, pool: Path) -> list[str]:
+    """``prune_shards`` for a caller that already holds the pool lock."""
     pool = pool.resolve()
     errors = []
     for wt in sorted(_registered(source)):
@@ -333,23 +413,14 @@ def open_pool(
     pool = (pool or default_pool_dir(source)).resolve()
     if is_under(pool, source):
         raise Unisolated(f"shard pool {pool} is inside the invoking tree {source}")
-    pool.mkdir(parents=True, exist_ok=True)
-    lock = (pool / "pool.lock").open("w")
-    try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        lock.close()
-        raise Unisolated(f"another battery holds the shard pool {pool}") from None
-    shards: list[Shard] = []
-    try:
-        for k in range(n):
-            shards.append(make_shard(source, pool, k, sha))
-        yield shards
-    finally:
+    with pool_lock(pool):
+        shards: list[Shard] = []
         try:
+            for k in range(n):
+                shards.append(make_shard(source, pool, k, sha))
+            yield shards
+        finally:
             if not keep:
                 for s in shards:
                     remove_shard(source, s.root)
-                prune_shards(source, pool)
-        finally:
-            lock.close()
+                _prune_unlocked(source, pool)

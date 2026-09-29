@@ -9,7 +9,8 @@ battery reports as DID NOT RUN -- never make a split-brain run look isolated.
 
 Resolution uses ``importlib.util.find_spec``, which names the file ``rsr.__file__``
 would be without executing the package; if ``rsr`` is already imported in this
-process, its actual ``__file__`` is used.
+process, its actual ``__file__`` is used. It also records pytest's own
+``exitstatus`` (2 interrupted, 3 internal error, 4 usage error).
 """
 
 from __future__ import annotations
@@ -47,11 +48,14 @@ def _child(exe: str | None) -> str | None:
     return None
 
 
-def write_probe() -> None:
+def write_probe(exitstatus: object = None) -> None:
     path = os.environ.get("RSR_BATTERY_PROBE")
     if not path:
         return
     probe = {
+        # pytest's own session status (review MAJOR-1): the battery scores only a
+        # suite that ran to the end, 0 or 1.
+        "exitstatus": None if exitstatus is None else int(exitstatus),
         "in_process": _in_process(),
         "child": _child(sys.executable),
         "path_python": _child(shutil.which("python")),

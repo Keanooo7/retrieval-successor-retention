@@ -4127,10 +4127,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i1: run_suite never reads the probe",
         "test_a_suite_on_another_checkouts_venv_did_not_run",
         "scripts/mutation_battery.py",
-        "        problem = iso.probe_problem(iso.read_probe("
-        + "shard.probe), shard.root)",
-        "        problem = None",
-        "I1: the path assertion exists only if the battery consults it.",
+        # 📌 Re-anchored for the review fixes: run_suite consults suite_problem
+        # (completion AND probe) now. Same edit, and it disables every layer at
+        # once, so it is also the mutation that gates the end-to-end tests.
+        "    problem = iso.suite_problem(proc.returncode, "
+        + "iso.read_probe(shard.probe), shard.root)",
+        "    problem = None",
+        "I1: the path assertion and the completion check exist only if the battery "
+        "consults them.",
         off_gate_allowed=tuple(
             (n, _I1_E2E_WIRING)
             for n in (
@@ -4142,9 +4146,11 @@ MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "i1: a killed pytest is scored as a verdict",
         "test_a_killed_pytest_is_did_not_run_not_a_failure",
-        "scripts/mutation_battery.py",
-        "        if proc.returncode " + "< 0:",
-        "        if False:",
+        # 📌 Re-anchored for the review fixes: the check moved into
+        # battery_isolation.suite_problem. Same edit.
+        "scripts/battery_isolation.py",
+        "    if returncode < 0:",
+        "    if False:",
         "I1: a pytest killed by a signal became a '<collection/exit -9>' failure and "
         "was scored LEAKS or ADDS NOTHING; it is DID NOT RUN.",
         off_gate_allowed=tuple(
@@ -4208,7 +4214,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i1: the shard reset leaves untracked files",
         "test_reset_restores_the_pinned_tree",
         "scripts/battery_isolation.py",
-        '    _ok(git(shard.root, "clean", "-fdq"), f"git clean -fdq in {shard.root}")\n',
+        # 📌 Re-anchored for the review fixes: the clean is CLEAN_ARGV now.
+        '    _ok(git(shard.root, *CLEAN_ARGV), f"git clean in {shard.root}")\n',
         "    pass\n",
         "I1: a file one mutated suite created must not be in the next one's tree.",
     ),
@@ -4290,6 +4297,116 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        if False:",
         "I1: the pool only ever resets worktrees of this repository; anything else "
         "at a shard path is refused, never checked out over or cleaned.",
+    ),
+    # ------------------------------------------------ I1 review fixes (09-29)
+    Mutation(
+        "i1: an incomplete pytest run is scored",
+        "test_a_suite_that_did_not_complete_did_not_run",
+        "scripts/battery_isolation.py",
+        "    if returncode not in COMPLETED_EXIT:",
+        "    if False:",
+        "Review MAJOR-1: pytest exiting 2 (SIGINT), 3 or 4 did not run the suite to "
+        "the end; it was scored, and an interrupt after the gate failed is a "
+        "false PROVEN.",
+    ),
+    Mutation(
+        "i1: pytest's own exit status is not checked",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '    if probe.get("exitstatus") not in COMPLETED_EXIT:',
+        "    if False:",
+        "Review MAJOR-1: the probe's exitstatus is pytest's own verdict on whether "
+        "the session completed, independent of how the process ended.",
+    ),
+    Mutation(
+        "i1: the reset keeps ignored files",
+        "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+        "scripts/battery_isolation.py",
+        'CLEAN_ARGV = ("clean", "-ffdxq", "-e", "/.venv/")',
+        'CLEAN_ARGV = ("clean", "-ffdq", "-e", "/.venv/")',
+        "Review MAJOR-2: an ignored runs/ or .orchestrator/ file one mutation's "
+        "suite wrote changed the next mutation's verdict.",
+    ),
+    Mutation(
+        "i1: the clean check cannot see ignored files",
+        "test_an_ignored_file_left_in_a_shard_is_not_clean",
+        "scripts/battery_isolation.py",
+        '        git(shard.root, "status", "--porcelain", "--ignored"),',
+        '        git(shard.root, "status", "--porcelain"),',
+        "Review MAJOR-2: `verify_clean` claimed a pinned tree while ignored files "
+        "from a previous suite were in it.",
+    ),
+    Mutation(
+        "i1: a reused shard keeps ignored files",
+        "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+        "scripts/battery_isolation.py",
+        '        _ok(git(path, *CLEAN_ARGV), f"git clean in {path}")',
+        '        _ok(git(path, "clean", "-fdq"), f"git clean in {path}")',
+        "Review MAJOR-2: a --keep-shards pool carries one battery's ignored state "
+        "into the next battery.",
+    ),
+    Mutation(
+        "i1: --prune-shards takes no lock",
+        "test_prune_refuses_while_a_battery_holds_the_pool",
+        "scripts/battery_isolation.py",
+        "    with pool_lock(pool):\n        return _prune_unlocked(source, pool)",
+        "    return _prune_unlocked(source, pool)",
+        "Review MAJOR-3: the default pool is shared by every worktree; an unlocked "
+        "prune removes another battery's live shard mid-suite.",
+    ),
+    Mutation(
+        "i1: the suite inherits PYTHONPATH",
+        "test_the_suite_never_inherits_pythonpath_or_a_pycache_prefix",
+        "scripts/battery_isolation.py",
+        '_SUITE_STRIP = ("PYTHONPATH", "PYTHONPYCACHEPREFIX")',
+        "_SUITE_STRIP = ()",
+        "Review MINOR-1: another checkout's scripts/ via PYTHONPATH passes the rsr "
+        "probe; a pycache prefix escapes the reset.",
+    ),
+    Mutation(
+        "i1: the suite's process group outlives it",
+        "test_a_stopped_battery_kills_its_suites_grandchildren",
+        "scripts/mutation_battery.py",
+        "    finally:\n        _kill_" + "group(proc)\n",
+        "    finally:\n        proc.kill()\n        proc.wait()\n",
+        "Review MINOR-2: a grandchild of the suite kept writing into the shard under "
+        "the next suite or the teardown.",
+    ),
+    Mutation(
+        "i1: SIGINT is not handled",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGINT]",
+        "scripts/mutation_battery.py",
+        "_HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGHUP, " + "signal.SIGINT)",
+        "_HANDLED_SIGNALS = (signal.SIGTERM, " + "signal.SIGHUP)",
+        "Review MINOR-3: a Ctrl-C exited with a traceback, and a second Ctrl-C cut "
+        "the teardown short.",
+    ),
+    Mutation(
+        "i1: --markdown records DID_NOT_RUN rows",
+        "test_markdown_is_not_written_while_a_row_did_not_run",
+        "scripts/mutation_battery.py",
+        "    if args.markdown and " + "did_not_run:",
+        "    if False:",
+        "Review MINOR-4: the committed table records verdicts; a mutation that did "
+        "not run has none.",
+    ),
+    Mutation(
+        "i1: a baseline that did not run exits 1",
+        "test_a_baseline_that_did_not_run_exits_3",
+        "scripts/mutation_battery.py",
+        "            refuse(Exit.DID_NOT_RUN, "
+        + 'f"the baseline suite did not run: {e}")',
+        '            refuse(Exit.FAIL, f"the baseline suite did not ' + 'run: {e}")',
+        "Review MINOR-8: nothing was mutated, so nothing was tested: 3, not 1.",
+    ),
+    Mutation(
+        "i1: battery_subset drops --shard-dir",
+        "test_battery_subset_passes_the_shard_dir_through",
+        "scripts/battery_subset.py",
+        '        extra, rest = ["--shard-dir", rest[1]], rest[2:]',
+        "        rest = rest[2:]",
+        "Review MINOR-7 / pool policy: a subset beside another battery needs its "
+        "own pool, or it exits 3.",
     ),
     Mutation(
         "i1: no SIGTERM/SIGHUP handler",
@@ -4476,13 +4593,51 @@ class SuiteDidNotRun(Exception):
     """This suite run is not evidence: killed by a signal, or not isolated (I1)."""
 
 
+def _kill_group(proc: subprocess.Popen) -> None:
+    """SIGKILL pytest's whole process group, then reap pytest.
+
+    Called on EVERY exit from a shard suite, normal or not (review MINOR-2): the
+    real suite spawns grandchildren -- nested stub batteries, ``python -m venv``,
+    experiment ``run.py`` -- and one left alive would keep writing into the shard
+    while the next mutation's suite runs there, or under a teardown's
+    ``git worktree remove``.
+    """
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(proc.pid, signal.SIGKILL)
+    proc.wait()
+
+
+def _spawn(argv: list[str], cwd: Path, env: dict[str, str]):
+    """Run one shard suite as the leader of its own session; group-killed on exit.
+
+    Its own session also means a terminal Ctrl-C reaches only the battery, whose
+    SIGINT handler then stops the suite -- not pytest first, behind its back.
+    """
+    proc = subprocess.Popen(
+        argv,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        out, err = proc.communicate()
+    finally:
+        _kill_group(proc)
+    return subprocess.CompletedProcess(argv, proc.returncode, out, err)
+
+
 def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     """Return ``{failing node id: one-line reason}`` (``None`` if pytest printed none).
 
     🔴 I1: with a ``shard``, the suite runs there on the shard's own pytest, and
-    raises ``SuiteDidNotRun`` if pytest was killed by a signal or if its probe does
-    not put ``rsr`` under the shard root (`battery_isolation.probe_problem`). A
-    killed pytest used to become a ``<collection/exit -9>`` "failure" and be scored.
+    raises ``SuiteDidNotRun`` if the suite did not complete -- pytest killed by a
+    signal, or exiting 2/3/4 -- or if its probe does not put ``rsr`` under the shard
+    root (`battery_isolation.suite_problem`). A killed pytest used to become a
+    ``<collection/exit -9>`` "failure" and be scored; a SIGINTed one still was,
+    as ``<collection/exit 2>`` (review MAJOR-1).
 
     📌 I5 (PLAN-v4 §4): this ran ``--tb=no`` until 2026-09-27, so the 09-26 red on
     ``test_submit_launches_the_slot_detached_at_the_pinned_sha`` left only a node
@@ -4490,35 +4645,19 @@ def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     the node set is parsed exactly as before (`parse_failures`).
     """
     env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
-    root, pytest = ROOT, PYTEST
-    if shard is not None:
-        root, pytest = shard.root, shard.root / ".venv" / "bin" / "pytest"
-        env = iso.shard_env(shard, env)
-        with contextlib.suppress(FileNotFoundError):
-            shard.probe.unlink()
-    proc = subprocess.run(
-        [
-            str(pytest),
-            "-p",
-            "no:cacheprovider",
-            "-rfE",
-            "--tb=line",
-            "-q",
-            "--no-header",
-        ],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
-    if shard is not None:
-        if proc.returncode < 0:
-            raise SuiteDidNotRun(
-                f"pytest was killed by signal {-proc.returncode} in {shard.root}"
-            )
-        problem = iso.probe_problem(iso.read_probe(shard.probe), shard.root)
-        if problem:
-            raise SuiteDidNotRun(problem)
+    argv = ["-p", "no:cacheprovider", "-rfE", "--tb=line", "-q", "--no-header"]
+    if shard is None:
+        proc = subprocess.run(
+            [str(PYTEST), *argv], cwd=ROOT, capture_output=True, text=True, env=env
+        )
+        return parse_failures(proc.stdout + proc.stderr, proc.returncode)
+    env = iso.shard_env(shard, env)
+    with contextlib.suppress(FileNotFoundError):
+        shard.probe.unlink()
+    proc = _spawn([str(shard.root / ".venv" / "bin" / "pytest"), *argv], shard.root, env)
+    problem = iso.suite_problem(proc.returncode, iso.read_probe(shard.probe), shard.root)
+    if problem:
+        raise SuiteDidNotRun(f"{problem} (in {shard.root})")
     return parse_failures(proc.stdout + proc.stderr, proc.returncode)
 
 
@@ -4591,11 +4730,13 @@ def apply(mutation: Mutation, root: Path | None = None) -> str:
     return original
 
 
-_HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGHUP)
+_HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)
+"""SIGINT too (review MINOR-3): a Ctrl-C tears down exactly as SIGTERM does, and a
+second Ctrl-C during the teardown is ignored rather than cutting it short."""
 
 
 class _Signalled(BaseException):
-    """Raised by the SIGTERM/SIGHUP handler so every ``finally`` runs."""
+    """Raised by the SIGTERM/SIGHUP/SIGINT handler so every ``finally`` runs."""
 
     def __init__(self, signum: int):
         super().__init__(signum)
@@ -4674,7 +4815,10 @@ def main() -> Exit:
 
     if args.prune_shards:
         pool = (args.shard_dir or iso.default_pool_dir(ROOT)).resolve()
-        errors = iso.prune_shards(ROOT, pool)
+        try:
+            errors = iso.prune_shards(ROOT, pool)
+        except iso.Unisolated as e:
+            refuse(Exit.DID_NOT_RUN, f"--prune-shards: {e}; nothing removed")
         for e in errors:
             print(e, file=sys.stderr)
         if errors:
@@ -4811,8 +4955,17 @@ def _row(m: Mutation, failing, did_not_run: str | None) -> dict:
 
 def _report(args, rows: list[dict]) -> Exit:
     if args.json:
+        # A run record: DID_NOT_RUN rows belong in it.
         args.json.write_text(json.dumps(rows, indent=2) + "\n")
-    if args.markdown:
+    did_not_run = [r for r in rows if r["verdict"] == "DID_NOT_RUN"]
+    if args.markdown and did_not_run:
+        # 🔴 The committed table is a record of verdicts; a mutation that did not
+        # run has none (review MINOR-4). Leave the old record in place.
+        print(
+            f"NOT WRITING {args.markdown}: {len(did_not_run)} mutation(s) did not run",
+            file=sys.stderr,
+        )
+    elif args.markdown:
         args.markdown.write_text(_markdown(rows))
 
     bad = unproven(rows)

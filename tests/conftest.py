@@ -42,7 +42,7 @@ def pytest_sessionfinish(session, exitstatus):
     # rsr was imported from. The battery, not this file, judges it.
     from _battery_probe import write_probe
 
-    write_probe()
+    write_probe(exitstatus)
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):

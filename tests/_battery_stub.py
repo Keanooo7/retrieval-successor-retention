@@ -18,7 +18,8 @@ itself is green, but every child it spawns imports the host's ``rsr`` -- the
 2026-09-27 split-brain (a suite on another checkout's venv), reproduced with a
 green baseline; ``foreign-src`` --
 the shard venv's own python resolves ``rsr`` to THIS tree's ``src`` (an editable
-install pointing at another checkout).
+install pointing at another checkout); ``no-probe`` -- the shard's suite never
+receives ``RSR_BATTERY_PROBE``, so even its baseline reports nothing.
 """
 
 from __future__ import annotations
@@ -36,17 +37,25 @@ SCRIPTS = HERE.parent / "scripts"
 CALC = "VALUE = 1\nSLOW = False\nOTHER = 2\n"
 
 TEST_CALC = """import os
+import subprocess
+import sys
 import time
+from pathlib import Path
 
 from rsr import calc
+
+POISON = Path(__file__).resolve().parents[1] / "runs" / "poison"
 
 
 def test_gate():
     if calc.SLOW:
+        # a grandchild in pytest's process group, as the real suite's nested
+        # batteries and run.py children are
+        child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(300)"])
         marker = os.environ.get("STUB_MARKER")
         if marker:
             with open(marker + ".tmp", "w") as f:
-                f.write(str(os.getpid()))
+                f.write(f"{os.getpid()} {child.pid}")
             os.replace(marker + ".tmp", marker)
         time.sleep(120)
     assert calc.VALUE == 1
@@ -54,22 +63,40 @@ def test_gate():
 
 def test_other():
     assert calc.OTHER == 2
+
+
+def test_no_poison():
+    # An ignored file one mutation's suite writes (runs/ is ignored, like the
+    # real tree's runs/ and .orchestrator/ state) must not reach the next suite.
+    if calc.OTHER == 5:
+        POISON.parent.mkdir(exist_ok=True)
+        POISON.write_text("written under the previous mutation")
+        return
+    assert not POISON.exists(), POISON.read_text()
 """
 
 # Like the real suite's test files, the stub puts its own src first in sys.path.
 # So under ``foreign-pytest`` the pytest process imports the SHARD's rsr and the
 # baseline is green -- only a child of pytest reaches the host's rsr. That is the
 # 09-27 topology, and it is what the child clause of the path assertion is for.
-CONFTEST = """import sys
+#
+# It also pins calc.py's mtime. A .pyc is trusted when the source's mtime (whole
+# seconds) and size match, and every stub mutation of calc.py keeps its size: with
+# a fixed mtime, ANY bytecode that survives from one suite into the next is used,
+# deterministically -- the same-second race of 2026-09-29, without the race.
+CONFTEST = """import os
+import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+_SRC = Path(__file__).resolve().parents[1] / "src"
+os.utime(_SRC / "rsr" / "calc.py", (1_000_000_000, 1_000_000_000))
+sys.path.insert(0, str(_SRC))
 
 from _battery_probe import write_probe  # noqa: E402
 
 
 def pytest_sessionfinish(session, exitstatus):
-    write_probe()
+    write_probe(exitstatus)
 """
 
 TABLE = {
@@ -82,7 +109,12 @@ TABLE = {
     ),
     "adds-nothing": ("test_gate", "src/rsr/calc.py", "OTHER = 2", "OTHER = 5"),
     "slow": ("test_gate", "src/rsr/calc.py", "SLOW = False", "SLOW = True"),
-    "no-probe": ("test_gate", "tests/conftest.py", "    write_probe()", "    pass"),
+    "no-probe": (
+        "test_gate",
+        "tests/conftest.py",
+        "    write_probe(exitstatus)",
+        "    pass",
+    ),
 }
 
 
@@ -130,8 +162,10 @@ def stub_sync(mode: str):
         (site / "_stub.pth").write_text(f"{src}\n{host_site}\n")
         foreign = mode == "foreign-pytest"
         target = Path(sys.executable) if foreign else venv / "bin" / "python"
+        # no-probe: the suite runs, but never learns where to write its probe
+        unset = "RSR_BATTERY_PROBE= " if mode == "no-probe" else ""
         pytest = venv / "bin" / "pytest"
-        pytest.write_text(f'#!/bin/sh\nexec "{target}" -m pytest "$@"\n')
+        pytest.write_text(f'#!/bin/sh\n{unset}exec "{target}" -m pytest "$@"\n')
         pytest.chmod(pytest.stat().st_mode | stat.S_IEXEC)
 
     return sync
