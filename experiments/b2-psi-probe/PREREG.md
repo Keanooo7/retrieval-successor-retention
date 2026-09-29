@@ -1101,3 +1101,27 @@ the machine. Figures are written seed 0 / 1 / 2.
     (ckpt2500) = 5.0 h per child. That is within 24 h.
   - The projection assumes EVAL runs under the same conditions as this measurement (six concurrent
     1-thread children). It is a projection, not a measurement of EVAL.
+
+## Addendum: TBD-3, N_E (fence item 1, §9.4)
+
+**Written 2026-09-29 by a model** (Claude Opus 5.5, an `rsr-researcher` session, item B2-A-WRAP).
+**Not written by Brendan.** **Append-only.** It fills TBD-3 with `N_E`, computed by §9.4 as amended
+by A1.12, and nothing else. It changes no rule, threshold, arm, range or target. **No `EVAL` document
+has been run.**
+
+- **`N_E = 1024`.** It is **not UNDERPOWERED**: the cap did not bind.
+- **Source.** `runs/b2-psi-probe-fit/ledger.json`, key `N_E.power`. Phase A ran at `a94b228` (status
+  `ok`, every child rc 0, T0 ok at start and end), on `FIT_VAL` only (`N_V = 1024`), ckpt3000, γ = 0.9.
+- **The largest required size over the six gating contrasts × three seeds is 166**, from ψ̂-U − ref_U
+  on `gap_2_to_M`, seed 0: σ = 0.0038942 and δ = 0.0380219, so `⌈1024 · (1.96 · 0.0038942 /
+  0.0190109)²⌉ = 166`. That is below the floor, so **the floor 1024 of item 4 sets `N_E`**. No
+  contrast binds.
+- **Per contrast, seed 0 / 1 / 2:**
+  - ψ̂U − ref_U: 114 / 90 / 130;
+  - ψ̂C − ref_C: 34 / 23 / 74;
+  - ψ̂U − random: 87 / 68 / 97;
+  - ψ̂C − random: 37 / 42 / 59;
+  - ψ̂U − ref_U on gap_2_to_M: 166 / 140 / 156;
+  - ψ̂C − ref_C on gap_2_to_M: 36 / 27 / 58.
+- **Scope.** Per item 6, the same `N_E` serves ckpt2500 and γ = 0. `EVAL` uses ids `[940000, 941024)`
+  of each seed's generator.
