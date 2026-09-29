@@ -1,0 +1,8 @@
+{
+  "substrate_manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+  "repo_root": "/Users/keanooo7/retrieval-successor-retention",
+  "substrate_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+  "n_files": 435,
+  "restore": "/Users/keanooo7/rsr-substrate/2026-09-27/RESTORE.md",
+  "purpose": "T0 record for E0d C1 (PREREG A1.7); read by experiments/e0d/run.py t0_manifest()"
+}
