@@ -4259,6 +4259,24 @@ MUTATIONS: tuple[Mutation, ...] = (
         ),
     ),
     Mutation(
+        "i1: two batteries share a shard pool",
+        "test_two_batteries_never_share_a_pool",
+        "scripts/battery_isolation.py",
+        "        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)",
+        "        pass",
+        "I1: a shard is reset between mutations; a second battery in the same pool "
+        "would reset or mutate the tree under the first one's suite.",
+    ),
+    Mutation(
+        "i1: a foreign directory in the pool is taken over",
+        "test_a_directory_in_the_pool_that_is_not_our_worktree_is_refused",
+        "scripts/battery_isolation.py",
+        "        if path not in _registered(source):",
+        "        if False:",
+        "I1: the pool only ever resets worktrees of this repository; anything else "
+        "at a shard path is refused, never checked out over or cleaned.",
+    ),
+    Mutation(
         "i1: no SIGTERM/SIGHUP handler",
         "test_a_stopped_battery_leaves_the_live_tree_and_git_clean",
         "scripts/mutation_battery.py",

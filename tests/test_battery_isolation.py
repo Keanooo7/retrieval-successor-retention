@@ -243,6 +243,53 @@ def test_reset_restores_the_pinned_tree(stub, tmp_path, monkeypatch):
     assert _worktrees(stub) == {stub}
 
 
+def test_a_kept_shard_is_reused_at_the_new_pinned_sha(stub, tmp_path, monkeypatch):
+    from _battery_stub import CALC, stub_sync
+
+    monkeypatch.setattr(iso, "sync_venv", stub_sync("good"))
+    pool = tmp_path / "pool"
+    with iso.open_pool(stub, iso.pinned_sha(stub), pool=pool, keep=True) as (s1,):
+        (s1.root / "src" / "rsr" / "__pycache__").mkdir()
+        (s1.root / "src" / "rsr" / "calc.py").write_text("VALUE = 9\n")
+    assert _worktrees(stub) == {stub, s1.root}
+    (stub / "src" / "rsr" / "calc.py").write_text(CALC + "# v2\n")
+    iso.git(stub, "add", "-A")
+    iso.git(stub, "-c", "user.email=s@r", "-c", "user.name=s", "commit", "-qm", "v2")
+    sha2 = iso.pinned_sha(stub)
+    with iso.open_pool(stub, sha2, pool=pool) as (s2,):
+        assert s2.root == s1.root
+        assert iso.git(s2.root, "rev-parse", "HEAD").stdout.strip() == sha2
+        assert _porcelain(s2.root) == ""
+        assert not (s2.root / "src" / "rsr" / "__pycache__").exists()
+    assert _worktrees(stub) == {stub}
+
+
+def test_a_directory_in_the_pool_that_is_not_our_worktree_is_refused(stub, tmp_path):
+    pool = tmp_path / "pool"
+    (pool / "shard-0").mkdir(parents=True)
+    (pool / "shard-0" / "keep.txt").write_text("someone else's")
+    with (
+        pytest.raises(iso.Unisolated, match="is not a worktree of"),
+        iso.open_pool(stub, iso.pinned_sha(stub), pool=pool),
+    ):
+        pass
+    assert (pool / "shard-0" / "keep.txt").read_text() == "someone else's"
+
+
+def test_two_batteries_never_share_a_pool(stub, tmp_path, monkeypatch):
+    from _battery_stub import stub_sync
+
+    monkeypatch.setattr(iso, "sync_venv", stub_sync("good"))
+    pool, sha = tmp_path / "pool", iso.pinned_sha(stub)
+    with (
+        iso.open_pool(stub, sha, pool=pool),
+        pytest.raises(iso.Unisolated, match="another battery holds"),
+        iso.open_pool(stub, sha, pool=pool),
+    ):
+        pass
+    assert _worktrees(stub) == {stub}
+
+
 # ------------------------------------------------------------- end to end
 
 
