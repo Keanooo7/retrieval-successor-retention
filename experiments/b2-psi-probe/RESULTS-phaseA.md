@@ -47,6 +47,8 @@ check.
 
 ## 🔴 A reporting defect in the logged R² (found while writing this)
 
+> **Superseded 2026-09-29 by [Erratum P0.2](#erratum-p02-2026-09-29-the-logged-r²-fixed-and-corrected-without-a-refit)** at the end of this file: the formula is fixed in `run.py`, the stored values are corrected in sidecars, and the correction is checked against the split code to 5.6e-16. The text below is kept as written.
+
 **Every pooled `val_r2_raw` in the ledger, and `age_decodability.{U,C}.r2`, is wrong by a factor of
 `n_val`.** In `fit_heads` (`run.py`), `sse_raw` is a **sum** over rows, and the R² is computed as
 `1.0 - float(x) * n_val / sst`. The correct form is `1 - x / sst`. The logged values are therefore
@@ -246,3 +248,54 @@ figure is 2.6 h per child and 5.2 h in total.
 | 2500 / 0 | 0.592 / 0.594 / 0.415 |
 | 2500 / 1 | 0.387 / 0.568 / 0.268 |
 | 2500 / 2 | 0.571 / 0.521 / 0.262 |
+
+## Erratum P0.2 (2026-09-29): the logged R² fixed and corrected without a refit
+
+Everything above is kept as written. This section supersedes the defect section and the two table
+entries named below. It is an erratum to a derived statistic; PREREG.md is untouched.
+
+**Fix.** `fit_heads` now logs `1 - SSE/SST` and stamps `val_r2_form = "1-sse/sst"` on every fit.
+It was the only site with the defect: `age_decodability` reads `fit_heads`'s value, and
+`r2_split_by_index`, `within_step_r2` and `R2Acc` already used `1 - SSE/SST`. The test
+`test_val_r2_raw_is_one_minus_sse_over_sst` pins the logged R² to an independent computation. At
+3a90fce it failed (`-662.398` logged against `-2.6855` independent on the tiny fit). Battery
+mutation `b2-psi-probe: the FIT_VAL R² multiplies a summed SSE by n_val again` puts the defect
+back and turns that test red.
+
+**Correction, no refit.** `experiments/b2-psi-probe/r2_erratum.py` writes
+`runs/b2-psi-probe-fit/phaseA/ckpt{c}-seed{s}.r2-corrected.json` (every head, every λ on the path,
+and both age-decodability rows) and `runs/b2-psi-probe-fit/ledger.r2-corrected.json` (102 ledger
+rows). Each entry records the original value, `n_val_rows`, the corrected value and the formula
+`R2_true = 1 - (1 - R2_logged) / n_val_rows`. The `.pt` payloads and `ledger.json` are unchanged.
+
+**Independent check.** The age target `t - i` depends only on the row set, so the FIT_VAL SST can
+be derived from the row structure. The U rows are every `i < t`. The C rows are the FIFO-resident
+ones, `t - i <= M`, and this structure is confirmed because it reproduces the logged row counts and
+both split counts exactly. The split code (F11) is separate code with the correct formula. From
+it, `SSE_lt + SSE_ge` is the pooled SSE, and `1 - (SSE_lt + SSE_ge)/SST` equals the corrected
+pooled R² on all 12 age-decodability rows (2 checkpoints × 3 seeds × U, C). The worst absolute
+difference is **5.6e-16**. The ψ̂ heads' targets depend on the model, so for those heads the
+correction is arithmetic only.
+
+**The E0h input (U@0.0, selected λ), read through the sidecar:**
+
+| ckpt | seed | logged | n_val_rows | corrected | E0h gate `val_r2 > 0` |
+|---|---|---|---|---|---|
+| 3000 | 0 | −351034.9223 | 1,032,192 | 0.659912 | informative |
+| 3000 | 1 | −432716.4940 | 1,032,192 | 0.580778 | informative |
+| 3000 | 2 | −418435.6110 | 1,032,192 | 0.594614 | informative |
+| 2500 | 0 | −343001.1841 | 1,032,192 | 0.667695 | informative |
+| 2500 | 1 | −358523.8695 | 1,032,192 | 0.652657 | informative |
+| 2500 | 2 | −392399.0954 | 1,032,192 | 0.619838 | informative |
+
+`e0h_compute` now reads a pre-fix payload only through this sidecar, and only when the sidecar's
+`original` matches the payload. If the sidecar is missing or does not match, it raises and exits 3.
+**E0h itself has not run.** `run.py e0h` needs the EVAL-phase accumulators
+`phaseB/ckpt3000-seed{s}.e0h.pt`, and phase B has not run: `e0h_main` prints `DID NOT RUN: E0h
+inputs absent` and exits 3. No E0h class or within-step R² exists. When it does run, the thresholds
+are still unratified (`e0h_ratified() = False`), so rc is 2 whatever the values.
+
+**Two rounding slips in the head table above** (ckpt3000 seed 0; the sidecar values govern):
+C+@0.9 is 0.4765, printed as 0.477 where it should be 0.476. age_C@0.9 is 0.3885, printed as 0.389
+where it should be 0.388. Every other R² in the two tables matches the sidecars to the printed
+precision.
