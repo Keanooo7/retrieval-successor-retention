@@ -1,0 +1,115 @@
+<string>:82: RuntimeWarning: Mean of empty slice
+{
+ "bos_excluded.a=0.5.T=1 everywhere": {
+  "AUROC_strat": 0.6503,
+  "companion": 0.1479,
+  "H": 0.0203,
+  "R_H": 0.2974,
+  "AUROC_strat_sd1024": 0.0042
+ },
+ "bos_excluded.a=0.5.flat(T=.2) on critical steps, peaky(T=3) on k0 steps": {
+  "AUROC_strat": 0.7112,
+  "companion": 0.1479,
+  "H": 0.0203,
+  "R_H": 0.2974,
+  "AUROC_strat_sd1024": 0.0032
+ },
+ "bos_excluded.a=0.5.flat(T=.05) on critical steps, peaky(T=6) on k0 steps": {
+  "AUROC_strat": 0.7283,
+  "companion": 0.1479,
+  "H": 0.0203,
+  "R_H": 0.2974,
+  "AUROC_strat_sd1024": 0.0032
+ },
+ "bos_excluded.a=0.5.peaky(T=3) on critical steps, flat(T=.2) on k0 steps": {
+  "AUROC_strat": 0.5505,
+  "companion": 0.1479,
+  "H": 0.0203,
+  "R_H": 0.2974,
+  "AUROC_strat_sd1024": 0.0049
+ },
+ "bos_excluded.a=1.0.T=1 everywhere": {
+  "AUROC_strat": 0.7728,
+  "companion": 0.2639,
+  "H": 0.0135,
+  "R_H": 0.2013,
+  "AUROC_strat_sd1024": 0.0035
+ },
+ "bos_excluded.a=1.0.flat(T=.2) on critical steps, peaky(T=3) on k0 steps": {
+  "AUROC_strat": 0.7957,
+  "companion": 0.2639,
+  "H": 0.0135,
+  "R_H": 0.2013,
+  "AUROC_strat_sd1024": 0.0026
+ },
+ "bos_excluded.a=1.0.flat(T=.05) on critical steps, peaky(T=6) on k0 steps": {
+  "AUROC_strat": 0.8098,
+  "companion": 0.2639,
+  "H": 0.0135,
+  "R_H": 0.2013,
+  "AUROC_strat_sd1024": 0.0025
+ },
+ "bos_excluded.a=1.0.peaky(T=3) on critical steps, flat(T=.2) on k0 steps": {
+  "AUROC_strat": 0.6815,
+  "companion": 0.2639,
+  "H": 0.0135,
+  "R_H": 0.2013,
+  "AUROC_strat_sd1024": 0.0045
+ },
+ "all_cells.a=0.5.T=1 everywhere": {
+  "AUROC_strat": 0.6428,
+  "companion": 0.1362,
+  "H": 0.0258,
+  "R_H": 0.4236,
+  "AUROC_strat_sd1024": 0.0028
+ },
+ "all_cells.a=0.5.flat(T=.2) on critical steps, peaky(T=3) on k0 steps": {
+  "AUROC_strat": 0.6987,
+  "companion": 0.1362,
+  "H": 0.0258,
+  "R_H": 0.4236,
+  "AUROC_strat_sd1024": 0.0023
+ },
+ "all_cells.a=0.5.flat(T=.05) on critical steps, peaky(T=6) on k0 steps": {
+  "AUROC_strat": 0.7122,
+  "companion": 0.1362,
+  "H": 0.0258,
+  "R_H": 0.4236,
+  "AUROC_strat_sd1024": 0.0022
+ },
+ "all_cells.a=0.5.peaky(T=3) on critical steps, flat(T=.2) on k0 steps": {
+  "AUROC_strat": 0.5542,
+  "companion": 0.1362,
+  "H": 0.0258,
+  "R_H": 0.4236,
+  "AUROC_strat_sd1024": 0.0032
+ },
+ "all_cells.a=1.0.T=1 everywhere": {
+  "AUROC_strat": 0.7651,
+  "companion": 0.2456,
+  "H": 0.0103,
+  "R_H": 0.1753,
+  "AUROC_strat_sd1024": 0.0025
+ },
+ "all_cells.a=1.0.flat(T=.2) on critical steps, peaky(T=3) on k0 steps": {
+  "AUROC_strat": 0.7881,
+  "companion": 0.2456,
+  "H": 0.0103,
+  "R_H": 0.1753,
+  "AUROC_strat_sd1024": 0.002
+ },
+ "all_cells.a=1.0.flat(T=.05) on critical steps, peaky(T=6) on k0 steps": {
+  "AUROC_strat": 0.7995,
+  "companion": 0.2456,
+  "H": 0.0103,
+  "R_H": 0.1753,
+  "AUROC_strat_sd1024": 0.0019
+ },
+ "all_cells.a=1.0.peaky(T=3) on critical steps, flat(T=.2) on k0 steps": {
+  "AUROC_strat": 0.6887,
+  "companion": 0.2456,
+  "H": 0.0103,
+  "R_H": 0.1753,
+  "AUROC_strat_sd1024": 0.003
+ }
+}

@@ -1,0 +1,13 @@
+PC(binary)                     0.3196 0.0018
+ORACLE(LOO replicate)          0.6144 0.0019
+AGE(best age-only)             nan nan
+RECENCY                        nan nan
+SYN(a=0,c=0.0)                 0.003 0.0018
+SYN(a=1,c=0.0)                 0.0715 0.0018
+SYN(a=2,c=0.0)                 0.1176 0.0018
+SYN(a=4,c=0.0)                 0.1482 0.002
+SYN(a=0,c=0.5)                 0.2698 0.0019
+SYN(a=2,c=0.5)                 0.3138 0.0021
+SYN(a=4,c=0.5)                 0.2795 0.0023
+SYN(a=8,c=0.0)                 0.1606 0.0021
+NULL(shuffled SYN(4,0.5))      0.0023 0.0022

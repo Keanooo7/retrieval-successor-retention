@@ -1,0 +1,52 @@
+primary PC(binary) {'K0_rho_Q': 0.3633, 'K4_rho_QA_pooled': 0.4164, 'K6_rho_step_A': np.float64(0.4197), 'K2_top1_A': np.float64(0.9653), 'K3_auc_A': np.float64(0.9821)}
+primary ORACLE(LOO replicate) {'K0_rho_Q': 0.6257, 'K4_rho_QA_pooled': 0.6351, 'K6_rho_step_A': np.float64(0.6187), 'K2_top1_A': np.float64(0.9834), 'K3_auc_A': np.float64(0.9957)}
+primary AGE(best age-only) {'K0_rho_Q': 0.1616, 'K4_rho_QA_pooled': 0.2005, 'K6_rho_step_A': np.float64(0.1961), 'K2_top1_A': np.float64(0.2428), 'K3_auc_A': np.float64(0.7696)}
+primary RECENCY {'K0_rho_Q': 0.1858, 'K4_rho_QA_pooled': 0.2185, 'K6_rho_step_A': np.float64(0.2124), 'K2_top1_A': np.float64(0.2428), 'K3_auc_A': np.float64(0.7524)}
+primary SYN(a=0,c=0.0) {'K0_rho_Q': 0.0041, 'K4_rho_QA_pooled': 0.0042, 'K6_rho_step_A': np.float64(-0.0003), 'K2_top1_A': np.float64(0.0558), 'K3_auc_A': np.float64(0.4875)}
+primary SYN(a=1,c=0.0) {'K0_rho_Q': 0.0765, 'K4_rho_QA_pooled': 0.0987, 'K6_rho_step_A': np.float64(0.0961), 'K2_top1_A': np.float64(0.2624), 'K3_auc_A': np.float64(0.7519)}
+primary SYN(a=2,c=0.0) {'K0_rho_Q': 0.1241, 'K4_rho_QA_pooled': 0.1572, 'K6_rho_step_A': np.float64(0.1527), 'K2_top1_A': np.float64(0.5928), 'K3_auc_A': np.float64(0.9102)}
+primary SYN(a=4,c=0.0) {'K0_rho_Q': 0.1547, 'K4_rho_QA_pooled': 0.1794, 'K6_rho_step_A': np.float64(0.1773), 'K2_top1_A': np.float64(0.9367), 'K3_auc_A': np.float64(0.9793)}
+primary SYN(a=0,c=0.5) {'K0_rho_Q': 0.288, 'K4_rho_QA_pooled': 0.2954, 'K6_rho_step_A': np.float64(0.3061), 'K2_top1_A': np.float64(0.2564), 'K3_auc_A': np.float64(0.7766)}
+primary SYN(a=2,c=0.5) {'K0_rho_Q': 0.33, 'K4_rho_QA_pooled': 0.3485, 'K6_rho_step_A': np.float64(0.3694), 'K2_top1_A': np.float64(0.8718), 'K3_auc_A': np.float64(0.9788)}
+primary SYN(a=4,c=0.5) {'K0_rho_Q': 0.293, 'K4_rho_QA_pooled': 0.3293, 'K6_rho_step_A': np.float64(0.3724), 'K2_top1_A': np.float64(0.9638), 'K3_auc_A': np.float64(0.9888)}
+primary SYN(a=8,c=0.0) {'K0_rho_Q': 0.1662, 'K4_rho_QA_pooled': 0.1811, 'K6_rho_step_A': np.float64(0.1783), 'K2_top1_A': np.float64(0.9653), 'K3_auc_A': np.float64(0.9822)}
+primary NULL(shuffled SYN(4,0.5)) {'K0_rho_Q': -0.0008, 'K4_rho_QA_pooled': 0.0004, 'K6_rho_step_A': np.float64(-0.0035), 'K2_top1_A': np.float64(0.0468), 'K3_auc_A': np.float64(0.4921)}
+bos_excluded PC(binary) {'K0_rho_Q': 0.3614, 'K4_rho_QA_pooled': 0.43, 'K6_rho_step_A': np.float64(0.4323), 'K2_top1_A': np.float64(0.9679), 'K3_auc_A': np.float64(0.9832)}
+bos_excluded ORACLE(LOO replicate) {'K0_rho_Q': 0.6326, 'K4_rho_QA_pooled': 0.6466, 'K6_rho_step_A': np.float64(0.6232), 'K2_top1_A': np.float64(0.978), 'K3_auc_A': np.float64(0.9942)}
+bos_excluded AGE(best age-only) {'K0_rho_Q': 0.155, 'K4_rho_QA_pooled': 0.2006, 'K6_rho_step_A': np.float64(0.1985), 'K2_top1_A': np.float64(0.2305), 'K3_auc_A': np.float64(0.7456)}
+bos_excluded RECENCY {'K0_rho_Q': 0.1827, 'K4_rho_QA_pooled': 0.2188, 'K6_rho_step_A': np.float64(0.2138), 'K2_top1_A': np.float64(0.2305), 'K3_auc_A': np.float64(0.7196)}
+bos_excluded SYN(a=0,c=0.0) {'K0_rho_Q': 0.0069, 'K4_rho_QA_pooled': 0.0109, 'K6_rho_step_A': np.float64(0.0064), 'K2_top1_A': np.float64(0.0681), 'K3_auc_A': np.float64(0.4837)}
+bos_excluded SYN(a=1,c=0.0) {'K0_rho_Q': 0.0788, 'K4_rho_QA_pooled': 0.1123, 'K6_rho_step_A': np.float64(0.1104), 'K2_top1_A': np.float64(0.2766), 'K3_auc_A': np.float64(0.7523)}
+bos_excluded SYN(a=2,c=0.0) {'K0_rho_Q': 0.1265, 'K4_rho_QA_pooled': 0.1751, 'K6_rho_step_A': np.float64(0.1707), 'K2_top1_A': np.float64(0.5992), 'K3_auc_A': np.float64(0.91)}
+bos_excluded SYN(a=4,c=0.0) {'K0_rho_Q': 0.1574, 'K4_rho_QA_pooled': 0.1972, 'K6_rho_step_A': np.float64(0.1968), 'K2_top1_A': np.float64(0.9419), 'K3_auc_A': np.float64(0.9796)}
+bos_excluded SYN(a=0,c=0.5) {'K0_rho_Q': 0.2919, 'K4_rho_QA_pooled': 0.3054, 'K6_rho_step_A': np.float64(0.3136), 'K2_top1_A': np.float64(0.2786), 'K3_auc_A': np.float64(0.7773)}
+bos_excluded SYN(a=2,c=0.5) {'K0_rho_Q': 0.3334, 'K4_rho_QA_pooled': 0.3619, 'K6_rho_step_A': np.float64(0.3806), 'K2_top1_A': np.float64(0.8798), 'K3_auc_A': np.float64(0.979)}
+bos_excluded SYN(a=4,c=0.5) {'K0_rho_Q': 0.2935, 'K4_rho_QA_pooled': 0.3414, 'K6_rho_step_A': np.float64(0.3838), 'K2_top1_A': np.float64(0.9659), 'K3_auc_A': np.float64(0.9886)}
+bos_excluded SYN(a=8,c=0.0) {'K0_rho_Q': 0.1691, 'K4_rho_QA_pooled': 0.1979, 'K6_rho_step_A': np.float64(0.1981), 'K2_top1_A': np.float64(0.9679), 'K3_auc_A': np.float64(0.9827)}
+bos_excluded NULL(shuffled SYN(4,0.5)) {'K0_rho_Q': -0.0031, 'K4_rho_QA_pooled': 0.0018, 'K6_rho_step_A': np.float64(-0.0032), 'K2_top1_A': np.float64(0.0561), 'K3_auc_A': np.float64(0.4882)}
+{
+ "Q": {
+  "rho(d0,d1)": 0.6256836933621237,
+  "rho(d0,d2)": 0.626942787393628,
+  "rho(d0,zero)": 0.5063109373172358,
+  "n": 14028
+ },
+ "Q_offA": {
+  "rho(d0,d1)": 0.5685879227846463,
+  "rho(d0,d2)": 0.5701089922168391,
+  "rho(d0,zero)": 0.43093548722534114,
+  "n": 13376
+ },
+ "N": {
+  "rho(d0,d1)": 0.5884189337000482,
+  "rho(d0,d2)": 0.5834361714854422,
+  "rho(d0,zero)": 0.21428822549963583,
+  "n": 18470
+ },
+ "A": {
+  "rho(d0,d1)": 0.9259634788762634,
+  "rho(d0,d2)": 0.9189702693345094,
+  "rho(d0,zero)": 0.8817727018131976,
+  "n": 652
+ }
+}

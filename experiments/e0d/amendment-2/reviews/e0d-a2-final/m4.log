@@ -1,0 +1,41 @@
+{
+ "dres": {
+  "n": 13376,
+  "q0.99": 0.3109549731015192,
+  "q0.995": 0.4157434984576128,
+  "q0.999": 0.7129988655444408
+ },
+ "dzero": {
+  "n": 13481,
+  "q0.99": 0.24913927197480037,
+  "q0.995": 0.3447678400575726,
+  "q0.999": 0.5874972405433865
+ },
+ "crit_count_resample_tau=0.311": {
+  "all": 742,
+  "A": 641,
+  "nonA": 101
+ },
+ "crit_count_resample_tau=0.3779": {
+  "all": 701,
+  "A": 636,
+  "nonA": 65
+ },
+ "crit_count_resample_tau=0.4157": {
+  "all": 683,
+  "A": 631,
+  "nonA": 52
+ },
+ "crit_count_resample_tau=0.4716": {
+  "all": 665,
+  "A": 625,
+  "nonA": 40
+ },
+ "crit_count_resample_tau=0.713": {
+  "all": 572,
+  "A": 561,
+  "nonA": 11
+ },
+ "numpy_version": "2.5.3",
+ "quantile_method": "numpy default 'linear' (type 7)"
+}
