@@ -436,6 +436,27 @@ _I1_DIRTY = (
 )
 
 
+_I1_RESET_E2E = (
+    "I1 review: every end-to-end stub test runs more than one suite in one shard, "
+    "so the reset between them is on its path; a reset that leaves state behind "
+    "fails verify_clean or changes the next verdict in each."
+)
+_I1_POOL_LOCK = (
+    "I1 review: --prune-shards and a battery take the same pool lock; one edit to "
+    "the lock reddens both tests."
+)
+_I1_GROUP = (
+    "I1 review: every test that stops a suite -- the battery or the pytest child -- "
+    "asserts the suite's grandchild is gone; one edit to the group kill reddens "
+    "each."
+)
+
+
+def _i1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
+    """Declared couplings on tests/test_battery_isolation.py nodes, one reason."""
+    return tuple((f"tests/test_battery_isolation.py::{n}", reason) for n in nodes)
+
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -4076,6 +4097,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_battery_isolation.py::"
                 "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
             )
+        )
+        + _i1_declare(
+            _I1_SHARD_MUTATION,
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_markdown_is_written_when_every_row_ran",
+            "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+            "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGINT]",
+            "test_a_stopped_battery_kills_its_suites_grandchildren",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
         ),
     ),
     Mutation(
@@ -4121,6 +4152,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_battery_isolation.py::"
                 "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
             )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_completed_suite_is_judged_by_its_probe",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_markdown_is_not_written_while_a_row_did_not_run",
         ),
     ),
     Mutation(
@@ -4141,6 +4178,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_battery_isolation.py::"
                 "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
             )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_killed_pytest_is_did_not_run_not_a_failure",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
         ),
     ),
     Mutation(
@@ -4175,6 +4220,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_battery_isolation.py::"
                 "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
             )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
         ),
     ),
     Mutation(
@@ -4218,6 +4268,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    _ok(git(shard.root, *CLEAN_ARGV), f"git clean in {shard.root}")\n',
         "    pass\n",
         "I1: a file one mutated suite created must not be in the next one's tree.",
+        off_gate_allowed=_i1_declare(
+            _I1_RESET_E2E,
+            "test_an_ignored_file_left_in_a_shard_is_not_clean",
+            "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+            "test_check_still_fails_on_an_unproven_gate",
+            "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        ),
     ),
     Mutation(
         "i1: a shard suite writes bytecode again",
@@ -4237,14 +4295,6 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            pass\n",
         "I1: the second layer under PYTHONDONTWRITEBYTECODE, for caches written by "
         "anything that sets its own env.",
-        off_gate_allowed=(
-            (
-                "tests/test_battery_isolation.py::"
-                "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
-                "I1: a kept shard is re-entered through the same purge; the reuse test "
-                "asserts it on a real worktree, the unit test on a bare directory.",
-            ),
-        ),
     ),
     Mutation(
         "i1: the shard interpreter is not checked",
@@ -4278,6 +4328,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
                 "tests/test_battery_isolation.py::test_two_batteries_never_share_a_pool",
             )
+        )
+        + _i1_declare(
+            _I1_TEARDOWN,
+            "test_prune_refuses_while_a_battery_holds_the_pool",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
         ),
     ),
     Mutation(
@@ -4288,6 +4344,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass",
         "I1: a shard is reset between mutations; a second battery in the same pool "
         "would reset or mutate the tree under the first one's suite.",
+        off_gate_allowed=_i1_declare(
+            _I1_POOL_LOCK,
+            "test_prune_refuses_while_a_battery_holds_the_pool",
+        ),
     ),
     Mutation(
         "i1: a foreign directory in the pool is taken over",
@@ -4326,6 +4386,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         'CLEAN_ARGV = ("clean", "-ffdq", "-e", "/.venv/")',
         "Review MAJOR-2: an ignored runs/ or .orchestrator/ file one mutation's "
         "suite wrote changed the next mutation's verdict.",
+        off_gate_allowed=_i1_declare(
+            _I1_RESET_E2E,
+            "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+            "test_an_ignored_file_left_in_a_shard_is_not_clean",
+            "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+            "test_check_still_fails_on_an_unproven_gate",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        ),
     ),
     Mutation(
         "i1: the clean check cannot see ignored files",
@@ -4371,6 +4439,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    finally:\n        proc.kill()\n        proc.wait()\n",
         "Review MINOR-2: a grandchild of the suite kept writing into the shard under "
         "the next suite or the teardown.",
+        off_gate_allowed=_i1_declare(
+            _I1_GROUP,
+            "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
     ),
     Mutation(
         "i1: SIGINT is not handled",
@@ -4398,6 +4471,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         + 'f"the baseline suite did not run: {e}")',
         '            refuse(Exit.FAIL, f"the baseline suite did not ' + 'run: {e}")',
         "Review MINOR-8: nothing was mutated, so nothing was tested: 3, not 1.",
+        off_gate_allowed=_i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_suite_on_another_checkouts_venv_did_not_run",
+        ),
     ),
     Mutation(
         "i1: battery_subset drops --shard-dir",
@@ -4417,6 +4494,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    old = {}",
         "I1 defence in depth: a stopped battery kills its pytest child and tears its "
         "shards down; without the handler both outlive it.",
+        off_gate_allowed=_i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_stopped_battery_kills_its_suites_grandchildren",
+        ),
     ),
 )
 
