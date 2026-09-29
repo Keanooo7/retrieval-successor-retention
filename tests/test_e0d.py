@@ -160,7 +160,7 @@ GATE = "R-2026-09-27-sprint0-gate-green.md"
 
 def _rulings(tmp_path, bodies: dict[str, str]):
     d = tmp_path / "rulings"
-    d.mkdir()
+    d.mkdir(parents=True)
     for n, body in bodies.items():
         (d / n).write_text(body)
     return d
@@ -968,6 +968,10 @@ def test_loo_flatness_is_the_a_cell_median_at_1e_2(e0d):
 
 def test_analysis_reads_flatness_on_a_cells(e0d):
     c = _cells(a_delta=0.02, noise=1e-4, score="bad")
+    # A2.4: one critical A-cell, so the gated statistic has a value (else exit 3);
+    # the A-cell median stays 0.02 and q90 stays < 1e-3
+    j = int(np.flatnonzero(c["q_step"] & c["a_cell"] & (c["rank"] == 1))[0])
+    c["d_resample"][j] = c["d_zero"][j] = 1.0
     an = e0d.analyse_seed(c, M=4, n_docs=40, seed=0, auroc_star=0.85, n_boot=20)
     pa = an["populations"]["all"]
     assert pa["flags"]["loo_flat"] is False
@@ -1564,16 +1568,19 @@ def test_labels_use_each_seeds_own_tau_and_strict_greater(e0d, monkeypatch):
 def test_analyse_seed_labels_with_that_seeds_frozen_tau(e0d, seed):
     """T11: the analysis uses tau_s of the seed it analyses (never seed 0's for
     all, never a quantile of the run's cells), and records it."""
-    c = _cells(score="good", a_delta=0.46, noise=1e-4)  # between tau_0,1 and tau_2
+    # A-cell Delta ~ N(0.46, 0.05) straddles tau_0 = 0.416 < tau_1 = 0.432 < tau_2 = 0.488
+    c = _cells(score="good", a_delta=0.46, noise=0.05)
     an = e0d.analyse_seed(c, M=4, n_docs=40, seed=seed, auroc_star=A_STAR, n_boot=4)
     cell = an["populations"]["all"]["a2"]["gated_resample"]
     assert cell["r"]["tau"] == e0d.TAU_RESAMPLE[seed]
     assert an["tau"]["resample"] == e0d.TAU_RESAMPLE[seed]
     assert an["tau"]["zero"] == e0d.TAU_ZERO[seed]
     Q = c["q_step"]
-    want = int((Q & (c["d_resample"] > e0d.TAU_RESAMPLE[seed])).sum())
-    assert cell["r"]["positives"] == want
-    assert (want > 0) == (seed != 2)
+    want = {
+        s: int((Q & (c["d_resample"] > e0d.TAU_RESAMPLE[s])).sum()) for s in (0, 1, 2)
+    }
+    assert cell["r"]["positives"] == want[seed]
+    assert len(set(want.values())) == 3  # the three taus label differently here
 
 
 # --------------------------------------------------------------------------- #
@@ -1622,6 +1629,21 @@ def test_a13_population_has_n_t_15_no_bin_1_no_gap_1_steps(e0d, cal):
     assert fam["n_t_values"] == [15]
     allc = e0d.q_population(c, np.ones(len(c["doc"]), dtype=bool), M=16)
     assert set(allc["n_t"].tolist()) == {16}
+
+
+def test_pct_spans_zero_to_one_at_n_t_15(e0d, cal):
+    """A2.4 step 1 under A1.3: pct = (midrank - 1) / (n_t - 1) with n_t = 15 -- the
+    top slot of every step reads exactly 1.0 and the bottom 0.0, never 14/15."""
+    c = cal.synthetic_ledger(19, 16)
+    r = cal.content(c, np.random.default_rng(19), 1.0)
+    pop = e0d.q_population(c, e0d.bos_keep(c, 16), M=16)
+    pct = e0d.step_percentiles(r[pop["idx"]], pop)
+    top = np.full(pop["n_steps"], -1.0)
+    np.maximum.at(top, pop["step"], pct)
+    bot = np.full(pop["n_steps"], 2.0)
+    np.minimum.at(bot, pop["step"], pct)
+    assert (top == 1.0).all() and (bot == 0.0).all()
+    assert set(np.round(pct * 14, 9)) == set(range(15))
 
 
 def test_the_a13_population_asserts_n_t_is_m_minus_1(e0d, cal):
@@ -2077,7 +2099,8 @@ def test_undefined_replicates_are_counted_and_the_ci_is_on_the_rest(e0d):
     D = np.zeros((4, 16))
     D[0, 3] = 1.0
     c = _grid_cells(D, R, q=[True] * 4, gap=[40] * 4, docs=[0, 1, 2, 3])
-    W = np.array([[4.0, 0, 0, 0], [0, 4.0, 0, 0], [1.0, 1, 1, 1]])
+    # docs 0+1 (a positive and same-bin negatives), doc 1 alone (no positive), all
+    W = np.array([[2.0, 2, 0, 0], [0, 4.0, 0, 0], [1.0, 1, 1, 1]])
     fam = e0d.auroc_family(c, c["r"], c["d_resample"], tau=0.5,
                            keep=np.ones(64, dtype=bool), W=W, M=16)  # fmt: skip
     assert fam["pct_n_undefined"] == 1
@@ -2290,7 +2313,14 @@ def test_main_writes_the_a2_class_and_the_5b_booleans(e0d, cleared, fake_ledger)
     assert _row(fake_ledger, "e0d.halt") is False
     assert _row(fake_ledger, "c12_tau_tables") is not None
     assert _row(fake_ledger, "e0d.pooled") is not None
-    assert fake_ledger.last.rows["primary.AUROC_strat_pct"] == [1.0, 1.0, 1.0]
+    vals = fake_ledger.last.rows["primary.AUROC_strat_pct"]
+    # _cells' Q-steps without a resident assert hold a pct = 1 negative (the T1c
+    # ceiling), so the good score sits below 1.0 and above A*
+    assert len(vals) == 3 and all(A_STAR < v < 1.0 for v in vals), vals
+    for s in (0, 1, 2):
+        an = fake_ledger.last.rows[f"seed{s}.analysis"]
+        prim = an["populations"]["bos_excluded"]["a2"]["gated_resample"]["r"]
+        assert prim["pct"] == vals[s]
 
 
 def test_main_refuses_on_c12_before_any_document(e0d, cleared, fake_ledger, monkeypatch):
