@@ -605,12 +605,16 @@ def fake_ledger(monkeypatch, tmp_path):
 
 
 def test_main_refuses_before_any_e0d_document_without_the_rulings(
-    e0d, monkeypatch, fake_ledger
+    e0d, monkeypatch, fake_ledger, tmp_path
 ):
+    """C8 on a rulings directory that holds none of the four rulings. (Until
+    2026-09-29 this read the real `docs/owner/rulings/`, which has held all four
+    since 7f9bb10: C8 then passed and the test fell through to C1.)"""
     gen = []
     monkeypatch.setattr(e0d, "_generate_document", lambda i, cfg: gen.append(i))
     monkeypatch.setattr(e0d, "sha256", lambda p: pytest.fail("C1 before C8"))
-    code = e0d.main([])
+    (tmp_path / "no-rulings").mkdir()
+    code = e0d.main(["--rulings-dir", str(tmp_path / "no-rulings")])
     assert int(code) == 3
     assert gen == []
     assert fake_ledger.last._status == "did_not_run"
@@ -1316,8 +1320,12 @@ def test_claims_json_is_written_only_by_a_real_run(e0d, cleared, fake_ledger):
             assert proc.stdout.strip() == c["expected"], c["claim"]
 
 
-def test_a_refused_run_writes_no_claims(e0d, monkeypatch, fake_ledger):
-    assert int(e0d.main([])) == 3  # C8, today
+def test_a_refused_run_writes_no_claims(e0d, monkeypatch, fake_ledger, tmp_path):
+    """C8 refuses on a rulings directory without the rulings. (Until 2026-09-29
+    this passed no --rulings-dir and relied on the real rulings being absent; with
+    them committed it ran the real E0d measurement in-process for hours.)"""
+    (tmp_path / "no-rulings").mkdir()
+    assert int(e0d.main(["--rulings-dir", str(tmp_path / "no-rulings")])) == 3
     assert not (fake_ledger.last.path.parent / "claims.json").exists()
 
 
