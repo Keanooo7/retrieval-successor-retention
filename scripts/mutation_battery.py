@@ -4506,6 +4506,181 @@ MUTATIONS: tuple[Mutation, ...] = (
         " given content; without the content regression it is the raw within-step "
         "Spearman.",
     ),
+    Mutation(
+        "b1: L_MC means over rows, not over (doc, t)",
+        "test_l_mc_sums_over_live_slots_and_means_over_doc_t",
+        "experiments/b1-beta-inertness/run.py",
+        "    return (diff * diff).sum() / (N * (S - 1))\n",
+        "    return (diff * diff).sum() / rows.sum()\n",
+        "PREREG §3 / ADR-0009 L9: sum over resident slots, then mean over (doc, t).",
+    ),
+    Mutation(
+        "b1: the rows are rowset U, not C",
+        "test_rows_are_b2_rowset_c_and_target_is_c_at_09",
+        "experiments/b1-beta-inertness/run.py",
+        '        t, i = B2.row_index(cap, "C", m)\n',
+        '        t, i = B2.row_index(cap, "U", m)\n',
+        "PREREG §2: B2 rowset C, the FIFO-resident slots online L_MC sums over.",
+        off_gate_allowed=(
+            (
+                (
+                    "tests/test_b1_beta_inertness.py::test_full_memory_steps_are_those_with_m_resident"
+                ),
+                (
+                    "full is derived from rows (|rows[t]| = M); under rowset U every i "
+                    "< t is a row, so the full steps become t = M only instead of t >= "
+                    "M -- the same defect seen from the decision set"
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "b1: full-memory steps include M-1 resident",
+        "test_full_memory_steps_are_those_with_m_resident",
+        "experiments/b1-beta-inertness/run.py",
+        '        "full": rows_t.sum(-1) == m,\n',
+        '        "full": rows_t.sum(-1) >= m - 1,\n',
+        "PREREG §6 m2: decisions only where |resident[t]| = M.",
+    ),
+    Mutation(
+        "b1: pack accepts a captured input carrying graph",
+        "test_pack_refuses_inputs_that_carry_graph",
+        "experiments/b1-beta-inertness/run.py",
+        "            if x.requires_grad or x.grad_fn is not None:\n",
+        "            if False:\n",
+        "PREREG §2 / CLAUDE.md isolation: no gradient reaches the transformer.",
+    ),
+    Mutation(
+        "b1: psi_all pairs s_t with c_i",
+        "test_psi_all_is_the_head_at_every_t_and_i",
+        "experiments/b1-beta-inertness/run.py",
+        "    return head(g, ctx.reshape(N * S, d)).reshape(N, S, S)\n",
+        "    return head(g, ctx.reshape(N * S, d)).reshape(N, S, S).transpose(1, 2)\n",
+        "PREREG §3: psi[n, t, i] = head(s_i, c_t).",
+    ),
+    Mutation(
+        "b1: beta does not scale the loss",
+        "test_beta_scales_the_loss_and_never_the_lr_in_the_four_arms",
+        "experiments/b1-beta-inertness/run.py",
+        "    return 1.0 if arm == CONTROL_P else beta\n",
+        "    return 1.0\n",
+        "PREREG §5: phi's loss is beta * L_MC in the four arms.",
+    ),
+    Mutation(
+        "b1: P does not scale the LR",
+        "test_positive_control_scales_the_lr_and_not_the_loss",
+        "experiments/b1-beta-inertness/run.py",
+        "    lr_eff = beta * lr if arm == CONTROL_P else lr\n",
+        "    lr_eff = lr\n",
+        "PREREG §5 P: L7(a)'s reading, lr = beta * lr_phi.",
+        off_gate_allowed=(
+            (
+                (
+                    "tests/test_b1_beta_inertness.py::test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not"
+                ),
+                (
+                    "its last assertion is that P at beta = 0.01 moves phi away from "
+                    "beta = 1; with the LR unscaled and the loss unscaled, P is the "
+                    "beta = 1 run exactly, so the end-to-end test sees the same defect"
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "b1: coupled_l2 is AdamW",
+        "test_coupled_l2_is_adam_with_l2_and_the_others_are_adamw_decoupled",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            "        return torch.optim.Adam(params, lr=lr, betas=ADAM_BETAS, eps=eps, "
+            "weight_decay=L2)\n"
+        ),
+        (
+            "        return torch.optim.AdamW(params, lr=lr, betas=ADAM_BETAS, eps=eps,"
+            " weight_decay=L2)\n"
+        ),
+        "PREREG §5 arm 4: coupled L2 is Adam with the L2 term in the gradient.",
+    ),
+    Mutation(
+        "b1: the phi clip is never applied",
+        "test_phi_clip_binds_on_phi_norm_at_one",
+        "experiments/b1-beta-inertness/run.py",
+        "        torch.nn.utils.clip_grad_norm_(params, PHI_CLIP)\n",
+        "        pass\n",
+        "PREREG §5 arm 2: clip_grad_norm_(phi, 1.0).",
+    ),
+    Mutation(
+        "b1: the joint clip ignores phi's norm",
+        "test_joint_clip_uses_the_joint_norm_with_the_transformers",
+        "experiments/b1-beta-inertness/run.py",
+        "math.sqrt(g_T * g_T + n * n)",
+        "g_T",
+        "PREREG §5 arm 3: the joint norm is sqrt(g_T^2 + |g_phi|^2).",
+    ),
+    Mutation(
+        "b1: the batch order samples with replacement",
+        "test_batch_order_is_a_permutation_per_epoch_and_seed_determined",
+        "experiments/b1-beta-inertness/run.py",
+        "        perm = torch.randperm(n, generator=g)\n",
+        "        perm = torch.randint(n, (n,), generator=g)\n",
+        "PREREG §3: without replacement within an epoch.",
+    ),
+    Mutation(
+        "b1: the argmin reads non-resident slots",
+        "test_argmins_only_over_resident_slots_at_full_steps",
+        "experiments/b1-beta-inertness/run.py",
+        '    x = psi.masked_fill(~rows, float("inf"))\n',
+        "    x = psi\n",
+        "PREREG §6 m2: argmin over resident slots only.",
+    ),
+    Mutation(
+        "b1: eps ratio without bias correction",
+        "test_eps_ratio_uses_the_bias_corrected_second_moment",
+        "experiments/b1-beta-inertness/run.py",
+        '            vhat = st["exp_avg_sq"].double() / (1.0 - b2**k)\n',
+        '            vhat = st["exp_avg_sq"].double()\n',
+        "PREREG §6 m3: eps / sqrt(v / (1 - 0.95^k)).",
+    ),
+    Mutation(
+        "b1: INERT needs agreement strictly above 0.99",
+        "test_classify_thresholds_are_the_prereg_ones",
+        "experiments/b1-beta-inertness/run.py",
+        "    if min(agreements) >= INERT_AGREE and max(rels) <= INERT_REL:\n",
+        "    if min(agreements) > INERT_AGREE and max(rels) <= INERT_REL:\n",
+        "PREREG §7: INERT is agreement >= 0.99 and rel <= 0.01.",
+    ),
+    Mutation(
+        "b1: every cell is compared against decoupled_wd",
+        "test_compare_reads_every_cell_against_its_own_beta_one",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            '    return "decoupled_wd" if arm in (CONTROL_P, CONTROL_N, CONTROL_I) else'
+            " arm\n"
+        ),
+        '    return "decoupled_wd"\n',
+        "PREREG §6: against beta = 1 of the same seed, arm and eps.",
+    ),
+    Mutation(
+        "b1: g_T accepts a missing step",
+        "test_read_g_t_takes_steps_2000_to_2999_and_refuses_a_gap",
+        "experiments/b1-beta-inertness/run.py",
+        "    if sorted(got) != list(range(lo, hi)):\n",
+        "    if not got:\n",
+        "PREREG §4: exactly one logged transformer norm per step 2000-2999.",
+    ),
+    Mutation(
+        "b1: phi is initialised from the global generator",
+        "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            "        d, base_width=BASE_WIDTH, "
+            "generator=torch.Generator().manual_seed(init_seed)\n"
+        ),
+        "        d, base_width=BASE_WIDTH, generator=None\n",
+        (
+            "PREREG §2 / ADR-0009 L11: a dedicated generator, so every beta/arm/eps of "
+            "a seed starts from the same phi (N is bit-identical)."
+        ),
+    ),
 )
 
 
