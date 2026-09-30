@@ -4832,6 +4832,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "definition gets the new constant inserted above it, silently.",
     ),
     Mutation(
+        "battery-union: the output check does not compare entries and constants",
+        "test_the_output_check_compares_",
+        "scripts/battery_union.py",
+        "    if problems:\n        raise Refused(\n",
+        "    if False:\n        raise Refused(\n",
+        "review 66d1dfa5c440 MINOR-2: a union that loses one entry or constant and "
+        "gains another, or changes a value, is written as if it were the merge.",
+    ),
+    Mutation(
         "b2-psi-probe: age leaks into psi-hat",
         "test_no_age_in_psi_hat_permuting_written_at_and_step_changes_nothing",
         "experiments/b2-psi-probe/run.py",

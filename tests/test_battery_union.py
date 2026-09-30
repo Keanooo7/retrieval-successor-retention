@@ -375,6 +375,46 @@ def test_a_union_that_does_not_parse_is_refused():
         bu.union(_src(), _src(), theirs)
 
 
+_HEAD_B = _HEAD.replace("MUTATIONS:", '_B_COUPLING = (\n    "b",\n)\n\nMUTATIONS:')
+
+
+@pytest.mark.parametrize(
+    "corrupt",
+    [
+        lambda v: v.replace("_B_COUPLING", "_C_COUPLING"),  # a different constant
+        lambda v: v.replace('"b"', '"changed"'),  # the same name, another value
+    ],
+    ids=["renamed", "revalued"],
+)
+def test_the_output_check_compares_constants_not_counts(monkeypatch, corrupt):
+    """Review 66d1dfa5c440 MINOR-2: `_check_output` compared counts, so a union
+    that lost one constant and gained another (or changed a value) passed. The
+    corruption is injected at the one insertion point; the count is unchanged."""
+    monkeypatch.setattr(
+        bu, "_insert_new_const", lambda h, k, t, o: h + corrupt(t.consts[k]) + "\n"
+    )
+    ho = _HEAD.replace("import os", "import os\nimport signal")
+    with pytest.raises(bu.Refused, match="the union holds"):
+        bu.union(_src(), _src(head=ho), _src(head=_HEAD_B))
+
+
+def test_the_output_check_compares_entries_not_counts(monkeypatch):
+    """Review 66d1dfa5c440 MINOR-2, for entries: the re-split union is made to hold
+    a different body for one entry, same count; the check must refuse."""
+    real = bu._split
+
+    def split(side, src):
+        p = real(side, src)
+        if side == "the union":
+            k = p.order[0]
+            p.entries[k] = p.entries[k].replace('"y"', '"tampered"')
+        return p
+
+    monkeypatch.setattr(bu, "_split", split)
+    with pytest.raises(bu.Refused, match="the union holds"):
+        bu.union(_src(), _src(("m1", "m2", "o")), _src(("m1", "m2", "t")))
+
+
 def test_cli_malformed_entry_exits_3_and_writes_nothing(repo):
     b = _commit(repo, _src(), "b")
     t = _commit(repo, _HEAD + _entry("m1") + _UNTERMINATED + _TAIL, "t")

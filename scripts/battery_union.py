@@ -288,7 +288,7 @@ def union(base: str, ours: str, theirs: str) -> Result:
             h = _insert_new_const(h, k, t, o)
     body = "".join(entries[k] for k in order) + o.trailing
     text = h + OPEN + body + tail
-    _check_output(text, len(o.entries) + len(added), len(consts))
+    _check_output(text, {k: entries[k] for k in order}, consts)
     return Result(text, added, updated, new_consts, tail_from)
 
 
@@ -309,19 +309,40 @@ def _insert_new_const(h: str, k: str, t: Parts, o: Parts) -> str:
     return h[: m.start()] + text + h[m.start() :]
 
 
-def _check_output(text: str, n_entries: int, n_consts: int) -> None:
-    """MINOR-2: the union must parse and hold exactly the entries and constants
-    the merge computed, or nothing is written."""
+def _check_output(text: str, entries: dict[str, str], consts: dict[str, str]) -> None:
+    """MINOR-2 (7d90e27a400b): the union must parse and hold exactly the entries and
+    constants the merge computed, or nothing is written. Compared by name and by
+    text, entries in order -- not by count (review 66d1dfa5c440 MINOR-2: a union
+    that lost one and gained another passed a count check)."""
     try:
         ast.parse(text)
     except SyntaxError as e:
         raise Refused([f"the union does not parse: {e.msg} (line {e.lineno})"]) from None
     got = _split("the union", text)
-    if len(got.entries) != n_entries or len(got.consts) != n_consts:
+    problems = []
+    if got.order != list(entries):
+        lost = [k for k in entries if k not in got.entries]
+        extra = [k for k in got.order if k not in entries]
+        problems.append(f"entries lost {lost}, extra {extra}, or out of order")
+    problems += [
+        f"entry {k} differs from the merge"
+        for k, v in entries.items()
+        if k in got.entries and got.entries[k] != v
+    ]
+    if set(got.consts) != set(consts):
+        lost = sorted(set(consts) - set(got.consts))
+        extra = sorted(set(got.consts) - set(consts))
+        problems.append(f"constants lost {lost}, extra {extra}")
+    problems += [
+        f"constant {k} differs from the merge"
+        for k, v in consts.items()
+        if k in got.consts and got.consts[k] != v
+    ]
+    if problems:
         raise Refused(
             [
                 f"the union holds {len(got.entries)} entries and {len(got.consts)} "
-                f"constants; the merge computed {n_entries} and {n_consts}"
+                f"constants, not what the merge computed: " + "; ".join(problems)
             ]
         )
 
