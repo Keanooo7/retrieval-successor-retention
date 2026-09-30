@@ -1,0 +1,48 @@
+{
+  "seed": 0,
+  "exit_codes": {
+    "a": 0,
+    "b": 0,
+    "c": 0
+  },
+  "elapsed_s": 426.37370920181274,
+  "reference": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+  "reference_sha256": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+  "a": {
+    "equal": true,
+    "n_tensors": 825,
+    "mismatches": []
+  },
+  "b": {
+    "equal": false,
+    "n_tensors": 825,
+    "mismatches": [
+      "model.embed.weight",
+      "model.pos_embed.weight",
+      "model.blocks.0.ln_self.weight",
+      "model.blocks.0.ln_self.bias",
+      "model.blocks.0.self_attn.query.kernel",
+      "model.blocks.0.self_attn.query.bias",
+      "model.blocks.0.self_attn.key.kernel",
+      "model.blocks.0.self_attn.key.bias",
+      "model.blocks.0.self_attn.value.kernel",
+      "model.blocks.0.self_attn.value.bias",
+      "model.blocks.0.self_attn.attn_out_proj.kernel",
+      "model.blocks.0.self_attn.attn_out_proj.bias",
+      "model.blocks.0.ln_ffn.weight",
+      "model.blocks.0.ln_ffn.bias",
+      "model.blocks.0.mlp.Dense_0.kernel",
+      "model.blocks.0.mlp.Dense_0.bias",
+      "model.blocks.0.mlp.Dense_1.kernel",
+      "model.blocks.0.mlp.Dense_1.bias",
+      "model.blocks.1.memory_gate",
+      "model.blocks.1.ln_mem.weight"
+    ]
+  },
+  "c": {
+    "equal": true,
+    "n_tensors": 825,
+    "mismatches": []
+  },
+  "launch_allowed": true
+}

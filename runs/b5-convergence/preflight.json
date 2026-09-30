@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "error": null,
+  "closure": {
+    "0": {
+      "ok": true,
+      "n_stream_documents": 96000,
+      "n_measurement_documents": 128,
+      "vocab_words": 172
+    },
+    "1": {
+      "ok": true,
+      "n_stream_documents": 96000,
+      "n_measurement_documents": 128,
+      "vocab_words": 172
+    },
+    "2": {
+      "ok": true,
+      "n_stream_documents": 96000,
+      "n_measurement_documents": 128,
+      "vocab_words": 172
+    }
+  },
+  "disjointness": {
+    "n_ids": 96000,
+    "first_id": 52160,
+    "last_id": 148159,
+    "repeats": 0,
+    "ids_in_probe": [],
+    "ids_in_vocab_documents": [],
+    "ids_in_heldout": [],
+    "ok": true
+  }
+}

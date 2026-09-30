@@ -1,0 +1,20 @@
+[
+ {"claim": "PREREG committed alone, ahead of any B5 code",
+  "command": "/opt/homebrew/bin/git show --stat --format=%h dfda530 | grep -c 'experiments/b5-convergence/PREREG.md' && /opt/homebrew/bin/git show --stat --format= dfda530 | grep -c '|'",
+  "expected": "1 and 1 (one file in the commit)"},
+ {"claim": "B5 tests pass with none skipped",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 600 -- .venv/bin/pytest -q tests/test_b5_convergence.py -p no:cacheprovider",
+  "expected": "passed=21 failed=0 skipped=0 errors=0, rc 0"},
+ {"claim": "measurement path unchanged: re-measured B.ckpt3000 copies match the fresh-stream ledger exactly",
+  "command": "python3 -c \"import json;d=json.load(open('runs/b5-convergence/ledger.json'));r={x['key']:x['value'] for x in d['rows'] if x['kind']=='observation'};print(r['control_measurement_path.passed'],r['control_measurement_path.max_abs_diff'])\"",
+  "expected": "True [0.0, 0.0, 0.0]"},
+ {"claim": "resume proof: (a) 5-thread 2900->3000 equals arm B ckpt-003000; (b) 4-thread does not; (c) 4-thread kill-resume is bit-exact",
+  "command": "python3 -c \"import json;d=json.load(open('runs/b5-convergence/proof/proof.json'));print([d[k]['equal'] for k in 'abc'])\"",
+  "expected": "[True, False, True]"},
+ {"claim": "the plateau rule fails on every seed at E=7000 (loss still falling)",
+  "command": "python3 -c \"import json;d=json.load(open('runs/b5-convergence/ledger.json'));r={x['key']:x['value'] for x in d['rows'] if x['kind']=='observation'};print([r['rule_trace']['7000'][f'seed{s}']['holds'] for s in range(3)])\"",
+  "expected": "[False, False, False]"},
+ {"claim": "retrieval holds (R >= 0.03 every seed) at every measured checkpoint",
+  "command": "python3 -c \"import json;d=json.load(open('runs/b5-convergence/ledger.json'));r={x['key']:x['value'] for x in d['rows'] if x['kind']=='observation'};print(r['R_by_checkpoint'])\"",
+  "expected": "every value True"}
+]

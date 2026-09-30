@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "n_reference_keys": 262,
+  "missing_keys": [],
+  "tolerance": 1e-06,
+  "per_seed": {
+    "0": {
+      "ok": true,
+      "n_keys_compared": 262,
+      "max_abs_diff": 0.0,
+      "failures": []
+    },
+    "1": {
+      "ok": true,
+      "n_keys_compared": 262,
+      "max_abs_diff": 0.0,
+      "failures": []
+    },
+    "2": {
+      "ok": true,
+      "n_keys_compared": 262,
+      "max_abs_diff": 0.0,
+      "failures": []
+    }
+  },
+  "error": null
+}
