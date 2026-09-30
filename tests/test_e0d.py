@@ -1337,7 +1337,9 @@ def test_the_ledger_records_the_launched_argv(e0d, cleared, fake_ledger, monkeyp
     )
     assert not argv.startswith("uv run")
     assert "slot" not in note
-    spec = importlib.util.spec_from_file_location("ledger_real", ROOT / "scripts" / "ledger.py")
+    spec = importlib.util.spec_from_file_location(
+        "ledger_real", ROOT / "scripts" / "ledger.py"
+    )
     lm = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(lm)
     assert lm.entry_point(argv) == "experiments/e0d/run.py"
@@ -1396,8 +1398,11 @@ def test_each_seed_is_persisted_as_it_completes_and_reused_on_restart(
     assert not list(cache.glob("*.tmp*"))  # atomic: nothing half-written left
 
     measured.clear()
-    monkeypatch.setattr(e0d, "measure_seed", lambda seed, **kw: (measured.append(seed),
-                                                               real(seed, **kw))[1])
+    monkeypatch.setattr(
+        e0d,
+        "measure_seed",
+        lambda seed, **kw: (measured.append(seed), real(seed, **kw))[1],
+    )
     assert int(e0d.main(["--run-id", "killed"])) == 0
     assert measured == [1, 2]  # seed 0 reused, not re-measured
     assert fake_ledger.last.rows["seed_cache"]["reused_seeds"] == [0]
@@ -1434,6 +1439,18 @@ def test_a_seed_cache_whose_key_does_not_match_exits_3(
     assert measured == []
     assert p.read_bytes() == before
     assert fake_ledger.last.rows.get("e0d.class") is None
+
+
+def test_a_seed_cache_is_not_reused_when_the_git_sha_is_unknown(
+    e0d, cleared, fake_ledger, monkeypatch
+):
+    """Without a git sha no key can be trusted to match: a persisted seed is then
+    exit 3, not reused."""
+    cleared["score"] = "good"
+    assert int(e0d.main([])) == 0
+    monkeypatch.setattr(e0d, "_head_sha", lambda: None)
+    assert int(e0d.main([])) == 3
+    assert fake_ledger.last.rows["control_failed"]["control"] == "RESUME"
 
 
 def test_an_unreadable_seed_cache_exits_3(e0d, cleared, fake_ledger):

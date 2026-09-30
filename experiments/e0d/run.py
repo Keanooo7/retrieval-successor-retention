@@ -63,6 +63,8 @@ import hashlib
 import itertools
 import json
 import math
+import os
+import pickle
 import re
 import subprocess
 import sys
@@ -2213,6 +2215,94 @@ def write_claims(path: Path, *, ledger_path: Path, run_id: str, out: dict,
     return Path(path)
 
 
+#: The seed cache's own format. A change to what a record holds bumps it, so an
+#: old record is a key mismatch (exit 3), never a silent partial reuse.
+SEED_CACHE_FORMAT = 1
+
+
+def _head_sha() -> str | None:
+    r = subprocess.run(
+        ["/opt/homebrew/bin/git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
+        text=True,
+    )  # fmt: skip
+    return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
+
+
+def seed_key(seed: int, *, auroc_star: float) -> dict:
+    """What a persisted seed must match to be reused: the code (git sha and this
+    file's own sha256 -- a dirty run.py moves the second when not the first), the
+    seed, the documents, and the analysis inputs that are not in the code."""
+    return {
+        "format": SEED_CACHE_FORMAT,
+        "git_sha": _head_sha(),
+        "run_py_sha256": sha256(Path(__file__).resolve()),
+        "seed": int(seed),
+        "doc_range": [int(x) for x in D_E0D],
+        "auroc_star": float(auroc_star),
+        "n_boot": int(BOOT_N),
+        "bootstrap_seed": int(BOOT_SEED),
+        "batch": int(BATCH),
+    }
+
+
+class SeedCache:
+    """Crash safety (runner only; RESULTS.md erratum, post-data): each seed's
+    `measure_seed` record (cells included) and `analyse_seed` result, pickled --
+    types exact, so a reused seed ledgers byte-for-byte what a fresh one would --
+    to `<run dir>/seed-cache/seed<s>.pkl` as soon as the seed completes. Written
+    to a temporary name, fsynced, then `os.replace`d: a kill leaves either the
+    whole record or none. Nothing here is ever deleted."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = Path(root)
+
+    def path(self, seed: int) -> Path:
+        return self.root / f"seed{seed}.pkl"
+
+    def load(self, seed: int, key: dict):
+        """`(measured, analysis)` for a record whose key equals `key`, `None` if
+        there is no record; a record that cannot be read or whose key differs in
+        any field is `ControlFailed("RESUME")` -> exit 3."""
+        p = self.path(seed)
+        if not p.exists():
+            return None
+        try:
+            rec = pickle.loads(p.read_bytes())
+            got = rec["key"]
+            meas, an = rec["measured"], rec["analysis"]
+        except Exception as e:  # any unreadable record is exit 3
+            raise ControlFailed(
+                "RESUME", f"{p}: unreadable seed record ({type(e).__name__}: {e})"
+            ) from e
+        if key.get("git_sha") is None:
+            raise ControlFailed(
+                "RESUME", f"{p}: this run's git sha is unknown, so no key can match"
+            )
+        if got != key:
+            diff = sorted(k for k in set(got) | set(key) if got.get(k) != key.get(k))
+            raise ControlFailed(
+                "RESUME", f"{p}: key mismatch on {diff} (recorded "
+                f"{ {k: got.get(k) for k in diff} }, this run "
+                f"{ {k: key.get(k) for k in diff} }); not reused, not overwritten"
+            )  # fmt: skip
+        return meas, an
+
+    def save(self, seed: int, key: dict, measured: dict, analysis: dict) -> Path:
+        self.root.mkdir(parents=True, exist_ok=True)
+        p = self.path(seed)
+        tmp = p.with_name(f"{p.name}.tmp-{os.getpid()}")
+        blob = pickle.dumps(
+            {"key": key, "measured": measured, "analysis": analysis},
+            protocol=pickle.HIGHEST_PROTOCOL,
+        )
+        with open(tmp, "wb") as f:
+            f.write(blob)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, p)
+        return p
+
+
 def _measure_and_classify(a, led, argv_s: str) -> Exit:
     auth = check_authority(a.rulings_dir)  # C8 -- before anything is read
     led.note("c8_authority", _jsonable(auth), how="docs/owner/rulings (A2.13)")
@@ -2226,7 +2316,21 @@ def _measure_and_classify(a, led, argv_s: str) -> Exit:
 
     per_seed: dict[int, dict] = {}
     analyses: dict[int, dict] = {}
+    cache = SeedCache(Path(led.path).parent / "seed-cache")
+    keys = {s: seed_key(s, auroc_star=auth["auroc_star"]) for s in SEEDS}
+    # every persisted seed is checked before any seed is measured: a mismatch is
+    # exit 3 with nothing new computed
+    reused = {s: hit for s in SEEDS if (hit := cache.load(s, keys[s])) is not None}
+    led.note(
+        "seed_cache",
+        {"dir": str(cache.root), "reused_seeds": sorted(reused), "keys": keys},
+        how="SeedCache (runner crash safety; RESULTS.md erratum 2026-09-29)",
+    )
     for s in SEEDS:
+        if s in reused:
+            print(f"seed {s}: reusing {cache.path(s)} (key matches)", flush=True)
+            per_seed[s], analyses[s] = reused[s]
+            continue
         print(f"seed {s}: measuring", flush=True)
         per_seed[s] = measure_seed(
             s, ckpt_root=a.ckpt_root, doc_range=D_E0D, batch=BATCH, cleared=True
@@ -2235,6 +2339,7 @@ def _measure_and_classify(a, led, argv_s: str) -> Exit:
             per_seed[s]["cells"], seed=s, M=per_seed[s]["M"],
             n_docs=per_seed[s]["n_docs"], auroc_star=auth["auroc_star"], n_boot=BOOT_N,
         )  # fmt: skip
+        cache.save(s, keys[s], per_seed[s], analyses[s])
     end = substrate_recheck(t0["manifest"], cwd=t0["cwd"])  # C1, end
     led.note("c1_substrate_end", end, how="shasum -a 256 -c (PLAN-v4 T0, A1.7)")
 
