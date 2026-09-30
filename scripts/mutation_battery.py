@@ -5658,8 +5658,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    "RSR_NB_B2_FITS": "experiments/newcomer-bakeoff/run.py: where B2\'s '
         'fits are",\n',
         "",
-        "I6: the red team counted twelve RSR_* names; the tree had 35. A declared "
-        "list nothing holds to the tree is stale the day after it is written, and "
+        "I6: the red team counted twelve RSR_* names; this tree has 36 and one "
+        "prefix family. A declared list nothing holds to the tree is stale the day after it is written, and "
         "a legitimate launch is then refused. (The mutation deletes a line rather "
         "than renaming the key: a renamed key would itself be a new RSR_* token "
         "in this file.)",
