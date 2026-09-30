@@ -66,6 +66,7 @@ import math
 import os
 import pickle
 import re
+import shlex
 import subprocess
 import sys
 import traceback
@@ -2303,7 +2304,7 @@ class SeedCache:
         return p
 
 
-def _measure_and_classify(a, led, argv_s: str) -> Exit:
+def _measure_and_classify(a, led, argv_s: str, note: str = "") -> Exit:
     auth = check_authority(a.rulings_dir)  # C8 -- before anything is read
     led.note("c8_authority", _jsonable(auth), how="docs/owner/rulings (A2.13)")
     c12 = check_tau_tables()  # C12 -- a seed without a frozen tau is not run
@@ -2385,7 +2386,7 @@ def _measure_and_classify(a, led, argv_s: str) -> Exit:
         f"{out['class_ungated']}, zero {out['class_zero']}); labels {out['labels']}; "
         f"row5b {out['row5b']}; halt {out['halt_seeds']}",
     )
-    led.command(argv_s, exit_code=code)
+    led.command(argv_s, exit_code=code, note=note)
     path = led.write()
     write_claims(
         Path(path).parent / "claims.json", ledger_path=Path(path), run_id=a.run_id,
@@ -2393,6 +2394,40 @@ def _measure_and_classify(a, led, argv_s: str) -> Exit:
     )  # fmt: skip
     print(f"class {out['class']} -> exit {code}; labels {out['labels']}; {path}")
     return Exit(confirm_exit(path, code))  # A1.4: raises -> 3 if not written
+
+
+def _parent_command() -> str | None:
+    """The parent process's command line, or `None` if it cannot be read."""
+    try:
+        r = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(os.getppid())],
+            capture_output=True, text=True, timeout=10,
+        )  # fmt: skip
+    except Exception:  # provenance only; never fails a run
+        return None
+    if r.returncode != 0:
+        return None
+    return r.stdout.strip() or None
+
+
+def launched_command(argv: list[str] | None) -> tuple[str, str]:
+    """`(argv, note)` for the ledger's `commands[]` (RESULTS.md erratum, post-data,
+    provenance only): the interpreter and this process's own argv, not a typed
+    `uv run python ...`. The lane-slot wrapper, when the parent process is one, is
+    named in the note -- not in the argv, whose entry point must stay run.py. An
+    in-process `main(argv)` call says so instead of passing its host's argv off
+    as the run's."""
+    parts = []
+    if argv is None:
+        cmd = [sys.executable, *sys.argv]
+    else:
+        cmd = [sys.executable, EXPERIMENT, *argv]
+        parts.append(f"main() called in-process with argv {list(argv)!r}; process "
+                     f"argv {sys.argv!r}")  # fmt: skip
+    parent = _parent_command()
+    if parent and "orchestrator.slot" in parent:
+        parts.insert(0, f"launched under the lane slot wrapper: {parent}")
+    return shlex.join(cmd), "; ".join(parts)
 
 
 def main(argv: list[str] | None = None) -> Exit:
@@ -2467,7 +2502,7 @@ def _main(argv: list[str] | None) -> Exit:
         }
     )
     led.run_meta(device="cpu")
-    argv_s = " ".join(["uv run python", EXPERIMENT, *(argv or sys.argv[1:])])
+    argv_s, argv_note = launched_command(argv)
 
     def refuse_run(key: str, value, status: str, reason: str) -> Exit:
         """§8 row 0: exit 3, with the reason (and traceback) in the ledger. If
@@ -2475,14 +2510,14 @@ def _main(argv: list[str] | None) -> Exit:
         try:
             led.note(key, value, how="PREREG §6 / §8 row 0 / A1.4")
             led.status(status)
-            led.command(argv_s, exit_code=int(Exit.DID_NOT_RUN))
+            led.command(argv_s, exit_code=int(Exit.DID_NOT_RUN), note=argv_note)
             led.write()
         except BaseException as e2:  # A1.4: nothing escapes as 1
             print(f"ledger write failed: {type(e2).__name__}: {e2}", file=sys.stderr)
         return did_not_run(reason)
 
     try:
-        return status(_measure_and_classify(a, led, argv_s))
+        return status(_measure_and_classify(a, led, argv_s, argv_note))
     except ControlFailed as e:
         return refuse_run(
             "control_failed",
