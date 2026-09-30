@@ -73,6 +73,32 @@ class Mutation:
 
 # Reasons shared by several declared couplings. Written once so the table below
 # stays readable and so a reader can see that the same argument is being made.
+_REVIEW_GATE_COUPLING = (
+    "every T5(b) refusal is returned by the one review_gate() call; skipping the "
+    "call turns each of them into a merge. The coupling is the design: one gate."
+)
+_REVIEW_GATE_REFUSALS: tuple[str, ...] = (
+    "test_a_record_for_a_different_head_is_refused",
+    "test_a_record_for_another_branch_is_refused",
+    "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+    "test_a_record_whose_filename_is_not_its_reviewed_head_is_refused",
+    "test_a_reviewer_who_is_a_git_author_of_the_branch_is_refused",
+    "test_a_self_review_is_refused",
+    "test_an_unknown_verdict_is_refused",
+    "test_do_not_merge_is_refused_as_a_failure",
+    "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
+    "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+    "test_merge_with_fixes_without_fixes_verified_at_is_refused",
+    "test_other_prefixes_are_refused_without_a_review[docs/x]",
+    "test_other_prefixes_are_refused_without_a_review[eng/x]",
+    # added with the review fixes (MAJOR-1, MAJOR-2, MINOR-2), 2026-09-30
+    "test_merge_with_fixes_is_never_mergeable_on_its_own",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[run/a]",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[HEAD]",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[" + "0" * 40 + "]",
+    "test_only_the_merging_runs_own_verification_is_exempt",
+    "test_no_verification_json_is_exempt_on_other_prefixes",
+)
 _REDUCTION_TABLE_COUPLING = (
     "`reduction_to_tg()` is built *from* the off-switch table, so removing an "
     "entry makes every reduction test fail to construct a config. The coupling is "
@@ -2002,6 +2028,100 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if rec is None and False:\n        return Exit.DID_NOT_RUN,",
         "the verification gate stops being a gate: with no record the merge crashes "
         "(1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.",
+    ),
+    # T5(b), 2026-09-30: the review gate (docs/review-records.md). Proven by hand
+    # at authoring time against tests/test_orch_merge*.py only (battery lane busy).
+    Mutation(
+        "merge: the review gate is skipped",
+        "test_merge_is_refused_without_a_review_record",
+        "scripts/orchestrator/merge.py",
+        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
+        "    if code != Exit.OK:\n",
+        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
+        "    if False:\n",
+        "PLAN-v4 §4 T5(b) stops being a mechanism: any verified run/ branch, and "
+        "any fix/ eng/ feat/ docs/ branch at all, merges into the night branch with "
+        "no adversarial review on record.",
+        off_gate_allowed=tuple(
+            (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
+            for t in _REVIEW_GATE_REFUSALS
+        ),
+    ),
+    Mutation(
+        "merge: a stale review record is accepted",
+        "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+        "scripts/orchestrator/merge.py",
+        "    unreviewed = [\n"
+        "        p for p in diff.stdout.splitlines() if p and not review_exempt(p, "
+        "run_item)\n"
+        "    ]\n",
+        "    unreviewed = []\n",
+        "a review of an early head waves through every commit made after it -- "
+        "the census shape of 2026-09-29 (eng/i1-isolation reviewed at ff6dccc, "
+        "7 files changed since).",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_orch_merge_review.py::{t}",
+                "a forged verification.json is refused by the same staleness diff; "
+                "no diff, no refusal. One check, two path classes.",
+            )
+            for t in (
+                "test_only_the_merging_runs_own_verification_is_exempt",
+                "test_no_verification_json_is_exempt_on_other_prefixes",
+            )
+        ),
+    ),
+    # T5(b) review fixes, 2026-09-30 (docs/reviews/eng-t5b-review-gate/
+    # bbfa38c9bade.md). Proven by hand, targeted files only (B5 holds the CPU).
+    Mutation(
+        "merge: MERGE WITH FIXES merges on its own",
+        "test_merge_with_fixes_is_never_mergeable_on_its_own",
+        "scripts/orchestrator/merge.py",
+        '    if fm["verdict"] == "MERGE WITH FIXES":\n'
+        "        # Review MAJOR-2, PM decision",
+        "    if False:\n        # Review MAJOR-2, PM decision",
+        "review MAJOR-2 (probe P3): the author commits a 'fix', edits the "
+        "reviewer's record to attest it, and the unreviewed fix merges.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_orch_merge_review.py::{t}",
+                "every MERGE WITH FIXES record is refused by this one branch; "
+                "without it each falls through to the MERGE path.",
+            )
+            for t in (
+                "test_merge_with_fixes_without_fixes_verified_at_is_refused",
+                "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+                "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
+            )
+        ),
+    ),
+    Mutation(
+        "merge: fixes_verified_at is not validated",
+        "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit",
+        "scripts/orchestrator/merge.py",
+        "        if fixes is not None and not (_full_sha(fixes) and _commit(root, "
+        "fixes)):",
+        "        if False:",
+        "review MAJOR-1 (probe P1): a record naming a moving ref (`fix/x`, `HEAD`) "
+        "is accepted as if it named a commit.",
+    ),
+    Mutation(
+        "merge: every runs/*/verification.json is staleness-exempt",
+        "test_only_the_merging_runs_own_verification_is_exempt",
+        "scripts/orchestrator/merge.py",
+        '    return run_item is not None and path == f"runs/{run_item}/'
+        'verification.json"',
+        '    return path.startswith("runs/") and path.endswith("/verification.json")',
+        "review MINOR-2 (probe P4): a forged verification.json for another run id "
+        "rides in after review and then satisfies gate 1 for that run from the "
+        "night branch.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_no_verification_json_is_exempt_on_other_prefixes",
+                "the same exemption, reached from a non-run/ prefix.",
+            ),
+        ),
     ),
     Mutation(
         "tick: HALT ignored",
