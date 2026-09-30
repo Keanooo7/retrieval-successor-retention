@@ -6,6 +6,6 @@ Regenerate with `PYTHONPATH=scripts .venv/bin/python -m orchestrator.outbox inde
 
 | updated | run_id | status | report |
 |---|---|---|---|
-| - | (no per-run reports yet) | - | - |
+| 2026-09-29T17:40:00-07:00 | b2-psi-probe | RETURNED | [b2-psi-probe.md](b2-psi-probe.md) |
 
 Reports filed before per-run files (prepend-only, 2026-09-18 .. 2026-09-21): [_legacy-researcher.md](_legacy-researcher.md).
