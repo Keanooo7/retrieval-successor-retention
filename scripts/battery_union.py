@@ -12,8 +12,10 @@ to retire it; until then it is tested (`tests/test_battery_union.py`).
 The file is split into three parts:
 
 * **head** -- everything before ``MUTATIONS: tuple[Mutation, ...] = (``. Inside it,
-  module-level ``_NAME = (`` ... ``)`` constants are keyed by name; the rest of the
-  head ("head code") is compared as one string.
+  module-level ``_NAME = (`` ... ``)`` constants -- annotated ones too,
+  ``_NAME: tuple[str, ...] = (`` (added 2026-09-30: the i1 merge, 7eda821, was
+  refused because an annotated constant travelled as head code) -- are keyed by
+  name; the rest of the head ("head code") is compared as one string.
 * **body** -- the tuple's entries. An entry starts at ``    Mutation(`` (4-space
   indent) and ends at the matching ``    ),``; comment lines before it belong to
   it. It is keyed by its first argument (the mutation's name). Text after the last
@@ -27,12 +29,20 @@ Rules (``ours`` = the checked-out side, ``theirs`` = the side being merged in):
   and different -> REFUSE;
 * entry in base and ours but missing from theirs -> REFUSE (theirs deleted it);
   entry in base and theirs but missing from ours -> REFUSE (ours deleted it);
-* constants: the same one-sided rule; a constant new in theirs is appended;
+* constants: the same one-sided rule, deletions included (a constant either side
+  deleted and the other kept is REFUSED; review 7d90e27a400b MINOR-1); a constant
+  new in theirs is inserted before the constant that follows it in theirs, if ours
+  has that one, else appended to the head;
 * head code: taken from theirs only if ours == base; both changed -> REFUSE;
 * tail: taken from theirs only if ours == base; both changed -> REFUSE
   (`_merge_tail`; the one-sided rule was added 2026-09-30);
 * trailing text in the body: theirs may not change it (REFUSE) unless ours made
   the same change.
+
+A malformed side (an entry with no terminating ``    ),``, no ``MUTATIONS`` tuple)
+is a refusal, not a crash; and the merged text must parse (`ast.parse`) and hold
+exactly ours' entries plus the ones added, or it is refused before anything is
+written (review 7d90e27a400b MINOR-2).
 
 A refusal writes nothing and exits `3` (`Exit.DID_NOT_RUN`: the union did not run;
 resolve by hand). Success writes the merged file and exits `0`.
@@ -45,6 +55,7 @@ Usage (inside a conflicted merge, from the repo root)::
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 import sys
@@ -59,8 +70,9 @@ from rsr.exit_codes import ArgumentParser, Exit, run_main  # noqa: E402
 PATH = "scripts/mutation_battery.py"
 GIT = "/opt/homebrew/bin/git"
 OPEN = "MUTATIONS: tuple[Mutation, ...] = (\n"
-_CONST = re.compile(r"^(_[A-Z0-9_]+) = \(\n.*?^\)\n", re.S | re.M)
-_CONST_STRIP = re.compile(r"^(_[A-Z0-9_]+) = \(\n.*?^\)\n\n?", re.S | re.M)
+# `_NAME = (` or `_NAME: <annotation> = (`, through the `)` at column 0.
+_CONST = re.compile(r"^(_[A-Z0-9_]+)(?:: [^\n=]+)? = \(\n.*?^\)\n", re.S | re.M)
+_CONST_STRIP = re.compile(r"^(_[A-Z0-9_]+)(?:: [^\n=]+)? = \(\n.*?^\)\n\n?", re.S | re.M)
 
 
 class Refused(Exception):
@@ -81,6 +93,8 @@ class Parts:
     order: list[str]
     trailing: str
     tail: str
+    const_gap: dict[str, str] = field(default_factory=dict)
+    """Whitespace between a constant and the next one, when only whitespace."""
 
 
 @dataclass
@@ -93,9 +107,13 @@ class Result:
 
 
 def split(src: str) -> Parts:
-    start = src.index(OPEN)
+    start = src.find(OPEN)
+    if start < 0:
+        raise Refused([f"no {OPEN.strip()!r} line"])
     body_start = start + len(OPEN)
-    end = src.index("\n)\n", body_start)  # the tuple's closing paren at col 0
+    end = src.find("\n)\n", body_start)  # the tuple's closing paren at col 0
+    if end < 0:
+        raise Refused(["MUTATIONS has no closing ')' at column 0"])
     head, body, tail = src[:start], src[body_start : end + 1], src[end + 1 :]
     entries: dict[str, str] = {}
     order: list[str] = []
@@ -104,14 +122,23 @@ def split(src: str) -> Parts:
     i = 0
     while i < len(lines):
         if lines[i] == "    Mutation(\n":
-            j = i
-            while lines[j] != "    ),\n":
+            j = i + 1
+            while j < len(lines) and lines[j] not in ("    ),\n", "    Mutation(\n"):
                 j += 1
+            if j == len(lines) or lines[j] != "    ),\n":
+                where = "the end of MUTATIONS" if j == len(lines) else "the next entry"
+                first = lines[i + 1].strip() if i + 1 < len(lines) else ""
+                raise Refused(
+                    [
+                        f"the entry at MUTATIONS line {i + 1} ({first!r}) has no "
+                        f"terminating '    ),' before {where}"
+                    ]
+                )
             block = "".join(pre + lines[i : j + 1])
             pre = []
             k = i + 1
             key = lines[k]
-            while not key.rstrip().endswith(","):
+            while not key.rstrip().endswith(",") and k + 1 < j:
                 k += 1
                 key += lines[k]
             name = re.sub(r"\s+", " ", key).strip()
@@ -125,11 +152,36 @@ def split(src: str) -> Parts:
             i += 1
     consts: dict[str, str] = {}
     const_order: list[str] = []
-    for m in _CONST.finditer(head):
+    const_gap: dict[str, str] = {}
+    found = list(_CONST.finditer(head))
+    for n, m in enumerate(found):
+        if m.group(1) in consts:
+            raise Refused([f"duplicate constant {m.group(1)}"])
         consts[m.group(1)] = m.group(0)
         const_order.append(m.group(1))
+        if n + 1 < len(found):
+            gap = head[m.end() : found[n + 1].start()]
+            if not gap.strip():
+                const_gap[m.group(1)] = gap
     head_code = _CONST_STRIP.sub("", head)
-    return Parts(head, head_code, consts, const_order, entries, order, "".join(pre), tail)
+    return Parts(
+        head,
+        head_code,
+        consts,
+        const_order,
+        entries,
+        order,
+        "".join(pre),
+        tail,
+        const_gap,
+    )
+
+
+def _split(side: str, src: str) -> Parts:
+    try:
+        return split(src)
+    except Refused as e:
+        raise Refused([f"{side}: {r}" for r in e.reasons]) from None
 
 
 def _merge_tail(b: Parts, o: Parts, t: Parts, refuse: list[str]) -> tuple[str, str]:
@@ -151,7 +203,7 @@ def _merge_tail(b: Parts, o: Parts, t: Parts, refuse: list[str]) -> tuple[str, s
 
 def union(base: str, ours: str, theirs: str) -> Result:
     """The merged file, or `Refused` naming every reason it is not safe."""
-    b, o, t = split(base), split(ours), split(theirs)
+    b, o, t = _split("base", base), _split("ours", ours), _split("theirs", theirs)
     refuse: list[str] = []
     if (
         t.head_code != b.head_code
@@ -172,13 +224,19 @@ def union(base: str, ours: str, theirs: str) -> Result:
     for k in t.const_order:
         tv, bv, ov = t.consts[k], b.consts.get(k), o.consts.get(k)
         if ov is None:
-            new_consts.append(k)
-            consts[k] = tv
+            if bv is not None:  # MINOR-1: never resurrect what ours deleted
+                refuse.append(f"constant {k}: ours deleted it, theirs kept it")
+            else:
+                new_consts.append(k)
+                consts[k] = tv
         elif tv != ov:
             if ov == bv:
                 consts[k] = tv
             elif tv != bv:
                 refuse.append(f"constant {k} changed on both sides")
+    for k in b.const_order:  # MINOR-1: never silently drop theirs' deletion
+        if k in o.consts and k not in t.consts:
+            refuse.append(f"constant {k} deleted by theirs")
 
     entries = dict(o.entries)
     order = list(o.order)
@@ -221,10 +279,44 @@ def union(base: str, ours: str, theirs: str) -> Result:
         for k, v in consts.items():
             if k in o.consts and o.consts[k] != v:
                 h = h.replace(o.consts[k], v)
-        if new_consts:
-            h = h + "".join(t.consts[k] + "\n" for k in new_consts)
+        for k in new_consts:
+            h = _insert_new_const(h, k, t, o)
     body = "".join(entries[k] for k in order) + o.trailing
-    return Result(h + OPEN + body + tail, added, updated, new_consts, tail_from)
+    text = h + OPEN + body + tail
+    _check_output(text, len(o.entries) + len(added), len(consts))
+    return Result(text, added, updated, new_consts, tail_from)
+
+
+def _insert_new_const(h: str, k: str, t: Parts, o: Parts) -> str:
+    """Put theirs-only constant `k` where theirs put it: before the first constant
+    that follows it in theirs and that ours also has, with theirs' whitespace gap.
+    With no such constant, append it to the head (the pre-09-30 behaviour)."""
+    later = t.const_order[t.const_order.index(k) + 1 :]
+    succ = next((s for s in later if s in o.consts), None)
+    if succ is None:
+        return h + t.consts[k] + "\n"
+    m = re.search(rf"^{re.escape(succ)}\b", h, re.M)
+    if m is None:  # cannot happen for a constant split() found; refuse, don't guess
+        raise Refused([f"constant {succ} not found in the merged head"])
+    text = t.consts[k] + t.const_gap.get(k, "\n")
+    return h[: m.start()] + text + h[m.start() :]
+
+
+def _check_output(text: str, n_entries: int, n_consts: int) -> None:
+    """MINOR-2: the union must parse and hold exactly the entries and constants
+    the merge computed, or nothing is written."""
+    try:
+        ast.parse(text)
+    except SyntaxError as e:
+        raise Refused([f"the union does not parse: {e.msg} (line {e.lineno})"]) from None
+    got = _split("the union", text)
+    if len(got.entries) != n_entries or len(got.consts) != n_consts:
+        raise Refused(
+            [
+                f"the union holds {len(got.entries)} entries and {len(got.consts)} "
+                f"constants; the merge computed {n_entries} and {n_consts}"
+            ]
+        )
 
 
 def _show(spec: str) -> str:
