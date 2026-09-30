@@ -13,8 +13,8 @@ gate whose answer depends on state nobody wrote down is a gap. So, at start:
    * ``rsr_env_suite`` -- every ``RSR_*`` variable of the environment the shard's
      pytest receives: `mutation_battery._run_isolated` builds that environment
      once and passes the same object to every ``run_suite`` (second review,
-     MINOR-3). On the row the shard's own paths are replaced by ``<shard>``,
-     ``<probe>`` and ``<pool>`` (`portable`; second review, MAJOR-2), so a row does
+     MINOR-3). On the row the shard's own paths are replaced by ``<shard>`` and
+     ``<probe>`` (`portable`; second review, MAJOR-2), so a row does
      not depend on where the shard lives; stdout (`suite_header`) prints the real
      paths and marks each name the battery set, replaced or removed. Fix round 1
      (review MAJOR-3): the first version recorded only the battery's own
@@ -235,7 +235,6 @@ def suite_header(own: Mapping[str, str], suite: Mapping[str, str]) -> str:
 
 SHARD_TOKEN = "<shard>"
 PROBE_TOKEN = "<probe>"
-POOL_TOKEN = "<pool>"
 
 
 def portable(suite: Mapping[str, str], root: Path, probe: Path) -> dict[str, str]:
@@ -248,10 +247,13 @@ def portable(suite: Mapping[str, str], root: Path, probe: Path) -> dict[str, str
     pools -- never produce equal rows. The real paths are printed in the stdout
     header (`suite_header`), not recorded on the row.
     """
+    # The probe first: it is a file in the pool, which may contain the shard. No
+    # token for the pool itself: no other value holds a pool path today, and a
+    # pool token would also swallow the shard root (pool/shard-k) and make the
+    # root's own token untestable (fix round 2 by-hand proof).
     subs = [
         (str(probe), PROBE_TOKEN),
         (str(root), SHARD_TOKEN),
-        (str(probe.parent), POOL_TOKEN),
     ]
     out = {}
     for name, value in suite.items():

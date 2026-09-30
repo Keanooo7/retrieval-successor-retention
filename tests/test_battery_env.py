@@ -204,7 +204,7 @@ def test_declared_variable_is_recorded_in_the_header_and_every_json_row(
     assert row["verdict"] == "PROVEN"
 
 
-def test_the_record_is_the_env_the_suite_got(tmp_path, monkeypatch):
+def test_declared_variable_is_recorded_as_the_env_the_suite_got(tmp_path, monkeypatch):
     """Second review, MINOR-3: every suite gets the one environment object
     ``_run_isolated`` built and recorded -- not a rebuild that can drift (an
     ``ops/lanes.json`` edited mid-run changed the mutation's thread count while the

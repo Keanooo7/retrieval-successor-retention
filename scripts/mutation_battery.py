@@ -5723,7 +5723,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "battery: each mutation's suite rebuilds its own environment",
-        "test_the_record_is_the_env_the_suite_got",
+        "test_declared_variable_is_recorded_as_the_env_the_suite_got",
         "scripts/mutation_battery.py",
         "                failing = run_suite(shard, e" + "nv)",
         "                failing = run_suite(shard)",
