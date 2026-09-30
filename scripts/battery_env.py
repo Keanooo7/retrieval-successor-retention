@@ -11,11 +11,15 @@ gate whose answer depends on state nobody wrote down is a gap. So, at start:
    * ``rsr_env`` -- every ``RSR_*`` variable of the battery process itself, as
      `check` passed it (stdout: `header`, at start);
    * ``rsr_env_suite`` -- every ``RSR_*`` variable of the environment the shard's
-     pytest actually receives, after `mutation_battery._suite_env` and
-     `battery_isolation.shard_env` (stdout: `suite_header`, which marks each name
-     the battery set, replaced or removed). Fix round 1 (review MAJOR-3): the
-     first version recorded only the battery's own environment, so an ambient
-     ``RSR_TORCH_THREADS=14`` was recorded while the suite ran with ``2``.
+     pytest receives: `mutation_battery._run_isolated` builds that environment
+     once and passes the same object to every ``run_suite`` (second review,
+     MINOR-3). On the row the shard's own paths are replaced by ``<shard>``,
+     ``<probe>`` and ``<pool>`` (`portable`; second review, MAJOR-2), so a row does
+     not depend on where the shard lives; stdout (`suite_header`) prints the real
+     paths and marks each name the battery set, replaced or removed. Fix round 1
+     (review MAJOR-3): the first version recorded only the battery's own
+     environment, so an ambient ``RSR_TORCH_THREADS=14`` was recorded while the
+     suite ran with ``2``.
 
    Per row, not once per file: the record stays a list of rows, which is what
    `scripts/battery_subset.py` and every reader of it expects. `stamp` never
@@ -59,8 +63,11 @@ from __future__ import annotations
 import difflib
 import os
 import re
+import subprocess
 from collections.abc import Mapping
 from pathlib import Path
+
+import battery_isolation as iso
 
 from rsr.exit_codes import Exit, refuse
 
@@ -138,11 +145,15 @@ NOT_VARIABLES: dict[str, str] = {
 declared: set in the environment, either is refused like any other stray."""
 
 SCANNED = ("src", "scripts", "experiments", "tests", "ops", ".claude")
-"""Where `inventory` looks. In ``tests/`` only files whose name does not start with
-``test_`` (conftest, ``_battery_*`` helpers): test files hold made-up names on
-purpose. In ``.claude/`` only tracked-style settings, never ``*.local.json``
-(review MINOR-7: ``tests/conftest.py``, ``ops/launchd/*.plist`` and
-``.claude/settings.*.json`` read or set names too)."""
+"""Where `inventory` looks -- TRACKED files only (``git ls-files``). In ``tests/``
+only files whose name does not start with ``test_`` (conftest, ``_battery_*``
+helpers): test files hold made-up names on purpose. Review MINOR-7 widened the
+scan (``tests/conftest.py``, ``ops/launchd/*.plist`` and ``.claude/settings.*.json``
+read or set names too); the second review's MAJOR-1 found that a filesystem walk
+of ``.claude/`` also read the git-ignored agent checkouts under
+``.claude/worktrees/`` -- whole trees of other branches' code -- so the result
+depended on machine-local state. Tracked files are the same set in a checkout
+and in a battery shard."""
 _SUFFIXES = (".py", ".zsh", ".sh", ".json", ".plist", ".env")
 _NAME = re.compile(r"RSR_[A-Z0-9_]+")
 _SELF = "scripts/battery_env.py"
@@ -222,6 +233,34 @@ def suite_header(own: Mapping[str, str], suite: Mapping[str, str]) -> str:
     return "\n".join(lines)
 
 
+SHARD_TOKEN = "<shard>"
+PROBE_TOKEN = "<probe>"
+POOL_TOKEN = "<pool>"
+
+
+def portable(suite: Mapping[str, str], root: Path, probe: Path) -> dict[str, str]:
+    """``suite`` with the shard's own paths replaced by fixed tokens.
+
+    Second review, MAJOR-2 (the manager's decision): a verdict row must not depend
+    on where the shard lives. ``RSR_ORCH_ROOT`` is the shard root and
+    ``RSR_BATTERY_PROBE`` a file in the shard pool, so without this two batteries
+    at one SHA -- a serial run and I2's shards, or two serial runs on different
+    pools -- never produce equal rows. The real paths are printed in the stdout
+    header (`suite_header`), not recorded on the row.
+    """
+    subs = [
+        (str(probe), PROBE_TOKEN),
+        (str(root), SHARD_TOKEN),
+        (str(probe.parent), POOL_TOKEN),
+    ]
+    out = {}
+    for name, value in suite.items():
+        for path, token in subs:
+            value = value.replace(path, token)
+        out[name] = value
+    return out
+
+
 def stamp(row: dict, own: Mapping[str, str], suite: Mapping[str, str]) -> dict:
     """``row`` with ``rsr_env`` (the battery's) and ``rsr_env_suite`` (pytest's).
 
@@ -235,27 +274,40 @@ def stamp(row: dict, own: Mapping[str, str], suite: Mapping[str, str]) -> dict:
     return out
 
 
-def inventory(root: Path) -> dict[str, list[str]]:
-    """``{RSR_* token: ["path:line", ...]}`` over `SCANNED` under ``root``.
+def tracked(root: Path) -> list[str]:
+    """The tracked files under `SCANNED` in the git checkout ``root`` (a main
+    checkout or a worktree, whose ``.git`` is a file). Raises ``RuntimeError`` when
+    ``root`` is not one: an inventory of an unknown file set is not a measurement."""
+    proc = subprocess.run(
+        [iso._git_bin(), "-C", str(root), "ls-files", "-z", "--", *SCANNED],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"git ls-files in {root} -> rc={proc.returncode}: {proc.stderr.strip()}"
+        )
+    return sorted(f for f in proc.stdout.split("\0") if f)
 
-    Not this file, which would find every name it declares; not ``test_*`` files;
-    not ``*.local.json``; nothing under ``.venv`` or ``__pycache__``.
+
+def inventory(root: Path) -> dict[str, list[str]]:
+    """``{RSR_* token: ["path:line", ...]}`` over the tracked files of `SCANNED`.
+
+    Not this file, which would find every name it declares; not ``test_*`` files.
+    Untracked and ignored files are never read (second review, MAJOR-1).
     """
     found: dict[str, list[str]] = {}
-    for top in SCANNED:
-        for path in sorted((root / top).rglob("*")):
-            rel = path.relative_to(root).as_posix()
-            if (
-                path.suffix not in _SUFFIXES
-                or rel == _SELF
-                or path.name.startswith("test_")
-                or path.name.endswith(".local.json")
-                or {".venv", "__pycache__"} & set(path.parts)
-                or not path.is_file()
-            ):
-                continue
-            text = path.read_text(errors="replace")
-            for n, line in enumerate(text.splitlines(), 1):
-                for name in _NAME.findall(line):
-                    found.setdefault(name, []).append(f"{rel}:{n}")
+    for rel in tracked(root):
+        path = root / rel
+        if (
+            path.suffix not in _SUFFIXES
+            or rel == _SELF
+            or path.name.startswith("test_")
+            or not path.is_file()
+        ):
+            continue
+        text = path.read_text(errors="replace")
+        for n, line in enumerate(text.splitlines(), 1):
+            for name in _NAME.findall(line):
+                found.setdefault(name, []).append(f"{rel}:{n}")
     return dict(sorted(found.items()))

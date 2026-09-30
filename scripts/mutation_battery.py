@@ -5631,8 +5631,9 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scripts/mutation_battery.py",
         "        own = battery_env.che" + "ck()",
         "        own = battery_env.present()",
-        "I6 fix round 1: I2's sharded driver runs shards through _run_isolated "
-        "without main(); the check there is the only one it passes.",
+        "I6 fix round 1, defence in depth: a driver that bypasses main() and "
+        "calls _run_isolated directly would otherwise run every suite under a "
+        "stray override. (No driver does so today; I2's run_shard calls main().)",
     ),
     Mutation(
         "battery-env: RSR_ORCH_CMD_ with any suffix is declared",
@@ -5709,6 +5710,34 @@ MUTATIONS: tuple[Mutation, ...] = (
         "refused. (The mutation replaces the line with a comment rather than "
         "renaming the key: a renamed key would itself be a new RSR_* token in "
         "this file.)",
+    ),
+    Mutation(
+        "battery-env: rows carry the shard's root path",
+        "test_rows_do_not_depend_on_where_the_shard_lives",
+        "scripts/battery_env.py",
+        "        (str(root), SHARD_TOKEN),\n",
+        "        # (shard root not replaced)\n",
+        "I6 second review MAJOR-2: a row that carries its shard's path is never "
+        "equal to the same verdict from another pool, so a serial and a sharded "
+        "run at one SHA cannot be compared row by row.",
+    ),
+    Mutation(
+        "battery: each mutation's suite rebuilds its own environment",
+        "test_the_record_is_the_env_the_suite_got",
+        "scripts/mutation_battery.py",
+        "                failing = run_suite(shard, e" + "nv)",
+        "                failing = run_suite(shard)",
+        "I6 second review MINOR-3: a rebuilt env re-reads ops/lanes.json and "
+        "os.environ, and was measured to drift from the recorded one mid-run.",
+    ),
+    Mutation(
+        "battery-env: the inventory reads untracked and ignored files",
+        "test_inventory_reads_only_tracked",
+        "scripts/battery_env.py",
+        '"ls-files", "-z", "--", *SCANNED]',
+        '"ls-files", "-z", "--cached", "--others", "--", *SCANNED]',
+        "I6 second review MAJOR-1: git-ignored agent checkouts under "
+        ".claude/worktrees/ made the inventory test red on a machine-local file.",
     ),
 )
 
@@ -5921,7 +5950,9 @@ def _spawn(argv: list[str], cwd: Path, env: dict[str, str]):
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 
 
-def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
+def run_suite(
+    shard: iso.Shard | None = None, env: dict[str, str] | None = None
+) -> dict[str, str | None]:
     """Return ``{failing node id: one-line reason}`` (``None`` if pytest printed none).
 
     🔴 I1: with a ``shard``, the suite runs there on the shard's own pytest, and
@@ -5935,15 +5966,18 @@ def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     ``test_submit_launches_the_slot_detached_at_the_pinned_sha`` left only a node
     id. The reason is recorded on the verdict row; it never enters a verdict --
     the node set is parsed exactly as before (`parse_failures`).
+
+    I6: ``env``, when given, is the suite's whole environment, used as is:
+    `_run_isolated` builds it once and records that same object.
     """
-    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    if env is None:
+        env = suite_env(shard)
     argv = ["-p", "no:cacheprovider", "-rfE", "--tb=line", "-q", "--no-header"]
     if shard is None:
         proc = subprocess.run(
             [str(PYTEST), *argv], cwd=ROOT, capture_output=True, text=True, env=env
         )
         return parse_failures(proc.stdout + proc.stderr, proc.returncode)
-    env = iso.shard_env(shard, env)
     with contextlib.suppress(FileNotFoundError):
         shard.probe.unlink()
     proc = _spawn([str(shard.root / ".venv" / "bin" / "pytest"), *argv], shard.root, env)
@@ -5951,6 +5985,13 @@ def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     if problem:
         raise SuiteDidNotRun(f"{problem} (in {shard.root})")
     return parse_failures(proc.stdout + proc.stderr, proc.returncode)
+
+
+def suite_env(shard: iso.Shard | None = None) -> dict[str, str]:
+    """The environment a suite runs under: ``_suite_env`` and ``COLUMNS``, then the
+    shard's own (``battery_isolation.shard_env``) when there is a shard."""
+    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    return env if shard is None else iso.shard_env(shard, env)
 
 
 def parse_failures(text: str, returncode: int) -> dict[str, str | None]:
@@ -6181,14 +6222,17 @@ def _run_isolated(args) -> Exit:
             f"shard: {shard.root} at {shard.sha[:12]} "
             + " ".join(f"{k}={v:.2f}" for k, v in shard.timings.items())
         )
-        # 🔴 I6 (review MAJOR-3): the RSR_* environment pytest receives, beside the
-        # battery's own. check() again, so a driver that enters here without main()
-        # is gated too; the suite env is built by the functions run_suite uses.
+        # 🔴 I6: the environment every suite below runs under, built ONCE and passed
+        # to run_suite, so the record is what the suite got. check() again only as
+        # defence in depth, for a driver that bypasses main(). The row carries the
+        # suite env with the shard's paths as tokens: it must not depend on where
+        # the shard lives (battery_env.portable).
         own = battery_env.check()
-        suite = battery_env.present(iso.shard_env(shard, _suite_env()))
-        print(battery_env.suite_header(own, suite))
+        env = suite_env(shard)
+        print(battery_env.suite_header(own, battery_env.present(env)))
+        suite = battery_env.portable(battery_env.present(env), shard.root, shard.probe)
         try:
-            baseline = run_suite(shard)
+            baseline = run_suite(shard, env)
         except SuiteDidNotRun as e:
             refuse(Exit.DID_NOT_RUN, f"the baseline suite did not run: {e}")
         if baseline:
@@ -6206,7 +6250,7 @@ def _run_isolated(args) -> Exit:
             original = apply(m, shard.root)
             did_not_run = None
             try:
-                failing = run_suite(shard)
+                failing = run_suite(shard, env)
             except SuiteDidNotRun as e:
                 failing, did_not_run = {}, str(e)
             finally:

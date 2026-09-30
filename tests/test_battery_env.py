@@ -134,8 +134,10 @@ def test_stray_variable_stops_main_before_any_suite(tmp_path, monkeypatch, capsy
 
 
 def test_stray_variable_stops_a_driver_that_skips_main(tmp_path, monkeypatch, capsys):
-    """A driver that runs shards through ``_run_isolated`` without ``main()`` (I2's
-    sharded driver is one) is refused before the baseline suite too."""
+    """Defence in depth: a driver that bypasses ``main()`` and calls
+    ``_run_isolated`` directly is refused before the baseline suite too. (No driver
+    in the tree does that today; I2's ``run_shard`` calls ``mb.main()`` -- second
+    review, MINOR-4.)"""
     _one_mutation(tmp_path, monkeypatch)
     monkeypatch.setattr(mb, "run_suite", _no_suite)
     monkeypatch.setattr(mb, "apply", _no_suite)
@@ -191,12 +193,60 @@ def test_declared_variable_is_recorded_in_the_header_and_every_json_row(
     assert stdout.index("of each shard's suite") < stdout.index("PROVEN")
     (row,) = json.loads(out.read_text())
     assert row["rsr_env"] == {"RSR_BATTERY_THREADS": "4"}
-    # what pytest received: built by the same functions run_suite uses, so this
-    # holds whatever those functions set (their own gates test that)
-    suite = battery_env.present(iso.shard_env(shard, mb._suite_env()))
+    # what pytest received, with the shard's paths as tokens; built by the same
+    # function run_suite uses, so this holds whatever it sets (its own gates test
+    # which names)
+    suite = battery_env.portable(
+        battery_env.present(mb.suite_env(shard)), shard.root, shard.probe
+    )
     assert row["rsr_env_suite"] == suite
     assert suite["RSR_BATTERY_THREADS"] == "4"
     assert row["verdict"] == "PROVEN"
+
+
+def test_the_record_is_the_env_the_suite_got(tmp_path, monkeypatch):
+    """Second review, MINOR-3: every suite gets the one environment object
+    ``_run_isolated`` built and recorded -- not a rebuild that can drift (an
+    ``ops/lanes.json`` edited mid-run changed the mutation's thread count while the
+    record kept the baseline's)."""
+    shard = _one_mutation(tmp_path, monkeypatch)
+    got = []
+
+    def fake_run_suite(shard_, env=None):
+        got.append(env)
+        return {} if len(got) == 1 else {"tests/t.py::test_gate": None}
+
+    monkeypatch.setattr(mb, "run_suite", fake_run_suite)
+    out = tmp_path / "v.json"
+    monkeypatch.setattr(sys, "argv", ["mutation_battery.py", "--json", str(out)])
+    assert mb.main() == mb.Exit.OK
+    assert len(got) == 2 and got[0] is not None and got[1] is got[0]
+    (row,) = json.loads(out.read_text())
+    assert row["rsr_env_suite"] == battery_env.portable(
+        battery_env.present(got[1]), shard.root, shard.probe
+    )
+
+
+def test_rows_do_not_depend_on_where_the_shard_lives(tmp_path, monkeypatch, capsys):
+    """Second review, MAJOR-2 (the manager's decision): two batteries at one SHA
+    whose shards live at different paths produce equal rows for the same failing
+    set -- what I2 compares a serial and a sharded run by."""
+    rows = []
+    for name in ("pool-a", "pool-b"):
+        root = tmp_path / name
+        root.mkdir()
+        _one_mutation(root, monkeypatch)
+        runs = iter([{}, {"tests/t.py::test_gate": "AssertionError: gate"}])
+        monkeypatch.setattr(mb, "run_suite", lambda *a, runs=runs: next(runs))
+        out = root / "v.json"
+        monkeypatch.setattr(sys, "argv", ["mutation_battery.py", "--json", str(out)])
+        assert mb.main() == mb.Exit.OK
+        rows.append(json.loads(out.read_text()))
+    assert rows[0] == rows[1]
+    text = json.dumps(rows[0])
+    assert str(tmp_path) not in text
+    # the real paths are still in stdout, for the reader of this run
+    assert str(tmp_path / "pool-b") in capsys.readouterr().out
 
 
 def test_suite_header_marks_what_the_battery_set_replaced_or_removed():
@@ -248,21 +298,81 @@ def test_inventory_every_rsr_name_the_tree_reads_is_declared():
     )
 
 
-def test_inventory_finds_a_name_by_file_and_line(tmp_path):
-    (tmp_path / "scripts").mkdir()
-    (tmp_path / "scripts" / "a.py").write_text('import os\nos.environ["RSR_NEW"]\n')
-    (tmp_path / "tests").mkdir()
-    (tmp_path / "tests" / "test_t.py").write_text('"RSR_ONLY_IN_A_TEST"\n')
-    (tmp_path / "tests" / "_helper.py").write_text('"RSR_IN_A_HELPER"\n')
-    (tmp_path / "ops").mkdir()
-    (tmp_path / "ops" / "x.env").write_text("# c\nRSR_IN_OPS=1\n")
-    (tmp_path / ".claude").mkdir()
-    (tmp_path / ".claude" / "settings.local.json").write_text('"RSR_LOCAL"\n')
-    assert battery_env.inventory(tmp_path) == {
-        "RSR_IN_A_HELPER": ["tests/_helper.py:1"],
-        "RSR_IN_OPS": ["ops/x.env:2"],
-        "RSR_NEW": ["scripts/a.py:2"],
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(
+        [
+            iso._git_bin(),
+            "-C",
+            str(cwd),
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            *args,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _repo(root: Path) -> Path:
+    files = {
+        "scripts/a.py": 'import os\nos.environ["RSR_NEW"]\n',
+        "tests/test_t.py": '"RSR_ONLY_IN_A_TEST"\n',
+        "tests/_helper.py": '"RSR_IN_A_HELPER"\n',
+        "ops/x.env": "# c\nRSR_IN_OPS=1\n",
+        ".claude/settings.json": '"RSR_IN_SETTINGS"\n',
+        ".gitignore": "/.claude/worktrees/\n*.local.json\n",
     }
+    for rel, text in files.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text)
+    _git(root, "init", "-q")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "fixture")
+    return root
+
+
+_TRACKED = {
+    "RSR_IN_A_HELPER": ["tests/_helper.py:1"],
+    "RSR_IN_OPS": ["ops/x.env:2"],
+    "RSR_IN_SETTINGS": [".claude/settings.json:1"],
+    "RSR_NEW": ["scripts/a.py:2"],
+}
+
+
+def test_inventory_finds_a_name_by_file_and_line(tmp_path):
+    assert battery_env.inventory(_repo(tmp_path / "repo")) == _TRACKED
+
+
+def test_inventory_reads_only_tracked_files_in_a_checkout_and_a_worktree(tmp_path):
+    """Second review, MAJOR-1: an ignored agent checkout under ``.claude/worktrees/``
+    (Claude Code's ``isolation: worktree``), an ignored ``*.local.json`` and an
+    untracked file are never read -- in a main checkout, and in a worktree whose
+    ``.git`` is a file, as a battery shard is."""
+    repo = _repo(tmp_path / "repo")
+    _git(repo, "worktree", "add", "-q", "--detach", str(tmp_path / "shard"), "HEAD")
+    for root in (repo, tmp_path / "shard"):
+        planted = {
+            ".claude/worktrees/agent-x/scripts/battery_env.py": '"RSR_BATTERY_THREAD"\n',
+            ".claude/settings.local.json": '"RSR_LOCAL"\n',
+            "scripts/untracked.py": '"RSR_UNTRACKED"\n',
+        }
+        for rel, text in planted.items():
+            (root / rel).parent.mkdir(parents=True, exist_ok=True)
+            (root / rel).write_text(text)
+        assert battery_env.inventory(root) == _TRACKED, root
+    assert (tmp_path / "shard" / ".git").is_file()
+
+
+def test_inventory_refuses_a_tree_that_is_not_a_checkout(tmp_path):
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "a.py").write_text('"RSR_NEW"\n')
+    with pytest.raises(RuntimeError, match="git ls-files"):
+        battery_env.inventory(tmp_path)
 
 
 # ------------------------------------------ what the battery and the slot set
@@ -284,7 +394,12 @@ def test_launch_what_the_battery_sets_per_shard_is_declared(tmp_path, monkeypatc
 
 def test_launch_through_the_slot_wrapper_is_not_refused(tmp_path):
     """The integration battery is launched with ``orchestrator.slot run --lane
-    battery``; whatever the wrapper puts in its child's environment is declared."""
+    battery``; whatever the wrapper puts in its child's environment is declared.
+
+    No mutation in the table reddens this test (fix round 1 simulation; second
+    review, MINOR-5): the names the slot sets appear literally in the tree, so the
+    inventory test already implies it. It is kept as the named diagnosis for a
+    refused slot launch."""
     root = make_root(tmp_path)
     code = (
         "import json, sys; sys.path.insert(0, sys.argv[1]); import battery_env; "
