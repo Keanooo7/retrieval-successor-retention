@@ -42,12 +42,9 @@ def orch(tmp_path, monkeypatch):
     return o
 
 
-def _branch(orch: Orch, branch: str, files: dict[str, str], start: str | None = None):
+def _branch(orch: Orch, branch: str, files: dict[str, str]):
     wt = orch.root / ".worktrees" / branch.replace("/", "-")
-    lc.git(
-        orch.root, "worktree", "add", "-b", branch, str(wt), start or orch.base,
-        check=True,
-    )
+    lc.git(orch.root, "worktree", "add", "-b", branch, str(wt), orch.base, check=True)
     return wt, orch.commit(wt, files, f"work on {branch}")
 
 
@@ -84,7 +81,7 @@ def test_merge_is_refused_without_a_review_record(orch):
 
 
 def test_a_record_for_a_different_head_is_refused(orch):
-    wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
+    wt, _head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
     _, other = _branch(orch, "eng/other", {"src/other.py": "y = 2\n"})
     orch.review(wt, "run/a", other)  # reviews a commit not in run/a's history
     _verify(orch)
