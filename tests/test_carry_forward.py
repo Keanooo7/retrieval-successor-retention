@@ -391,6 +391,17 @@ def test_reach_baseline_is_all_slots_resample_on_evicted_targets():
     assert r["decidable"]
 
 
+def test_the_falsifier_names_the_baseline_reach_readout_uses():
+    """PREREG Amendment 1 A4 moved CARRY's baseline from `all_slots_zeroed` to
+    `all_slots_resample`; `reach_readout` computes `excess.acc` over the resample
+    (the test above), but `FALSIFIER` -- written into the manifest and the ledger's
+    `verdict.falsifier` -- still named the zeroed baseline (RESULTS.md, Notes;
+    PLAN-v4 §2D Record corrections). The committed ledger keeps its text."""
+    assert "all_slots_resample" in run.FALSIFIER
+    assert "zeroed" not in run.FALSIFIER
+    assert run.REACH_SECONDARY["excess_zeroed"][0] == "all_slots_zeroed"
+
+
 def test_reach_coverage_below_0_8_is_not_decidable():
     rec = _records()
     ev = (rec["gap"] >= 17).nonzero().flatten()
