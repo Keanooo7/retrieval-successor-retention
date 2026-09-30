@@ -1,0 +1,28 @@
+{
+ "status": "ok",
+ "seed": "7ee0227a0e6ae08c261b80899fe595acd145db1023695512cedeba0ea1ed6dd7",
+ "claims": [
+  {
+   "claim": "the phi clip at 1.0 never binds in any phi_clip run (clip_frac 0)",
+   "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print(sorted({v(k)['clip_frac'] for k in R if k.startswith('run.') and '.phi_clip.' in k}))\"",
+   "expected": "[0.0]",
+   "observed": "[0.0]",
+   "match": true
+  },
+  {
+   "claim": "the joint clip's transformer-coefficient deviation is nonzero at beta=1 (max over seeds 1.9e-06)",
+   "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print('%.1e' % max(v(f'run.seed{s}.joint_clip.eps1e-08.beta1')['joint_dev']['max'] for s in (0,1,2)))\"",
+   "expected": "1.9e-06",
+   "observed": "1.9e-06",
+   "match": true
+  },
+  {
+   "claim": "median eps/sqrt(vhat) at beta=0.01, eps=1e-8, arm decoupled_wd is 0.13-0.15 across seeds",
+   "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print([round(v(f'run.seed{s}.decoupled_wd.eps1e-08.beta0.01')['eps_ratio']['p50'],2) for s in (0,1,2)])\"",
+   "expected": "[0.14, 0.15, 0.13]",
+   "observed": "[0.14, 0.15, 0.13]",
+   "match": true
+  }
+ ],
+ "verifier_sha": "4ed73e5434792c7158831df466d2a4c013365d0c"
+}
