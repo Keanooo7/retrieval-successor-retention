@@ -338,7 +338,9 @@ def _repo(root: Path) -> Path:
         "tests/_helper.py": '"RSR_IN_A_HELPER"\n',
         "ops/x.env": "# c\nRSR_IN_OPS=1\n",
         ".claude/settings.json": '"RSR_IN_SETTINGS"\n',
-        ".gitignore": "/.claude/worktrees/\n*.local.json\n",
+        # the repository's own ignore rules, verbatim: no rule invented for the test
+        # (fourth review, MINOR-1)
+        ".gitignore": (_REPO / ".gitignore").read_text(),
     }
     for rel, text in files.items():
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -378,19 +380,59 @@ _AGENT_COPY = ".claude/worktrees/agent-x/scripts/battery_env.py"
 
 
 def test_inventory_skips_ignored_files_in_a_checkout_and_a_worktree(tmp_path):
-    """Second review, MAJOR-1: an ignored agent checkout under ``.claude/worktrees/``
-    (Claude Code's ``isolation: worktree``) and an ignored ``*.local.json`` are never
-    read -- in a main checkout, and in a worktree whose ``.git`` is a file, as a
-    battery shard is."""
+    """Second review, MAJOR-1: files the repository's ``.gitignore`` ignores are
+    never read -- an agent checkout under ``.claude/worktrees/`` (Claude Code's
+    ``isolation: worktree``), and, in the code directories where untracked files ARE
+    read, a stray ``test-count.json`` and a ``__pycache__`` -- in a main checkout,
+    and in a worktree whose ``.git`` is a file, as a battery shard is."""
     for root in _checkout_and_worktree(tmp_path):
         _plant(
             root,
             {
                 _AGENT_COPY: '"RSR_BATTERY_THREAD"\n',
-                ".claude/settings.local.json": '"RSR_LOCAL"\n',
+                "scripts/test-count.json": '"RSR_IGNORED_CENSUS"\n',
+                "src/__pycache__/a.py": '"RSR_IGNORED_CACHE"\n',
             },
         )
         assert battery_env.inventory(root) == _TRACKED, root
+
+
+def test_inventory_skips_untracked_claude_files_without_global_excludes(
+    tmp_path, monkeypatch
+):
+    """Fourth review, MINOR-1: an untracked ``.claude/settings.local.json`` holding
+    an ``RSR_*`` typo is not read even on a machine whose git has no global excludes
+    file -- the repository does not ignore it, so reading untracked ``.claude/``
+    files made the verdict depend on the machine."""
+    empty = tmp_path / "empty-home"
+    empty.mkdir()
+    monkeypatch.setenv("HOME", str(empty))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(empty))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    for root in _checkout_and_worktree(tmp_path):
+        local = ".claude/settings.local.json"
+        _plant(root, {local: '{"note": "RSR_BATTERY_THREAD"}\n'})
+        # not vacuous: in this environment git does NOT ignore the file
+        probe = subprocess.run(
+            [iso._git_bin(), "-C", str(root), "check-ignore", "-q", local],
+            capture_output=True,
+        )
+        assert probe.returncode == 1, probe
+        assert battery_env.inventory(root) == _TRACKED, root
+
+
+@pytest.mark.skipif(
+    not os.path.exists(str(Path(__file__).resolve()).swapcase()),
+    reason="case-sensitive filesystem: a differently-cased root is another path "
+    "here, so this APFS-only check cannot run (NOT a pass)",
+)
+def test_tracked_accepts_a_differently_cased_root(tmp_path):
+    """Fourth review, MINOR-2: on a case-insensitive filesystem (the Studio's APFS)
+    a root spelled with different case is the same checkout."""
+    repo = _repo(tmp_path / "repo")
+    other = Path(str(repo).swapcase())
+    assert str(other) != str(repo) and other.exists()
+    assert battery_env.tracked(other) == battery_env.tracked(repo)
 
 
 def test_inventory_reads_a_new_untracked_file(tmp_path):

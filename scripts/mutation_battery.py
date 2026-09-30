@@ -5734,8 +5734,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "battery-env: the inventory reads ignored files",
         "test_inventory_skips_ignored",
         "scripts/battery_env.py",
-        '        "--exclude-standard",\n',
-        "        # (ignored files not excluded)\n",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--others", "--", *CODE_DIRS',
         "I6 second review MAJOR-1: git-ignored agent checkouts under "
         ".claude/worktrees/ made the inventory test red on a machine-local file.",
     ),
@@ -5743,8 +5743,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "battery-env: the inventory misses a new untracked file",
         "test_inventory_reads_a_new_untracked",
         "scripts/battery_env.py",
-        '        "--others",\n',
-        "        # (new files not listed)\n",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--cached", "--", *CODE_DIRS',
         "I6 third review MINOR-3: a new file reading an RSR_* name was invisible "
         "until committed, so the author's run was green and CI red.",
     ),
@@ -5752,10 +5752,29 @@ MUTATIONS: tuple[Mutation, ...] = (
         "battery-env: the inventory accepts a directory inside a checkout",
         "test_inventory_refuses_a_directory_inside",
         "scripts/battery_env.py",
-        "    if Path(top).resolve() != Path(root).resolve():",
+        "    if not os.path.samefile(top, root):",
         "    if False:",
         "I6 third review MINOR-2: inside a checkout ls-files exits 0 and lists "
         "nothing, so an empty inventory passed as a measurement.",
+    ),
+    Mutation(
+        "battery-env: the inventory reads untracked .claude files",
+        "test_inventory_skips_untracked_claude_files",
+        "scripts/battery_env.py",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--others", "--exclude-standard", "--", *SCANNED',
+        "I6 fourth review MINOR-1: whether git ignores .claude/settings.local.json "
+        "depends on each machine's excludes file; reading untracked .claude/ files "
+        "made the inventory red on one machine and green on another.",
+    ),
+    Mutation(
+        "battery-env: the checkout-top check compares path strings",
+        "test_tracked_accepts_a_differently_cased_root",
+        "scripts/battery_env.py",
+        "    if not os.path.samefile(top, root):",
+        "    if Path(top) != Path(root):",
+        "I6 fourth review MINOR-2: on case-insensitive APFS a differently-cased "
+        "root is the same checkout, and a string comparison refused it.",
     ),
     Mutation(
         "battery-env: rows carry the probe's path",

@@ -145,15 +145,25 @@ NOT_VARIABLES: dict[str, str] = {
 declared: set in the environment, either is refused like any other stray."""
 
 SCANNED = ("src", "scripts", "experiments", "tests", "ops", ".claude")
-"""Where `inventory` looks -- files git does not ignore (``git ls-files``). In ``tests/``
+"""Where `inventory` looks (``git ls-files``): tracked files in all of these, plus
+new not-yet-added files that git does not ignore in `CODE_DIRS` only. In ``tests/``
 only files whose name does not start with ``test_`` (conftest, ``_battery_*``
 helpers): test files hold made-up names on purpose. Review MINOR-7 widened the
 scan (``tests/conftest.py``, ``ops/launchd/*.plist`` and ``.claude/settings.*.json``
 read or set names too); the second review's MAJOR-1 found that a filesystem walk
 of ``.claude/`` also read the git-ignored agent checkouts under
 ``.claude/worktrees/`` -- whole trees of other branches' code -- so the result
-depended on machine-local state. Non-ignored files are the same set in a
-checkout and in a battery shard, except the author's own not-yet-added files."""
+depended on machine-local state. ``.claude/`` is where Claude Code writes
+machine-local runtime state (``settings.local.json`` and others); whether git
+ignores those depends on each machine's excludes file and ``info/exclude`` -- the
+repository's ``.gitignore`` ignores only ``/.claude/worktrees/`` -- so untracked
+files there are never read (fourth review, MINOR-1). What is read is then the same
+set on every machine, in a checkout and in a shard, apart from the author's own
+not-yet-added files in `CODE_DIRS`."""
+
+CODE_DIRS = ("src", "scripts", "experiments", "tests", "ops")
+"""Where a NEW file that reads an ``RSR_*`` name would land: untracked, not-ignored
+files here are inventoried before they are committed (third review, MINOR-3)."""
 _SUFFIXES = (".py", ".zsh", ".sh", ".json", ".plist", ".env")
 _NAME = re.compile(r"RSR_[A-Z0-9_]+")
 _SELF = "scripts/battery_env.py"
@@ -289,40 +299,42 @@ def _git_out(root: Path, *args: str) -> str:
 
 
 def tracked(root: Path) -> list[str]:
-    """The files under `SCANNED` that git does not ignore -- tracked, or new and not
-    yet added -- in the git checkout whose top level is ``root`` (a main checkout or
-    a worktree, whose ``.git`` is a file).
+    """The tracked files under `SCANNED`, plus the untracked files git does not
+    ignore under `CODE_DIRS`, in the git checkout whose top level is ``root`` (a main
+    checkout or a worktree, whose ``.git`` is a file).
 
     Raises ``RuntimeError`` when ``root`` is not the top of a checkout: not in one at
     all, or a directory inside one (a subdirectory, or a copy of the tree under an
     ignored path), where ``ls-files`` exits 0 and lists nothing (third review,
     MINOR-2). An inventory of an unknown file set is not a measurement.
 
-    ``--others --exclude-standard`` (third review, MINOR-3): a new file that reads an
-    ``RSR_*`` name is inventoried before it is committed; git-ignored files --
-    ``/.claude/worktrees/`` (``.gitignore``), ``*.local.json`` -- still are not.
+    ``--others --exclude-standard`` in `CODE_DIRS` only (third review MINOR-3,
+    fourth review MINOR-1): a new source file is inventoried before it is committed,
+    git-ignored files are not, and nothing untracked under ``.claude/`` is read --
+    the repository ignores only ``/.claude/worktrees/`` there, and the rest of what
+    is ignored there (``settings.local.json`` and other runtime files) is ignored by
+    per-machine excludes, so reading untracked ``.claude/`` files made the result
+    depend on the machine.
+
+    ``os.path.samefile`` (fourth review, MINOR-2): the same directory by inode, so
+    a root spelled with different case on a case-insensitive filesystem, or through
+    a symlink, is accepted.
     """
     top = _git_out(root, "rev-parse", "--show-toplevel").strip()
-    if Path(top).resolve() != Path(root).resolve():
+    if not os.path.samefile(top, root):
         raise RuntimeError(
             f"git ls-files: {root} is not the top of a checkout (its checkout's top "
             f"is {top}); the inventory would read nothing"
         )
-    out = _git_out(
-        root,
-        "ls-files",
-        "-z",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "--",
-        *SCANNED,
+    listed = _git_out(root, "ls-files", "-z", "--cached", "--", *SCANNED)
+    listed += _git_out(
+        root, "ls-files", "-z", "--others", "--exclude-standard", "--", *CODE_DIRS
     )
-    return sorted({f for f in out.split("\0") if f})
+    return sorted({f for f in listed.split("\0") if f})
 
 
 def inventory(root: Path) -> dict[str, list[str]]:
-    """``{RSR_* token: ["path:line", ...]}`` over the non-ignored files of `SCANNED`.
+    """``{RSR_* token: ["path:line", ...]}`` over the files `tracked` lists.
 
     Not this file, which would find every name it declares; not ``test_*`` files.
     Ignored files are never read (second review, MAJOR-1).
