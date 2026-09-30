@@ -218,11 +218,13 @@ def test_suite_header_marks_what_the_battery_set_replaced_or_removed():
 def test_stamp_keeps_a_rows_existing_environment():
     """Review MAJOR-4: a driver merging rows from several batteries must not stamp
     its own environment over each row's."""
-    row = {"mutation": "m", "rsr_env": {"RSR_BATTERY_THREADS": "2"}}
+    # Both keys pre-set, so this does not also test how a fresh stamp is written
+    # (that is test_declared_variable_is_recorded*'s gate; fix round 1 simulation).
+    shard_env = {"rsr_env": {"RSR_GIT": "/s"}, "rsr_env_suite": {"RSR_GIT": "/s"}}
+    row = {"mutation": "m", **shard_env}
     got = battery_env.stamp(row, {"RSR_GIT": "/merge"}, {"RSR_GIT": "/merge"})
-    assert got["rsr_env"] == {"RSR_BATTERY_THREADS": "2"}
-    assert got["rsr_env_suite"] == {"RSR_GIT": "/merge"}
-    assert row == {"mutation": "m", "rsr_env": {"RSR_BATTERY_THREADS": "2"}}
+    assert got == row
+    assert row == {"mutation": "m", **shard_env}
 
 
 # ----------------------------------------------------------------- the inventory
