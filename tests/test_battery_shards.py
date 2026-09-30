@@ -395,13 +395,15 @@ def test_a_row_for_another_mutation_is_did_not_run(table, work):
 
 def test_a_row_without_the_serial_rows_fields_is_did_not_run(table, work):
     _write_all(work, 2, table, skip=(1,))
-    short = {k: v for k, v in _proven(table[3]).items() if k != "off_gate"}
+    # a field outside the verdict fields: only the serial-schema check sees it
+    # (a missing verdict field is `verdict_field_problem`'s, since fix round 2)
+    short = {k: v for k, v in _proven(table[3]).items() if k != "failure_reasons"}
     _write_shard(work, 1, 2, [_proven(table[1]), short])
     rc, rows = _merge(work, 2)
     by_name = {r["mutation"]: r for r in rows}
     assert rc == 3
     assert by_name["m3"]["verdict"] == "DID_NOT_RUN"
-    assert "off_gate" in by_name["m3"]["did_not_run"]
+    assert "failure_reasons" in by_name["m3"]["did_not_run"]
 
 
 def test_a_row_with_a_field_of_the_wrong_type_is_did_not_run(table, work):
