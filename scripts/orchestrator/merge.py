@@ -36,8 +36,9 @@ owner is notified, and the exit is 1.
 Gate 3 -- **the review gate** (PLAN-v4 §4 T5(b)), every prefix: a committed
 adversarial-review record `docs/reviews/<branch-slug>/<reviewed_head[:12]>.md` on
 the branch. Format and rule: `docs/review-records.md`. Missing, stale (code changed
-since the reviewed head), malformed, self-reviewed, or MERGE WITH FIXES without a
-`fixes_verified_at` ancestor of head -> refused (3, naming what is missing);
+since the reviewed head), malformed, self-reviewed, or MERGE WITH FIXES (never
+mergeable on its own; the fixes need a MERGE re-review) -> refused (3, naming what
+is missing);
 DO NOT MERGE -> 1. It runs after the guard, so a frozen edit HALTs the night
 whether or not anyone reviewed it.
 
@@ -205,12 +206,18 @@ def resolve_target(target: str) -> tuple[str | None, str | None, str]:
     return target, (rest if prefix == "run" else None), ""
 
 
-def review_exempt(path: str) -> bool:
-    """Paths that may change after the reviewed head without staling the record."""
+def review_exempt(path: str, run_item: str | None = None) -> bool:
+    """Paths that may change after the reviewed head without staling the record.
+    Only the merging `run/<item>`'s OWN verification.json is exempt (review
+    MINOR-2): another run's record would ride into the night branch unreviewed and
+    then satisfy gate 1 for that run. No verification.json is exempt off `run/`."""
     if path.startswith((f"{REVIEW_DIR}/", ".orchestrator/outbox/")):
         return True
-    parts = path.split("/")
-    return len(parts) == 3 and parts[0] == "runs" and parts[2] == "verification.json"
+    return run_item is not None and path == f"runs/{run_item}/verification.json"
+
+
+def _full_sha(value: str) -> bool:
+    return len(value) == 40 and all(c in "0123456789abcdef" for c in value)
 
 
 def front_matter(text: str) -> dict[str, str] | None:
@@ -242,7 +249,9 @@ def _ancestor(root: Path, a: str, b: str) -> bool:
     return lc.git(root, "merge-base", "--is-ancestor", a, b).returncode == 0
 
 
-def review_gate(root: Path, branch: str, base: str, head: str) -> tuple[Exit, str]:
+def review_gate(
+    root: Path, branch: str, base: str, head: str, run_item: str | None = None
+) -> tuple[Exit, str]:
     """(OK, record path) or a refusal naming what is missing. docs/review-records.md."""
     rdir = f"{REVIEW_DIR}/{branch.replace('/', '-')}"
     want = f"{rdir}/{head[:12]}.md"
@@ -277,10 +286,15 @@ def review_gate(root: Path, branch: str, base: str, head: str) -> tuple[Exit, st
         bad = []
         if fm["branch"] != branch:
             bad.append(f"branch is {fm['branch']!r}, not {branch!r}")
-        if len(rh) != 40 or any(c not in "0123456789abcdef" for c in rh):
+        if not _full_sha(rh):
             bad.append(f"reviewed_head {rh!r} is not a full sha")
         elif name != f"{rh[:12]}.md":
             bad.append(f"file name {name} is not reviewed_head[:12].md ({rh[:12]}.md)")
+        # Review MAJOR-1: informational only, but a present value is held to the
+        # same standard as reviewed_head -- a ref name (`fix/x`, `HEAD`) moves.
+        fixes = fm.get("fixes_verified_at")
+        if fixes is not None and not (_full_sha(fixes) and _commit(root, fixes)):
+            bad.append(f"fixes_verified_at {fixes!r} is not the full sha of a commit")
         if fm["verdict"] not in VERDICTS:
             bad.append(f"verdict {fm['verdict']!r} is not one of {', '.join(VERDICTS)}")
         if reviewer.casefold() == fm["author"].strip().casefold():
@@ -311,25 +325,24 @@ def review_gate(root: Path, branch: str, base: str, head: str) -> tuple[Exit, st
     who = f"{path} (reviewer {fm['reviewer']})"
     if fm["verdict"] == "DO NOT MERGE":
         return Exit.FAIL, f"review verdict DO NOT MERGE: {who} -- not merged"
-    anchor = fm["reviewed_head"]
     if fm["verdict"] == "MERGE WITH FIXES":
-        fixed = fm.get("fixes_verified_at", "")
-        full = _commit(root, fixed) if fixed else None
-        if full is None or not _ancestor(root, full, head):
-            return Exit.DID_NOT_RUN, (
-                f"review verdict MERGE WITH FIXES needs fixes_verified_at, an ancestor "
-                f"of {head[:12]}; got {fixed or 'none'!r}: {who} -- not merged"
-            )
-        if not _ancestor(root, anchor, full):
-            return Exit.DID_NOT_RUN, (
-                f"fixes_verified_at {fixed[:12]} does not descend from reviewed_head "
-                f"{anchor[:12]}: {who} -- not merged"
-            )
-        anchor = full
+        # Review MAJOR-2, PM decision 2026-09-30: never mergeable on its own. The
+        # fixes are code no record covers, and `fixes_verified_at` is writable by
+        # anyone (docs/reviews/ is exempt), so it is an attestation the gate cannot
+        # tell from the author's own. A MERGE record at or after the fixes governs
+        # instead (the nearest record wins).
+        return Exit.DID_NOT_RUN, (
+            f"review verdict MERGE WITH FIXES is not mergeable on its own: {who} -- "
+            f"the fixes need a re-review, a MERGE record at or after them "
+            f"(expected {want}); not merged"
+        )
+    anchor = fm["reviewed_head"]
     diff = lc.git(root, "diff", "--name-only", "--no-renames", f"{anchor}..{head}")
     if diff.returncode != 0:
         return Exit.DID_NOT_RUN, f"git diff {anchor[:12]}..{head[:12]} failed: {who}"
-    unreviewed = [p for p in diff.stdout.splitlines() if p and not review_exempt(p)]
+    unreviewed = [
+        p for p in diff.stdout.splitlines() if p and not review_exempt(p, run_item)
+    ]
     if unreviewed:
         return Exit.DID_NOT_RUN, (
             f"review is stale: {who} covers {anchor[:12]}, but {anchor[:12]}.."
@@ -376,7 +389,7 @@ def merge_item(root: Path, item: str, *, dry_run: bool = False) -> tuple[Exit, s
     if found:
         label = run_item if run_item is not None else branch
         return trip(root, label, found, dry_run=dry_run, branch=branch)
-    code, record = review_gate(root, branch, base, head_sha)
+    code, record = review_gate(root, branch, base, head_sha, run_item)
     if code != Exit.OK:
         return code, record
     passed.append(f"reviewed ({record})")
