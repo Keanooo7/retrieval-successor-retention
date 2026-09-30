@@ -4807,6 +4807,20 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
         ),
     ),
+    # battery-union review minors, 2026-09-30 (docs/reviews/eng-battery-union/
+    # 7d90e27a400b.md, docs/reviews/eng-battery-union-annotated/66d1dfa5c440.md).
+    # Proven by hand on tests/test_battery_union.py (fix/review-minors-0930).
+    Mutation(
+        "battery-union: git is hard-coded to the homebrew path",
+        "test_git_falls_back_to_path_git_where_homebrew_git_is_absent",
+        "scripts/battery_union.py",
+        'GIT = _HOMEBREW_GIT if Path(_HOMEBREW_GIT).exists() else shutil.which("git") '
+        'or "git"\n',
+        "GIT = _HOMEBREW_GIT\n",
+        "review 7d90e27a400b MINOR-3: on the ubuntu CI runner there is no "
+        "/opt/homebrew/bin/git, so the repo fixture and _have() raise "
+        "FileNotFoundError and four tests ERROR instead of running.",
+    ),
     Mutation(
         "b2-psi-probe: age leaks into psi-hat",
         "test_no_age_in_psi_hat_permuting_written_at_and_step_changes_nothing",

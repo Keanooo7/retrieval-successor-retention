@@ -57,6 +57,7 @@ from __future__ import annotations
 
 import ast
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -68,7 +69,11 @@ sys.path.insert(0, str(ROOT / "src"))
 from rsr.exit_codes import ArgumentParser, Exit, run_main  # noqa: E402
 
 PATH = "scripts/mutation_battery.py"
-GIT = "/opt/homebrew/bin/git"
+# Homebrew git where it exists (Apple's git can block on a licence prompt and look
+# like an empty answer, CLAUDE.md); the git on PATH elsewhere, e.g. the ubuntu CI
+# runner (review docs/reviews/eng-battery-union/7d90e27a400b.md MINOR-3).
+_HOMEBREW_GIT = "/opt/homebrew/bin/git"
+GIT = _HOMEBREW_GIT if Path(_HOMEBREW_GIT).exists() else shutil.which("git") or "git"
 OPEN = "MUTATIONS: tuple[Mutation, ...] = (\n"
 # `_NAME = (` or `_NAME: <annotation> = (`, through the `)` at column 0.
 _CONST = re.compile(r"^(_[A-Z0-9_]+)(?:: [^\n=]+)? = \(\n.*?^\)\n", re.S | re.M)

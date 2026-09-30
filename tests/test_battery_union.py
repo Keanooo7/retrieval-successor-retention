@@ -212,6 +212,33 @@ def test_cli_one_sided_tail_exits_0_and_writes_the_union(repo):
     assert out.read_text() == _src(("m1", "m2", "m3", "m4"), tail=_TAIL_THEIRS)
 
 
+# -- the git binary (review 7d90e27a400b MINOR-3) ---------------------------------
+
+
+def test_git_falls_back_to_path_git_where_homebrew_git_is_absent(monkeypatch):
+    """`GIT` was hard-coded to /opt/homebrew/bin/git, so on the ubuntu CI runner the
+    `repo` fixture and `_have()` raised FileNotFoundError and four tests ERRORed.
+    Homebrew git stays first where it exists (Apple's git can block on a licence
+    prompt, CLAUDE.md); elsewhere the git on PATH is used."""
+    import importlib
+    import shutil
+
+    real_exists = Path.exists
+    monkeypatch.setattr(
+        Path,
+        "exists",
+        lambda self, *a, **k: (
+            False if str(self) == "/opt/homebrew/bin/git" else real_exists(self, *a, **k)
+        ),
+    )
+    monkeypatch.setattr(shutil, "which", lambda name, *a, **k: f"/usr/bin/{name}")
+    try:
+        assert importlib.reload(bu).GIT == "/usr/bin/git"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(bu)
+
+
 # -- the two real merges of 2026-09-29 ------------------------------------------
 
 _MERGES_0929 = ("13ea9ae", "74dec77")
