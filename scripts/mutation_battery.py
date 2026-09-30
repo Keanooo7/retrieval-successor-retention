@@ -5785,6 +5785,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    mb.MUTATIONS = table\n",
         "I2: shard k runs MUTATIONS[k::N] and nothing else; N shards each running "
         "everything is N serial batteries, and rows the merge cannot place.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "every shard of a real (or faked) run returns rows for the whole "
+                "table where the merge expects its slice, so the end-to-end runs "
+                "and the shards-then-merge test see DID_NOT_RUN rows, and in the "
+                "SIGKILL run the surviving shard also runs the slow mutation. The "
+                "same defect, seen from the merge.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "test_merged_rows_are_in_table_order_with_the_serial_schema",
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+            )
+        ),
     ),
     Mutation(
         "i2: a shard does not cap its suite threads",
@@ -5806,6 +5821,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    try:\n        try:\n",
         "I2: the done record says the shard's battery RETURNED. Written at the "
         "start, a killed or crashed shard would look finished to the merge.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the SIGKILL end-to-end run asserts its killed shard is DID_NOT_RUN "
+                "for having no done record; written early, the record exists and "
+                "the reason changes.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+            )
+        ),
     ),
     Mutation(
         "i2: a refused battery is recorded as exit 0",
@@ -5875,6 +5901,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if not isinstance(done, dict):",
         "I2: a shard that was killed leaves no done record, and whatever rows "
         "file is in its directory is not a finished battery's.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the SIGKILL end-to-end run asserts its killed shard is DID_NOT_RUN "
+                "for having no done record; the same check, seen from the real "
+                "driver.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+            )
+        ),
     ),
     Mutation(
         "i2: a done record from another run is accepted",
@@ -5902,6 +5939,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ROWS_EXIT = (int(Exit.OK),)",
         "I2: a shard exits 3 when ONE of its mutations did not run; the battery's "
         "own reason for that row, and the shard's other verdicts, are kept.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "a shard whose battery refused exits 3 with no rows; the test "
+                "asserts the reason names the missing rows, which it reaches only "
+                "when 3 is a readable exit status.",
+            )
+            for t in ("test_a_shard_that_wrote_no_rows_is_did_not_run",)
+        ),
     ),
     Mutation(
         "i2: a missing rows file is not checked",
@@ -5947,6 +5993,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    return [merged[i] for p in parts for i in p], problems",
         "I2: the merged JSON is in MUTATIONS order, as the serial one is, whatever "
         "the partition.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the end-to-end run compares the merged JSON with the serial one, "
+                "which is in MUTATIONS order; the same property, end to end.",
+            )
+            for t in ("test_sharded_verdicts_equal_the_serial_ones_on_the_stub",)
+        ),
     ),
     Mutation(
         "i2: zero mutations is a pass",
@@ -5975,6 +6029,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "def _stop(",
         "I2: the driver's exit code is the merged rows' -- a shard that died makes "
         "it 3. 'Did not run' must not become 0 at the driver's exit.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the SIGKILL end-to-end run asserts the real driver exits 3 when "
+                "one shard was killed; the same exit rule, end to end.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+            )
+        ),
     ),
     Mutation(
         "i2: shards are launched in the battery lane",
