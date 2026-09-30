@@ -1,0 +1,74 @@
+{
+ "status": "ok",
+ "seed": "acc202b1b5d31edc2309bca566a0a33fc7b31b12e87c2cb2f4a2cc39eb864c30",
+ "claims": [
+  {
+   "claim": "headline kind-oracle cap CI lo/hi, ckpt3000 g0.9",
+   "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt3000.g09.cap.ko.'+f]['samples']] for f in ('lo','hi')])\"",
+   "expected": "[[0.978, -1.014, 0.982], [1.016, -0.891, 1.021]]",
+   "observed": "[[0.978, -1.014, 0.982], [1.016, -0.891, 1.021]]",
+   "match": true
+  },
+  {
+   "claim": "F2 kind assert minus kind filler at ckpt3000 g0.9 is positive on every seed",
+   "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([round(x,3) for x in r['B.ckpt3000.g09.F2.assert_minus_filler.point']['samples']])\"",
+   "expected": "[0.114, 0.063, 0.268]",
+   "observed": "[0.114, 0.063, 0.268]",
+   "match": true
+  },
+  {
+   "claim": "recomputed from D.pt: seed 1 ckpt3000 g0.9 kind-oracle hit (compute, ~70 s, reads the protected D.pt read-only)",
+   "command": "PYTHONPATH=scripts uv run python -m orchestrator.slot run --lane cpu-det --slots 1 -- uv run python -c \"import importlib.util as u,sys; sys.path.insert(0,'src'); s=u.spec_from_file_location('b0','experiments/b0-ceilings/run.py'); b=u.module_from_spec(s); s.loader.exec_module(b); base=b.main_checkout(); r=b.measure_seed(1,{3000:b.load_D(base,3000,1)}); print(round(r['ckpt'][3000]['gammas']['g09']['rules']['ko']['hit'],4))\"",
+   "expected": "0.6613",
+   "observed": "0.6613",
+   "match": true
+  }
+ ],
+ "verifier_sha": "b4f366103c2cc911b3dd0f5f79aaa030831e329b",
+ "draw_note": "Claims drawn by `orchestrator.verify draw b0-ceilings` (seed sha256(run_id), indices 2, 6, 10), not by the manager's seed 20260927: `verify check` requires the canonical draw. Index 10 recomputes from D.pt.",
+ "rcs": {
+  "claim2": 0,
+  "claim6": 0,
+  "claim10_under_slot_cpu-det": 0
+ },
+ "prereg": {
+  "fc26dbf_ancestor_of_bb40c40_rc": 0,
+  "fc26dbf_files": [
+   "experiments/b0-ceilings/PREREG.md"
+  ],
+  "fc26dbf_parent": "941a68e3cd4890bd5a3279f31e9452f0d3e16496",
+  "committed_alone": true
+ },
+ "manifest_check": {
+  "command": "cd <main checkout> && shasum -a 256 -c ~/rsr-substrate/2026-09-27/MANIFEST.sha256",
+  "rc": 0,
+  "lines": 435,
+  "ok_lines": 435,
+  "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+  "matches_manifest_json_t0_manifest_sha256": true,
+  "note": "Paths are relative to the main checkout; run from the b0-ceilings worktree the same command exits 1 (files not found), which is a cwd artefact, not a mismatch."
+ },
+ "independent_recompute": {
+  "what": "seed 1, ckpt3000, gamma 0.9 kind-oracle cap from B-ckpt3000-seed1.D.pt, by a separate script (own float64 discounting, own list-based memory simulator, own FIFO/factfiller/ko; only lookahead-room documents() imported). Not via run.py, rsr.metrics.headroom or discounted_returns.",
+  "m_kind": {
+   "assert": 0.40546,
+   "query": 0.50978,
+   "filler": 0.342456
+  },
+  "rows": {
+   "assert": 515109,
+   "query": 395249,
+   "filler": 186346
+  },
+  "hits": {
+   "fifo": "16316/20161 = 0.8092852537076534",
+   "factfiller": "19461/20161 = 0.9652795000248003",
+   "ko": "13332/20161 = 0.6612767223848024"
+  },
+  "cap_ko_mine": -0.9488076311605718,
+  "cap_ko_ledger": -0.9488076311605718,
+  "match": true,
+  "rc": 0
+ },
+ "ledger_cross_read_jq": "B.ckpt3000.g09.F2.assert_minus_filler.point samples equal E_G.kind.assert - E_G.kind.filler per seed (0.5728-0.4586=0.1142, 0.4055-0.3425=0.0630, 0.5862-0.3181=0.2681)."
+}

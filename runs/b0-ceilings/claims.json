@@ -1,0 +1,62 @@
+[
+ {
+  "claim": "run status ok, seeds 0-2, no control failed, C1 ok at start and end",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; import json as j; d=j.load(open('runs/b0-ceilings/ledger.json')); print(d['status'], d['seeds_actually_run'], r['controls_failed']['value'], r['C1.start']['value']['ok'], r['C1.end']['value']['ok'])\"",
+  "expected": "ok [0, 1, 2] [] True True"
+ },
+ {
+  "claim": "headline kind-oracle cap, ckpt3000 g0.9, point per seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([round(x,3) for x in r['B.ckpt3000.g09.cap.ko.point']['samples']])\"",
+  "expected": "[0.996, -0.949, 1.002]"
+ },
+ {
+  "claim": "headline kind-oracle cap CI lo/hi, ckpt3000 g0.9",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt3000.g09.cap.ko.'+f]['samples']] for f in ('lo','hi')])\"",
+  "expected": "[[0.978, -1.014, 0.982], [1.016, -0.891, 1.021]]"
+ },
+ {
+  "claim": "kind x age-band (not a legal psi_hat) cap, ckpt3000 g0.9",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([round(x,3) for x in r['B.ckpt3000.g09.cap.kb.point']['samples']])\"",
+  "expected": "[0.898, -0.287, 1.066]"
+ },
+ {
+  "claim": "age-only cap and CI, ckpt3000 g0.9",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt3000.g09.cap.age.'+f]['samples']] for f in ('point','lo','hi')])\"",
+  "expected": "[[0.041, 0.105, 0.01], [0.004, 0.077, -0.028], [0.074, 0.133, 0.044]]"
+ },
+ {
+  "claim": "references FIFO / factfiller all-query hit",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([round(x,4) for x in r['U.hit.fifo.all']['samples']], [round(x,4) for x in r['U.hit.factfiller.all']['samples']])\"",
+  "expected": "[0.8059, 0.8093, 0.8088] [0.9655, 0.9653, 0.9666]"
+ },
+ {
+  "claim": "F2 kind assert minus kind filler at ckpt3000 g0.9 is positive on every seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([round(x,3) for x in r['B.ckpt3000.g09.F2.assert_minus_filler.point']['samples']])\"",
+  "expected": "[0.114, 0.063, 0.268]"
+ },
+ {
+  "claim": "the scratch F2 (+0.0633/-0.0507/+0.1601) equals kind assert minus slot_class filler",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([round(a-b,4) for a,b in zip(r['B.ckpt3000.g09.E_G.kind.assert']['samples'], r['B.ckpt3000.g09.E_G.class.filler']['samples'])])\"",
+  "expected": "[0.0633, -0.0507, 0.1601]"
+ },
+ {
+  "claim": "seed-1 kind order at ckpt3000 g0.9: filler < assert < query",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([round(r['B.ckpt3000.g09.E_G.kind.'+k]['samples'][1],4) for k in ('filler','assert','query')])\"",
+  "expected": "[0.3425, 0.4055, 0.5098]"
+ },
+ {
+  "claim": "hindsight rule_g09 cap at ckpt3000 reproduces the 0.18/0.13/0.54 already seen",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows']}; print([round(x,2) for x in r['B.ckpt3000.cap.rule_g09.point']['samples']])\"",
+  "expected": "[0.18, 0.13, 0.54]"
+ },
+ {
+  "claim": "recomputed from D.pt: seed 1 ckpt3000 g0.9 kind-oracle hit (compute, ~70 s, reads the protected D.pt read-only)",
+  "command": "PYTHONPATH=scripts uv run python -m orchestrator.slot run --lane cpu-det --slots 1 -- uv run python -c \"import importlib.util as u,sys; sys.path.insert(0,'src'); s=u.spec_from_file_location('b0','experiments/b0-ceilings/run.py'); b=u.module_from_spec(s); s.loader.exec_module(b); base=b.main_checkout(); r=b.measure_seed(1,{3000:b.load_D(base,3000,1)}); print(round(r['ckpt'][3000]['gammas']['g09']['rules']['ko']['hit'],4))\"",
+  "expected": "0.6613"
+ },
+ {
+  "claim": "C1 dry run: the six D.pt match the T0 manifest (exit 0)",
+  "command": "uv run python experiments/b0-ceilings/run.py --dry-run > /dev/null; echo rc=$?",
+  "expected": "rc=0"
+ }
+]

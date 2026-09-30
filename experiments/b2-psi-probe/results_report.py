@@ -44,6 +44,7 @@ E0D_REF = "run/e0d"
 OUT = EXP / "RESULTS.md"
 
 sys.path.insert(0, str(ROOT / "src"))
+from rsr.exit_codes import Exit, run_main  # noqa: E402
 _spec = importlib.util.spec_from_file_location("b2run", EXP / "run.py")
 B2 = importlib.util.module_from_spec(_spec)
 sys.modules["b2run"] = B2
@@ -441,14 +442,14 @@ def attr_payload_rows(att: dict, arms) -> list[str]:
     return L
 
 
-def main() -> int:
+def main() -> Exit:
     I = load_inputs()
     led, rows, man = I["led"], I["rows"], I["man"]
     n2 = man["N_tier2"]
     chk = check_summaries(I)
     if chk["worst_abs_diff"] != 0.0 or not chk["labels_ok"] or not chk["class_ok"]:
         print(f"CHECK FAILED: {chk}", file=sys.stderr)
-        return 1
+        return Exit.FAIL
 
     rates = {}  # (c, key, s) -> bucket -> arm -> stats
     for c in CKPTS:
@@ -471,7 +472,7 @@ def main() -> int:
         rg = arm_rates({a: v["gap_gt_M"] for a, v in res[s]["counts"].items()}, s)
         if rr["fifo"]["point"] != 1.0 or rg["fifo"]["point"] != 0.0:
             print(f"CHECK FAILED: FIFO replay seed {s}: {rr['fifo']} {rg['fifo']}")
-            return 1
+            return Exit.FAIL
     resid = {
         s: {
             b: arm_rates({a: v[b] for a, v in res[s]["counts"].items()}, s)
@@ -1145,8 +1146,8 @@ def main() -> int:
     )
     OUT.write_text("\n".join(L) + "\n")
     print(f"wrote {OUT} ({len(L)} lines); checks {chk}")
-    return 0
+    return Exit.OK
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)

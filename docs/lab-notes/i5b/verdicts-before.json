@@ -1,0 +1,47 @@
+[
+  {
+    "mutation": "t_warm back to inf",
+    "gate": "test_reduction",
+    "why": "gauntlet 0.1: the reduction stops reaching the score path",
+    "reddened_gate": true,
+    "n_on_gate": 12,
+    "off_gate": [
+      "tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+      "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+        "since correction 31 a policy with T_warm > 0 and no optimizer step set raises instead of evicting FIFO. Under `t_warm = inf` every caller of the reduction that sets no step -- the accelerator placement test, the reduction's own no-counter test -- now fails loudly: the gauntlet 0.1 defect surfacing as an error rather than as a silently FIFO reduction. Found by the 2026-09-26 review (the raise confirmed in-process); the full battery is the measurement."
+      ],
+      [
+        "tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+        "since correction 31 a policy with T_warm > 0 and no optimizer step set raises instead of evicting FIFO. Under `t_warm = inf` every caller of the reduction that sets no step -- the accelerator placement test, the reduction's own no-counter test -- now fails loudly: the gauntlet 0.1 defect surfacing as an error rather than as a silently FIFO reduction. Found by the 2026-09-26 review (the raise confirmed in-process); the full battery is the measurement."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "off-gate failures stop counting",
+    "gate": "test_an_off_gate_failure_makes_a_mutation_unproven",
+    "why": "5.3: clause 2 of the stated discipline goes back to being enforced by nothing",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  },
+  {
+    "mutation": "a canary ledger row typed again",
+    "gate": "test_the_canary_ledger_row_records_the_exit_code_it_returns",
+    "why": "S0-05 bar 6: the row was the literal `exit_code=0`, written before the verdict existed, so a MOVED canary exiting 1 filed a ledger saying 0. A hardcoded 0 is worse than null: it looks measured.",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN"
+  }
+]
