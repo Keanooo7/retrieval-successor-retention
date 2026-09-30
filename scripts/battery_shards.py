@@ -14,6 +14,9 @@ and a sharded run at one SHA can be compared mutation by mutation.
         --run-id ID --work-dir W          # one shard (what `run` spawns N of)
     .venv/bin/python scripts/battery_shards.py merge --shards N --run-id ID \\
         --work-dir W --check              # merge shards launched by hand
+    RSR_BATTERY_THREADS=1 .venv/bin/python scripts/mutation_battery.py --json S.json
+    .venv/bin/python scripts/battery_shards.py compare S.json W/merged.json
+                                          # serial vs sharded, verdict fields only
 
 **Partition -- by stride.** Shard ``k`` of ``N`` gets ``MUTATIONS[k::N]``. Every
 mutation costs one full suite run, so equal counts are equal work to first order;
@@ -41,16 +44,17 @@ through `mutation_battery._report`, so the rule is the serial one by constructio
 3 if any row is ``DID_NOT_RUN``, else 1 under ``--check`` if any gate is unproven,
 else 0. Zero mutations is 2 (nothing to compare), never 0. A refusal before any
 shard starts -- a work dir inside the tree or the default pool, an earlier result
-in it, more shards than mutations -- is 3.
+in it, a stale anchor anywhere in the table, more shards than mutations -- is 3.
+``compare`` exits by the same protocol (see its help).
 
 **Under the lane scheduler.** With ``--slot-wait S`` every shard is launched as
 
     PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det \\
-        --slots 1 --wait S --job-id <run-id>-s<K>of<N> -- \\
+        --slots T --wait S --job-id <run-id>-s<K>of<N> -- \\
         .venv/bin/python scripts/battery_shards.py shard --index K --of N ...
 
-one cpu-det slot per shard, so the scheduler's thread cap (1) and this driver's
-``--threads`` (default 1, exported as ``RSR_BATTERY_THREADS``) agree. A slot that
+``--threads`` cpu-det slots per shard (default 1), so the scheduler's thread cap
+and this driver's ``--threads`` (exported as ``RSR_BATTERY_THREADS``) agree. A slot that
 is refused exits 3 and starts no shard: no done record, so its mutations are
 ``DID_NOT_RUN``. ``plan`` prints the same commands for launching them by hand,
 followed by the ``merge`` that collects them.
@@ -212,8 +216,10 @@ def run_shard(args) -> int:
     """Run the real battery on slice ``index`` of ``of``; record that it finished.
 
     The done record is written only when the battery RETURNED -- a status or a
-    refusal. A battery that was killed, or that raised, leaves none, and the
-    merge then counts every mutation of this shard as ``DID_NOT_RUN``.
+    refusal -- and names the SHA the battery pinned. A dirty invoking tree is
+    refused by the battery itself (3). A battery that was killed, or that raised,
+    leaves none, and the merge then counts every mutation of this shard as
+    ``DID_NOT_RUN``.
     """
     table = mb.MUTATIONS
     parts = partition(len(table), args.of)
@@ -224,7 +230,6 @@ def run_shard(args) -> int:
                 f"{old} exists: shard {args.index} of {args.of} already has a result "
                 f"there. Use a fresh --work-dir; nothing was overwritten."
             )
-    sha = pinned_sha()
     paths.dir.mkdir(parents=True, exist_ok=True)
 
     argv = ["mutation_battery.py", "--json", str(paths.rows)]
@@ -232,10 +237,19 @@ def run_shard(args) -> int:
     if args.keep_shards:
         argv.append("--keep-shards")
     os.environ["RSR_BATTERY_THREADS"] = str(args.threads)
-    saved_argv = sys.argv
+    saved_argv, real_pin = sys.argv, iso.pinned_sha
+    # Review MINOR-5: the SHA recorded is the one the battery PINNED (its own
+    # `open_workspace` read), not a second read that could see a later commit.
+    pinned: list[str] = []
+
+    def pin(root):
+        sha = real_pin(root)
+        pinned.append(sha)
+        return sha
+
     started, t0 = _utc(), time.perf_counter()
     mb.MUTATIONS = tuple(table[i] for i in parts[args.index])
-    sys.argv = argv
+    sys.argv, iso.pinned_sha = argv, pin
     try:
         try:
             rc = int(status(mb.main()))
@@ -244,7 +258,9 @@ def run_shard(args) -> int:
             rc = e.code if isinstance(e.code, int) else int(Exit.FAIL)
     finally:
         mb.MUTATIONS = table
-        sys.argv = saved_argv
+        sys.argv, iso.pinned_sha = saved_argv, real_pin
+    # None when the battery refused before pinning: no done record then matches
+    sha = pinned[-1] if pinned else None
     _write_json(
         paths.done,
         {
@@ -360,6 +376,63 @@ def _print_shards(n: int, problems: list[str | None]) -> None:
         print(f"shard {k} of {n}: {'rows read' if problem is None else problem}")
 
 
+# -------------------------------------------------------------------- compare
+
+VERDICT_FIELDS = (
+    "mutation",
+    "gate",
+    "verdict",
+    "reddened_gate",
+    "n_on_gate",
+    "off_gate",
+    "off_gate_undeclared",
+    "off_gate_allowed",
+)
+"""What `compare` compares, per mutation (review MAJOR-1; the manager's decision).
+Never whole rows: ``failure_reasons`` carry per-run tmp paths, and environment
+stamps differ between a serial and a sharded run by design."""
+
+
+def compare_rows(serial: object, sharded: object) -> tuple[Exit, list[str]]:
+    """``(exit, lines)``: 0 identical on `VERDICT_FIELDS`, 1 any difference, 2 no
+    mutations, 3 unreadable, different mutation sets, or a mutation that did not
+    run in either arm (identical DID_NOT_RUN rows are not evidence of anything)."""
+    arms = {"serial": serial, "sharded": sharded}
+    for name, rows in arms.items():
+        if not isinstance(rows, list) or not all(
+            isinstance(r, dict) and "mutation" in r for r in rows
+        ):
+            return Exit.DID_NOT_RUN, [f"{name}: not a battery --json record"]
+    a = {r["mutation"]: r for r in serial}
+    b = {r["mutation"]: r for r in sharded}
+    if sorted(a) != sorted(b) or len(a) != len(serial) or len(b) != len(sharded):
+        return Exit.DID_NOT_RUN, [
+            f"the mutation sets differ: serial {len(serial)} rows ({len(a)} names), "
+            f"sharded {len(sharded)} rows ({len(b)} names); only in serial "
+            f"{sorted(set(a) - set(b))}, only in sharded {sorted(set(b) - set(a))}"
+        ]
+    if not a:
+        return Exit.UNKNOWN, ["no mutations to compare"]
+    dnr = [n for n in a if "DID_NOT_RUN" in (a[n].get("verdict"), b[n].get("verdict"))]
+    if dnr:
+        return Exit.DID_NOT_RUN, [f"did not run in at least one arm: {dnr}"]
+    diffs = [
+        f"DIFFERS {n}: {f}: serial {a[n].get(f)!r} != sharded {b[n].get(f)!r}"
+        for n in a
+        for f in VERDICT_FIELDS
+        if a[n].get(f) != b[n].get(f)
+    ]
+    return (Exit.FAIL if diffs else Exit.OK), diffs
+
+
+def run_compare(args) -> Exit:
+    code, lines = compare_rows(_read_json(args.serial), _read_json(args.sharded))
+    for line in lines:
+        print(line)
+    print(f"compare: {code.name} ({len(lines)} line(s)) on {', '.join(VERDICT_FIELDS)}")
+    return code
+
+
 # ------------------------------------------------------------------ launching
 
 
@@ -374,8 +447,10 @@ def launch(
     base: dict[str, str],
     keep: bool = False,
 ) -> tuple[list[str], dict[str, str]]:
-    """``(argv, env)`` that runs shard ``k`` of ``n`` -- under one cpu-det slot of
-    the lane scheduler when ``slot_wait`` is given."""
+    """``(argv, env)`` that runs shard ``k`` of ``n`` -- under ``threads`` cpu-det
+    slots of the lane scheduler when ``slot_wait`` is given (review MINOR-1: the
+    slot sizes the job's thread env by its slot count, and the suite's thread cap
+    is ``threads``; the two must agree)."""
     argv = [*SHARD_PREFIX, "shard", "--index", str(k), "--of", str(n)]
     argv += ["--run-id", run_id, "--work-dir", str(work), "--threads", str(threads)]
     if keep:
@@ -384,7 +459,7 @@ def launch(
     if slot_wait is None:
         return argv, env
     slot = [sys.executable, "-m", "orchestrator.slot", "run"]
-    slot += ["--lane", "cpu-det", "--slots", "1", "--wait", f"{slot_wait:g}"]
+    slot += ["--lane", "cpu-det", "--slots", str(threads), "--wait", f"{slot_wait:g}"]
     slot += ["--job-id", f"{run_id}-s{k}of{n}", "--"]
     path = [str(mb.ROOT / "scripts"), *env.get("PYTHONPATH", "").split(os.pathsep)]
     env["PYTHONPATH"] = os.pathsep.join(p for p in path if p)
@@ -395,6 +470,14 @@ def _prepare(args) -> tuple[Path, str, str]:
     """``(work dir, pinned sha, run id)``, or `Refused` before anything starts."""
     work = check_work_dir(args.work_dir)
     parts = partition(len(mb.MUTATIONS), args.shards)
+    # 🔴 Review MINOR-2: every anchor, before any shard. A stale one is refused by
+    # the ONE shard whose slice holds it; the other N-1 would run for hours toward
+    # a merged exit 3 (the 87-minute refusal of 2026-09-22, sharded).
+    stale = mb.anchor_problems()
+    if stale:
+        for s in stale:
+            print(f"STALE ANCHOR {s}", file=sys.stderr)
+        raise Refused(f"{len(stale)} stale anchor(s); no shard was started")
     sha = pinned_sha()
     for k in range(len(parts)):
         p = shard_paths(work, k, args.shards)
@@ -436,8 +519,6 @@ def run_plan(args) -> Exit:
 
 def run_all(args) -> Exit:
     work, sha, run_id = _prepare(args)
-    # A stale anchor is refused by every shard's own battery before its baseline
-    # suite (exit 3, no rows): every mutation is then DID_NOT_RUN here.
     n = args.shards
     print(f"run id {run_id} at {sha[:12]}: {len(mb.MUTATIONS)} mutations, {n} shards")
     t0 = time.perf_counter()
@@ -565,11 +646,23 @@ def _parser() -> ArgumentParser:
     merge = sub.add_parser("merge", help="merge shards that already ran")
     common(merge, shards=True, run_id_required=True)
     reporting(merge)
+    compare = sub.add_parser(
+        "compare",
+        help="compare a serial --json record with a merged sharded one, per "
+        "mutation, on the verdict fields only; exit 0 identical, 1 any difference, "
+        "2 no mutations, 3 unreadable / different mutation sets / a mutation that "
+        "did not run. Run the SERIAL arm with RSR_BATTERY_THREADS=1 so both arms "
+        "run the suite at one thread, as every shard does.",
+    )
+    compare.add_argument("serial", type=Path)
+    compare.add_argument("sharded", type=Path)
     return ap
 
 
 def main(argv: list[str] | None = None) -> Exit:
     args = _parser().parse_args(sys.argv[1:] if argv is None else argv)
+    if args.action == "compare":
+        return status(run_compare(args))
     if not mb.MUTATIONS:
         # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has
         # no unproven gate in it -- as in the serial main().

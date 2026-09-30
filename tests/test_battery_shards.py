@@ -74,6 +74,7 @@ def table(tmp_path, monkeypatch):
     tree.mkdir()
     monkeypatch.setattr(mb, "MUTATIONS", ms)
     monkeypatch.setattr(mb, "ROOT", tree)
+    monkeypatch.setattr(mb, "anchor_problems", lambda: [])  # the fake table's
     monkeypatch.setattr(iso, "pinned_sha", lambda root: SHA)
     monkeypatch.setattr(iso, "default_pool_dir", lambda root: tmp_path / "default-pool")
     # restored on teardown whatever a shard run sets it to
@@ -210,6 +211,7 @@ def test_a_dirty_invoking_tree_is_did_not_run_not_a_traceback(table, work, monke
 
 def _fake_battery(seen: dict):
     def main():
+        seen["pinned"] = iso.pinned_sha(mb.ROOT)  # as open_workspace does
         seen["argv"] = list(sys.argv)
         seen["names"] = [m.name for m in mb.MUTATIONS]
         seen["threads"] = os.environ.get("RSR_BATTERY_THREADS")
@@ -265,6 +267,17 @@ def test_a_shard_records_what_it_ran_when_it_finishes(table, work, monkeypatch):
         "rc": 0,
     }
     assert done["n_mutations"] == 3 and done["threads"] == 1 and done["wall_s"] >= 0
+
+
+def test_a_shard_records_the_sha_its_battery_pinned(table, work, monkeypatch):
+    """Review MINOR-5: not a second read of HEAD, which could see a later commit."""
+    reads = iter(["c" * 40, "d" * 40, "e" * 40])
+    monkeypatch.setattr(iso, "pinned_sha", lambda root: next(reads))
+    seen: dict = {}
+    monkeypatch.setattr(mb, "main", _fake_battery(seen))
+    _shard(work, 0, 2)
+    done = json.loads(bs.shard_paths(work, 0, 2).done.read_text())
+    assert done["sha"] == seen["pinned"] == "c" * 40
 
 
 def test_a_shard_whose_battery_refused_records_the_refusal(table, work, monkeypatch):
@@ -357,6 +370,18 @@ def test_a_missing_row_is_did_not_run_never_a_pass(table, work):
     assert by_name["m1"]["verdict"] == by_name["m3"]["verdict"] == "PROVEN"
 
 
+def test_a_row_for_another_gate_is_did_not_run(table, work):
+    """Review MINOR-3: the right name with another gate is not this mutation's row."""
+    _write_all(work, 2, table, skip=(1,))
+    wrong = {**_proven(table[3]), "gate": "test_gate_9"}
+    _write_shard(work, 1, 2, [_proven(table[1]), wrong])
+    rc, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
+    assert rc == 3
+    assert by_name["m3"]["verdict"] == "DID_NOT_RUN"
+    assert "test_gate_9" in by_name["m3"]["did_not_run"]
+
+
 def test_a_row_for_another_mutation_is_did_not_run(table, work):
     _write_all(work, 2, table, skip=(1,))
     _write_shard(work, 1, 2, [_proven(table[1]), _proven(table[4])])  # m4, not m3
@@ -400,7 +425,7 @@ def test_a_shard_record_from_another_run_is_did_not_run(table, work, stale):
     assert by_name["m0"]["verdict"] == "PROVEN"
 
 
-@pytest.mark.parametrize("rc", [1, 2, 137, 143, None], ids=str)
+@pytest.mark.parametrize("rc", [1, 2, 137, 143, None, False], ids=str)
 def test_a_shard_that_exited_outside_0_and_3_is_did_not_run(table, work, rc):
     _write_all(work, 2, table, skip=(1,))
     _write_shard(work, 1, 2, [_proven(table[i]) for i in (1, 3)], rc=rc)
@@ -438,6 +463,75 @@ def test_check_fails_on_an_unproven_merged_gate(table, work):
     assert rc == 1
 
 
+# ------------------------------------------------------------- compare
+
+
+def _compare(tmp_path, serial, sharded) -> int:
+    a, b = tmp_path / "serial.json", tmp_path / "sharded.json"
+    for path, rows in ((a, serial), (b, sharded)):
+        path.write_text(rows if isinstance(rows, str) else _serial(rows))
+    return int(bs.main(["compare", str(a), str(b)]))
+
+
+def test_compare_reads_only_the_verdict_fields(tmp_path):
+    """Review MAJOR-1 (manager's decision): per mutation, on the verdict fields
+    only -- `failure_reasons` carry per-run tmp paths and env stamps differ by
+    design, so whole rows differ between any two real batteries."""
+    serial = [_proven(_mutation(i)) for i in range(3)]
+    sharded = [
+        {
+            **r,
+            "failure_reasons": {"x": "/tmp/pytest-of-u/pytest-9/elsewhere"},
+            "rsr_env": {"RSR_BATTERY_THREADS": "1"},
+        }
+        for r in serial
+    ]
+    assert _compare(tmp_path, serial, list(reversed(sharded))) == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("verdict", "LEAKS"), ("off_gate_undeclared", ["tests/t.py::x"])],
+    ids=["verdict", "off-gate-undeclared"],
+)
+def test_compare_exits_1_on_a_verdict_field_difference(tmp_path, capsys, field, value):
+    serial = [_proven(_mutation(i)) for i in range(3)]
+    sharded = [dict(r) for r in serial]
+    sharded[1][field] = value
+    assert _compare(tmp_path, serial, sharded) == 1
+    out = capsys.readouterr().out
+    assert "m1" in out and field in out and "m0" not in out
+
+
+@pytest.mark.parametrize(
+    "sharded",
+    [[0, 1], [0, 1, 2, 3], [0, 1, 1]],
+    ids=["missing", "extra", "duplicate"],
+)
+def test_compare_refuses_mismatched_mutation_sets(tmp_path, sharded):
+    serial = [_proven(_mutation(i)) for i in range(3)]
+    assert _compare(tmp_path, serial, [_proven(_mutation(i)) for i in sharded]) == 3
+
+
+def test_compare_refuses_an_unreadable_record(tmp_path):
+    serial = [_proven(_mutation(i)) for i in range(3)]
+    assert _compare(tmp_path, serial, "not json") == 3
+    assert _compare(tmp_path, serial, '{"a": 1}') == 3
+
+
+def test_compare_of_a_mutation_that_did_not_run_is_not_a_pass(tmp_path):
+    serial = [_proven(_mutation(i)) for i in range(3)]
+    sharded = [dict(r) for r in serial]
+    sharded[2] = mb._row(_mutation(2), {}, "shard 1 of 2: no done record")
+    # a DID_NOT_RUN row in both arms is still not evidence of equivalence
+    assert _compare(tmp_path, sharded, sharded) == 3
+    assert _compare(tmp_path, serial, sharded) == 3
+
+
+def test_compare_of_zero_mutations_is_unknown(tmp_path):
+    assert _compare(tmp_path, [], []) == 2
+
+
 # ------------------------------------------------------------- launching
 
 
@@ -458,6 +552,15 @@ def test_a_shard_is_launched_under_one_cpu_det_slot(work, monkeypatch):
         [*shard, *tail],
         {"A": "b"},
     )
+
+
+def test_a_shards_slot_request_equals_its_thread_count(work, monkeypatch):
+    """Review MINOR-1: one cpu-det slot per suite thread, as orchestrator.slot
+    sizes a job's thread env by its slots."""
+    monkeypatch.setattr(bs, "SHARD_PREFIX", ["PY", "battery_shards.py"])
+    argv, _ = bs.launch(0, 2, RUN, work, threads=4, slot_wait=10.0, base={})
+    assert argv[argv.index("--slots") + 1] == "4"
+    assert argv[argv.index("--threads") + 1] == "4"
 
 
 def test_every_shard_gets_its_own_slot_job_id(work):
@@ -521,6 +624,20 @@ def test_run_refuses_a_work_dir_holding_an_earlier_result(table, work, monkeypat
 
     monkeypatch.setattr(subprocess, "Popen", must_not_run)
     _write_all(work, 2, table)
+    with pytest.raises(SystemExit) as e:
+        bs.main(["run", "--shards", "2", "--work-dir", str(work)])
+    assert e.value.code == 3
+
+
+def test_run_refuses_a_stale_anchor_before_any_shard_starts(table, work, monkeypatch):
+    """Review MINOR-2: a stale anchor refuses only the shard whose slice holds it;
+    the other N-1 would run for hours toward an exit 3 anyway."""
+
+    def must_not_run(*a, **k):
+        raise AssertionError("run started a shard on a stale table")
+
+    monkeypatch.setattr(subprocess, "Popen", must_not_run)
+    monkeypatch.setattr(mb, "anchor_problems", lambda: ["'m3': anchor occurs 0 times"])
     with pytest.raises(SystemExit) as e:
         bs.main(["run", "--shards", "2", "--work-dir", str(work)])
     assert e.value.code == 3
@@ -680,7 +797,8 @@ def test_sharded_verdicts_equal_the_serial_ones_on_the_stub(stub, tmp_path):
         ],
         capture_output=True,
         text=True,
-        env=_env(tmp_path),
+        # the serial arm runs its suite at one thread, as every shard does
+        env=_env(tmp_path, RSR_BATTERY_THREADS="1"),
         timeout=300,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
@@ -693,7 +811,8 @@ def test_sharded_verdicts_equal_the_serial_ones_on_the_stub(stub, tmp_path):
         timeout=300,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr + _shard_logs(work, 2)
-    assert json.loads(merged.read_text()) == json.loads(serial.read_text())
+    # per mutation, on the verdict fields (review MAJOR-1): never whole rows
+    assert bs.main(["compare", str(serial), str(merged)]) == mb.Exit.OK
     assert _verdicts(json.loads(merged.read_text())) == [
         "PROVEN",
         "LEAKS",
