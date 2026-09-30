@@ -4010,6 +4010,54 @@ MUTATIONS: tuple[Mutation, ...] = (
         "(same tensors, same documents, same simulate); a tolerance would hide a "
         "different reading of D.pt.",
     ),
+    # --- b5-convergence (experiments/b5-convergence/PREREG.md, dfda530) ---
+    Mutation(
+        "b5-convergence: the T0 protection guard dropped",
+        "test_output_dir_inside_protected_dir_refused",
+        "experiments/b5-convergence/run.py",
+        "        if p == d or d in p.parents:\n",
+        "        if False:\n",
+        "B5 PREREG control 1: the run never writes into a directory the T0 manifest "
+        "names or into .worktrees/fresh-stream; the guard refuses such a target.",
+    ),
+    Mutation(
+        "b5-convergence: the start-checkpoint sha256 comparison dropped",
+        "test_start_copy_refuses_sha_mismatch",
+        "experiments/b5-convergence/run.py",
+        "    if sha != expected_sha:\n",
+        "    if False:\n",
+        "B5 PREREG control 2: each start checkpoint has the sha256 of its T0 manifest "
+        "line before it is copied.",
+    ),
+    Mutation(
+        "b5-convergence: E* read on any seed",
+        "test_common_step_needs_every_seed",
+        "experiments/b5-convergence/run.py",
+        '        if all(s in row and row[s]["holds"] for s in SEEDS):\n',
+        '        if any(s in row and row[s]["holds"] for s in SEEDS):\n',
+        "B5 PREREG common step: E* is the first E at which the rule holds on EVERY "
+        "seed -- one common step.",
+    ),
+    Mutation(
+        "b5-convergence: the rule reads the point slope, not its CI",
+        "test_rule_reads_the_confidence_interval_not_the_point",
+        "experiments/b5-convergence/run.py",
+        '        "holds": bool(rel[0] > -REL_BOUND and rel[1] < REL_BOUND),\n',
+        '        "holds": bool(-REL_BOUND < 100 * b / my < REL_BOUND),\n',
+        "B5 PREREG plateau rule: the 95 % CI of the slope over the mean lies strictly "
+        "inside (-1, +1) % per 1000 steps; the point estimate alone is not the rule.",
+    ),
+    Mutation(
+        "b5-convergence: resume from the earliest own checkpoint",
+        "test_resume_picks_the_latest_own_checkpoint",
+        "experiments/b5-convergence/run.py",
+        '    return max(found, key=lambda p: int(p.stem.split("-")[1])) '
+        "if found else None\n",
+        '    return min(found, key=lambda p: int(p.stem.split("-")[1])) '
+        "if found else None\n",
+        "B5 brief: a killed run resumes from its LATEST own checkpoint and loses at "
+        "most one window.",
+    ),
 )
 
 
