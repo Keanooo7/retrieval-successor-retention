@@ -306,3 +306,21 @@ def test_compare_payloads_is_exact():
     assert r["equal"] is False and any("model" in m for m in r["mismatches"])
     d = {**a, "rng": {**a["rng"], "cpu": torch.tensor([1, 3], dtype=torch.uint8)}}
     assert run.compare_payloads(a, d)["equal"] is False
+
+
+def test_report_key_ignores_the_step_counter():
+    """The report and ledger update per completed window / measurement, not per poll."""
+    base = {
+        "windows": {s: {3000: 0.8} for s in SEEDS},
+        "per": {s: {} for s in SEEDS},
+        "trace": {},
+        "e_star": None,
+        "classification": "IN_PROGRESS",
+        "reached": {s: 3300 for s in SEEDS},
+    }
+    moved = {**base, "reached": {s: 3310 for s in SEEDS}}
+    assert run.report_key(base) == run.report_key(moved)
+    window = {**base, "windows": {**base["windows"], 1: {3000: 0.8, 3250: 0.79}}}
+    assert run.report_key(base) != run.report_key(window)
+    measured = {**base, "per": {**base["per"], 0: {4000: {}}}}
+    assert run.report_key(base) != run.report_key(measured)

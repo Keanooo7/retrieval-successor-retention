@@ -44,6 +44,7 @@ import json
 import math
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -768,6 +769,18 @@ def pending_measurements(st: dict) -> list[int]:
     return [c for c in want if not all(c in st["per"][s] for s in SEEDS)]
 
 
+def report_key(st: dict) -> tuple:
+    """What changes the report: a completed window on any seed, a measurement, the
+    rule, E*, the classification -- not the step counter."""
+    return (
+        tuple(len(st["windows"][s]) for s in SEEDS),
+        tuple(sorted((s, c) for s in SEEDS for c in st["per"][s])),
+        tuple(sorted(st["trace"])),
+        st["e_star"],
+        st["classification"],
+    )
+
+
 def status_line(st: dict) -> str:
     last = {s: (max(w) if w else None) for s, w in st["windows"].items()}
     parts = []
@@ -1037,6 +1050,9 @@ def parent(root: Path, *, report: Path | None, protected: set[Path]) -> Exit:
             + "\n"
         )
         log(f"manifest frozen: {m} config_hash {led.doc['config_hash']}")
+    # Each control runs when its own result is absent (a parent killed during the
+    # controls re-runs them on relaunch; the manifest is frozen once).
+    if not (root / "control_measurement_path.json").exists():
         c3 = control_measurement_path(
             root, reference_rows(json.loads(ref_path.read_text()))
         )
@@ -1044,15 +1060,18 @@ def parent(root: Path, *, report: Path | None, protected: set[Path]) -> Exit:
             json.dumps(c3, indent=2, default=str) + "\n"
         )
         log(f"control 3 measurement path unchanged: ok={c3.get('ok')}")
-        if not c3.get("ok"):
-            write_ledger(root)
-            refuse(Exit.DID_NOT_RUN, f"control 3 failed: {c3.get('error')}")
+    c3 = _read_json(root / "control_measurement_path.json") or {}
+    if not c3.get("ok"):
+        write_ledger(root)
+        refuse(Exit.DID_NOT_RUN, f"control 3 failed: {c3.get('error')}")
+    if not (root / "preflight.json").exists():
         pf = preflight()
         (root / "preflight.json").write_text(json.dumps(pf, indent=2, default=str) + "\n")
         log(f"control 4 stream/closure: ok={pf['ok']}")
-        if not pf["ok"]:
-            write_ledger(root)
-            refuse(Exit.DID_NOT_RUN, f"control 4 failed: {pf['error']}")
+    pf = _read_json(root / "preflight.json") or {}
+    if not pf.get("ok"):
+        write_ledger(root)
+        refuse(Exit.DID_NOT_RUN, f"control 4 failed: {pf.get('error')}")
     segs = _read_json(root / "segments.json") or []
     seg = {
         "started": now_iso(),
@@ -1082,8 +1101,35 @@ def parent(root: Path, *, report: Path | None, protected: set[Path]) -> Exit:
         f"{seg['child_pid']}, from steps {seg['from_step']}",
     )
 
+    def _stop(signum, _frame):
+        # A killed parent must not orphan its children: they would keep training
+        # beside a relaunched run. Stop them; each resumes from its latest ckpt.
+        log(f"signal {signum}: terminating children {seg['child_pid']}")
+        for c in children.values():
+            if c.poll() is None:
+                c.terminate()
+        for c in children.values():
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                c.wait(timeout=60)
+            if c.poll() is None:
+                c.kill()
+        seg["exit_codes"] = {str(s): c.poll() for s, c in children.items()}
+        seg["ended"] = now_iso()
+        seg["stopped_by_signal"] = signum
+        segs[-1] = seg
+        (root / "segments.json").write_text(json.dumps(segs, indent=2) + "\n")
+        _append(
+            report,
+            f"- {now_iso()} segment {len(segs)} STOPPED by signal "
+            f"{signum}; resumable from each seed's latest ckpt",
+        )
+        raise SystemExit(128 + signum)
+
+    for sig in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        signal.signal(sig, _stop)
+
     errors: list[str] = _read_json(root / "measurement_errors.json") or []
-    last_line = None
+    last_key = None
     while True:
         st = state(root)
         for c in pending_measurements(st):
@@ -1107,12 +1153,13 @@ def parent(root: Path, *, report: Path | None, protected: set[Path]) -> Exit:
                     )
                     log(f"  measurement raised: {errors[-1]}")
         st = state(root)
-        line = status_line(st)
-        if line != last_line:
+        key = report_key(st)
+        if key != last_key:
+            line = status_line(st)
             write_ledger(root)
             _append(report, f"- {now_iso()} {line}")
             log(line)
-            last_line = line
+            last_key = key
         alive = [s for s, c in children.items() if c.poll() is None]
         if not alive and not [
             c
