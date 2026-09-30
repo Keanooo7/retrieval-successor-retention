@@ -4200,6 +4200,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "'empirically results in poor performance'; the loss is charged while "
         "0 < m < 1. This mutation restores this branch's own first (wrong) "
         "implementation.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::"
+                "test_rows_past_their_stream_length_are_not_charged",
+                "its memories sit on the ramp (age 3) and must be charged before the "
+                "row mask can halve the charge; charged only at admission they are "
+                "never charged, so its 'charge > 0' precondition fails.",
+            ),
+        ),
     ),
     Mutation(
         "model: every C block reads layer 0's mask",
