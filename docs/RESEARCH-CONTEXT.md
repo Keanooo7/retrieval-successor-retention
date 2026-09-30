@@ -835,16 +835,18 @@ decision that §12 lists. Neither is a correction; a correction is written by Br
      `runs/lookahead-room-r2/ledger.json`), now reproduced in B0's ledger.
    - **By age it is not one gap.** At age 1, `B.ckpt3000.F1.D.1|pending.mean`
      **0.0930 / 0.0999 / 0.1047** against `B.ckpt3000.F1.D.1|filler.mean` **0.0580 / 0.0831 / 0.0615**.
-     The gap narrows at older ages (not monotonically on seed 1) and **reverses from age 13 on seeds 0
-     and 1**, still inside FIFO memory:
+     The gap (pending − filler) narrows at older ages — strictly at every step from age 1 to 16 only on
+     seed 0; it rises at age 2 on seed 2 and at ages 2 and 8–10 on seed 1 — and **reverses from age 13
+     on seeds 0 and 1**, still inside FIFO memory:
      at age 13, `…D.13|pending.mean` 0.0562 / 0.0472 / 0.0682 against `…D.13|filler.mean`
      0.0579 / 0.0523 / 0.0601; at age 16, `…D.16|pending.mean` 0.0783 / 0.0508 / 0.0758 against
      `…D.16|filler.mean` 0.0928 / 0.0683 / 0.0731. On seed 2 pending stays above filler at every age
      1–16. Full table: `B.ckpt3000.F1.D_by_age_class` (the per-age signs are arithmetic on it).
      **Pooling across ages hides a sign change.**
    - For evicted sentences probed back at rank 0 (`B.ckpt3000.F1.D.age_gt_M|*`), pending
-     **0.0843 / 0.0544 / 0.0829** against filler **0.0962 / 0.0817 / 0.0757**: filler is higher on
-     every seed.
+     (`B.ckpt3000.F1.D.age_gt_M|pending.mean`) **0.0843 / 0.0544 / 0.0829** against filler
+     (`B.ckpt3000.F1.D.age_gt_M|filler.mean`) **0.0962 / 0.0817 / 0.0757**: filler is higher on seeds
+     0 and 1, pending is higher on seed 2.
    - **A rule that evicts on the `γ = 0` target sits near FIFO.** `B.ckpt3000.hit.rule_g0`
      **0.7997 / 0.7881 / 0.8457** against `U.hit.fifo.all` **0.8059 / 0.8093 / 0.8088**; its share of
      the fact/filler gain, `B.ckpt3000.cap.rule_g0.point`, is −0.039 / −0.136 / +0.234. The causal
@@ -859,8 +861,10 @@ decision that §12 lists. Neither is a correction; a correction is written by Br
    Whether `r_i` is the right target is **E0d's question** (§3.2.1). 🔴 These are hindsight,
    FIFO-world proxies, computed in-sample on the already-inspected U range (B0 is descriptive, no
    gate) — not a result about a trained RSR head.
-2. **`β`'s inertness under AdamW with `φ`-only gradient holds only as `ε → 0`.** *(Updated
-   2026-09-30 with B1's measured result, replacing "`β` is inert"; PLAN-v4 §2D.)* The premise
+2. **`β`'s inertness with `φ`-only gradient, as measured by B1: it fails at `ε = 1e-8` and holds at
+   `ε = 1e-12` in the three decoupled-weight-decay AdamW arms; under coupled L2 (`torch.optim.Adam`
+   with `weight_decay`, not AdamW) `β` is LIVE at both.** Only these two `ε` values were measured.
+   *(Updated 2026-09-30 with B1's measured result, replacing "`β` is inert"; PLAN-v4 §2D.)* The premise
    (ADR-0009 decision **L7**, proposed, on the unmerged PR #52, branch `docs/adr-learning-path`): only `φ` receives `L_MC`'s gradient (§13.3) and AdamW is
    invariant to a constant rescaling of the gradient, so `β` as a loss weight would change nothing,
    and E1's `β` sweep would return a null by construction — the shape of defect D-1.
