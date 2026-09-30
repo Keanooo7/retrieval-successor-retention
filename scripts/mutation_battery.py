@@ -4309,6 +4309,7 @@ MUTATIONS: tuple[Mutation, ...] = (
             )
             for t in (
                 "test_a_missing_row_is_did_not_run_never_a_pass",
+                "test_a_row_for_another_gate_is_did_not_run",
                 "test_a_row_for_another_mutation_is_did_not_run",
                 "test_a_row_without_the_serial_rows_fields_is_did_not_run",
                 "test_a_shard_process_that_dies_makes_its_mutations_did_not_run",
@@ -4321,6 +4322,7 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[143]",
                 "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[1]",
                 "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[2]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[False]",
                 "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[None]",
                 "test_a_shard_that_wrote_no_rows_is_did_not_run",
                 "test_a_shard_with_no_done_record_is_did_not_run",
@@ -4458,6 +4460,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
                 "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
             )
+        )
+        # I2 fix round 1 (tests/test_battery_worktree_admin.py): shown red by hand.
+        + tuple(
+            (
+                f"tests/test_battery_worktree_admin.py::{t}",
+                "the teardown test asserts the pool's teardown ran and reported the "
+                "prune it could not do; a pool that is never torn down reports nothing.",
+            )
+            for t in ("test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts",)
         ),
     ),
     Mutation(
@@ -5817,7 +5828,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    sys.argv, iso.pinned_sha = argv, pin\n    try:\n        try:\n",
         "    sys.argv, iso.pinned_sha = argv, pin\n"
         '    _write_json(paths.done, {"run_id": args.run_id, "index": args.index, '
-        '"of": args.of, "sha": real_pin(mb.ROOT), "table": table_fingerprint(table), '
+        '"of": args.of, "sha": None, "table": table_fingerprint(table), '
         '"rc": 0})\n'
         "    try:\n        try:\n",
         "I2: the done record says the shard's battery RETURNED. Written at the "
@@ -5976,6 +5987,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if False:",
         "I2: a row is this mutation's only if it names it and its gate; another "
         "mutation's verdict in its place would be reported under the wrong name.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_shards.py::test_a_row_for_another_gate_is_did_not_run",
+                "name and gate are one condition in row_problem; disabling it accepts a "
+                "row for another gate too.",
+            ),
+        ),
     ),
     Mutation(
         "i2: a row without the serial row's fields is accepted",
