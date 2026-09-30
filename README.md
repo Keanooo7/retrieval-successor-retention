@@ -44,17 +44,17 @@ commit and the date the ledger landed.
 | An offline ψ̂ eviction rule is harmful through the model (B2; closed-form ridge fit, not a trained head) | `classification` row 1, HARMFUL: ψ̂-U LOSS / LOSS / EQUIV, ψ̂-C EQUIV ×3 | Preliminary | run `b2-psi-probe` · `80c1cd7` · 2026-09-29 |
 | Hard grace does not rescue it; the harm travels with the counterfactual target (newcomer bake-off, offline) | `decision.DQ1` NO; `decision.DQ2` INTERMEDIATE; `decision.DQ3` YES | Preliminary | run `newcomer-bakeoff` · `16f867a` · 2026-09-30 |
 | `β` is not inert under AdamW at `ε = 1e-8` with `φ`-only gradient (B1, open-loop) | `verdict.outcome` falsified: decoupled_wd LIVE at 1e-8, INERT at 1e-12 | Preliminary | run `b1-beta-inertness` · `412f136` · 2026-09-30 |
-| Arm B's stream loss has not plateaued by step 9000, and retrieval holds throughout (B5; FIFO only) | `classification_reported_as` NO_PLATEAU by 9000; `B.ckpt9000.R_quantity` 0.8683 / 0.8546 / 0.8573 | Preliminary | run `b5-convergence` · `b9595e0` · 2026-09-30 |
+| Arm B's stream loss has not plateaued by step 9000, and retrieval holds throughout (B5; FIFO only) | `classification_reported_as` NO_PLATEAU by 9000; `B.ckpt9000.R_quantity` 0.8683 / 0.8546 / 0.8573 | Preliminary | run `b5-convergence` · `b9595e0` (the ledger records `dirty: true`; the code ran at `a84f78d`, and `a84f78d`→`b9595e0` changes no code) · 2026-09-30 |
 
 Ledgers are at `runs/<run id>/ledger.json`, beside the verifier's
 `verification.json`. The rows dated 2026-09-29/30 are generated, with their keys,
 verifier verdicts and review records, in
 [`docs/results/2026-09-30-verified.md`](docs/results/2026-09-30-verified.md)
 (`scripts/verified_results.py`; a test fails if that file and the ledgers disagree).
-The open question has narrowed but not closed: the headroom exists; `r_i` ranks the
-slot being retrieved *now* well (E0d) but its bottom-of-ranking agreement is poor, and
-eviction is an argmin; an offline ψ̂ fitted to it was harmful (B2). Whether a ψ̂
-trained in the loop behaves differently has not been measured.
+The open question has narrowed but not closed. The headroom exists; `r_i` ranks the
+slot being retrieved *now* above its same-age peers (E0d); and an offline ψ̂ eviction
+rule was harmful through the model (B2). Nothing here measures what connects those
+facts. Whether a ψ̂ trained in the loop behaves differently has not been measured.
 
 **Where to find the audit trail**
 
