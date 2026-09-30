@@ -317,6 +317,11 @@ def test_a_constant_new_in_theirs_lands_where_theirs_put_it():
     assert res.text.index("_R:") < res.text.index("_A_COUPLING")
 
 
+# un-annotated on purpose: these placement tests must not also depend on _CONST
+# matching annotations (that has its own mutation)
+_PLAIN = '_P_COUPLING = (\n    "p",\n)\n'
+
+
 def test_a_new_constant_is_anchored_on_its_successors_definition():
     """Review 66d1dfa5c440 MINOR-1: the successor was found by the first column-0
     line starting with its name, so a head-code line such as an annotation-only
@@ -324,10 +329,10 @@ def test_a_new_constant_is_anchored_on_its_successors_definition():
     inserted above it -- silently, since the output still parses and counts."""
     decl = "_A_COUPLING: tuple[str, ...]\n\n"
     head_b = _HEAD.replace("_A_COUPLING = (", decl + "_A_COUPLING = (")
-    head_t = head_b.replace("_A_COUPLING = (", _ANNOTATED + "_A_COUPLING = (")
+    head_t = head_b.replace("_A_COUPLING = (", _PLAIN + "_A_COUPLING = (")
     head_o = head_b.replace("import os", "import os\nimport signal")
     res = bu.union(_src(head=head_b), _src(head=head_o), _src(head=head_t))
-    assert res.new_consts == ["_R"]
+    assert res.new_consts == ["_P_COUPLING"]
     assert res.text == _src(head=head_t.replace("import os", "import os\nimport signal"))
 
 
@@ -335,7 +340,7 @@ def test_a_constant_new_in_ours_lands_where_ours_put_it_when_theirs_head_is_take
     """Review 66d1dfa5c440 MINOR-3: on the take-theirs'-head path (only theirs
     changed head code) an ours-only constant was appended to the end of the head,
     so the placement rule was one-sided. It now mirrors theirs-new placement."""
-    head_o = _HEAD.replace("_A_COUPLING = (", _ANNOTATED + "_A_COUPLING = (")
+    head_o = _HEAD.replace("_A_COUPLING = (", _PLAIN + "_A_COUPLING = (")
     head_t = _HEAD.replace("import os", "import os\nimport json")
     res = bu.union(_src(), _src(("m1", "m2", "o"), head=head_o), _src(head=head_t))
     assert res.text == _src(
