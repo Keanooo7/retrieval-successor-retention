@@ -1,8 +1,9 @@
 """E0d -- `r_i` against leave-one-out delta-loss (spec §3.2.1, §6 kill gate).
 
 Pre-registration: `experiments/e0d/PREREG.md`, committed alone at 5357ad2, ahead of
-this file; **Amendment 1** (84e21c5, erratum 268b947); and **Amendment 2** (8c63ecd),
-which governs wherever they differ. They fix the substrate, the documents, every
+this file; **Amendment 1** (84e21c5, erratum 268b947); **Amendment 2** (8c63ecd),
+which governs wherever it and A1 differ; and **Amendment 3** (f5a8752), which
+governs over both. They fix the substrate, the documents, every
 statistic, every threshold, the controls and the classification. This file
 implements them; it chooses none. Where they left a detail open, the choice is
 marked `PREREG-OPEN:` below and listed in RESULTS.md. Amendment 2's cited material
@@ -2462,7 +2463,7 @@ def _main(argv: list[str] | None) -> Exit:
             "experiment": EXPERIMENT,
             "prereg": PREREG_PATH,
             "prereg_amendment": "Amendment 1 (84e21c5), erratum (268b947), "
-            "Amendment 2 (8c63ecd)",
+            "Amendment 2 (8c63ecd), Amendment 3 (f5a8752)",
             "run_id": a.run_id,
             "seeds": list(SEEDS),
             "ckpt_root": str(a.ckpt_root),
