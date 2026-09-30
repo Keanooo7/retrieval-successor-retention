@@ -4702,6 +4702,40 @@ MUTATIONS: tuple[Mutation, ...] = (
         ),
     ),
     Mutation(
+        "battery-union: an annotated constant is not a constant",
+        "test_an_annotated_constant_is_split_out_as_a_constant",
+        "scripts/battery_union.py",
+        '_CONST = re.compile(r"^(_[A-Z0-9_]+)(?:: [^\\n=]+)? = ',
+        '_CONST = re.compile(r"^(_[A-Z0-9_]+) = ',
+        "2026-09-30: `_X: tuple[str, ...] = (` must be keyed as a constant. The "
+        "pre-fix regex made it head code, and the union refused the i1 merge "
+        "(7eda821 was resolved by hand). Reverting only _CONST is worse than the "
+        "original defect: _CONST_STRIP still removes the constant from head code, "
+        "so a theirs-only annotated constant vanishes from the union silently.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_battery_union.py::{t}",
+                    "the same regex seen through union(): the annotated constant is "
+                    "neither a constant nor head code, so it is dropped (measured by "
+                    "hand 2026-09-30 on tests/test_battery_union.py: 5 red, 25 green)",
+                )
+                for t in (
+                    "test_an_annotated_constant_new_in_theirs_merges_when_ours_changed_"
+                    "head_code",
+                    "test_an_annotated_constant_only_theirs_changed_is_updated",
+                    "test_a_constant_new_in_theirs_lands_where_theirs_put_it",
+                )
+            ),
+            (
+                "tests/test_battery_union.py::"
+                "test_reproduces_the_mutation_battery_the_i1_merge_committed",
+                "the real i1 merge: theirs' _REVIEW_GATE_REFUSALS is annotated, so "
+                "the union cannot reproduce 7eda821 without it",
+            ),
+        ),
+    ),
+    Mutation(
         "b2-psi-probe: age leaks into psi-hat",
         "test_no_age_in_psi_hat_permuting_written_at_and_step_changes_nothing",
         "experiments/b2-psi-probe/run.py",
