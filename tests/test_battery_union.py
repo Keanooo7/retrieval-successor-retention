@@ -331,6 +331,18 @@ def test_a_new_constant_is_anchored_on_its_successors_definition():
     assert res.text == _src(head=head_t.replace("import os", "import os\nimport signal"))
 
 
+def test_a_constant_new_in_ours_lands_where_ours_put_it_when_theirs_head_is_taken():
+    """Review 66d1dfa5c440 MINOR-3: on the take-theirs'-head path (only theirs
+    changed head code) an ours-only constant was appended to the end of the head,
+    so the placement rule was one-sided. It now mirrors theirs-new placement."""
+    head_o = _HEAD.replace("_A_COUPLING = (", _ANNOTATED + "_A_COUPLING = (")
+    head_t = _HEAD.replace("import os", "import os\nimport json")
+    res = bu.union(_src(), _src(("m1", "m2", "o"), head=head_o), _src(head=head_t))
+    assert res.text == _src(
+        ("m1", "m2", "o"), head=head_o.replace("import os", "import os\nimport json")
+    )
+
+
 # -- constant deletions (review MINOR-1) ------------------------------------------
 
 _HEAD_NO_A = _HEAD.replace('_A_COUPLING = (\n    "a",\n)\n\n', "")

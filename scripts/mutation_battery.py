@@ -4841,6 +4841,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "gains another, or changes a value, is written as if it were the merge.",
     ),
     Mutation(
+        "battery-union: an ours-only constant is appended to theirs' head",
+        "test_a_constant_new_in_ours_lands_where_ours_put_it_when_theirs_head_is_taken",
+        "scripts/battery_union.py",
+        "                h = _insert_new_const(h, k, o, t)\n",
+        '                h = h + v + "\\n"\n',
+        "review 66d1dfa5c440 MINOR-3: when only theirs changed head code, a constant "
+        "only ours has moves to the end of the head instead of where ours put it -- "
+        "the placement rule applied to one side only.",
+    ),
+    Mutation(
         "b2-psi-probe: age leaks into psi-hat",
         "test_no_age_in_psi_hat_permuting_written_at_and_step_changes_nothing",
         "experiments/b2-psi-probe/run.py",
