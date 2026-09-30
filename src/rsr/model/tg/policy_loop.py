@@ -342,10 +342,27 @@ def run_policy_loop(
     # stream. Anything the policy keeps per stream -- LRU's `last_used`, H2O's
     # accumulated attention, §3.5's `b` -- dies here rather than leaking forward.
     policy.reset()
+    # Expire-Span [P7] (spec §5.4) is the one policy that shapes the forward pass:
+    # its soft mask enters cross-attention and its span loss enters the objective.
+    # Every other policy has no `memory_weight`, and the model is then called with
+    # exactly the arguments it always was -- E0b's bit-exact path is untouched.
+    weight_fn = getattr(policy, "memory_weight", None)
 
     for t in range(steps):
         ids_t, mask_t = sentences[:, t], masks[:, t]
         row_valid = torch.full((batch,), t, device=device) < lengths
+        extra, span_loss = {}, None
+        if weight_fn is not None:
+            # Pre-write memory, like `observe`: the mask is for what this step's
+            # forward attends over. The MODEL's mode gates structured dropout.
+            extra["mem_weight"], span_loss = weight_fn(
+                mem.kv,
+                mem.valid,
+                mem.step,
+                t,
+                training=model.training,
+                row_valid=row_valid,
+            )
         out = model(
             ids_t,
             mask_t,
@@ -354,6 +371,7 @@ def run_policy_loop(
             bos_ctx,
             bos_valid,
             capture=capture or observe,
+            **extra,
         )
         if capture:
             captured.append(out)
@@ -368,6 +386,13 @@ def run_policy_loop(
                         t,
                     )
         contrib = step_fn(t, out, ids_t, mask_t, row_valid)
+        if span_loss is not None:
+            # [P7]'s auxiliary span loss is part of the objective the arm TRAINS
+            # on. Added here rather than left to the caller: a caller that forgot
+            # it would run `alpha = 0` under a config that says otherwise. The
+            # policy returns None at eval (review MAJOR-1), so an eval loss read
+            # from this loop never carries it.
+            contrib = contrib + span_loss
         acc = contrib if acc is None else acc + contrib
 
         srep_mem = out.srep.detach() if cfg.detach_sreps_for_memory else out.srep

@@ -5350,6 +5350,260 @@ MUTATIONS: tuple[Mutation, ...] = (
             "a seed starts from the same phi (N is bit-identical)."
         ),
     ),
+    # ------------------------------------------------------------------ #
+    # Expire-Span [P7] (spec §5.4, D-4, falsifier 6; release condition 3).
+    # P7:L<n> = line of ~/research-corpus/sources/memory-retention/
+    # sukhbaatar-2021-expire-span.md
+    # ------------------------------------------------------------------ #
+    Mutation(
+        "expire-span: eviction takes the MOST remaining span",
+        "test_expire_span_evicts_the_slot_with_least_remaining_span",
+        "src/rsr/baselines/expire_span.py",
+        "            victim = int(r.argmin().item())",
+        "            victim = int(r.argmax().item())",
+        "ADR-0010 q6 (a port choice; [P7] has no capacity): a full memory "
+        "drops the slot whose longest remaining span over layers is least. "
+        "argmax keeps the dying slot.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_a_slot_one_layer_still_reads_is_not_the_victim",
+                "the cross-layer eviction test asserts the same argmin, over "
+                "max-over-layers.",
+            ),
+            (
+                "tests/test_expire_span.py::test_at_zero_weight_init_expire_span_evicts_exactly_fifo",
+                "at the zero-weight init least-remaining IS oldest; argmax is "
+                "newest-first.",
+            ),
+            (
+                "tests/test_expire_span.py::test_eviction_ignores_dead_slots",
+                "dead slots are masked to +inf for the argmin; argmax picks exactly "
+                "those.",
+            ),
+            (
+                "tests/test_expire_span.py::test_span_resets_on_admission",
+                "ends by asserting the fresh newcomer is not the victim; under argmax "
+                "it is.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: newcomer inherits the row's oldest age",
+        "test_span_resets_on_admission",
+        "src/rsr/baselines/expire_span.py",
+        "        age = (step - mem_step).to(e.dtype)",
+        "        age = (step - mem_step.min(dim=-1, keepdim=True).values.clamp(min=0))"
+        ".to(e.dtype)",
+        "gauntlet 0.4: a new occupant is aged from its own write (P7:L267 r = "
+        "e - (t-i)). Aging every slot from the row's oldest tenant makes the "
+        "newcomer born expired.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_memory_weight_is_zero_on_dead_slots_and_follows_age",
+                "pins age = step - written_at per slot by hand; any other age reddens "
+                "it.",
+            ),
+            (
+                "tests/test_expire_span.py::test_each_cross_layer_gets_its_own_span_and_mask",
+                "compares per-layer masks at hand-set ages; wrong ages collapse them "
+                "to 0.",
+            ),
+            (
+                "tests/test_expire_span.py::test_structured_dropout_drops_every_memory_older_than_one_cutoff",
+                "the cutoff drops by the same age; wrong ages expire everything at eval.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_span_loss_charges_memories_on_the_ramp_only",
+                "the ramp window is an age window; wrong ages move memories off it.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_span_loss_carries_gradient_only_through_the_span",
+                "its one charged memory is chosen by age; wrong ages charge none.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: predictor path leaks into the gestalt",
+        "test_predictor_path_trains_the_predictor_but_not_the_gestalt",
+        "src/rsr/baselines/expire_span.py",
+        "        return kv.detach()",
+        "        return kv",
+        "ADR-0010 q1: `predictor` must stop span gradient at w, b. Without the "
+        "detach it silently becomes `through_gestalt` under a config that says "
+        "otherwise.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_model_gradients_are_identical_under_none_and_predictor",
+                "the end-to-end form of the same guard.",
+            ),
+            (
+                "tests/test_expire_span.py::test_through_gestalt_changes_the_model_gradients",
+                "with the detach gone `predictor` and `through_gestalt` are one setting.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: structured dropout never fires",
+        "test_structured_dropout_drops_every_memory_older_than_one_cutoff",
+        "src/rsr/baselines/expire_span.py",
+        "        if training and self.cfg.structured_dropout:",
+        "        if False and self.cfg.structured_dropout:",
+        "[P7] §4.2 (P7:L387-392): sample l ~ U(0, L) per step and zero every "
+        "memory older than l in training. A switch that is on and never "
+        "applied is an unregularised comparator passing as a regularised one.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_structured_dropout_is_reproducible_under_its_seed",
+                "with no draws two seeds give the same all-ones mask; the test asserts "
+                "they differ.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: construction draws from the global RNG",
+        "test_construction_does_not_consume_the_global_rng",
+        "src/rsr/baselines/expire_span.py",
+        "        self.weight = nn.Parameter(torch.zeros(n_layers, d_model))",
+        "        self.weight = nn.Parameter(torch.randn(n_layers, d_model) * 0.0)",
+        "tests/test_reduction.py's RNG trap: identical values, but the "
+        "constructor consumed global draws, shifting data order and dropout "
+        "for every later arm.",
+    ),
+    Mutation(
+        "model: Expire-Span mask never reaches cross-attention",
+        "test_a_zero_weight_slot_receives_no_attention_and_rows_renormalise",
+        "src/rsr/model/tg/model.py",
+        "            att = _reweight_attention(att, mem_weight)",
+        "            att = att",
+        "Eq. 4 (P7:L272-279): the mask in attention is the only route by which "
+        "the LM loss trains the spans. Dropped, Expire-Span is hard eviction "
+        "by an untrained predictor.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_each_c_block_reads_its_own_layer_of_the_mask",
+                "asserts a per-layer zero shows in that layer's attention; no mask, no "
+                "zero.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_lm_loss_reaches_the_span_predictor_through_the_model",
+                "with alpha = 0 the LM loss reaches w only through the mask.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_loop_passes_the_mask_to_the_model",
+                "fully-expired spans must change the loss vs FIFO; unmasked, it is "
+                "FIFO's.",
+            ),
+        ),
+    ),
+    Mutation(
+        "loop: Expire-Span's span loss is dropped",
+        "test_the_loop_adds_the_span_loss",
+        "src/rsr/model/tg/policy_loop.py",
+        "            contrib = contrib + span_loss",
+        "            contrib = contrib",
+        "Eq. 7 (P7:L332-335): the alpha term must enter the objective the arm "
+        "trains on; a loop that discards it runs alpha = 0 under a config "
+        "stamped otherwise.",
+    ),
+    Mutation(
+        "expire-span: the mask ramp is not clamped at 1",
+        "test_the_mask_is_the_clamped_ramp",
+        "src/rsr/baselines/expire_span.py",
+        "        return (1.0 + remaining / self.cfg.ramp).clamp(0.0, 1.0)",
+        "        return (1.0 + remaining / self.cfg.ramp).clamp(0.0, None)",
+        "Eq. 5 (P7:L284) m = max(0, min(1, 1 + r/R)): unclamped above, an "
+        "unexpired slot's weight grows with its span -- an attention bias, not "
+        "expiry.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_span_resets_on_admission",
+                "asserts the newcomer's mask is exactly 1.",
+            ),
+            (
+                "tests/test_expire_span.py::test_structured_dropout_drops_every_memory_older_than_one_cutoff",
+                "asserts the eval mask is exactly 1 before testing the cutoff.",
+            ),
+            (
+                "tests/test_expire_span.py::test_structured_dropout_is_off_at_eval_and_when_switched_off",
+                "asserts every weight is exactly 1 at long spans.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: span loss charged once at admission",
+        "test_the_span_loss_charges_memories_on_the_ramp_only",
+        "src/rsr/baselines/expire_span.py",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid & row_valid.view(-1, 1)",
+        "            charged = (mem_step == step - 1) & mem_valid"
+        " & row_valid.view(-1, 1)",
+        "[P7] §4.2 Loss Computation (P7:L368-382): charging at admission "
+        "'empirically results in poor performance'; the loss is charged while "
+        "0 < m < 1. This mutation restores this branch's own first (wrong) "
+        "implementation.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::"
+                "test_rows_past_their_stream_length_are_not_charged",
+                "its memories sit on the ramp (age 3) and must be charged before the "
+                "row mask can halve the charge; charged only at admission they are "
+                "never charged, so its 'charge > 0' precondition fails.",
+            ),
+        ),
+    ),
+    Mutation(
+        "model: every C block reads layer 0's mask",
+        "test_each_c_block_reads_its_own_layer_of_the_mask",
+        "src/rsr/model/tg/model.py",
+        "                layer_weight = mem_weight[c_idx]",
+        "                layer_weight = mem_weight[0]",
+        "[P7] computes spans 'independently for each layer' (P7:L81-82). "
+        "Routing one layer's mask to every block silently shares one span "
+        "across layers.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_the_lm_loss_reaches_the_span_predictor_through_the_model",
+                "asserts more than one layer's predictor receives LM gradient; with "
+                "layer 0's mask everywhere only layer 0's does.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: eviction uses the SHORTEST-lived layer",
+        "test_a_slot_one_layer_still_reads_is_not_the_victim",
+        "src/rsr/baselines/expire_span.py",
+        "            r = (e - age).amax(dim=0)",
+        "            r = (e - age).amin(dim=0)",
+        "ADR-0010 q6: a slot any layer still reads is alive (as P7:L353-355 "
+        "says for heads). min over layers evicts a slot a deep layer is still "
+        "retaining.",
+    ),
+    Mutation(
+        "expire-span: span loss charged at eval",
+        "test_the_span_loss_is_not_charged_at_eval",
+        "src/rsr/baselines/expire_span.py",
+        "        if training:\n            charged",
+        "        if True:\n            charged",
+        "review MAJOR-1 (feat-expire-span @ 49027dd): Eq. 7 is a training objective "
+        "(P7:L330-335). Charged at eval, every loss read from the loop bills "
+        "Expire-Span alone for its spans -- biasing the referendum against the "
+        "baseline whose win ends the project, the direction B-3 forbids.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_memory_weight_returns_no_span_loss_at_eval",
+                "the unit form of the same guard: the policy returns None at eval.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: rows past their stream are charged",
+        "test_rows_past_their_stream_length_are_not_charged",
+        "src/rsr/baselines/expire_span.py",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid & row_valid.view(-1, 1)",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid",
+        "review MINOR-1: after a row's stream ends step_fn masks it, so no LM "
+        "gradient opposes a span charge on its still-ageing memories; charging it "
+        "pushes spans down for nothing.",
+    ),
 )
 
 
