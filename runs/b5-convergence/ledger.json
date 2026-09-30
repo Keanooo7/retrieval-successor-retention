@@ -2,9 +2,9 @@
   "run_id": "b5-convergence",
   "cycle": null,
   "question": "Does fresh-stream arm B's stream answer loss reach a plateau after its ckpt 3000 if the same run is continued on the same never-repeating stream, and if so at which common step, and does that checkpoint still retrieve through memory?",
-  "started_utc": "2026-09-30T14:58:33Z",
+  "started_utc": "2026-09-30T15:27:38Z",
   "provenance": {
-    "git_sha": "a84f78d798d7909733e21fbe8853a6c2124925d2",
+    "git_sha": "b9595e05fa11fc3dfd30f62b49559bc681796499",
     "dirty": true,
     "python": "3.12.13",
     "platform": "macOS-26.6.2-arm64-arm-64bit",
@@ -17,8 +17,8 @@
     2
   ],
   "steps_requested": 9000,
-  "steps_done": 8505,
-  "status": "partial",
+  "steps_done": 9000,
+  "status": "ok",
   "config_hash": "69fc307d24d03aba7bfb080f049f725971d8e6e6feab51d40c82b6c716fcefa3",
   "manifest_written_utc": "2026-09-30T09:39:31Z",
   "commands": [],
@@ -18759,71 +18759,3818 @@
       "how": "seeds whose R_quantity >= 0.03"
     },
     {
+      "key": "B.ckpt9000.seeds_measured",
+      "kind": "observation",
+      "value": [
+        0,
+        1,
+        2
+      ],
+      "how": "run_arm()"
+    },
+    {
+      "key": "B.ckpt9000.stored_step",
+      "kind": "observation",
+      "value": {
+        "seed0": 9000,
+        "seed1": 9000,
+        "seed2": 9000
+      },
+      "how": "rsr.train.checkpoint.load(...)['step'], checked == label"
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.all.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.14660698690834678,
+        0.17844184908384478,
+        0.15518258009108848
+      ],
+      "mean": 0.16007713869442666,
+      "sd": 0.01647216258948327,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3220462321557782,
+        0.39960455147604784,
+        0.3615666152653885
+      ],
+      "mean": 0.3610724662990716,
+      "sd": 0.0387815208745984,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8897306323051453,
+        0.8655462265014648,
+        0.8875839114189148
+      ],
+      "mean": 0.8809535900751749,
+      "sd": 0.013386270647951644,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3218267251020011,
+        0.39942624385106945,
+        0.36133627131121654
+      ],
+      "mean": 0.3608630800880957,
+      "sd": 0.038801923405573355,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_eq_1.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.02690925044595027,
+        0.023473628577751808,
+        0.010253304738053998
+      ],
+      "mean": 0.02021206125391869,
+      "sd": 0.008793946663018772,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.05314620566931606,
+        0.050692713423141446,
+        0.028256357133198105
+      ],
+      "mean": 0.0440317587418852,
+      "sd": 0.01371686472875764,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9770992398262024,
+        0.984674334526062,
+        0.9922480583190918
+      ],
+      "mean": 0.9846738775571188,
+      "sd": 0.007574409256783162,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.053036606979953174,
+        0.050620045366057395,
+        0.028152199008634273
+      ],
+      "mean": 0.04393628378488162,
+      "sd": 0.013722716264510498,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_ge_2.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.18047394906077427,
+        0.22197974526478156,
+        0.19521657692308306
+      ],
+      "mean": 0.1992234237495463,
+      "sd": 0.021041005103136126,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3981280971011919,
+        0.4976303746534521,
+        0.4536373289678565
+      ],
+      "mean": 0.44979860024083357,
+      "sd": 0.04986208668118002,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8650107979774475,
+        0.8320775032043457,
+        0.8586723804473877
+      ],
+      "mean": 0.8519202272097269,
+      "sd": 0.01747409958085517,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.39787749286439483,
+        0.49742238788184245,
+        0.4533721285425508
+      ],
+      "mean": 0.449557336429596,
+      "sd": 0.049881970792636725,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_2_to_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.08991420176620507,
+        0.11045381886058635,
+        0.08734327768454433
+      ],
+      "mean": 0.09590376610377858,
+      "sd": 0.012666113811182681,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.16710768903703094,
+        0.19088167955558277,
+        0.15538124522323918
+      ],
+      "mean": 0.17112353793861765,
+      "sd": 0.01808771658464775,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9320113062858582,
+        0.9141274094581604,
+        0.9378530979156494
+      ],
+      "mean": 0.9279972712198893,
+      "sd": 0.012361692090024625,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.16697086609636413,
+        0.19077135941270953,
+        0.15523337987226093
+      ],
+      "mean": 0.17099186846044487,
+      "sd": 0.018106997058134542,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_lt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0708898668001301,
+        0.08605774796561816,
+        0.06738409843829861
+      ],
+      "mean": 0.0747772377346823,
+      "sd": 0.009925222226952468,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1326843652585031,
+        0.1506783223515823,
+        0.12196229925448528
+      ],
+      "mean": 0.1351083289548569,
+      "sd": 0.01451065800124802,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.945263147354126,
+        0.9326424598693848,
+        0.9515279531478882
+      ],
+      "mean": 0.9431445201237997,
+      "sd": 0.009619350295051616,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1325563699972056,
+        0.15057956891327703,
+        0.12182725964656463
+      ],
+      "mean": 0.13498773285234908,
+      "sd": 0.014529537709170159,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_eq_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1769042557586747,
+        0.15714152718416902,
+        0.03158140030176154
+      ],
+      "mean": 0.12187572774820175,
+      "sd": 0.07881903664046598,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32512151944037115,
+        0.3134883207385428,
+        0.09163763328893658
+      ],
+      "mean": 0.24341582448928353,
+      "sd": 0.13157240334145248,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8888888955116272,
+        0.9444444179534912,
+        1.0
+      ],
+      "mean": 0.9444444378217062,
+      "sd": 0.055555552244189066,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32491505530197173,
+        0.313303851955829,
+        0.09143711112932686
+      ],
+      "mean": 0.2432186727957092,
+      "sd": 0.13157483367726802,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_le_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07286120874357413,
+        0.0873593838007493,
+        0.06675403025163078
+      ],
+      "mean": 0.0756582075986514,
+      "sd": 0.010583598190951908,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.13626274209246347,
+        0.1536595837666029,
+        0.12142863536068163
+      ],
+      "mean": 0.13711698707324935,
+      "sd": 0.01613244586700009,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9442148804664612,
+        0.9328585863113403,
+        0.9523809552192688
+      ],
+      "mean": 0.9431514739990234,
+      "sd": 0.009804531958770615,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.13613328769915373,
+        0.15355926076960047,
+        0.12129244336831095
+      ],
+      "mean": 0.13699499727902173,
+      "sd": 0.01615065892934611,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_gt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.47108841083334646,
+        0.6109735562011531,
+        0.5331559391393902
+      ],
+      "mean": 0.53840596872463,
+      "sd": 0.07009019604500703,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.1394935884343629,
+        1.5675461131107549,
+        1.3879970957430294
+      ],
+      "mean": 1.3650122657627157,
+      "sd": 0.2149499192309135,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6499999761581421,
+        0.5458937287330627,
+        0.6106194853782654
+      ],
+      "mean": 0.6021710634231567,
+      "sd": 0.05256481297771001,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.live.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.1388778496745295,
+        1.566997472687224,
+        1.3873643146423968
+      ],
+      "mean": 1.3644132123347168,
+      "sd": 0.21498062174295177,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.all.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9403176636306525,
+        0.938953701638374,
+        0.9429863708331281
+      ],
+      "mean": 0.9407525787007183,
+      "sd": 0.002051211482808961,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.797101540998979,
+        2.785856215493018,
+        2.8196264537388847
+      ],
+      "mean": 2.8008614034102934,
+      "sd": 0.01719621097246899,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.05892255902290344,
+        0.06218487396836281,
+        0.0813758373260498
+      ],
+      "mean": 0.06749442343910535,
+      "sd": 0.012131814098737774,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.796073577219388,
+        2.7847236537131943,
+        2.8180677214724907
+      ],
+      "mean": 2.7996216508016913,
+      "sd": 0.01695282670510187,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_eq_1.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9416003877880009,
+        0.9385631947681822,
+        0.9431993924370108
+      ],
+      "mean": 0.941120991664398,
+      "sd": 0.00235498358563433,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.805917084672069,
+        2.7825753049375455,
+        2.820448020631953
+      ],
+      "mean": 2.802980136747189,
+      "sd": 0.019106409810648504,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.04198473319411278,
+        0.061302680522203445,
+        0.08527132123708725
+      ],
+      "mean": 0.06285291165113449,
+      "sd": 0.021684893094395814,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8049383236251715,
+        2.7814863669004475,
+        2.818914903226749
+      ],
+      "mean": 2.8017798645841228,
+      "sd": 0.018913110017070252,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_ge_2.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9399547330375366,
+        0.9390634134716572,
+        0.9429275276063597
+      ],
+      "mean": 0.9406485580385179,
+      "sd": 0.0020233361956164737,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7946072943009774,
+        2.7867779783078492,
+        2.8193995112780583
+      ],
+      "mean": 2.8002615946289615,
+      "sd": 0.017029957060453547,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.063714899122715,
+        0.062432724982500076,
+        0.08029978722333908
+      ],
+      "mean": 0.06881580377618472,
+      "sd": 0.009966062386536897,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.793565409229847,
+        2.785633160557249,
+        2.8178337033861967
+      ],
+      "mean": 2.799010757724431,
+      "sd": 0.01677669826844133,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_2_to_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9402971453437049,
+        0.9389923259492066,
+        0.9437609953058641
+      ],
+      "mean": 0.9410168221995918,
+      "sd": 0.002464447796354319,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.798182920423513,
+        2.7857466127073334,
+        2.825873406593409
+      ],
+      "mean": 2.8032676465747515,
+      "sd": 0.020540952434556503,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06373937427997589,
+        0.059556785970926285,
+        0.08050847798585892
+      ],
+      "mean": 0.0679348794122537,
+      "sd": 0.011088058759691663,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.797141517525692,
+        2.7846035921012264,
+        2.8243027821099016
+      ],
+      "mean": 2.8020159639122735,
+      "sd": 0.02029351109389318,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_lt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.940627804304424,
+        0.9389527310979181,
+        0.9433899532505031
+      ],
+      "mean": 0.9409901628842817,
+      "sd": 0.002240694738947092,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8002682949367323,
+        2.785633933852991,
+        2.8228341178974437
+      ],
+      "mean": 2.802912115562389,
+      "sd": 0.018740484621822612,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0589473694562912,
+        0.061139896512031555,
+        0.08324552327394485
+      ],
+      "mean": 0.0677775964140892,
+      "sd": 0.013440400467579874,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.799244757702476,
+        2.7845060531339496,
+        2.8212727133667506
+      ],
+      "mean": 2.8016745080677254,
+      "sd": 0.01850336702593959,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_eq_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9418151179949442,
+        0.934892647796207,
+        0.9559507229748894
+      ],
+      "mean": 0.9442194962553468,
+      "sd": 0.010732958989583565,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.800696545177036,
+        2.7458034886254206,
+        2.9131990180296055
+      ],
+      "mean": 2.8198996839440205,
+      "sd": 0.08533396873464218,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7996240191989474,
+        2.7446329991022744,
+        2.911682928309721
+      ],
+      "mean": 2.8186466488703146,
+      "sd": 0.08513410034624022,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_le_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9406498824515619,
+        0.9388783857271848,
+        0.9436110019930648
+      ],
+      "mean": 0.9410464233906038,
+      "sd": 0.002391097596768079,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.800276258267647,
+        2.7849045869413978,
+        2.8244243904670574
+      ],
+      "mean": 2.8032017452253672,
+      "sd": 0.019921660902935002,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.057851240038871765,
+        0.06002034619450569,
+        0.08178053796291351
+      ],
+      "mean": 0.06655070806543033,
+      "sd": 0.013233935333388435,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.799251810085675,
+        2.783775926000104,
+        2.8228637834019787
+      ],
+      "mean": 2.8019638398292526,
+      "sd": 0.019684549221784586,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_gt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9388559008186513,
+        0.9393113612552771,
+        0.9403164872026022
+      ],
+      "mean": 0.9394945830921769,
+      "sd": 0.0007473324744605629,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.78313278501684,
+        2.7903753018033677,
+        2.799118458697226
+      ],
+      "mean": 2.7908755151724782,
+      "sd": 0.008004567497055826,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06363636255264282,
+        0.07246376574039459,
+        0.0796460211277008
+      ],
+      "mean": 0.07191538314024608,
+      "sd": 0.008018904821083186,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.slots_zeroed.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.782089352607727,
+        2.789224215751685,
+        2.797567739950872
+      ],
+      "mean": 2.7896271027700945,
+      "sd": 0.007747054740242264,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.all.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9411187079117355,
+        0.9401677852919121,
+        0.9437245721084959
+      ],
+      "mean": 0.9416703551040478,
+      "sd": 0.001841444835786736,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.805506641615922,
+        2.7965272545814512,
+        2.821898484390054
+      ],
+      "mean": 2.807977460195809,
+      "sd": 0.012864817676176674,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07154881954193115,
+        0.06974790245294571,
+        0.07550335675477982
+      ],
+      "mean": 0.07226669291655223,
+      "sd": 0.002944116198728842,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8045083260295365,
+        2.79552068349694,
+        2.8206759832249393
+      ],
+      "mean": 2.806901664250472,
+      "sd": 0.012747287043963954,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_eq_1.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9418124199368572,
+        0.9415138994140186,
+        0.9433776507543963
+      ],
+      "mean": 0.9422346567017573,
+      "sd": 0.0010010520360675076,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8116218943632285,
+        2.8109430814611502,
+        2.8076526481051776
+      ],
+      "mean": 2.810072541309852,
+      "sd": 0.0021229953086451944,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06106870248913765,
+        0.07279693335294724,
+        0.07751937955617905
+      ],
+      "mean": 0.07046167179942131,
+      "sd": 0.00847031751964191,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8105847571642344,
+        2.809976839927878,
+        2.8063573162685067
+      ],
+      "mean": 2.8089729711202067,
+      "sd": 0.0022855258845569746,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_ge_2.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9409224308592712,
+        0.9397895982242375,
+        0.9438204026324335
+      ],
+      "mean": 0.9415108105719807,
+      "sd": 0.0020788191501497316,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.803776408117224,
+        2.7924771675894156,
+        2.825833629744977
+      ],
+      "mean": 2.807362401817205,
+      "sd": 0.016964902151090602,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07451403886079788,
+        0.06889127939939499,
+        0.07494646310806274
+      ],
+      "mean": 0.07278392712275188,
+      "sd": 0.0033780582301112406,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.802789076615616,
+        2.7914592660281836,
+        2.8246312466882793
+      ],
+      "mean": 2.806293196444026,
+      "sd": 0.016861323111112422,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_2_to_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9412521601736377,
+        0.9399027642781054,
+        0.944697803191546
+      ],
+      "mean": 0.9419509092144297,
+      "sd": 0.0024727084769252815,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8075458682630283,
+        2.7927676571373135,
+        2.8342153266661585
+      ],
+      "mean": 2.8115096173554996,
+      "sd": 0.021006208784408016,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.08215297758579254,
+        0.06648199260234833,
+        0.0762711837887764
+      ],
+      "mean": 0.07496871799230576,
+      "sd": 0.007916265246381367,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.806555573055494,
+        2.791750668818931,
+        2.8330071691402607
+      ],
+      "mean": 2.8104378036715616,
+      "sd": 0.02090044235436714,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_lt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9413081145913977,
+        0.9403515423517771,
+        0.9441422026200088
+      ],
+      "mean": 0.9419339531877279,
+      "sd": 0.001971302051634908,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.807920183382536,
+        2.797965699897529,
+        2.825523645156804
+      ],
+      "mean": 2.81046984281229,
+      "sd": 0.013954771912650515,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07684210687875748,
+        0.06943005323410034,
+        0.07797681540250778
+      ],
+      "mean": 0.07474965850512187,
+      "sd": 0.004641717466421012,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8069176124271595,
+        2.7969626604584215,
+        2.824290693999593
+      ],
+      "mean": 2.8093903222950583,
+      "sd": 0.013830801671448735,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_eq_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9464539024564955,
+        0.939204732577006,
+        0.9556781334035537
+      ],
+      "mean": 0.9471122561456852,
+      "sd": 0.008256409987584049,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.847119172414144,
+        2.777638461854723,
+        2.9162879551158234
+      ],
+      "mean": 2.8470151964615638,
+      "sd": 0.06932480511071791,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0555555559694767,
+        0.0,
+        0.0
+      ],
+      "mean": 0.018518518656492233,
+      "sd": 0.032075015193956696,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8460949526892767,
+        2.7766094870037503,
+        2.9151408672332764
+      ],
+      "mean": 2.8459484356421014,
+      "sd": 0.06926580633695253,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_le_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9414038007293851,
+        0.9403305427831647,
+        0.9443452158946675
+      ],
+      "mean": 0.9420265198024058,
+      "sd": 0.0020785173395917373,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.808649090203372,
+        2.797593481906918,
+        2.827120946677822
+      ],
+      "mean": 2.811121172929371,
+      "sd": 0.014918149640702254,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0764462798833847,
+        0.06815870106220245,
+        0.07660455256700516
+      ],
+      "mean": 0.0737365111708641,
+      "sd": 0.004831173435803271,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8076461166882316,
+        2.796589967556912,
+        2.8258895065720284
+      ],
+      "mean": 2.810041863605724,
+      "sd": 0.014795960566792858,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_gt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9398642995140769,
+        0.9393948837754807,
+        0.941071731854329
+      ],
+      "mean": 0.9401103050479622,
+      "sd": 0.0008650687324779076,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7916798678311436,
+        2.791463962499646,
+        2.799575924345877
+      ],
+      "mean": 2.7942399182255557,
+      "sd": 0.004622377609534273,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.05000000074505806,
+        0.07729468494653702,
+        0.07079645991325378
+      ],
+      "mean": 0.06603038186828296,
+      "sd": 0.014257859985379328,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7907020471312785,
+        2.790442875617944,
+        2.798391631219239
+      ],
+      "mean": 2.793178851322821,
+      "sd": 0.0045162593099500655,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.all.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9419376636394347,
+        0.9395507147332199,
+        0.9429737964032481
+      ],
+      "mean": 0.9414873915919676,
+      "sd": 0.0017554004436220003,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8120311819744432,
+        2.790630721645195,
+        2.81655037253095
+      ],
+      "mean": 2.806404092050196,
+      "sd": 0.013845764019061194,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06818182021379471,
+        0.07394958287477493,
+        0.07550335675477982
+      ],
+      "mean": 0.07254491994778316,
+      "sd": 0.0038575941704764487,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8103638439868837,
+        2.7895050263204495,
+        2.8154235160190786
+      ],
+      "mean": 2.805097462108804,
+      "sd": 0.013738380931856949,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_eq_1.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9427523030579545,
+        0.9386905004695001,
+        0.9412763042505398
+      ],
+      "mean": 0.9409063692593315,
+      "sd": 0.0020560153185674567,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.81732196025266,
+        2.784957530398022,
+        2.7986791891645093
+      ],
+      "mean": 2.8003195599383965,
+      "sd": 0.01624445111909952,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06488549709320068,
+        0.08045977354049683,
+        0.07364340871572495
+      ],
+      "mean": 0.07299622644980748,
+      "sd": 0.00780728220177735,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8156972950651444,
+        2.783825133495404,
+        2.7975303396698115
+      ],
+      "mean": 2.79901758941012,
+      "sd": 0.01598804567870783,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_ge_2.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9417071717089247,
+        0.9397923895694211,
+        0.9434426968051739
+      ],
+      "mean": 0.9416474193611734,
+      "sd": 0.0018258870409046711,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8105342231095483,
+        2.7922245891538195,
+        2.8214869520904164
+      ],
+      "mean": 2.8080819214512616,
+      "sd": 0.014784512461549323,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06911446899175644,
+        0.0721205621957779,
+        0.07601713389158249
+      ],
+      "mean": 0.07241738835970561,
+      "sd": 0.00346089222723226,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.808854811392387,
+        2.791100776618982,
+        2.820366170727977
+      ],
+      "mean": 2.8067739195797823,
+      "sd": 0.01474324951089556,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_2_to_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9418527644349225,
+        0.9400000994060178,
+        0.944325898831847
+      ],
+      "mean": 0.9420595875575958,
+      "sd": 0.002170303439885851,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8127021029718198,
+        2.7929779776575825,
+        2.830126665574683
+      ],
+      "mean": 2.811935582068028,
+      "sd": 0.01858620238812898,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06940510123968124,
+        0.06509695202112198,
+        0.07768361270427704
+      ],
+      "mean": 0.07072855532169342,
+      "sd": 0.006396847256158018,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8110202071349275,
+        2.791857863397149,
+        2.829002815788075
+      ],
+      "mean": 2.810626962106717,
+      "sd": 0.0185755983287267,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_lt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9421071459745106,
+        0.9396710969623506,
+        0.943267276905108
+      ],
+      "mean": 0.9416818399473231,
+      "sd": 0.0018354267780939096,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.814151957662482,
+        2.7911497958583533,
+        2.8199907244822
+      ],
+      "mean": 2.8084308260010116,
+      "sd": 0.015247894988730748,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06842105090618134,
+        0.07046632468700409,
+        0.07797681540250778
+      ],
+      "mean": 0.07228806366523106,
+      "sd": 0.005031620857726351,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8124848584124917,
+        2.7900259494781494,
+        2.81885888604143
+      ],
+      "mean": 2.8071232313106904,
+      "sd": 0.015145786265480566,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_eq_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9415203564696841,
+        0.938649101389779,
+        0.9571398286258473
+      ],
+      "mean": 0.9457697621617701,
+      "sd": 0.009950871066475537,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8034265836079917,
+        2.774692349963718,
+        2.9186889704535988
+      ],
+      "mean": 2.8322693013417695,
+      "sd": 0.07620815870252656,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0555555559694767,
+        0.0,
+        0.0
+      ],
+      "mean": 0.018518518656492233,
+      "sd": 0.032075015193956696,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8017967806922064,
+        2.7735942204793296,
+        2.9176316682030174
+      ],
+      "mean": 2.8310075564581845,
+      "sd": 0.07633248752874636,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_le_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9420962345994208,
+        0.939652382903036,
+        0.9435114108380818
+      ],
+      "mean": 0.9417533427801795,
+      "sd": 0.001952230839486682,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8139525188887413,
+        2.7908484387616053,
+        2.8217276501359407
+      ],
+      "mean": 2.808842869262096,
+      "sd": 0.016061220789701246,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06818182021379471,
+        0.06917598843574524,
+        0.07660455256700516
+      ],
+      "mean": 0.0713207870721817,
+      "sd": 0.00460279545130992,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.812286113165627,
+        2.789725063290989,
+        2.820597123408663
+      ],
+      "mean": 2.8075360999550933,
+      "sd": 0.015974761128182906,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_gt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9412399514154954,
+        0.9390679137142384,
+        0.940675851518074
+      ],
+      "mean": 0.9403279055492693,
+      "sd": 0.0011270477992641275,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8035772995515305,
+        2.7895968282856227,
+        2.794420947015813
+      ],
+      "mean": 2.7958650249509884,
+      "sd": 0.007101226303700227,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06818182021379471,
+        0.09661835432052612,
+        0.07079645991325378
+      ],
+      "mean": 0.07853221148252487,
+      "sd": 0.015717522300188882,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.heldout.gate_zeroed_bos_off.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.801905859600414,
+        2.7884601164555205,
+        2.79330977823882
+      ],
+      "mean": 2.794558584764918,
+      "sd": 0.0068093054333266765,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set heldout; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.all.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15461659542012912,
+        0.17455987132630574,
+        0.15433613653656442
+      ],
+      "mean": 0.16117086776099976,
+      "sd": 0.011596065136509659,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3591353327119639,
+        0.3803878450105168,
+        0.3685231118406789
+      ],
+      "mean": 0.36934876318771986,
+      "sd": 0.010650286139826881,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8898305296897888,
+        0.8674496412277222,
+        0.8931552767753601
+      ],
+      "mean": 0.8834784825642904,
+      "sd": 0.01398056872020633,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3589063793322751,
+        0.3802292656851664,
+        0.3683133103130511
+      ],
+      "mean": 0.3691496517768309,
+      "sd": 0.010686017541049033,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_eq_1.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.019566138176414442,
+        0.02863025006530481,
+        0.015368309991369124
+      ],
+      "mean": 0.02118823274436279,
+      "sd": 0.006778138145662934,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.04653994141625035,
+        0.05536514986130356,
+        0.03246237794122062
+      ],
+      "mean": 0.04478915640625817,
+      "sd": 0.011551327911510643,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9921259880065918,
+        0.9857650995254517,
+        0.9858155846595764
+      ],
+      "mean": 0.9879022240638733,
+      "sd": 0.0036579739706630817,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0464360479157286,
+        0.05530057539196032,
+        0.032357380805840115
+      ],
+      "mean": 0.04469800137117635,
+      "sd": 0.01156992432116202,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_ge_2.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.19166067332499256,
+        0.21957219138595588,
+        0.19711880802755247
+      ],
+      "mean": 0.20278389091283364,
+      "sd": 0.0147930079155559,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.4448796409075484,
+        0.48064182671954964,
+        0.4719828574298134
+      ],
+      "mean": 0.46583477501897047,
+      "sd": 0.018656973803672258,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8617710471153259,
+        0.8309549689292908,
+        0.864628791809082
+      ],
+      "mean": 0.8524516026178995,
+      "sd": 0.018671385088962898,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.444616383846101,
+        0.4804542513848271,
+        0.4717407907945287
+      ],
+      "mean": 0.4656038086751522,
+      "sd": 0.01869050827508387,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_2_to_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07233373941896017,
+        0.10983727752223603,
+        0.07275419988521434
+      ],
+      "mean": 0.08497507227547019,
+      "sd": 0.021532327650538717,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.13382460723760128,
+        0.1854124603495703,
+        0.13557391771877325
+      ],
+      "mean": 0.15160366176864828,
+      "sd": 0.029292339747857294,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9454023241996765,
+        0.9090909361839294,
+        0.9533898234367371
+      ],
+      "mean": 0.9359610279401144,
+      "sd": 0.023610408917569756,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1336911661901363,
+        0.18531361736113053,
+        0.13543235852958493
+      ],
+      "mean": 0.15147904736028392,
+      "sd": 0.029314527679077152,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_lt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.054835429852975355,
+        0.08206860398874588,
+        0.055079907080226455
+      ],
+      "mean": 0.06399464697398256,
+      "sd": 0.015652983227081512,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10280754915640684,
+        0.1412939473840777,
+        0.1028498956457658
+      ],
+      "mean": 0.11565046406208344,
+      "sd": 0.02220791809176038,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.96004319190979,
+        0.9340885877609253,
+        0.9630769491195679
+      ],
+      "mean": 0.9524029095967611,
+      "sd": 0.01593303828313665,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.10268397270795171,
+        0.14120640918776073,
+        0.10271913185293297
+      ],
+      "mean": 0.1155365045828818,
+      "sd": 0.022230796451298305,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_eq_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.18901973702293162,
+        0.4058520836380402,
+        0.14272850220513647
+      ],
+      "mean": 0.24586677428870277,
+      "sd": 0.14047132807424248,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.40680338492772233,
+        0.6351111633703113,
+        0.3241384046462675
+      ],
+      "mean": 0.455350984314767,
+      "sd": 0.16107037661157414,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.875,
+        0.7142857313156128,
+        0.9333333373069763
+      ],
+      "mean": 0.8408730228741964,
+      "sd": 0.11344140050460305,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.4066020463069435,
+        0.6349160704329344,
+        0.32398251130556066
+      ],
+      "mean": 0.4551668760151462,
+      "sd": 0.1610553524765447,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_le_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.05822534919200583,
+        0.08667060268426885,
+        0.05640791609727055
+      ],
+      "mean": 0.06710128932451508,
+      "sd": 0.016971867451539852,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.11048744395484009,
+        0.14831266923565867,
+        0.1062027518427431
+      ],
+      "mean": 0.12166762167774729,
+      "sd": 0.023174524075941366,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9578947424888611,
+        0.930964469909668,
+        0.9626262784004211
+      ],
+      "mean": 0.95049516359965,
+      "sd": 0.017078725216757996,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1103619029883473,
+        0.14822360234251447,
+        0.1060716072991849
+      ],
+      "mean": 0.12155237087668223,
+      "sd": 0.02319736192335481,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_gt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5527543515797689,
+        0.5927769225939692,
+        0.6204368011274343
+      ],
+      "mean": 0.5886560251003908,
+      "sd": 0.034028882457516896,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.3861592210566058,
+        1.484706918142088,
+        1.6170671329847
+      ],
+      "mean": 1.4959777573944646,
+      "sd": 0.11586582676025663,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6086956262588501,
+        0.5652173757553101,
+        0.5625
+      ],
+      "mean": 0.5788043340047201,
+      "sd": 0.025922250041523168,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.live.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.3855031294484987,
+        1.4842175670982685,
+        1.6164829544655872
+      ],
+      "mean": 1.4954012170041182,
+      "sd": 0.11589532091565932,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition live; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.all.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9396669893446615,
+        0.9415539251077896,
+        0.9444203529015607
+      ],
+      "mean": 0.9418804224513373,
+      "sd": 0.0023934424293310264,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7923265546055163,
+        2.8046498542664033,
+        2.826405153847696
+      ],
+      "mean": 2.807793854239872,
+      "sd": 0.01725547111649388,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06610169261693954,
+        0.052013423293828964,
+        0.0609348900616169
+      ],
+      "mean": 0.05968333532412847,
+      "sd": 0.007127034802484267,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.791294872558723,
+        2.803522444411412,
+        2.8248521967204865
+      ],
+      "mean": 2.8065565045635403,
+      "sd": 0.016983157597439454,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_eq_1.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.940075434803024,
+        0.9418922478193914,
+        0.9411354536283101
+      ],
+      "mean": 0.9410343787502419,
+      "sd": 0.0009126140927812081,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7959861642732395,
+        2.80774347637896,
+        2.797316131016887
+      ],
+      "mean": 2.800348590556362,
+      "sd": 0.00643859108281826,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07480315119028091,
+        0.05338078364729881,
+        0.06382978707551956
+      ],
+      "mean": 0.0640045739710331,
+      "sd": 0.010712253293811983,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7949816758238426,
+        2.806648613295097,
+        2.7958066691743566
+      ],
+      "mean": 2.799145652764432,
+      "sd": 0.006510834512613158,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_ge_2.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9395549535493871,
+        0.941449568706077,
+        0.9454316428524958
+      ],
+      "mean": 0.9421453883693199,
+      "sd": 0.0029994987988220174,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.791322730787372,
+        2.803695619564287,
+        2.835360508037967
+      ],
+      "mean": 2.8101262861298753,
+      "sd": 0.022712255736751154,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.063714899122715,
+        0.051591657102108,
+        0.06004366651177406
+      ],
+      "mean": 0.058450074245532356,
+      "sd": 0.006216743641636016,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.790283589589673,
+        2.8025581705845015,
+        2.8337941604410197
+      ],
+      "mean": 2.8088786402050645,
+      "sd": 0.022433316654495387,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_2_to_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9391922568795324,
+        0.9414151431145993,
+        0.9449130476868085
+      ],
+      "mean": 0.9418401492269801,
+      "sd": 0.002883978937479317,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.788351057247184,
+        2.803401446816596,
+        2.831513663806484
+      ],
+      "mean": 2.807755389290088,
+      "sd": 0.021908223628242778,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06609195470809937,
+        0.05255681648850441,
+        0.06214689090847969
+      ],
+      "mean": 0.06026522070169449,
+      "sd": 0.00696099875960428,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.787305799708969,
+        2.8022632378746164,
+        2.8299518220842224
+      ],
+      "mean": 2.8065069532226024,
+      "sd": 0.021637413109558613,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_lt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9393490274833036,
+        0.9414496384369234,
+        0.9437228412505908
+      ],
+      "mean": 0.9415071690569393,
+      "sd": 0.002187474353428465,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7897188769045966,
+        2.8038714663744218,
+        2.8212563013419127
+      ],
+      "mean": 2.8049488815403105,
+      "sd": 0.015796293951893303,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07019438594579697,
+        0.05355303734540939,
+        0.06358974426984787
+      ],
+      "mean": 0.06244572252035141,
+      "sd": 0.008379451660603818,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7886855404011373,
+        2.8027465677408676,
+        2.8197106295365555
+      ],
+      "mean": 2.8037142458928535,
+      "sd": 0.015535164618359689,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_eq_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9424904907743136,
+        0.9485988191195897,
+        0.9512576977411906
+      ],
+      "mean": 0.9474490025450312,
+      "sd": 0.004495279537065657,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8163808981577554,
+        2.857952969414847,
+        2.855328607559204
+      ],
+      "mean": 2.8432208250439355,
+      "sd": 0.023281066883391714,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.815307160218557,
+        2.8567616088049754,
+        2.8537004629770917
+      ],
+      "mean": 2.8419230773335413,
+      "sd": 0.023100821118494562,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_le_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9394283907664449,
+        0.9415512511572862,
+        0.9438370057428727
+      ],
+      "mean": 0.9416055492222012,
+      "sd": 0.002204808996826233,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.790392443757308,
+        2.804640137483626,
+        2.821772548405811
+      ],
+      "mean": 2.8056017098822483,
+      "sd": 0.015712135693345345,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06842105090618134,
+        0.05279187858104706,
+        0.06262626498937607
+      ],
+      "mean": 0.061279731492201485,
+      "sd": 0.007901115189417612,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.7893580865859984,
+        2.8035142942128446,
+        2.820225627012927
+      ],
+      "mean": 2.8043660026039237,
+      "sd": 0.015451385646264724,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_gt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9406525052112081,
+        0.941566648978542,
+        0.9471968610126239
+      ],
+      "mean": 0.9431386717341247,
+      "sd": 0.003544092249354315,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.800315273326376,
+        2.8046960911313117,
+        2.8484545739797444
+      ],
+      "mean": 2.817821979479144,
+      "sd": 0.026618880057933867,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.056521739810705185,
+        0.04830917716026306,
+        0.05288461595773697
+      ],
+      "mean": 0.052571844309568405,
+      "sd": 0.004115205450494884,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.slots_zeroed.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.799294640706933,
+        2.8035612267572523,
+        2.8468728890785804
+      ],
+      "mean": 2.8165762521809214,
+      "sd": 0.026324239677768778,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition slots_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.all.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9417186501167588,
+        0.9422297853251431,
+        0.9462368348007011
+      ],
+      "mean": 0.9433950900808677,
+      "sd": 0.002474257381486075,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.807207043696258,
+        2.810279331751318,
+        2.8400649069147637
+      ],
+      "mean": 2.8191837607874466,
+      "sd": 0.01814873097949529,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06525423377752304,
+        0.05033557116985321,
+        0.060100167989730835
+      ],
+      "mean": 0.058563324312369026,
+      "sd": 0.007577139293087907,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.806197577007746,
+        2.8092789003913032,
+        2.8388424079883876
+      ],
+      "mean": 2.818106295129146,
+      "sd": 0.018023967954696574,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_eq_1.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9416381289639811,
+        0.9465465045060127,
+        0.9472413690800362
+      ],
+      "mean": 0.94514200085001,
+      "sd": 0.003054267152581113,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.806094684938746,
+        2.8452495018358333,
+        2.8433732462267503
+      ],
+      "mean": 2.8315724776671103,
+      "sd": 0.022084350239700394,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.05905511975288391,
+        0.024911031126976013,
+        0.06382978707551956
+      ],
+      "mean": 0.04926531265179316,
+      "sd": 0.02122610735516521,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.805008835679903,
+        2.8442899620829953,
+        2.8420981460429253
+      ],
+      "mean": 2.830465647935275,
+      "sd": 0.02207346783000586,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_ge_2.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9417407369124452,
+        0.9408982835800012,
+        0.9459275786142682
+      ],
+      "mean": 0.9428555330355716,
+      "sd": 0.002693609090519447,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.807512161541191,
+        2.7994927040962696,
+        2.8390464007073617
+      ],
+      "mean": 2.815350422114941,
+      "sd": 0.02090938725828853,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06695464253425598,
+        0.058177825063467026,
+        0.0589519664645195
+      ],
+      "mean": 0.061361478020747505,
+      "sd": 0.004859263388990535,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8065236464432455,
+        2.7984796596280046,
+        2.8378400956178855
+      ],
+      "mean": 2.8142811338963782,
+      "sd": 0.02079531050543646,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_2_to_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9419874250888824,
+        0.9407768321477554,
+        0.9449750937647738
+      ],
+      "mean": 0.9425797836671372,
+      "sd": 0.0021609064452577658,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8084010317407806,
+        2.7989711534570563,
+        2.83290987870114
+      ],
+      "mean": 2.813427354632992,
+      "sd": 0.017518767341366624,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06465516984462738,
+        0.06107954680919647,
+        0.06214689090847969
+      ],
+      "mean": 0.06262720252076785,
+      "sd": 0.0018355637980059893,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8074017211623574,
+        2.797958243638277,
+        2.831705909664348
+      ],
+      "mean": 2.8123552914883274,
+      "sd": 0.01741061844916941,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_lt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9418381491181145,
+        0.9424389299354397,
+        0.9455146330442185
+      ],
+      "mean": 0.9432639040325909,
+      "sd": 0.001972199333346676,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8074097193085605,
+        2.812446272827447,
+        2.8354277867537276
+      ],
+      "mean": 2.8184279262965783,
+      "sd": 0.014936136030080295,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06479481607675552,
+        0.05149330571293831,
+        0.06358974426984787
+      ],
+      "mean": 0.0599592886865139,
+      "sd": 0.007356473360014619,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.806387449186255,
+        2.811449615397979,
+        2.8342043061134143
+      ],
+      "mean": 2.8173471235658827,
+      "sd": 0.014816539213641781,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_eq_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9440502723058065,
+        0.9413040450641087,
+        0.9525110165278117
+      ],
+      "mean": 0.9459551112992424,
+      "sd": 0.005841263650978979,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8222403327624,
+        2.793247938156128,
+        2.865957164764404
+      ],
+      "mean": 2.8271484785609773,
+      "sd": 0.036602258535211825,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8212110102176666,
+        2.7921790225165233,
+        2.8646841843922934
+      ],
+      "mean": 2.826024739042161,
+      "sd": 0.03649148686412675,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_le_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9418940343354878,
+        0.9424227995920907,
+        0.9456206388545759
+      ],
+      "mean": 0.9433124909273848,
+      "sd": 0.0020163229687961783,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8077843874379207,
+        2.812173403096078,
+        2.835890353087223
+      ],
+      "mean": 2.8186160478737405,
+      "sd": 0.015120088626337437,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06315789371728897,
+        0.05076142027974129,
+        0.06262626498937607
+      ],
+      "mean": 0.05884852632880211,
+      "sd": 0.007008681792081352,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.806761939149154,
+        2.811175718646364,
+        2.8346661224509733
+      ],
+      "mean": 2.817534593415497,
+      "sd": 0.014999577583469509,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_gt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9409942370394002,
+        0.9413113357940158,
+        0.9491696905058163
+      ],
+      "mean": 0.9438250877797442,
+      "sd": 0.004631276457921575,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8048223630241726,
+        2.801266480183256,
+        2.859934177536231
+      ],
+      "mean": 2.82200767358122,
+      "sd": 0.03289340135014454,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07391304522752762,
+        0.04830917716026306,
+        0.048076923936605453
+      ],
+      "mean": 0.05676638210813204,
+      "sd": 0.01484989991506694,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.803866515988889,
+        2.8002529777766427,
+        2.858719920882812
+      ],
+      "mean": 2.8209464715494477,
+      "sd": 0.032762623834302514,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.all.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9414280676235587,
+        0.9415320185006865,
+        0.9453910095166285
+      ],
+      "mean": 0.9427836985469579,
+      "sd": 0.0022585956512039453,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.all.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8069519441006547,
+        2.8055593579407505,
+        2.8308687239935084
+      ],
+      "mean": 2.8144600086783047,
+      "sd": 0.014227412898160492,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.all.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06525423377752304,
+        0.05788590759038925,
+        0.05759599432349205
+      ],
+      "mean": 0.060245378563801445,
+      "sd": 0.004340217199588085,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.all.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.805253150503514,
+        2.8044410697965816,
+        2.829741532794621
+      ],
+      "mean": 2.8131452510315724,
+      "sd": 0.014378535914255124,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket all",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_eq_1.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9411541805492611,
+        0.942984901925423,
+        0.9441440274529423
+      ],
+      "mean": 0.9427610366425422,
+      "sd": 0.0015074424949305682,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_eq_1.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.80407444041545,
+        2.8190293609035395,
+        2.816001739907772
+      ],
+      "mean": 2.8130351804089204,
+      "sd": 0.007906501637667604,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_eq_1.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07480315119028091,
+        0.0569395013153553,
+        0.05319149047136307
+      ],
+      "mean": 0.06164471432566643,
+      "sd": 0.011548603459367066,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_eq_1.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.802389865785133,
+        2.817903536494516,
+        2.8148586416075414
+      ],
+      "mean": 2.811717347962397,
+      "sd": 0.008220054077897608,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_eq_1",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_ge_2.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9415031943156447,
+        0.9410838733389402,
+        0.945774905741475
+      ],
+      "mean": 0.9427873244653533,
+      "sd": 0.002595802174945361,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_ge_2.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8077412377680866,
+        2.8014045052156753,
+        2.835445677609423
+      ],
+      "mean": 2.8148638068643947,
+      "sd": 0.018103828252167373,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_ge_2.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06263498961925507,
+        0.058177825063467026,
+        0.0589519664645195
+      ],
+      "mean": 0.0599215937157472,
+      "sd": 0.002381535581108507,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_ge_2.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.806038543935986,
+        2.800288541649359,
+        2.834323383574923
+      ],
+      "mean": 2.8135501563867558,
+      "sd": 0.018218420827076465,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_ge_2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_2_to_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9414166457009041,
+        0.9409455027939244,
+        0.94485137868399
+      ],
+      "mean": 0.9424045090596062,
+      "sd": 0.002132105093270176,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_2_to_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.806278175321119,
+        2.800833574072881,
+        2.8293939842342657
+      ],
+      "mean": 2.8121685778760885,
+      "sd": 0.015163999763958227,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_2_to_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06609195470809937,
+        0.0625,
+        0.06214689090847969
+      ],
+      "mean": 0.06357961520552635,
+      "sd": 0.0021829014727582615,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_2_to_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.804556071073159,
+        2.799717246808789,
+        2.8282746147301236
+      ],
+      "mean": 2.8108493108706907,
+      "sd": 0.015283470352329707,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_2_to_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_lt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9412329220102363,
+        0.9415474530965489,
+        0.9445145099590986
+      ],
+      "mean": 0.9424316283552946,
+      "sd": 0.0018106709482020851,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_lt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.804827581214081,
+        2.8063634632790246,
+        2.824925089860574
+      ],
+      "mean": 2.812038711451226,
+      "sd": 0.01118632177308642,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_lt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07019438594579697,
+        0.06179196760058403,
+        0.06051282212138176
+      ],
+      "mean": 0.06416639188925426,
+      "sd": 0.0052594284431415755,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_lt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.803116189480858,
+        2.805245739301373,
+        2.8237995190498157
+      ],
+      "mean": 2.8107204826106824,
+      "sd": 0.011376714870367908,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_lt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_eq_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9457275619109472,
+        0.9401296036584037,
+        0.9534496426582336
+      ],
+      "mean": 0.9464356027425281,
+      "sd": 0.006688187430360854,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_eq_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.838924070199331,
+        2.782511694090707,
+        2.868097925186157
+      ],
+      "mean": 2.8298445631587317,
+      "sd": 0.04350952567376668,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_eq_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_eq_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8371858298778534,
+        2.7813016176223755,
+        2.8669355392456053
+      ],
+      "mean": 2.8284743289152785,
+      "sd": 0.043476543329812684,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_eq_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_le_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.941346470807728,
+        0.9415273009217935,
+        0.9446498907575703
+      ],
+      "mean": 0.9425078874956974,
+      "sd": 0.0018572313703317377,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_le_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8056889661989715,
+        2.806024453361627,
+        2.825579223729143
+      ],
+      "mean": 2.81243088109658,
+      "sd": 0.011388034220027694,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_le_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.06842105090618134,
+        0.060913704335689545,
+        0.05959596112370491
+      ],
+      "mean": 0.06297690545519193,
+      "sd": 0.004760583111534696,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_le_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.803976896185624,
+        2.804905416759743,
+        2.8244530951133884
+      ],
+      "mean": 2.811111802686252,
+      "sd": 0.011563221883796937,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_le_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_gt_M.answer_brier_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9417650979498159,
+        0.9415544668833414,
+        0.9489184497640684
+      ],
+      "mean": 0.9440793381990753,
+      "sd": 0.0041921166390474825,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_gt_M.answer_nll",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.812168591955434,
+        2.8033462227254673,
+        2.8560447108287077
+      ],
+      "mean": 2.8238531751698694,
+      "sd": 0.028225516394977595,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_gt_M.answer_acc",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.052173912525177,
+        0.043478261679410934,
+        0.048076923936605453
+      ],
+      "mean": 0.0479096993803978,
+      "sd": 0.004350236654139309,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train.gate_zeroed_bos_off.gap_gt_M.answer_nll_over_16",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.8105246357295823,
+        2.802231496082988,
+        2.8549124621427975
+      ],
+      "mean": 2.8225561979851226,
+      "sd": 0.028326487851133376,
+      "how": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported) -> experiments/s0-03-rewardable-corpus/run.py::measure with sets=doc_sets(seed, 64); per-seed samples in seed order; set train; condition gate_zeroed_bos_off; bucket gap_gt_M",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.memory_gates",
+      "kind": "observation",
+      "value": {
+        "seed0": [
+          1.5030956268310547,
+          1.9740846157073975,
+          2.383845806121826,
+          2.864102602005005,
+          2.7747509479522705,
+          2.585362195968628
+        ],
+        "seed1": [
+          1.498145580291748,
+          1.835667610168457,
+          2.3145461082458496,
+          2.5421295166015625,
+          2.9058985710144043,
+          2.5071394443511963
+        ],
+        "seed2": [
+          1.6079338788986206,
+          1.8639079332351685,
+          2.555670976638794,
+          2.6033265590667725,
+          3.115799903869629,
+          2.769190788269043
+        ]
+      },
+      "how": "trained checkpoint's memory_gate per C block"
+    },
+    {
+      "key": "B.ckpt9000.R_quantity",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8682719320058823,
+        0.8545706234872341,
+        0.8573446199297905
+      ],
+      "mean": 0.8600623918076357,
+      "sd": 0.007243699107900565,
+      "how": "per seed, gap_2_to_M: heldout.live.answer_acc - heldout.slots_zeroed.answer_acc at gap_2_to_M.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.M_quantity",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.01339101791381836,
+        -0.005036473274230957,
+        0.015536725521087646
+      ],
+      "mean": 0.007963756720225016,
+      "sd": 0.01130953138797262,
+      "how": "per seed, gap_2_to_M: train.live.answer_acc - heldout.live.answer_acc at gap_2_to_M.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.train_memory_share",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8793103694915771,
+        0.856534119695425,
+        0.8912429325282574
+      ],
+      "mean": 0.8756958072384199,
+      "sd": 0.017634461071368436,
+      "how": "per seed, gap_2_to_M: train.live - train.slots_zeroed accuracy: memorised answers routed through",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.side_channel_share",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.0014367848634719849,
+        -0.0014204531908035278,
+        0.0
+      ],
+      "mean": -0.0009524126847585043,
+      "sd": 0.000824854000687221,
+      "how": "per seed, gap_2_to_M: train.gate_zeroed - train.gate_zeroed_bos_off accuracy.",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.probe_R_quantity",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8793103694915771,
+        0.856534119695425,
+        0.8912429325282574
+      ],
+      "mean": 0.8756958072384199,
+      "sd": 0.017634461071368436,
+      "how": "per seed, gap_2_to_M: R on the probe [0, 64): train.live - train.slots_zeroed answer_acc at",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.C_quantity",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.08991420176620507,
+        0.11045381886058635,
+        0.08734327768454433
+      ],
+      "mean": 0.09590376610377858,
+      "sd": 0.012666113811182681,
+      "how": "per seed: heldout.live.gap_2_to_M.answer_brier_over_16",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt9000.R_holds",
+      "kind": "observation",
+      "value": true,
+      "how": "R_quantity >= 0.03 every seed"
+    },
+    {
+      "key": "B.ckpt9000.C_holds",
+      "kind": "observation",
+      "value": true,
+      "how": "C_quantity <= 0.8875 every seed"
+    },
+    {
+      "key": "B.ckpt9000.probe_R_holds",
+      "kind": "observation",
+      "value": true,
+      "how": "probe_R_quantity >= 0.03 every seed"
+    },
+    {
+      "key": "B.ckpt9000.R_reaches_delta_on_seeds",
+      "kind": "observation",
+      "value": [
+        0,
+        1,
+        2
+      ],
+      "how": "seeds whose R_quantity >= 0.03"
+    },
+    {
       "key": "seed0.steps_reached",
       "kind": "observation",
-      "value": 8514,
+      "value": 9000,
       "how": "max heartbeat beat step + 1"
     },
     {
       "key": "seed0.steps_done",
       "kind": "observation",
-      "value": null,
+      "value": 9000,
       "how": "child result.json steps_done (None while running)"
     },
     {
       "key": "seed0.s_per_step",
       "kind": "observation",
       "value": {
-        "n": 5508,
-        "s_per_step": 3.4497440087145965,
+        "n": 5994,
+        "s_per_step": 3.4476456456456455,
         "from": 3005,
-        "to": 8513
+        "to": 8999
       },
       "how": "beats' elapsed_s over the last segment, first 5 steps skipped"
     },
     {
       "key": "seed1.steps_reached",
       "kind": "observation",
-      "value": 8505,
+      "value": 9000,
       "how": "max heartbeat beat step + 1"
     },
     {
       "key": "seed1.steps_done",
       "kind": "observation",
-      "value": null,
+      "value": 9000,
       "how": "child result.json steps_done (None while running)"
     },
     {
       "key": "seed1.s_per_step",
       "kind": "observation",
       "value": {
-        "n": 5499,
-        "s_per_step": 3.455463356973995,
+        "n": 5994,
+        "s_per_step": 3.4528535201868533,
         "from": 3005,
-        "to": 8504
+        "to": 8999
       },
       "how": "beats' elapsed_s over the last segment, first 5 steps skipped"
     },
     {
       "key": "seed2.steps_reached",
       "kind": "observation",
-      "value": 8513,
+      "value": 9000,
       "how": "max heartbeat beat step + 1"
     },
     {
       "key": "seed2.steps_done",
       "kind": "observation",
-      "value": null,
+      "value": 9000,
       "how": "child result.json steps_done (None while running)"
     },
     {
       "key": "seed2.s_per_step",
       "kind": "observation",
       "value": {
-        "n": 5507,
-        "s_per_step": 3.4500906119484296,
+        "n": 5994,
+        "s_per_step": 3.448005005005005,
         "from": 3005,
-        "to": 8512
+        "to": 8999
       },
       "how": "beats' elapsed_s over the last segment, first 5 steps skipped"
     },
@@ -18853,7 +22600,9 @@
           "7500": 0.5056282449048424,
           "7750": 0.509975536476953,
           "8000": 0.49899417215147096,
-          "8250": 0.49497583684194435
+          "8250": 0.49497583684194435,
+          "8500": 0.4948109212779018,
+          "8750": 0.48264992379592997
         },
         "seed1": {
           "3000": 0.8701950961654056,
@@ -18877,7 +22626,9 @@
           "7500": 0.589753122430589,
           "7750": 0.5760008216332339,
           "8000": 0.5709670038939796,
-          "8250": 0.5558548044762041
+          "8250": 0.5558548044762041,
+          "8500": 0.5582014716298584,
+          "8750": 0.5486690067730788
         },
         "seed2": {
           "3000": 0.7582731178043919,
@@ -18901,7 +22652,9 @@
           "7500": 0.5169577226761592,
           "7750": 0.5245225090320084,
           "8000": 0.5139035661909523,
-          "8250": 0.5032471570021276
+          "8250": 0.5032471570021276,
+          "8500": 0.49278081242234745,
+          "8750": 0.4884395240599389
         }
       },
       "how": "heartbeat loss_answer_tokens, mean over each complete 250-step window from step 3000, keyed by its first step"
@@ -19154,6 +22907,76 @@
             ],
             "holds": false
           }
+        },
+        "8750": {
+          "seed0": {
+            "slope_per_1000": -0.035566559649576356,
+            "se": 0.0022744653632440597,
+            "mean": 0.5463084962566197,
+            "rel_slope_pct": -6.510343495164961,
+            "rel_ci_pct": [
+              -7.403290075092215,
+              -5.617396915237706
+            ],
+            "holds": false
+          },
+          "seed1": {
+            "slope_per_1000": -0.04177337275569741,
+            "se": 0.00275017877964914,
+            "mean": 0.6202625572579689,
+            "rel_slope_pct": -6.734788722435127,
+            "rel_ci_pct": [
+              -7.685764525651848,
+              -5.783812919218406
+            ],
+            "holds": false
+          },
+          "seed2": {
+            "slope_per_1000": -0.029961292185051214,
+            "se": 0.0014113494152984732,
+            "mean": 0.5485564272837198,
+            "rel_slope_pct": -5.461843247997327,
+            "rel_ci_pct": [
+              -6.013663131486176,
+              -4.910023364508478
+            ],
+            "holds": false
+          }
+        },
+        "9000": {
+          "seed0": {
+            "slope_per_1000": -0.03320391702237751,
+            "se": 0.002161994827249931,
+            "mean": 0.5373426007957157,
+            "rel_slope_pct": -6.179282449075876,
+            "rel_ci_pct": [
+              -7.042236124799269,
+              -5.316328773352482
+            ],
+            "holds": false
+          },
+          "seed1": {
+            "slope_per_1000": -0.03710897490943888,
+            "se": 0.001903889939751043,
+            "mean": 0.6089245379587761,
+            "rel_slope_pct": -6.094182874258081,
+            "rel_ci_pct": [
+              -6.764781206802404,
+              -5.423584541713759
+            ],
+            "holds": false
+          },
+          "seed2": {
+            "slope_per_1000": -0.029229021354087066,
+            "se": 0.0013917256458029074,
+            "mean": 0.5410261811645106,
+            "rel_slope_pct": -5.40251514098157,
+            "rel_ci_pct": [
+              -5.954236063599817,
+              -4.8507942183633235
+            ],
+            "holds": false
+          }
         }
       },
       "how": "ols_rule over the 16 windows [E-4000, E), per seed"
@@ -19178,7 +23001,8 @@
         "5000": true,
         "6000": true,
         "7000": true,
-        "8000": true
+        "8000": true,
+        "9000": true
       },
       "how": "fresh-stream arm_readout: live - slots_zeroed >= DELTA every seed"
     },
@@ -19190,14 +23014,15 @@
         "5000": true,
         "6000": true,
         "7000": true,
-        "8000": true
+        "8000": true,
+        "9000": true
       },
       "how": "fresh-stream arm_readout (reported only)"
     },
     {
       "key": "reached_cap",
       "kind": "observation",
-      "value": false,
+      "value": true,
       "how": "every seed steps_done == CAP"
     },
     {
@@ -19420,7 +23245,12 @@
             "1": 71823,
             "2": 71824
           },
-          "exit_codes": {}
+          "exit_codes": {
+            "0": 0,
+            "1": 0,
+            "2": 0
+          },
+          "ended": "2026-09-30T08:27:38-07:00"
         }
       ],
       "how": "runs/b5-convergence/segments.json"
@@ -19434,25 +23264,25 @@
     {
       "key": "classification",
       "kind": "observation",
-      "value": "IN_PROGRESS",
+      "value": "NO_PLATEAU",
       "how": "PREREG table"
     },
     {
       "key": "classification_reported_as",
       "kind": "observation",
-      "value": "IN_PROGRESS (steps reached {0: 8514, 1: 8505, 2: 8513})",
+      "value": "NO_PLATEAU by 9000",
       "how": "PREREG decision rule"
     },
     {
       "key": "classification_detail",
       "kind": "observation",
-      "value": "E* = None; R(E*) = None; reached cap: False: IN_PROGRESS (steps reached {0: 8514, 1: 8505, 2: 8513}) -- the run has not reached the cap and no measured E* exists yet",
+      "value": "E* = None; R(E*) = None; reached cap: True: NO_PLATEAU by 9000 -- no common plateau by the cap; this is itself the result",
       "how": "verdict()"
     },
     {
       "key": "reading",
       "kind": "observation",
-      "value": "the run has not reached the cap and no measured E* exists yet",
+      "value": "no common plateau by the cap; this is itself the result",
       "how": "PREREG table"
     },
     {
@@ -19481,5 +23311,5 @@
     }
   ],
   "verdict": null,
-  "finished_utc": "2026-09-30T14:58:33Z"
+  "finished_utc": "2026-09-30T15:27:38Z"
 }
