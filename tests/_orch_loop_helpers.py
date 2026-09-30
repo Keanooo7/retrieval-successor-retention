@@ -135,10 +135,20 @@ rec = {"job_id": kv["--job-id"], "item_id": kv["--item"], "lane": kv["--lane"],
        "pid": os.getpid(), "pinned_sha": kv["--pinned-sha"], "start": "t0",
        "end": None, "rc": None, "status": "running"}
 path = root / (kv["--job-id"] + ".json")
-path.write_text(json.dumps(rec))
+
+
+def write_record(rec):
+    # tmp + os.replace, as slot.py::_write_record does: wait_job polls this file
+    # and must never read it truncated (I5b, tests/test_orch_stub_job_record.py)
+    tmp = path.with_suffix(f".json.tmp-{os.getpid()}")
+    tmp.write_text(json.dumps(rec))
+    os.replace(tmp, path)
+
+
+write_record(rec)
 rc = subprocess.run(cmd).returncode
 rec.update(end="t1", rc=rc, status="done")
-path.write_text(json.dumps(rec))
+write_record(rec)
 sys.exit(rc)
 """,
 }

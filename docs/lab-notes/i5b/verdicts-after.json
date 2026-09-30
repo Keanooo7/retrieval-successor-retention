@@ -1,0 +1,69 @@
+[
+  {
+    "mutation": "t_warm back to inf",
+    "gate": "test_reduction",
+    "why": "gauntlet 0.1: the reduction stops reaching the score path",
+    "reddened_gate": true,
+    "n_on_gate": 12,
+    "off_gate": [
+      "tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+      "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step"
+    ],
+    "off_gate_allowed": [
+      [
+        "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+        "since correction 31 a policy with T_warm > 0 and no optimizer step set raises instead of evicting FIFO. Under `t_warm = inf` every caller of the reduction that sets no step -- the accelerator placement test, the reduction's own no-counter test -- now fails loudly: the gauntlet 0.1 defect surfacing as an error rather than as a silently FIFO reduction. Found by the 2026-09-26 review (the raise confirmed in-process); the full battery is the measurement."
+      ],
+      [
+        "tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+        "since correction 31 a policy with T_warm > 0 and no optimizer step set raises instead of evicting FIFO. Under `t_warm = inf` every caller of the reduction that sets no step -- the accelerator placement test, the reduction's own no-counter test -- now fails loudly: the gauntlet 0.1 defect surfacing as an error rather than as a silently FIFO reduction. Found by the 2026-09-26 review (the raise confirmed in-process); the full battery is the measurement."
+      ]
+    ],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN",
+    "failure_reasons": {
+      "tests/test_device_placement.py::test_rsr_policy_runs_where_the_memory_lives[neg_age]": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_a_learned_head_changes_the_loss": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_is_reduction_detects_a_single_flipped_switch": "AssertionError: flipping t_warm left is_reduction() True",
+      "tests/test_reduction.py::test_loss_curve_is_bit_exact_against_stock_tg": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_reduction_agrees_with_fifo_on_every_eviction": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_reduction_runs_through_the_score_path": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_switching_psi_source_to_the_learned_head_reddens_the_reduction": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_t_warm_is_zero_not_infinity": "AssertionError: assert inf == 0.0",
+      "tests/test_reduction.py::test_the_learned_head_does_evict_middle_slots": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_the_learned_head_does_shift_ranks": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_the_reduction_displaces_no_ranks_on_the_real_model": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_the_reduction_ran_through_the_score_path": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_reduction.py::test_the_reduction_shifts_no_ranks": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1).",
+      "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step": "RuntimeError: T_warm = inf optimizer steps, but no training step was set: call policy.set_train_step(k) first. Defaulting to 0 would make every eval-time use of a trained policy silently FIFO (correction 31; gauntlet 0.1)."
+    }
+  },
+  {
+    "mutation": "off-gate failures stop counting",
+    "gate": "test_an_off_gate_failure_makes_a_mutation_unproven",
+    "why": "5.3: clause 2 of the stated discipline goes back to being enforced by nothing",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN",
+    "failure_reasons": {
+      "tests/test_evidence_machinery.py::test_an_off_gate_failure_makes_a_mutation_unproven": "AssertionError: assert [] == [{'mutation':...est_x'], ...}]"
+    }
+  },
+  {
+    "mutation": "a canary ledger row typed again",
+    "gate": "test_the_canary_ledger_row_records_the_exit_code_it_returns",
+    "why": "S0-05 bar 6: the row was the literal `exit_code=0`, written before the verdict existed, so a MOVED canary exiting 1 filed a ledger saying 0. A hardcoded 0 is worse than null: it looks measured.",
+    "reddened_gate": true,
+    "n_on_gate": 1,
+    "off_gate": [],
+    "off_gate_allowed": [],
+    "off_gate_undeclared": [],
+    "verdict": "PROVEN",
+    "failure_reasons": {
+      "tests/test_exit_codes.py::test_the_canary_ledger_row_records_the_exit_code_it_returns": "AssertionError: ('baseline', {'argv': '.venv/bin/python scripts/canary.py 1', 'entry_point': 'scripts/canary.py', 'reproducible': True, 'unreproducible_because': None, ...})"
+    }
+  }
+]
