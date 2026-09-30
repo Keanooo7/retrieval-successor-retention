@@ -4165,6 +4165,21 @@ MUTATIONS: tuple[Mutation, ...] = (
             "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGINT]",
             "test_a_stopped_battery_kills_its_suites_grandchildren",
             "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's end-to-end runs call this main() once per shard, all on one "
+                "stub tree: a shard that mutates the invoking tree leaves it dirty "
+                "for the others, whose pinned-SHA check then refuses. The same "
+                "defect, seen from the sharded driver.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+            )
         ),
     ),
     Mutation(
@@ -4283,6 +4298,35 @@ MUTATIONS: tuple[Mutation, ...] = (
             _I1_E2E_WIRING,
             "test_markdown_is_not_written_while_a_row_did_not_run",
             "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the sharded driver's exit code IS `_report`'s, on the merged rows "
+                "-- by construction, so it cannot drift from the serial rule. Every "
+                "I2 test that expects 3 for a DID_NOT_RUN row reddens with it.",
+            )
+            for t in (
+                "test_a_missing_row_is_did_not_run_never_a_pass",
+                "test_a_row_for_another_mutation_is_did_not_run",
+                "test_a_row_without_the_serial_rows_fields_is_did_not_run",
+                "test_a_shard_process_that_dies_makes_its_mutations_did_not_run",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-index]",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-n]",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-run]",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-sha]",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-table]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[137]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[143]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[1]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[2]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[None]",
+                "test_a_shard_that_wrote_no_rows_is_did_not_run",
+                "test_a_shard_with_no_done_record_is_did_not_run",
+                "test_a_shards_own_did_not_run_row_is_kept_with_its_reason",
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+            )
         ),
     ),
     Mutation(
@@ -4333,6 +4377,16 @@ MUTATIONS: tuple[Mutation, ...] = (
             "test_check_still_fails_on_an_unproven_gate",
             "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
             "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's end-to-end sharded run resets each shard between mutations "
+                "with this same reset; broken, a shard battery refuses and the "
+                "sharded run is not 0.",
+            )
+            for t in ("test_sharded_verdicts_equal_the_serial_ones_on_the_stub",)
         ),
     ),
     Mutation(
@@ -4392,6 +4446,18 @@ MUTATIONS: tuple[Mutation, ...] = (
             "test_prune_refuses_while_a_battery_holds_the_pool",
             "test_a_baseline_that_did_not_run_exits_3",
             "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's end-to-end runs require no shard worktree registration to "
+                "outlive the driver; each shard's teardown is this one.",
+            )
+            for t in (
+                "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+            )
         ),
     ),
     Mutation(
@@ -4451,6 +4517,16 @@ MUTATIONS: tuple[Mutation, ...] = (
             "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
             "test_check_still_fails_on_an_unproven_gate",
             "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's end-to-end sharded run resets each shard between mutations "
+                "with this same reset; broken, a shard battery refuses and the "
+                "sharded run is not 0.",
+            )
+            for t in ("test_sharded_verdicts_equal_the_serial_ones_on_the_stub",)
         ),
     ),
     Mutation(
@@ -4501,6 +4577,16 @@ MUTATIONS: tuple[Mutation, ...] = (
             _I1_GROUP,
             "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
             "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's stopped-driver test requires the slow suite's grandchild "
+                "gone; each shard battery kills its suite's group exactly as the "
+                "serial one does.",
+            )
+            for t in ("test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",)
         ),
     ),
     Mutation(
@@ -4555,6 +4641,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         off_gate_allowed=_i1_declare(
             _I1_E2E_WIRING,
             "test_a_stopped_battery_kills_its_suites_grandchildren",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "a stopped sharded driver stops its shards with SIGTERM, which each "
+                "shard battery must handle to kill its suite and tear its pool "
+                "down.",
+            )
+            for t in ("test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",)
         ),
     ),
     Mutation(
@@ -5603,6 +5699,330 @@ MUTATIONS: tuple[Mutation, ...] = (
         "review MINOR-1: after a row's stream ends step_fn masks it, so no LM "
         "gradient opposes a span charge on its still-ageing memories; charging it "
         "pushes spans down for nothing.",
+    ),
+    # ------------------------------------------------------------------ I2
+    # PLAN-v4 §4 I2 (red-team M-13): the sharded driver, scripts/battery_shards.py.
+    # One entry per check of the driver; gates are in tests/test_battery_shards.py.
+    # Each was shown red by hand on 2026-09-30 (apply, run the test file, restore):
+    # no battery has run these entries yet.
+    Mutation(
+        "i2: the stride stops short of the table's end",
+        "test_the_slices_cover_every_mutation_exactly_once",
+        "scripts/battery_shards.py",
+        "    parts = [list(range(k, total, n)) for k in range(n)]",
+        "    parts = [list(range(k, min(total, 300), n)) for k in range(n)]",
+        "I2: every mutation is in exactly one shard's slice. A slice rule that "
+        "leaves some out runs a smaller battery and reports it as the whole one.",
+    ),
+    Mutation(
+        "i2: a slice list that is not a partition is accepted",
+        "test_a_partition_that_is_not_exactly_once_is_refused",
+        "scripts/battery_shards.py",
+        "    if flat != list(range(total)):",
+        "    if False:",
+        "I2: the driver refuses to start, and to merge, unless the slices cover "
+        "every mutation exactly once -- asserted, not assumed from the slice rule.",
+    ),
+    Mutation(
+        "i2: a shard with no mutations is accepted",
+        "test_more_shards_than_mutations_is_refused",
+        "scripts/battery_shards.py",
+        '    if empty:\n        raise Refused(\n            f"shard(s)',
+        '    if False:\n        raise Refused(\n            f"shard(s)',
+        "I2: a shard with an empty slice is a battery with zero mutations, which "
+        "exits 2; more shards than mutations is refused before anything starts.",
+    ),
+    Mutation(
+        "i2: every shard shares one pool",
+        "test_every_shard_has_its_own_pool",
+        "scripts/battery_shards.py",
+        'd / "done.json", d / "pool", d / "log.txt")',
+        'd / "done.json", Path(work) / "pool", d / "log.txt")',
+        "I2: an I1 pool admits one battery (flock). Shards on one pool are one "
+        "battery and N-1 refusals -- or, unlocked, N batteries in one worktree.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the end-to-end runs start two real shard batteries at once; on one "
+                "pool the second is refused by I1's lock, so its mutations did not "
+                "run. The same defect, seen from the real driver.",
+            )
+            for t in (
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+            )
+        ),
+    ),
+    Mutation(
+        "i2: a shard does not pass its --shard-dir",
+        "test_a_shard_passes_its_own_shard_dir_to_the_battery",
+        "scripts/battery_shards.py",
+        '    argv += ["--shard-dir", str(paths.pool)]\n',
+        "    pass\n",
+        "I2: each shard battery gets its own --shard-dir; without it every shard "
+        "takes the repository's default pool, which admits one battery.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the end-to-end runs start two real shard batteries at once; with "
+                "no --shard-dir both take the default pool (under the test's own "
+                "HOME) and I1's lock refuses the second. The same defect, seen from "
+                "the real driver.",
+            )
+            for t in (
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+            )
+        ),
+    ),
+    Mutation(
+        "i2: a shard runs the whole table",
+        "test_a_shard_runs_only_its_own_slice",
+        "scripts/battery_shards.py",
+        "    mb.MUTATIONS = tuple(table[i] for i in parts[args.index])\n",
+        "    mb.MUTATIONS = table\n",
+        "I2: shard k runs MUTATIONS[k::N] and nothing else; N shards each running "
+        "everything is N serial batteries, and rows the merge cannot place.",
+    ),
+    Mutation(
+        "i2: a shard does not cap its suite threads",
+        "test_a_shard_suite_runs_at_one_thread_by_default",
+        "scripts/battery_shards.py",
+        '    os.environ["RSR_BATTERY_THREADS"] = str(args.threads)\n',
+        "    pass\n",
+        "I2: each shard's suite runs at --threads (default 1); N uncapped suites "
+        "on one machine each spawn a BLAS pool per core (the battery's thread cap).",
+    ),
+    Mutation(
+        "i2: the done record is written before the battery runs",
+        "test_a_shard_whose_battery_crashed_leaves_no_done_record",
+        "scripts/battery_shards.py",
+        "    sys.argv = argv\n    try:\n        try:\n",
+        "    sys.argv = argv\n"
+        '    _write_json(paths.done, {"run_id": args.run_id, "index": args.index, '
+        '"of": args.of, "sha": sha, "table": table_fingerprint(table), "rc": 0})\n'
+        "    try:\n        try:\n",
+        "I2: the done record says the shard's battery RETURNED. Written at the "
+        "start, a killed or crashed shard would look finished to the merge.",
+    ),
+    Mutation(
+        "i2: a refused battery is recorded as exit 0",
+        "test_a_shard_whose_battery_refused_records_the_refusal",
+        "scripts/battery_shards.py",
+        "            rc = e.code if isinstance(e.code, int) else int(Exit.FAIL)\n",
+        "            rc = int(Exit.OK)\n",
+        "I2: a shard whose battery refused (red baseline, not isolated) exits 3 "
+        "and records 3 -- 'did not run' must not become 0 at the shard boundary.",
+    ),
+    Mutation(
+        "i2: a shard overwrites an earlier result",
+        "test_a_shard_never_overwrites_an_earlier_result",
+        "scripts/battery_shards.py",
+        "        if old.exists():\n            raise Refused(\n"
+        '                f"{old} exists: shard',
+        "        if False:\n            raise Refused(\n"
+        '                f"{old} exists: shard',
+        "I2: a shard refuses a directory that already holds rows or a done "
+        "record; a result is never replaced by a later run's.",
+    ),
+    Mutation(
+        "i2: run starts over an earlier result",
+        "test_run_refuses_a_work_dir_holding_an_earlier_result",
+        "scripts/battery_shards.py",
+        "            if old.exists():\n                raise Refused(\n"
+        '                    f"{old} exists: --work-dir',
+        "            if False:\n                raise Refused(\n"
+        '                    f"{old} exists: --work-dir',
+        "I2: `run` needs a work dir with no earlier shard result, so a shard that "
+        "never starts cannot be answered for by an old file.",
+    ),
+    Mutation(
+        "i2: a work dir inside the invoking tree is accepted",
+        "test_a_work_dir_inside_the_invoking_tree_is_refused",
+        "scripts/battery_shards.py",
+        "    if iso.is_under(work, mb.ROOT):",
+        "    if False:",
+        "I2: shard pools and logs live outside the invoking tree, which every "
+        "shard requires to be clean (I1: the tree the battery runs from is never "
+        "written).",
+    ),
+    Mutation(
+        "i2: a work dir inside the default pool is accepted",
+        "test_a_work_dir_inside_the_default_pool_is_refused",
+        "scripts/battery_shards.py",
+        "    if iso.is_under(work, default):",
+        "    if False:",
+        "I2: a serial battery's teardown and --prune-shards remove every worktree "
+        "registered under the default pool; shard pools must not be under it.",
+    ),
+    Mutation(
+        "i2: a dirty invoking tree is a traceback",
+        "test_a_dirty_invoking_tree_is_did_not_run_not_a_traceback",
+        "scripts/battery_shards.py",
+        "    except iso.Unisolated as e:\n        raise Refused(",
+        "    except KeyError as e:\n        raise Refused(",
+        "I2: a precondition the driver cannot meet is DID NOT RUN (3). An uncaught "
+        "exception exits 1 -- 'did not run' reported as a real failure (S0-05).",
+    ),
+    Mutation(
+        "i2: a shard with no done record is read anyway",
+        "test_a_shard_with_no_done_record_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    done = _read_json(paths.done)\n    if not isinstance(done, dict):",
+        '    done = _read_json(paths.done) or {**want, "rc": 0}\n'
+        "    if not isinstance(done, dict):",
+        "I2: a shard that was killed leaves no done record, and whatever rows "
+        "file is in its directory is not a finished battery's.",
+    ),
+    Mutation(
+        "i2: a done record from another run is accepted",
+        "test_a_shard_record_from_another_run_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if got != want:",
+        "    if False:",
+        "I2: rows count only from THIS run, shard, pinned SHA and table; an old "
+        "file in the work dir must never answer for a shard that did not run.",
+    ),
+    Mutation(
+        "i2: a shard that exited outside 0 and 3 is read",
+        "test_a_shard_that_exited_outside_0_and_3_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if isinstance(rc, bool) or rc not in ROWS_EXIT:",
+        "    if False:",
+        "I2: a battery that exited 1, 2 or 128+N did not finish its slice; its "
+        "rows are not evidence.",
+    ),
+    Mutation(
+        "i2: a shard that exited 3 loses its finished rows",
+        "test_a_shards_own_did_not_run_row_is_kept_with_its_reason",
+        "scripts/battery_shards.py",
+        "ROWS_EXIT = (int(Exit.OK), int(Exit.DID_NOT_RUN))",
+        "ROWS_EXIT = (int(Exit.OK),)",
+        "I2: a shard exits 3 when ONE of its mutations did not run; the battery's "
+        "own reason for that row, and the shard's other verdicts, are kept.",
+    ),
+    Mutation(
+        "i2: a missing rows file is not checked",
+        "test_a_shard_that_wrote_no_rows_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if not isinstance(rows, list) or len(rows) != n_rows:",
+        "    if len(rows) != n_rows:",
+        "I2: a shard whose battery refused wrote no rows; each of its mutations "
+        "is DID_NOT_RUN with that reason, not a crash of the merge.",
+    ),
+    Mutation(
+        "i2: a short rows file is accepted",
+        "test_a_missing_row_is_did_not_run_never_a_pass",
+        "scripts/battery_shards.py",
+        "    if not isinstance(rows, list) or len(rows) != n_rows:",
+        "    if not isinstance(rows, list) or len(rows) > n_rows:",
+        "I2: a missing row never reads as a pass -- a rows file with fewer rows "
+        "than the shard's slice makes the slice DID_NOT_RUN.",
+    ),
+    Mutation(
+        "i2: a row for another mutation is accepted",
+        "test_a_row_for_another_mutation_is_did_not_run",
+        "scripts/battery_shards.py",
+        '    if got.get("mutation") != m.name or got.get("gate") != m.gate:',
+        "    if False:",
+        "I2: a row is this mutation's only if it names it and its gate; another "
+        "mutation's verdict in its place would be reported under the wrong name.",
+    ),
+    Mutation(
+        "i2: a row without the serial row's fields is accepted",
+        "test_a_row_without_the_serial_rows_fields_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if absent:",
+        "    if False:",
+        "I2: the merged JSON has the serial --json row schema, so a serial and a "
+        "sharded run can be compared field by field.",
+    ),
+    Mutation(
+        "i2: merged rows come out in shard order",
+        "test_merged_rows_are_in_table_order_with_the_serial_schema",
+        "scripts/battery_shards.py",
+        "    return [merged[i] for i in range(len(mutations))], problems",
+        "    return [merged[i] for p in parts for i in p], problems",
+        "I2: the merged JSON is in MUTATIONS order, as the serial one is, whatever "
+        "the partition.",
+    ),
+    Mutation(
+        "i2: zero mutations is a pass",
+        "test_zero_mutations_is_unknown_not_a_pass",
+        "scripts/battery_shards.py",
+        '        return Exit.UNKNOWN\n    try:\n        if args.action == "shard":',
+        '        return Exit.OK\n    try:\n        if args.action == "shard":',
+        "I2: a merged result with zero mutations has no unproven gate in it; it "
+        "is NOTHING TO COMPARE (2), as in the serial battery (S0-05).",
+    ),
+    Mutation(
+        "i2: --check is dropped from the merged report",
+        "test_check_fails_on_an_unproven_merged_gate",
+        "scripts/battery_shards.py",
+        "check=args.check)",
+        "check=False)",
+        "I2: under --check an unproven merged gate exits 1, as the serial battery "
+        "does; the sharded run is the same gate.",
+    ),
+    Mutation(
+        "i2: run exits 0 whatever the merged rows say",
+        "test_a_shard_process_that_dies_makes_its_mutations_did_not_run",
+        "scripts/battery_shards.py",
+        "    args.work_dir = work\n    return report(args, rows)\n\n\ndef _stop(",
+        "    args.work_dir = work\n    report(args, rows)\n    return Exit.OK\n\n\n"
+        "def _stop(",
+        "I2: the driver's exit code is the merged rows' -- a shard that died makes "
+        "it 3. 'Did not run' must not become 0 at the driver's exit.",
+    ),
+    Mutation(
+        "i2: shards are launched in the battery lane",
+        "test_a_shard_is_launched_under_one_cpu_det_slot",
+        "scripts/battery_shards.py",
+        '    slot += ["--lane", "cpu-det", "--slots", "1"',
+        '    slot += ["--lane", "battery", "--slots", "1"',
+        "I2: each shard takes ONE cpu-det slot. The battery lane has capacity 1 "
+        "(ops/lanes.json), so N shards there are one shard and N-1 refusals.",
+    ),
+    Mutation(
+        "i2: every shard has the same slot job id",
+        "test_every_shard_gets_its_own_slot_job_id",
+        "scripts/battery_shards.py",
+        'f"{run_id}-s{k}of{n}"',
+        'f"{run_id}"',
+        "I2: orchestrator.slot refuses a job id whose record exists, so shards "
+        "sharing one id are one shard and N-1 refusals.",
+    ),
+    Mutation(
+        "i2: plan prints a merge for one shard",
+        "test_plan_prints_one_command_per_shard_and_the_merge",
+        "scripts/battery_shards.py",
+        '    merge = [*SHARD_PREFIX, "merge", "--shards", str(args.shards)]',
+        '    merge = [*SHARD_PREFIX, "merge", "--shards", str(1)]',
+        "I2: `plan` prints the commands a measurement launches by hand; the merge "
+        "it prints must be the merge of those N shards.",
+    ),
+    Mutation(
+        "i2: shards run one after another",
+        "test_run_starts_every_shard_before_waiting_on_any",
+        "scripts/battery_shards.py",
+        "                            start_new_session=True,\n"
+        "                        )\n                    )\n",
+        "                            start_new_session=True,\n"
+        "                        )\n                    )\n"
+        "                    procs[-1].wait()\n",
+        "I2: the shards run CONCURRENTLY -- that is the whole of I2. Waiting on "
+        "each before starting the next is the serial battery with extra venvs.",
+    ),
+    Mutation(
+        "i2: a stopped driver leaves its shards running",
+        "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+        "scripts/battery_shards.py",
+        "        with mb.signal_handlers(), contextlib.ExitStack() as logs:",
+        "        with contextlib.ExitStack() as logs:",
+        "I2: SIGTERM/SIGHUP/SIGINT to the driver stops every shard battery, each "
+        "of which tears its own pool down (I1), and no merged verdict is written.",
     ),
 )
 
