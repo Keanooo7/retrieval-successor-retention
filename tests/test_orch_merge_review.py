@@ -128,13 +128,28 @@ def test_merge_with_fixes_without_fixes_verified_at_is_refused(orch):
     wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
     orch.review(wt, "run/a", head, "MERGE WITH FIXES")
     _verify(orch)
-    _refused(orch, "a", 3, "fixes_verified_at")
+    _refused(orch, "a", 3, "MERGE WITH FIXES", "re-review")
 
 
-def test_merge_with_fixes_verified_at_an_ancestor_of_head_merges(orch):
+def test_merge_with_fixes_is_never_mergeable_on_its_own(orch):
+    """Review MAJOR-2 (probe P3), PM decision 2026-09-30: MERGE WITH FIXES is
+    self-attested -- the author can add `fixes_verified_at` to the reviewer's record
+    after committing a "fix" -- so it never merges. Only a MERGE record at or after
+    the fixes does."""
     wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
-    fixed = orch.commit(wt, {"src/fix.py": "fixed = True\n"}, "the review's fixes")
+    orch.review(wt, "run/a", head, "MERGE WITH FIXES")  # the reviewer
+    fixed = orch.commit(wt, {"src/fix.py": "fixed = True\n"}, "the author's 'fix'")
+    # the author edits the reviewer's record to attest the fix
     orch.review(wt, "run/a", head, "MERGE WITH FIXES", fixes_verified_at=fixed)
+    _verify(orch)
+    _refused(orch, "a", 3, "MERGE WITH FIXES", "re-review")
+
+
+def test_a_fresh_merge_record_after_the_fixes_merges(orch):
+    wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
+    orch.review(wt, "run/a", head, "MERGE WITH FIXES")
+    fixed = orch.commit(wt, {"src/fix.py": "fixed = True\n"}, "the review's fixes")
+    orch.review(wt, "run/a", fixed, "MERGE", reviewer="second-reviewer")
     _verify(orch)
     proc = orch.run("merge", "a")
     assert proc.returncode == 0, proc.stderr
@@ -146,7 +161,7 @@ def test_merge_with_fixes_with_code_after_the_fix_check_is_refused(orch):
     orch.review(wt, "run/a", head, "MERGE WITH FIXES", fixes_verified_at=fixed)
     orch.commit(wt, {"src/after.py": "late = 1\n"}, "after the fix check")
     _verify(orch)
-    _refused(orch, "a", 3, "src/after.py")
+    _refused(orch, "a", 3, "MERGE WITH FIXES")
 
 
 def test_merge_with_fixes_verified_at_not_an_ancestor_is_refused(orch):
@@ -154,7 +169,39 @@ def test_merge_with_fixes_verified_at_not_an_ancestor_is_refused(orch):
     _, other = _branch(orch, "eng/other", {"src/other.py": "y = 2\n"})
     orch.review(wt, "run/a", head, "MERGE WITH FIXES", fixes_verified_at=other)
     _verify(orch)
-    _refused(orch, "a", 3, "fixes_verified_at")
+    _refused(orch, "a", 3, "MERGE WITH FIXES")
+
+
+@pytest.mark.parametrize("rev", ["run/a", "HEAD", "0" * 40])
+def test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit(orch, rev):
+    """Review MAJOR-1 (probe P1): `fixes_verified_at: <branch>` resolved to the
+    branch tip and waved every later commit through. The field is now informational,
+    but a present one is validated exactly as `reviewed_head` is -- a record that
+    names a moving ref is malformed, and malformed fails closed."""
+    wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
+    orch.review(wt, "run/a", head, "MERGE", fixes_verified_at=rev)
+    _verify(orch)
+    _refused(orch, "a", 3, "fixes_verified_at", rev)
+
+
+def test_only_the_merging_runs_own_verification_is_exempt(orch):
+    """Review MINOR-2 (probe P4): a verification.json for ANOTHER run id, committed
+    after review, rode in unreviewed and then satisfied gate 1 for that run from
+    the night branch."""
+    wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
+    orch.review(wt, "run/a", head)
+    orch.commit(
+        wt, {"runs/other/verification.json": json.dumps({"status": "ok"})}, "forged"
+    )
+    _verify(orch)
+    _refused(orch, "a", 3, "runs/other/verification.json")
+
+
+def test_no_verification_json_is_exempt_on_other_prefixes(orch):
+    wt, head = _branch(orch, "eng/x", {"notes/x.md": "x\n"})
+    orch.review(wt, "eng/x", head)
+    orch.commit(wt, {"runs/x/verification.json": json.dumps({"status": "ok"})}, "forged")
+    _refused(orch, "eng/x", 3, "runs/x/verification.json")
 
 
 def test_a_valid_merge_record_merges(orch):
