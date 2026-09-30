@@ -1,0 +1,517 @@
+{
+ "ledger": "runs/b2-psi-probe-fit/ledger.json",
+ "formula": "R2_true = 1 - (1 - R2_logged) / n_val_rows",
+ "bug": "logged R2 = 1 - n_val*SSE/SST, SSE already summed over the n_val rows",
+ "rows": {
+  "ckpt2500.seed0.head.U@0.9": {
+   "original": -313398.813288244,
+   "n_val_rows": 1032192,
+   "corrected": 0.6963744988449396
+  },
+  "ckpt2500.seed0.head.U@0.0": {
+   "original": -343001.18412209704,
+   "n_val_rows": 1032192,
+   "corrected": 0.6676953666351831
+  },
+  "ckpt2500.seed0.head.U+@0.9": {
+   "original": -315578.8365950161,
+   "n_val_rows": 1032192,
+   "corrected": 0.6942624660964083
+  },
+  "ckpt2500.seed0.head.U+@0.0": {
+   "original": -737615.4451926695,
+   "n_val_rows": 1032192,
+   "corrected": 0.2853883335729501
+  },
+  "ckpt2500.seed0.head.U1@0.9": {
+   "original": -331441.23160705913,
+   "n_val_rows": 1032192,
+   "corrected": 0.6788947873970549
+  },
+  "ckpt2500.seed0.head.U2@0.9": {
+   "original": -347323.3062188635,
+   "n_val_rows": 1032192,
+   "corrected": 0.6635080428652194
+  },
+  "ckpt2500.seed0.head.U3@0.9": {
+   "original": -347897.16311771324,
+   "n_val_rows": 1032192,
+   "corrected": 0.6629520834130538
+  },
+  "ckpt2500.seed0.head.C@0.9": {
+   "original": -265604.18584734446,
+   "n_val_rows": 524288,
+   "corrected": 0.49339831190615757
+  },
+  "ckpt2500.seed0.head.C@0.0": {
+   "original": -222030.60218856484,
+   "n_val_rows": 524288,
+   "corrected": 0.576508327124472
+  },
+  "ckpt2500.seed0.head.C+@0.9": {
+   "original": -276309.5137020013,
+   "n_val_rows": 524288,
+   "corrected": 0.47297951945876826
+  },
+  "ckpt2500.seed0.head.C+@0.0": {
+   "original": -417032.5941500012,
+   "n_val_rows": 524288,
+   "corrected": 0.20457154436111225
+  },
+  "ckpt2500.seed0.head.age_U@0.9": {
+   "original": -914093.8111371889,
+   "n_val_rows": 1032192,
+   "corrected": 0.11441397420519739
+  },
+  "ckpt2500.seed0.head.age_U@0.0": {
+   "original": -759340.9691775868,
+   "n_val_rows": 1032192,
+   "corrected": 0.26434038514386193
+  },
+  "ckpt2500.seed0.head.age_C@0.9": {
+   "original": -310032.2624657356,
+   "n_val_rows": 524288,
+   "corrected": 0.4086584807095802
+  },
+  "ckpt2500.seed0.head.age_C@0.0": {
+   "original": -455492.9769306736,
+   "n_val_rows": 524288,
+   "corrected": 0.13121418584695133
+  },
+  "ckpt2500.seed0.age_decodability.U": {
+   "original": -188605.27241638288,
+   "n_val_rows": 1155072,
+   "corrected": 0.8367147048700143
+  },
+  "ckpt2500.seed0.age_decodability.C": {
+   "original": -270631.4571918258,
+   "n_val_rows": 647168,
+   "corrected": 0.5818203971892526
+  },
+  "ckpt2500.seed1.head.U@0.9": {
+   "original": -253098.7911765932,
+   "n_val_rows": 1032192,
+   "corrected": 0.7547938841062581
+  },
+  "ckpt2500.seed1.head.U@0.0": {
+   "original": -358523.86951776635,
+   "n_val_rows": 1032192,
+   "corrected": 0.652656802690036
+  },
+  "ckpt2500.seed1.head.U+@0.9": {
+   "original": -253867.34066558164,
+   "n_val_rows": 1032192,
+   "corrected": 0.7540493041356825
+  },
+  "ckpt2500.seed1.head.U+@0.0": {
+   "original": -704496.7811447314,
+   "n_val_rows": 1032192,
+   "corrected": 0.31747409285798434
+  },
+  "ckpt2500.seed1.head.U1@0.9": {
+   "original": -257020.5101955103,
+   "n_val_rows": 1032192,
+   "corrected": 0.7509944756445407
+  },
+  "ckpt2500.seed1.head.U2@0.9": {
+   "original": -261613.27225261973,
+   "n_val_rows": 1032192,
+   "corrected": 0.7465449526322431
+  },
+  "ckpt2500.seed1.head.U3@0.9": {
+   "original": -268456.9573208571,
+   "n_val_rows": 1032192,
+   "corrected": 0.7399147083867564
+  },
+  "ckpt2500.seed1.head.C@0.9": {
+   "original": -206857.33446431655,
+   "n_val_rows": 524288,
+   "corrected": 0.605449038573615
+  },
+  "ckpt2500.seed1.head.C@0.0": {
+   "original": -207452.6901126322,
+   "n_val_rows": 524288,
+   "corrected": 0.6043134877917629
+  },
+  "ckpt2500.seed1.head.C+@0.9": {
+   "original": -216199.40805283602,
+   "n_val_rows": 524288,
+   "corrected": 0.5876304472869186
+  },
+  "ckpt2500.seed1.head.C+@0.0": {
+   "original": -359437.67886570323,
+   "n_val_rows": 524288,
+   "corrected": 0.3144251272855697
+  },
+  "ckpt2500.seed1.head.age_U@0.9": {
+   "original": -4740173.6555061955,
+   "n_val_rows": 1032192,
+   "corrected": -3.5923381071604847
+  },
+  "ckpt2500.seed1.head.age_U@0.0": {
+   "original": -900128.6382891207,
+   "n_val_rows": 1032192,
+   "corrected": 0.1279436012978974
+  },
+  "ckpt2500.seed1.head.age_C@0.9": {
+   "original": -289568.4866887627,
+   "n_val_rows": 524288,
+   "corrected": 0.447690035459971
+  },
+  "ckpt2500.seed1.head.age_C@0.0": {
+   "original": -410943.5751860579,
+   "n_val_rows": 524288,
+   "corrected": 0.21618542635715887
+  },
+  "ckpt2500.seed1.age_decodability.U": {
+   "original": -131718.11767832827,
+   "n_val_rows": 1155072,
+   "corrected": 0.8859645825729233
+  },
+  "ckpt2500.seed1.age_decodability.C": {
+   "original": -205963.8996590609,
+   "n_val_rows": 647168,
+   "corrected": 0.6817443080327505
+  },
+  "ckpt2500.seed2.head.U@0.9": {
+   "original": -437476.67415741546,
+   "n_val_rows": 1032192,
+   "corrected": 0.5761663778081835
+  },
+  "ckpt2500.seed2.head.U@0.0": {
+   "original": -392399.0954487689,
+   "n_val_rows": 1032192,
+   "corrected": 0.6198380771709441
+  },
+  "ckpt2500.seed2.head.U+@0.9": {
+   "original": -442822.5938940272,
+   "n_val_rows": 1032192,
+   "corrected": 0.5709871865951033
+  },
+  "ckpt2500.seed2.head.U+@0.0": {
+   "original": -768884.172230585,
+   "n_val_rows": 1032192,
+   "corrected": 0.25509481546981083
+  },
+  "ckpt2500.seed2.head.U1@0.9": {
+   "original": -437470.5058921991,
+   "n_val_rows": 1032192,
+   "corrected": 0.5761723536975687
+  },
+  "ckpt2500.seed2.head.U2@0.9": {
+   "original": -434192.778138753,
+   "n_val_rows": 1032192,
+   "corrected": 0.5793478556908472
+  },
+  "ckpt2500.seed2.head.U3@0.9": {
+   "original": -428392.28564485774,
+   "n_val_rows": 1032192,
+   "corrected": 0.5849674424478608
+  },
+  "ckpt2500.seed2.head.C@0.9": {
+   "original": -300732.2910501074,
+   "n_val_rows": 524288,
+   "corrected": 0.426396768474374
+  },
+  "ckpt2500.seed2.head.C@0.0": {
+   "original": -219825.61578470265,
+   "n_val_rows": 524288,
+   "corrected": 0.5807140049272487
+  },
+  "ckpt2500.seed2.head.C+@0.9": {
+   "original": -321440.2303285655,
+   "n_val_rows": 524288,
+   "corrected": 0.38689950880324264
+  },
+  "ckpt2500.seed2.head.C+@0.0": {
+   "original": -401345.9172357569,
+   "n_val_rows": 524288,
+   "corrected": 0.23449150612686753
+  },
+  "ckpt2500.seed2.head.age_U@0.9": {
+   "original": -5197211.262259154,
+   "n_val_rows": 1032192,
+   "corrected": -4.0351216268476735
+  },
+  "ckpt2500.seed2.head.age_U@0.0": {
+   "original": -896269.7997291108,
+   "n_val_rows": 1032192,
+   "corrected": 0.1316820904162106
+  },
+  "ckpt2500.seed2.head.age_C@0.9": {
+   "original": -355710.16630495805,
+   "n_val_rows": 524288,
+   "corrected": 0.32153479327209844
+  },
+  "ckpt2500.seed2.head.age_C@0.0": {
+   "original": -462311.6825483174,
+   "n_val_rows": 524288,
+   "corrected": 0.11820853700958744
+  },
+  "ckpt2500.seed2.age_decodability.U": {
+   "original": -266561.7502203593,
+   "n_val_rows": 1155072,
+   "corrected": 0.7692241260974559
+  },
+  "ckpt2500.seed2.age_decodability.C": {
+   "original": -338434.13715917116,
+   "n_val_rows": 647168,
+   "corrected": 0.47705211450632423
+  },
+  "ckpt3000.seed0.head.U@0.9": {
+   "original": -300780.6662352057,
+   "n_val_rows": 1032192,
+   "corrected": 0.7085991111777599
+  },
+  "ckpt3000.seed0.head.U@0.0": {
+   "original": -351034.9222977382,
+   "n_val_rows": 1032192,
+   "corrected": 0.659912184653884
+  },
+  "ckpt3000.seed0.head.U+@0.9": {
+   "original": -297584.2034121436,
+   "n_val_rows": 1032192,
+   "corrected": 0.7116958827309807
+  },
+  "ckpt3000.seed0.head.U+@0.0": {
+   "original": -792291.402267058,
+   "n_val_rows": 1032192,
+   "corrected": 0.2324176100308295
+  },
+  "ckpt3000.seed0.head.U1@0.9": {
+   "original": -314082.7666507894,
+   "n_val_rows": 1032192,
+   "corrected": 0.6957118766171513
+  },
+  "ckpt3000.seed0.head.U2@0.9": {
+   "original": -320887.4824044872,
+   "n_val_rows": 1032192,
+   "corrected": 0.6891193863113769
+  },
+  "ckpt3000.seed0.head.U3@0.9": {
+   "original": -320246.1239154682,
+   "n_val_rows": 1032192,
+   "corrected": 0.6897407421143855
+  },
+  "ckpt3000.seed0.head.C@0.9": {
+   "original": -267802.1393535174,
+   "n_val_rows": 524288,
+   "corrected": 0.4892060482911732
+  },
+  "ckpt3000.seed0.head.C@0.0": {
+   "original": -219064.35170740818,
+   "n_val_rows": 524288,
+   "corrected": 0.5821660009242855
+  },
+  "ckpt3000.seed0.head.C+@0.9": {
+   "original": -274485.3054206005,
+   "n_val_rows": 524288,
+   "corrected": 0.4764589206302633
+  },
+  "ckpt3000.seed0.head.C+@0.0": {
+   "original": -432015.0817008807,
+   "n_val_rows": 524288,
+   "corrected": 0.17599471721481186
+  },
+  "ckpt3000.seed0.head.age_U@0.9": {
+   "original": -6156939.138960373,
+   "n_val_rows": 1032192,
+   "corrected": -4.9649175143387785
+  },
+  "ckpt3000.seed0.head.age_U@0.0": {
+   "original": -823230.212789868,
+   "n_val_rows": 1032192,
+   "corrected": 0.20244371900783187
+  },
+  "ckpt3000.seed0.head.age_C@0.9": {
+   "original": -320620.17513756716,
+   "n_val_rows": 524288,
+   "corrected": 0.38846363995062416
+  },
+  "ckpt3000.seed0.head.age_C@0.0": {
+   "original": -468743.44478292414,
+   "n_val_rows": 524288,
+   "corrected": 0.10594092410483524
+  },
+  "ckpt3000.seed0.age_decodability.U": {
+   "original": -201898.7366875986,
+   "n_val_rows": 1155072,
+   "corrected": 0.8252059294246604
+  },
+  "ckpt3000.seed0.age_decodability.C": {
+   "original": -277925.64612803946,
+   "n_val_rows": 647168,
+   "corrected": 0.5705494614566242
+  },
+  "ckpt3000.seed1.head.U@0.9": {
+   "original": -277008.51579426765,
+   "n_val_rows": 1032192,
+   "corrected": 0.7316298558850798
+  },
+  "ckpt3000.seed1.head.U@0.0": {
+   "original": -432716.4939773001,
+   "n_val_rows": 1032192,
+   "corrected": 0.580778097507731
+  },
+  "ckpt3000.seed1.head.U+@0.9": {
+   "original": -260836.27759637393,
+   "n_val_rows": 1032192,
+   "corrected": 0.7472977143822332
+  },
+  "ckpt3000.seed1.head.U+@0.0": {
+   "original": -816818.7193853188,
+   "n_val_rows": 1032192,
+   "corrected": 0.20865525078152247
+  },
+  "ckpt3000.seed1.head.U1@0.9": {
+   "original": -276815.93762012286,
+   "n_val_rows": 1032192,
+   "corrected": 0.7318164279318936
+  },
+  "ckpt3000.seed1.head.U2@0.9": {
+   "original": -277733.9613670517,
+   "n_val_rows": 1032192,
+   "corrected": 0.7309270355059411
+  },
+  "ckpt3000.seed1.head.U3@0.9": {
+   "original": -281465.9106712824,
+   "n_val_rows": 1032192,
+   "corrected": 0.7273114782218013
+  },
+  "ckpt3000.seed1.head.C@0.9": {
+   "original": -222768.65123074202,
+   "n_val_rows": 524288,
+   "corrected": 0.5751006102929268
+  },
+  "ckpt3000.seed1.head.C@0.0": {
+   "original": -235007.99830008065,
+   "n_val_rows": 524288,
+   "corrected": 0.551755908393706
+  },
+  "ckpt3000.seed1.head.C+@0.9": {
+   "original": -224626.3060886133,
+   "n_val_rows": 524288,
+   "corrected": 0.5715574148395285
+  },
+  "ckpt3000.seed1.head.C+@0.0": {
+   "original": -399164.7148148871,
+   "n_val_rows": 524288,
+   "corrected": 0.23865181958220083
+  },
+  "ckpt3000.seed1.head.age_U@0.9": {
+   "original": -6119538.652441786,
+   "n_val_rows": 1032192,
+   "corrected": -4.928683474045319
+  },
+  "ckpt3000.seed1.head.age_U@0.0": {
+   "original": -887987.2457551903,
+   "n_val_rows": 1032192,
+   "corrected": 0.13970632812965977
+  },
+  "ckpt3000.seed1.head.age_C@0.9": {
+   "original": -254612.64008299095,
+   "n_val_rows": 524288,
+   "corrected": 0.5143630216922932
+  },
+  "ckpt3000.seed1.head.age_C@0.0": {
+   "original": -403675.041614279,
+   "n_val_rows": 524288,
+   "corrected": 0.23004905392784314
+  },
+  "ckpt3000.seed1.age_decodability.U": {
+   "original": -136894.33611532513,
+   "n_val_rows": 1155072,
+   "corrected": 0.8814832875220548
+  },
+  "ckpt3000.seed1.age_decodability.C": {
+   "original": -203398.64564258762,
+   "n_val_rows": 647168,
+   "corrected": 0.6857081227091147
+  },
+  "ckpt3000.seed2.head.U@0.9": {
+   "original": -506784.7938655671,
+   "n_val_rows": 1032192,
+   "corrected": 0.5090198394624574
+  },
+  "ckpt3000.seed2.head.U@0.0": {
+   "original": -418435.61095032486,
+   "n_val_rows": 1032192,
+   "corrected": 0.5946135884115311
+  },
+  "ckpt3000.seed2.head.U+@0.9": {
+   "original": -509309.0158187195,
+   "n_val_rows": 1032192,
+   "corrected": 0.5065743429335632
+  },
+  "ckpt3000.seed2.head.U+@0.0": {
+   "original": -851730.2499922888,
+   "n_val_rows": 1032192,
+   "corrected": 0.17483254085258482
+  },
+  "ckpt3000.seed2.head.U1@0.9": {
+   "original": -498410.5639530552,
+   "n_val_rows": 1032192,
+   "corrected": 0.517132893925689
+  },
+  "ckpt3000.seed2.head.U2@0.9": {
+   "original": -476026.7868338288,
+   "n_val_rows": 1032192,
+   "corrected": 0.5388185658929455
+  },
+  "ckpt3000.seed2.head.U3@0.9": {
+   "original": -462062.1693752049,
+   "n_val_rows": 1032192,
+   "corrected": 0.552347654917685
+  },
+  "ckpt3000.seed2.head.C@0.9": {
+   "original": -323583.02545913344,
+   "n_val_rows": 524288,
+   "corrected": 0.38281245144055664
+  },
+  "ckpt3000.seed2.head.C@0.0": {
+   "original": -223661.69855782556,
+   "n_val_rows": 524288,
+   "corrected": 0.5733972576945772
+  },
+  "ckpt3000.seed2.head.C+@0.9": {
+   "original": -343488.72851225734,
+   "n_val_rows": 524288,
+   "corrected": 0.34484533593700917
+  },
+  "ckpt3000.seed2.head.C+@0.0": {
+   "original": -425901.21252552955,
+   "n_val_rows": 524288,
+   "corrected": 0.1876559972276124
+  },
+  "ckpt3000.seed2.head.age_U@0.9": {
+   "original": -5534281.112244197,
+   "n_val_rows": 1032192,
+   "corrected": -4.361678943688962
+  },
+  "ckpt3000.seed2.head.age_U@0.0": {
+   "original": -925035.8169545782,
+   "n_val_rows": 1032192,
+   "corrected": 0.10381322762182021
+  },
+  "ckpt3000.seed2.head.age_C@0.9": {
+   "original": -359958.3446743339,
+   "n_val_rows": 524288,
+   "corrected": 0.31343203606732584
+  },
+  "ckpt3000.seed2.head.age_C@0.0": {
+   "original": -475903.34944343346,
+   "n_val_rows": 524288,
+   "corrected": 0.09228448973954495
+  },
+  "ckpt3000.seed2.age_decodability.U": {
+   "original": -297022.45826444856,
+   "n_val_rows": 1155072,
+   "corrected": 0.7428528626228941
+  },
+  "ckpt3000.seed2.age_decodability.C": {
+   "original": -368109.7533931986,
+   "n_val_rows": 647168,
+   "corrected": 0.4311975354263521
+  }
+ }
+}

@@ -85,6 +85,32 @@ class Mutation:
 
 # Reasons shared by several declared couplings. Written once so the table below
 # stays readable and so a reader can see that the same argument is being made.
+_REVIEW_GATE_COUPLING = (
+    "every T5(b) refusal is returned by the one review_gate() call; skipping the "
+    "call turns each of them into a merge. The coupling is the design: one gate."
+)
+_REVIEW_GATE_REFUSALS: tuple[str, ...] = (
+    "test_a_record_for_a_different_head_is_refused",
+    "test_a_record_for_another_branch_is_refused",
+    "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+    "test_a_record_whose_filename_is_not_its_reviewed_head_is_refused",
+    "test_a_reviewer_who_is_a_git_author_of_the_branch_is_refused",
+    "test_a_self_review_is_refused",
+    "test_an_unknown_verdict_is_refused",
+    "test_do_not_merge_is_refused_as_a_failure",
+    "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
+    "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+    "test_merge_with_fixes_without_fixes_verified_at_is_refused",
+    "test_other_prefixes_are_refused_without_a_review[docs/x]",
+    "test_other_prefixes_are_refused_without_a_review[eng/x]",
+    # added with the review fixes (MAJOR-1, MAJOR-2, MINOR-2), 2026-09-30
+    "test_merge_with_fixes_is_never_mergeable_on_its_own",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[run/a]",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[HEAD]",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[" + "0" * 40 + "]",
+    "test_only_the_merging_runs_own_verification_is_exempt",
+    "test_no_verification_json_is_exempt_on_other_prefixes",
+)
 _REDUCTION_TABLE_COUPLING = (
     "`reduction_to_tg()` is built *from* the off-switch table, so removing an "
     "entry makes every reduction test fail to construct a config. The coupling is "
@@ -467,7 +493,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "gauntlet 0.1: the reduction stops reaching the score path",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                "ep",
                 _REDUCTION_WARMUP_LOUD_COUPLING,
             ),
             (
@@ -486,7 +513,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the §3.7 reduction is no longer argmin(-a_i)",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                "ep",
                 "it builds RSRConfig.reduction_to_tg() and asserts the one eviction is "
                 "attributed to neg_age -- the psi_override this mutation clears "
                 "(measured under it, W11: {'psi': 1} != {'neg_age': 1}). The "
@@ -536,7 +564,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         + (
             # W11: RSRConfig(...) missing 'nu' at construction, measured under it.
             (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                "ep",
                 _REDUCTION_TABLE_COUPLING,
             ),
         ),
@@ -556,8 +585,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "LRU state back in MemoryState.accum",
         "test_lru_and_fifo_choose_different_slots_in_a_real_eviction_loop",
         "src/rsr/baselines/lru.py",
-        "        self._last_used[winner] = step",
-        "        slots.accum.setdefault('lru', {})[winner] = step",
+        "        self._last_used.setdefault(slots.row, {})[occupant] = step",
+        "        slots.accum.setdefault('lru', {})[occupant] = step",
         "gauntlet 0.4: LRU silently becomes FIFO",
         off_gate_allowed=(
             (
@@ -571,6 +600,20 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the round-trip asserts LRU's recency lives in the policy's own "
                 "state; moving it into MemoryState.accum is exactly what that test "
                 "is checking cannot happen",
+            ),
+            (
+                "tests/test_on_write_slot.py::test_lru_state_is_per_batch_row",
+                "2026-09-29: with recency in the per-step accum no record survives "
+                "to select_eviction, so row B falls back to write order and the "
+                "per-row assertion fails -- LRU losing all cross-step state, seen "
+                "from the per-row test",
+            ),
+            (
+                "tests/test_on_write_slot.py::"
+                "test_lru_recency_follows_the_occupant_through_compaction",
+                "2026-09-29: the step-3 use of occupant 1 is forgotten by step 4, "
+                "so LRU evicts it as FIFO would -- the same lost cross-step state, "
+                "seen from the compaction test",
             ),
         ),
     ),
@@ -748,7 +791,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 _DISPLACEMENT_COUPLING,
             ),
             (
-                "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_most",
+                "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_"
+                "most",
                 _DISPLACEMENT_COUPLING,
             ),
             (
@@ -1176,7 +1220,8 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
             (
                 "tests/test_lookahead_room.py::"
-                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe"
+                "_holds",
                 "lookahead-room records r_i and runs its probes and online_g0 rule from "
                 "observe(); never reached, no demand is recorded: the same call site, "
                 "seen from W10.",
@@ -1217,11 +1262,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "genuine.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_traini"
+                "ng_steps",
                 _BUILD_POLICY_INJECTION_COUPLING,
             ),
             (
-                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one"
+                "_stream",
                 _BUILD_POLICY_INJECTION_COUPLING,
             ),
         ),
@@ -1242,7 +1289,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "and two warmup tests that fed `select_eviction` the sentence index.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one"
+                "_stream",
                 _T_WARM_COUPLING,
             ),
             (
@@ -1263,7 +1311,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "FIFO arm.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_traini"
+                "ng_steps",
                 _T_WARM_COUPLING,
             ),
         ),
@@ -1289,7 +1338,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a ledger exists, not at all.",
         off_gate_allowed=(
             (
-                "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_not_build",
+                "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_no"
+                "t_build",
                 "train() reaches the epoch refusal through build_policy: one "
                 "refusal, two call sites, and the S0-01 test matches its message "
                 "to prove `iters` is no longer passed.",
@@ -1548,7 +1598,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "anti-oracle fails both, the oracle seen from that control.",
             ),
             (
-                "tests/test_retention_readability.py::test_oracle_keeps_every_queried_fact",
+                "tests/test_retention_readability.py::test_oracle_keeps_every_queried_f"
+                "act",
                 "retention-readability's arm A is OraclePolicy(discounted_demand(doc)); "
                 "the test asserts it keeps every queried fact resident, which an "
                 "oracle evicting the most-needed sentence cannot: the oracle, seen "
@@ -1587,7 +1638,8 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
             (
                 "tests/test_lookahead_room.py::"
-                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe"
+                "_holds",
                 _LOOKAHEAD_S003_COUPLING,
             ),
             (
@@ -1726,7 +1778,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 for t in _READABILITY_WORLD_READERS
             ),
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_S003_COUPLING,
             ),
         ),
@@ -1842,7 +1895,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "collapse into 'real failure'",
         off_gate_allowed=(
             (
-                "tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plus_n",
+                "tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plu"
+                "s_n",
                 _SLOT_RC_COUPLING,
             ),
             (
@@ -2556,7 +2610,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
             ),
             (
-                "tests/test_retention_readability.py::test_documents_are_E_then_P_and_closed",
+                "tests/test_retention_readability.py::test_documents_are_E_then_P_and_c"
+                "losed",
                 _HELDOUT_READERS_COUPLING,
             ),
         ),
@@ -2572,7 +2627,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "primary readout must be the squared distance.",
         off_gate_allowed=(
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
             (
@@ -3240,7 +3296,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
             ),
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
         ),
@@ -3400,7 +3457,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         ),
         off_gate_allowed=(
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
             (
@@ -4497,6 +4555,765 @@ MUTATIONS: tuple[Mutation, ...] = (
         off_gate_allowed=_i1_declare(
             _I1_E2E_WIRING,
             "test_a_stopped_battery_kills_its_suites_grandchildren",
+        ),
+    ),
+    Mutation(
+        "on_write is told the victim index again",
+        "test_on_write_receives_the_newcomers_slot_after_an_eviction",
+        "src/rsr/model/tg/policy_loop.py",
+        "                    policy.on_write(memory_state(mem, t, row), slot, t)",
+        "                    policy.on_write(memory_state(mem, t, row), "
+        "int(victim[row]), t)",
+        "2026-09-29, gauntlet 0.4 one level down: `write_at` compacts behind the "
+        "victim and writes the newcomer at M-1 (§3.1, ADR-0006), so after the "
+        "write the victim index names a different occupant -- and on an underfull "
+        "row it is the placeholder 0. Any policy keying state on `slot` (LRU, "
+        "H2O, E1's per-slot baselines) would update the wrong slot. The loop's "
+        "own written_at guard checks `slot`, not the argument actually passed, so "
+        "it cannot catch this mutation; only the recording-policy test does.",
+        off_gate_allowed=(
+            (
+                "tests/test_on_write_slot.py::"
+                "test_on_write_receives_the_newly_filled_slot_on_a_non_full_row",
+                "the same call site: the old call passed the placeholder 0 on an "
+                "underfull row, which is the other half of the defect this gate "
+                "names",
+            ),
+        ),
+    ),
+    # T5(b), 2026-09-30: the review gate (docs/review-records.md). Proven by hand
+    # at authoring time against tests/test_orch_merge*.py only (battery lane busy).
+    Mutation(
+        "merge: the review gate is skipped",
+        "test_merge_is_refused_without_a_review_record",
+        "scripts/orchestrator/merge.py",
+        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
+        "    if code != Exit.OK:\n",
+        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
+        "    if False:\n",
+        "PLAN-v4 §4 T5(b) stops being a mechanism: any verified run/ branch, and "
+        "any fix/ eng/ feat/ docs/ branch at all, merges into the night branch with "
+        "no adversarial review on record.",
+        off_gate_allowed=tuple(
+            (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
+            for t in _REVIEW_GATE_REFUSALS
+        ),
+    ),
+    Mutation(
+        "merge: a stale review record is accepted",
+        "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+        "scripts/orchestrator/merge.py",
+        "    unreviewed = [\n"
+        "        p for p in diff.stdout.splitlines() if p and not review_exempt(p, "
+        "run_item)\n"
+        "    ]\n",
+        "    unreviewed = []\n",
+        "a review of an early head waves through every commit made after it -- "
+        "the census shape of 2026-09-29 (eng/i1-isolation reviewed at ff6dccc, "
+        "7 files changed since).",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_orch_merge_review.py::{t}",
+                "a forged verification.json is refused by the same staleness diff; "
+                "no diff, no refusal. One check, two path classes.",
+            )
+            for t in (
+                "test_only_the_merging_runs_own_verification_is_exempt",
+                "test_no_verification_json_is_exempt_on_other_prefixes",
+            )
+        ),
+    ),
+    # T5(b) review fixes, 2026-09-30 (docs/reviews/eng-t5b-review-gate/
+    # bbfa38c9bade.md). Proven by hand, targeted files only (B5 holds the CPU).
+    Mutation(
+        "merge: MERGE WITH FIXES merges on its own",
+        "test_merge_with_fixes_is_never_mergeable_on_its_own",
+        "scripts/orchestrator/merge.py",
+        '    if fm["verdict"] == "MERGE WITH FIXES":\n'
+        "        # Review MAJOR-2, PM decision",
+        "    if False:\n        # Review MAJOR-2, PM decision",
+        "review MAJOR-2 (probe P3): the author commits a 'fix', edits the "
+        "reviewer's record to attest it, and the unreviewed fix merges.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_orch_merge_review.py::{t}",
+                "every MERGE WITH FIXES record is refused by this one branch; "
+                "without it each falls through to the MERGE path.",
+            )
+            for t in (
+                "test_merge_with_fixes_without_fixes_verified_at_is_refused",
+                "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+                "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
+            )
+        ),
+    ),
+    Mutation(
+        "merge: fixes_verified_at is not validated",
+        "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit",
+        "scripts/orchestrator/merge.py",
+        "        if fixes is not None and not (_full_sha(fixes) and _commit(root, "
+        "fixes)):",
+        "        if False:",
+        "review MAJOR-1 (probe P1): a record naming a moving ref (`fix/x`, `HEAD`) "
+        "is accepted as if it named a commit.",
+    ),
+    Mutation(
+        "merge: every runs/*/verification.json is staleness-exempt",
+        "test_only_the_merging_runs_own_verification_is_exempt",
+        "scripts/orchestrator/merge.py",
+        '    return run_item is not None and path == f"runs/{run_item}/'
+        'verification.json"',
+        '    return path.startswith("runs/") and path.endswith("/verification.json")',
+        "review MINOR-2 (probe P4): a forged verification.json for another run id "
+        "rides in after review and then satisfies gate 1 for that run from the "
+        "night branch.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_no_verification_json_is_exempt_on_other_prefixes",
+                "the same exemption, reached from a non-run/ prefix.",
+            ),
+        ),
+    ),
+    Mutation(
+        "battery-union: a one-sided tail change keeps ours",
+        "test_a_tail_change_only_theirs_made_is_taken_from_theirs",
+        "scripts/battery_union.py",
+        '        return t.tail, "theirs"',
+        '        return o.tail, "ours"',
+        "the 2026-09-30 rule: theirs' post-MUTATIONS tail is taken iff ours' tail == "
+        "base. Keeping ours silently drops main's I5 edit, which is what 13ea9ae and "
+        "74dec77 would have lost.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_union.py::"
+                "test_cli_one_sided_tail_exits_0_and_writes_the_union",
+                "the same rule through the CLI: the written file keeps ours' tail",
+            ),
+            *(
+                (
+                    "tests/test_battery_union.py::"
+                    f"test_reproduces_the_mutation_battery_the_0929_merges_committed[{m}]",
+                    "both real 09-29 merges took theirs' tail; keeping ours cannot "
+                    "reproduce the committed file",
+                )
+                for m in ("13ea9ae", "74dec77")
+            ),
+        ),
+    ),
+    Mutation(
+        "b2-psi-probe: age leaks into psi-hat",
+        "test_no_age_in_psi_hat_permuting_written_at_and_step_changes_nothing",
+        "experiments/b2-psi-probe/run.py",
+        "            return X @ self.w\n",
+        "            return X @ self.w"
+        " + 1e-3 * (step - slots.written_at[live]).double()\n",
+        "PREREG §4, §6, §11 control 9 (CLAUDE.md: age is excluded from psi-hat): the "
+        "bilinear score reads (s_i, c_t) only. A score that also reads written_at and "
+        "the step collapses onto recency and makes the vacuity failure invisible.",
+        off_gate_allowed=(
+            (
+                "tests/test_b2_psi_probe.py::"
+                "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+                "inspected: that test ties slots 1 and 2 at psi 0.1 with ages 3 and 2; "
+                "an age term (+1e-3 * age) makes them 0.103 and 0.102, so the argmin "
+                "moves to slot 2 and the logged psi vector changes -- the same leak "
+                "seen through the tie-break and the per-eviction log.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b2-psi-probe: a captured s_i / c_t keeps its graph",
+        "test_stopgrad_cuts_the_graph",
+        "experiments/b2-psi-probe/run.py",
+        "    return x.detach().clone()\n",
+        "    return x.clone()\n",
+        "PREREG §1, §5 (CLAUDE.md: no gradient into the transformer or W_sent; c_t "
+        "enters psi-hat with a stop-gradient): `_stopgrad` is the one place a captured "
+        "gestalt or context leaves the transformer.",
+    ),
+    Mutation(
+        "b2-psi-probe: the ridge lambda is chosen on whatever rows it is handed",
+        "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
+        "experiments/b2-psi-probe/run.py",
+        # fit_heads's pair: r2_split_by_index (review F11) repeats the FIT_VAL line alone,
+        # so the FIT_TRAIN line above it keeps this anchor unique (--check-anchors).
+        '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n'
+        '    require_range([c.doc_id for c in val_caps], "FIT_VAL")\n',
+        '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n    pass\n',
+        "PREREG §6 / A1.7: lambda minimises the FIT_VAL validation MSE. Without the "
+        "range guard an EVAL capture selects lambda silently -- a fit tuned on the "
+        "data it is scored on.",
+    ),
+    Mutation(
+        "b2-psi-probe: ref is chosen on whatever accuracies it is handed",
+        "test_ref_is_never_chosen_on_eval",
+        "experiments/b2-psi-probe/run.py",
+        '    require_range(doc_ids, "FIT_VAL")  # §9.3: ref on FIT_VAL, never EVAL\n',
+        "    pass\n",
+        "PREREG §9.3 / PLAN-v4: ref (FIFO or the age-only head) is chosen per seed on "
+        "FIT_VAL, never on EVAL. Choosing it on EVAL picks the easier comparator after "
+        "seeing the contrast.",
+    ),
+    Mutation(
+        "b2-psi-probe: kind-oracle ties go to the oldest",
+        "test_kind_oracle_ties_are_uniform_random_seeded_per_step",
+        "experiments/b2-psi-probe/run.py",
+        "        return rng.choice(ks)\n",
+        "        return ks[0]\n",
+        "PREREG A1.10: ties inside the lowest class are uniformly random, seeded "
+        "ko:seed:doc:t. An oldest tie-break hands Q2's comparator the age information "
+        "psi-hat is barred from.",
+    ),
+    Mutation(
+        "b2-psi-probe: the random floor is its best seed, not its 5-seed mean",
+        "test_the_bootstrap_is_paired_and_the_random_floor_is_the_five_seed_mean",
+        "experiments/b2-psi-probe/run.py",
+        "    return torch.stack(xs).mean(0)\n",
+        "    return torch.stack(xs).min(0).values\n",
+        "PREREG §9.2: the random arm's accuracy per replicate is the mean over its 5 "
+        "seeds. Its minimum lowers the floor that WIN's clause (4) must clear.",
+    ),
+    Mutation(
+        "b2-psi-probe: WIN no longer has to beat random",
+        "test_the_random_floor_is_part_of_win",
+        "experiments/b2-psi-probe/run.py",
+        "and noninf_lo > -delta and rand_lo > 0:",
+        "and noninf_lo > -delta:",
+        "PREREG §9.5 WIN clause (4) (REDTEAM-v3 edit 5): psi-hat must beat the random "
+        "arm's 5-seed mean with a paired CI lower bound > 0.",
+        off_gate_allowed=(
+            (
+                "tests/test_b2_psi_probe.py::test_the_outcome_rule",
+                "the outcome rule's table carries the same clause as one of its rows "
+                "(rand_lo = -0.01 must not be WIN); the dedicated test isolates it. "
+                "Inspected: both fail on that one row and nothing else.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b2-psi-probe: E0h reads its class before the thresholds are ratified",
+        "test_e0h_rc_is_its_own_and_is_2_until_ratified",
+        "experiments/b2-psi-probe/run.py",
+        "    if not ratified:\n        return 2\n",
+        "    pass\n",
+        "PREREG A1.3: until a ruling ratifies the proposed 0.90 / 0.49, E0h exits 2 "
+        "whatever the R^2; otherwise an unratified COLLINEAR is a kill (rc 1).",
+    ),
+    Mutation(
+        "b2-psi-probe: an exception inside E0h exits 1",
+        "test_e0h_without_its_fits_or_on_an_exception_exits_3",
+        "experiments/b2-psi-probe/run.py",
+        "            pass\n        return 3\n",
+        "            pass\n        return 1\n",
+        "PREREG A1.3: an exception inside run.py e0h is DID NOT RUN (3); 1 means "
+        "COLLINEAR under a ratifying ruling, and a crash must never read as a kill.",
+    ),
+    Mutation(
+        "b2-psi-probe: the range check skips the used ranges",
+        "test_an_overlap_with_any_used_range_is_a_problem",
+        "experiments/b2-psi-probe/run.py",
+        "        for uname, urng in used.items():\n",
+        "        for uname, urng in {}.items():\n",
+        "PREREG §3 / A1.15: B2's ranges are asserted disjoint from every used range, "
+        "E0d's [262144, 263168) included, before any model is loaded (exit 3).",
+    ),
+    Mutation(
+        "b2-psi-probe: the selected lambda's residual is not checked",
+        "test_a_selected_lambda_over_1e8_residual_or_no_eligible_point_exits_1",
+        "experiments/b2-psi-probe/run.py",
+        '    if path[best]["resid"] > SELECTED_RESID:\n',
+        '    if path[best]["resid"] > SELECTED_RESID * 1e3:\n',
+        "PREREG A1.6 / §11 control 10: the selected lambda's relative residual must "
+        "be <= 1e-8, else exit 1.",
+    ),
+    Mutation(
+        "b2-psi-probe: psi-hat ties go to the newest",
+        "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+        "experiments/b2-psi-probe/run.py",
+        "            if vals[q] < vals[j]:  # strict: ties to the lowest slot, "
+        "the oldest\n",
+        "            if vals[q] <= vals[j]:  # strict: ties to the lowest slot, "
+        "the oldest\n",
+        "PREREG §4: argmin with ties to the lowest slot index (the oldest), as "
+        "OraclePolicy. Ties to the newest is an age preference nobody registered.",
+    ),
+    Mutation(
+        "b2-psi-probe: a CI that excludes its estimate is read",
+        "test_a_ci_excluding_the_estimate_is_unresolved",
+        "experiments/b2-psi-probe/run.py",
+        '    if outcome_flags(point, lo, hi):\n        return "UNRESOLVED"\n',
+        "    pass\n",
+        "PREREG A1.13: if the estimate is outside its CI the contrast is UNRESOLVED "
+        "(CI_EXCLUDES_ESTIMATE); it removes the only WIN and EQUIV overlap.",
+    ),
+    Mutation(
+        "b2-psi-probe: Q2's contrast sizes N_E",
+        "test_power_takes_the_max_over_gating_contrasts_only_and_clips",
+        "experiments/b2-psi-probe/run.py",
+        "        if c in GATING_CONTRASTS\n",
+        "        if True\n",
+        "PREREG A1.12: only the gating contrasts enter the max; psi-U - kind-oracle "
+        "(Q2, outside the truth table) is reported with the N_E that results.",
+    ),
+    Mutation(
+        "b2-psi-probe: the FIT_VAL R² multiplies a summed SSE by n_val again",
+        "test_val_r2_raw_is_one_minus_sse_over_sst",
+        "experiments/b2-psi-probe/run.py",
+        '            "val_r2_raw": [1.0 - float(x) / sst if sst > 0 else None'
+        " for x in sse_raw[j]],\n",
+        '            "val_r2_raw": [1.0 - float(x) * n_val / sst if sst > 0 else None'
+        " for x in sse_raw[j]],\n",
+        "PREREG §6 / §8.1, A1.3: phase A (280a2ad) logged 1 - n_val*SSE/SST, so every "
+        "pooled R² read near -2e5 and E0h's R² > 0 informativeness gate read every "
+        "seed UNINFORMATIVE. The old test asserted only r2 <= 1 and passed on it.",
+    ),
+    Mutation(
+        "b2-psi-probe: the E0h pre-hook changes the forward pass",
+        "test_the_logit_prehook_does_not_change_the_forward",
+        "experiments/b2-psi-probe/run.py",
+        "        x, mem_kv, mem_valid = args[:3]\n        with torch.no_grad():\n"
+        "            lg = recompute_logits(module, x, mem_kv, mem_valid)\n"
+        "        self._pending.append(lg)\n        self._valid = mem_valid\n"
+        "        self.calls.append(tuple(lg.shape))\n        return None\n",
+        "        x, mem_kv, mem_valid = args[:3]\n        x = x * 1.001\n"
+        "        with torch.no_grad():\n"
+        "            lg = recompute_logits(module, x, mem_kv, mem_valid)\n"
+        "        self._pending.append(lg)\n        self._valid = mem_valid\n"
+        "        self.calls.append(tuple(lg.shape))\n        return (x, *args[1:])\n",
+        "PREREG A1.5: the logits come from a forward pre-hook and the forward pass is "
+        "unchanged (test_fidelity / test_reduction untouched). A hook that edits its "
+        "input passes the softmax control, since the recompute sees the same edit.",
+    ),
+    Mutation(
+        "b2-psi-probe: EVAL units are held in RAM until the tier ends",
+        "test_eval_units_reach_disk_before_the_next_document_runs",
+        "experiments/b2-psi-probe/run.py",
+        "            _flush(pending)  # F1: every unit reaches disk before the next "
+        "document runs\n",
+        "            pass  # units wait in `pending` until the tier ends\n",
+        "B2 build review F1 (BLOCKER): EVAL's per-eviction logs are about 1 kB a "
+        "record; held in RAM for a tier they reach tens of GB at the N_E cap. Each "
+        "document's unit must be on disk before the next runs, which is also what "
+        "makes a killed child resumable.",
+    ),
+    Mutation(
+        "b2-psi-probe: an E0h logit-control failure stops B2's EVAL child",
+        "test_a_failed_logit_control_is_e0h_exit_3_and_b2_still_completes",
+        "experiments/b2-psi-probe/run.py",
+        '            if not u["residency_ok"] or u["sum_worst"] > SUM_TOL:\n',
+        '            if not u["residency_ok"] or u["sum_worst"] > SUM_TOL or '
+        '(u["logit_control_worst"] or 0.0) > LOGIT_TOL:\n',
+        "PREREG A1.3 / A1.5 (build review F3): a failed logit control is E0h exit 3, "
+        "and B2's rc covers B2 alone. Raising it from the EVAL child kills B2 after "
+        "its cost is paid.",
+    ),
+    Mutation(
+        "b2-psi-probe: non-inferiority reads the all-query CI",
+        "test_win_needs_non_inferiority_on_gap_2_to_m",
+        "experiments/b2-psi-probe/run.py",
+        '            boot["gap_2_to_M"][k],\n',
+        '            boot["all"][k],\n',
+        "PREREG §9.5 WIN clause (3): the non-inferiority bound is read on "
+        "gap_2_to_M. Reading it on all queries lets an arm that loses the "
+        "short-gap bucket win (build review F4, M1).",
+    ),
+    Mutation(
+        "b2-psi-probe: E0h pairs each slot's logits with another slot's psi-hat",
+        "test_e0h_rows_pair_each_slot_with_its_own_sentence",
+        "experiments/b2-psi-probe/run.py",
+        "        i_idx = torch.arange(t - m, t)  # FIFO memory at t, oldest first\n",
+        "        i_idx = torch.arange(t - m, t).flip(0)"
+        "  # FIFO memory at t, oldest first\n",
+        "PREREG §10 / A1.4: E0h's rows pair FIFO slot j's logits with "
+        "psi-hat(s_{t-m+j}, c_t) and D[t, t-m+j]. A reversed index regresses one "
+        "slot's psi-hat on another's logits (build review F4, M2).",
+    ),
+    Mutation(
+        "b2-psi-probe: delta is measured from a random seed, not FIFO",
+        "test_val_decisions_delta_is_a_quarter_of_oracle_minus_fifo",
+        "experiments/b2-psi-probe/run.py",
+        '    d09 = delta_of(out["acc"][0.9]["oracle"], out["acc"][0.9]["fifo"])\n',
+        '    d09 = delta_of(out["acc"][0.9]["oracle"], out["acc"][0.9]["random0"])\n',
+        "PREREG §9.3: delta = 0.25 (acc_oracle - acc_FIFO) on FIT_VAL. Any other "
+        "baseline rescales every WIN / EQUIV / LOSS threshold (build review F4, M3).",
+    ),
+    Mutation(
+        "b2-psi-probe: the gamma = 0 contrasts use the gamma = 0.9 ref",
+        "test_the_gamma_zero_contrasts_use_the_gamma_zero_ref",
+        "experiments/b2-psi-probe/run.py",
+        '        ref = {"U": decisions["ref"][f"U@{g}"], '
+        '"C": decisions["ref"][f"C@{g}"]}\n',
+        '        ref = {"U": decisions["ref"]["U@0.9"], '
+        '"C": decisions["ref"]["C@0.9"]}\n',
+        "PREREG §9.3 / §9.8: ref is chosen per (seed, arm, gamma) on FIT_VAL; gamma "
+        "= 0 is read against its own ref (build review F4, M4).",
+    ),
+    Mutation(
+        "b2-psi-probe: the bootstrap draws from the global RNG",
+        "test_the_bootstrap_is_seeded_and_leaves_the_global_rng_alone",
+        "experiments/b2-psi-probe/run.py",
+        "    idx = torch.randint(0, D, (n_boot, D), generator=g)\n",
+        "    idx = torch.randint(0, D, (n_boot, D))\n",
+        "PREREG §9.2: the paired bootstrap uses torch.Generator(20260927 + seed). "
+        "Unseeded, every CI changes run to run and consumes the global stream "
+        "(build review F4, M7).",
+    ),
+    Mutation(
+        "b2-psi-probe: WIN's random clause reads the ref contrast",
+        "test_win_needs_the_random_floor_not_the_ref",
+        "experiments/b2-psi-probe/run.py",
+        'noninf_lo=n["lo"], rand_lo=rn["lo"]',
+        'noninf_lo=n["lo"], rand_lo=a["lo"]',
+        "PREREG §9.5 WIN clause (4): psi-hat - random's CI lower bound > 0. Reading "
+        "the ref contrast's bound instead drops the random floor from the wiring "
+        "(build review F4, M9).",
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace protects the newest slot even when switched off",
+        "test_grace_g0_is_the_inner_policy",
+        "experiments/newcomer-bakeoff/run.py",
+        "        ok = [a > self.g for a in ages]\n",
+        "        ok = [a > max(self.g, 1) for a in ages]\n",
+        "PREREG §4: g = 0 is the grace rule's off-switch and must return exactly the "
+        "inner psi-U victim (the pack's reduction requirement, stated for this "
+        "experiment-local wrapper).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::test_grace_protects_the_g_newest",
+                "its first assertion is the g = 0 case (the newest slot, the inner "
+                "argmin), which the mutation protects",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_units_are_atomic_resumable_and_keyed",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace lets the g-th newest slot be evicted",
+        "test_grace_protects_the_g_newest",
+        "experiments/newcomer-bakeoff/run.py",
+        "        ok = [a > self.g for a in ages]\n",
+        "        ok = [a >= self.g for a in ages]\n",
+        "PREREG §4: a slot of age <= g is ineligible (the g newest are protected; B2's "
+        "convention, newest = age 1).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_grace_falls_back_when_every_slot_is_protected",
+                "at g = 4 with ages 1..4, `>=` makes the age-4 slot eligible, so the "
+                "fallback is never reached and the victim changes",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "it asserts graceU1 never evicts age 1 and graceU2 never age <= 2 on "
+                "the tiny model; `>=` lets exactly those through",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace has no fallback when every slot is protected",
+        "test_grace_falls_back_when_every_slot_is_protected",
+        "experiments/newcomer-bakeoff/run.py",
+        '        return ok if any(ok) else [True] * len(ages)  # "unless all are"\n',
+        '        return ok  # "unless all are"\n',
+        "PREREG §4: 'ineligible unless all are' -- with every slot protected the rule "
+        "falls back to the unmasked argmin.",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_units_are_atomic_resumable_and_keyed",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: the R1 shadow part is not down-weighted",
+        "test_r1_at_half_weight_is_resident_plus_half_the_shadow",
+        "experiments/newcomer-bakeoff/run.py",
+        "torch.where(in_win, lam * base, torch.zeros_like(base))",
+        "torch.where(in_win, base, torch.zeros_like(base))",
+        "PREREG §5 / ADR-0009 L3 R1: the shadow r~ enters the return at weight "
+        "lambda_shadow (FROZEN 0.5, read from the registry).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_r1_at_zero_weight_is_the_censored_target",
+                "at lambda 0 R1 must equal B2's censored target; ignoring lambda gives "
+                "U's demand instead",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::test_r1_window_truncates_at_k",
+                "it checks the in-window cells equal 0.5 * D0, which the mutation makes"
+                " D0",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: the R1 shadow window is one step too deep",
+        "test_r1_window_truncates_at_k",
+        "experiments/newcomer-bakeoff/run.py",
+        "    in_win = after & ((t - t_e.unsqueeze(0)) < K)\n",
+        "    in_win = after & ((t - t_e.unsqueeze(0)) <= K)\n",
+        "PREREG §5: a slot stays in the depth-K shadow buffer while fewer than K "
+        "evictions followed its own (t - t_e < K).",
+    ),
+    Mutation(
+        "newcomer-bakeoff: partial rho does not partial out content",
+        "test_partial_rho_removes_an_age_signal_carried_by_content",
+        "experiments/newcomer-bakeoff/analysis.py",
+        "    P = torch.linalg.pinv(dZ.T @ dZ)\n",
+        "    P = 0 * torch.linalg.pinv(dZ.T @ dZ)\n",
+        "PREREG §6.3: the §7.1 vacuity statistic on the effective rule is a PARTIAL rho"
+        " given content; without the content regression it is the raw within-step "
+        "Spearman.",
+    ),
+    Mutation(
+        "b1: L_MC means over rows, not over (doc, t)",
+        "test_l_mc_sums_over_live_slots_and_means_over_doc_t",
+        "experiments/b1-beta-inertness/run.py",
+        "    return (diff * diff).sum() / (N * (S - 1))\n",
+        "    return (diff * diff).sum() / rows.sum()\n",
+        "PREREG §3 / ADR-0009 L9: sum over resident slots, then mean over (doc, t).",
+    ),
+    Mutation(
+        "b1: the rows are rowset U, not C",
+        "test_rows_are_b2_rowset_c_and_target_is_c_at_09",
+        "experiments/b1-beta-inertness/run.py",
+        '        t, i = B2.row_index(cap, "C", m)\n',
+        '        t, i = B2.row_index(cap, "U", m)\n',
+        "PREREG §2: B2 rowset C, the FIFO-resident slots online L_MC sums over.",
+        off_gate_allowed=(
+            (
+                (
+                    "tests/test_b1_beta_inertness.py::test_full_memory_steps_are_those_with_m_resident"
+                ),
+                (
+                    "full is derived from rows (|rows[t]| = M); under rowset U every i "
+                    "< t is a row, so the full steps become t = M only instead of t >= "
+                    "M -- the same defect seen from the decision set"
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "b1: full-memory steps include M-1 resident",
+        "test_full_memory_steps_are_those_with_m_resident",
+        "experiments/b1-beta-inertness/run.py",
+        '        "full": rows_t.sum(-1) == m,\n',
+        '        "full": rows_t.sum(-1) >= m - 1,\n',
+        "PREREG §6 m2: decisions only where |resident[t]| = M.",
+    ),
+    Mutation(
+        "b1: pack accepts a captured input carrying graph",
+        "test_pack_refuses_inputs_that_carry_graph",
+        "experiments/b1-beta-inertness/run.py",
+        "            if x.requires_grad or x.grad_fn is not None:\n",
+        "            if False:\n",
+        "PREREG §2 / CLAUDE.md isolation: no gradient reaches the transformer.",
+    ),
+    Mutation(
+        "b1: psi_all pairs s_t with c_i",
+        "test_psi_all_is_the_head_at_every_t_and_i",
+        "experiments/b1-beta-inertness/run.py",
+        "    return head(g, ctx.reshape(N * S, d)).reshape(N, S, S)\n",
+        "    return head(g, ctx.reshape(N * S, d)).reshape(N, S, S).transpose(1, 2)\n",
+        "PREREG §3: psi[n, t, i] = head(s_i, c_t).",
+    ),
+    Mutation(
+        "b1: beta does not scale the loss",
+        "test_beta_scales_the_loss_and_never_the_lr_in_the_four_arms",
+        "experiments/b1-beta-inertness/run.py",
+        "    return 1.0 if arm == CONTROL_P else beta\n",
+        "    return 1.0\n",
+        "PREREG §5: phi's loss is beta * L_MC in the four arms.",
+    ),
+    Mutation(
+        "b1: P does not scale the LR",
+        "test_positive_control_scales_the_lr_and_not_the_loss",
+        "experiments/b1-beta-inertness/run.py",
+        "    lr_eff = beta * lr if arm == CONTROL_P else lr\n",
+        "    lr_eff = lr\n",
+        "PREREG §5 P: L7(a)'s reading, lr = beta * lr_phi.",
+        off_gate_allowed=(
+            (
+                (
+                    "tests/test_b1_beta_inertness.py::test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not"
+                ),
+                (
+                    "its last assertion is that P at beta = 0.01 moves phi away from "
+                    "beta = 1; with the LR unscaled and the loss unscaled, P is the "
+                    "beta = 1 run exactly, so the end-to-end test sees the same defect"
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "b1: coupled_l2 is AdamW",
+        "test_coupled_l2_is_adam_with_l2_and_the_others_are_adamw_decoupled",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            "        return torch.optim.Adam(params, lr=lr, betas=ADAM_BETAS, eps=eps, "
+            "weight_decay=L2)\n"
+        ),
+        (
+            "        return torch.optim.AdamW(params, lr=lr, betas=ADAM_BETAS, eps=eps,"
+            " weight_decay=L2)\n"
+        ),
+        "PREREG §5 arm 4: coupled L2 is Adam with the L2 term in the gradient.",
+    ),
+    Mutation(
+        "b1: the phi clip is never applied",
+        "test_phi_clip_binds_on_phi_norm_at_one",
+        "experiments/b1-beta-inertness/run.py",
+        "        torch.nn.utils.clip_grad_norm_(params, PHI_CLIP)\n",
+        "        pass\n",
+        "PREREG §5 arm 2: clip_grad_norm_(phi, 1.0).",
+    ),
+    Mutation(
+        "b1: the joint clip ignores phi's norm",
+        "test_joint_clip_uses_the_joint_norm_with_the_transformers",
+        "experiments/b1-beta-inertness/run.py",
+        "math.sqrt(g_T * g_T + n * n)",
+        "g_T",
+        "PREREG §5 arm 3: the joint norm is sqrt(g_T^2 + |g_phi|^2).",
+    ),
+    Mutation(
+        "b1: the batch order samples with replacement",
+        "test_batch_order_is_a_permutation_per_epoch_and_seed_determined",
+        "experiments/b1-beta-inertness/run.py",
+        "        perm = torch.randperm(n, generator=g)\n",
+        "        perm = torch.randint(n, (n,), generator=g)\n",
+        "PREREG §3: without replacement within an epoch.",
+    ),
+    Mutation(
+        "b1: the argmin reads non-resident slots",
+        "test_argmins_only_over_resident_slots_at_full_steps",
+        "experiments/b1-beta-inertness/run.py",
+        '    x = psi.masked_fill(~rows, float("inf"))\n',
+        "    x = psi\n",
+        "PREREG §6 m2: argmin over resident slots only.",
+    ),
+    Mutation(
+        "b1: eps ratio without bias correction",
+        "test_eps_ratio_uses_the_bias_corrected_second_moment",
+        "experiments/b1-beta-inertness/run.py",
+        '            vhat = st["exp_avg_sq"].double() / (1.0 - b2**k)\n',
+        '            vhat = st["exp_avg_sq"].double()\n',
+        "PREREG §6 m3: eps / sqrt(v / (1 - 0.95^k)).",
+    ),
+    Mutation(
+        "b1: INERT needs agreement strictly above 0.99",
+        "test_classify_thresholds_are_the_prereg_ones",
+        "experiments/b1-beta-inertness/run.py",
+        "    if min(agreements) >= INERT_AGREE and max(rels) <= INERT_REL:\n",
+        "    if min(agreements) > INERT_AGREE and max(rels) <= INERT_REL:\n",
+        "PREREG §7: INERT is agreement >= 0.99 and rel <= 0.01.",
+    ),
+    Mutation(
+        "b1: every cell is compared against decoupled_wd",
+        "test_compare_reads_every_cell_against_its_own_beta_one",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            '    return "decoupled_wd" if arm in (CONTROL_P, CONTROL_N, CONTROL_I) else'
+            " arm\n"
+        ),
+        '    return "decoupled_wd"\n',
+        "PREREG §6: against beta = 1 of the same seed, arm and eps.",
+    ),
+    Mutation(
+        "b1: g_T accepts a missing step",
+        "test_read_g_t_takes_steps_2000_to_2999_and_refuses_a_gap",
+        "experiments/b1-beta-inertness/run.py",
+        "    if sorted(got) != list(range(lo, hi)):\n",
+        "    if not got:\n",
+        "PREREG §4: exactly one logged transformer norm per step 2000-2999.",
+    ),
+    Mutation(
+        "b1: phi is initialised from the global generator",
+        "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            "        d, base_width=BASE_WIDTH, "
+            "generator=torch.Generator().manual_seed(init_seed)\n"
+        ),
+        "        d, base_width=BASE_WIDTH, generator=None\n",
+        (
+            "PREREG §2 / ADR-0009 L11: a dedicated generator, so every beta/arm/eps of "
+            "a seed starts from the same phi (N is bit-identical)."
         ),
     ),
 )
