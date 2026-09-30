@@ -73,6 +73,25 @@ class Mutation:
 
 # Reasons shared by several declared couplings. Written once so the table below
 # stays readable and so a reader can see that the same argument is being made.
+_REVIEW_GATE_COUPLING = (
+    "every T5(b) refusal is returned by the one review_gate() call; skipping the "
+    "call turns each of them into a merge. The coupling is the design: one gate."
+)
+_REVIEW_GATE_REFUSALS: tuple[str, ...] = (
+    "test_a_record_for_a_different_head_is_refused",
+    "test_a_record_for_another_branch_is_refused",
+    "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+    "test_a_record_whose_filename_is_not_its_reviewed_head_is_refused",
+    "test_a_reviewer_who_is_a_git_author_of_the_branch_is_refused",
+    "test_a_self_review_is_refused",
+    "test_an_unknown_verdict_is_refused",
+    "test_do_not_merge_is_refused_as_a_failure",
+    "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
+    "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+    "test_merge_with_fixes_without_fixes_verified_at_is_refused",
+    "test_other_prefixes_are_refused_without_a_review[docs/x]",
+    "test_other_prefixes_are_refused_without_a_review[eng/x]",
+)
 _REDUCTION_TABLE_COUPLING = (
     "`reduction_to_tg()` is built *from* the off-switch table, so removing an "
     "entry makes every reduction test fail to construct a config. The coupling is "
@@ -1950,6 +1969,42 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if rec is None and False:\n        return Exit.DID_NOT_RUN,",
         "the verification gate stops being a gate: with no record the merge crashes "
         "(1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.",
+    ),
+    # T5(b), 2026-09-30: the review gate (docs/review-records.md). Proven by hand
+    # at authoring time against tests/test_orch_merge*.py only (battery lane busy).
+    Mutation(
+        "merge: the review gate is skipped",
+        "test_merge_is_refused_without_a_review_record",
+        "scripts/orchestrator/merge.py",
+        "    code, record = review_gate(root, branch, base, head_sha)\n"
+        "    if code != Exit.OK:\n",
+        "    code, record = review_gate(root, branch, base, head_sha)\n    if False:\n",
+        "PLAN-v4 §4 T5(b) stops being a mechanism: any verified run/ branch, and "
+        "any fix/ eng/ feat/ docs/ branch at all, merges into the night branch with "
+        "no adversarial review on record.",
+        off_gate_allowed=tuple(
+            (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
+            for t in _REVIEW_GATE_REFUSALS
+        ),
+    ),
+    Mutation(
+        "merge: a stale review record is accepted",
+        "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+        "scripts/orchestrator/merge.py",
+        "    unreviewed = [p for p in diff.stdout.splitlines() if p and not "
+        "review_exempt(p)]",
+        "    unreviewed = []",
+        "a review of an early head waves through every commit made after it -- "
+        "the census shape of 2026-09-29 (eng/i1-isolation reviewed at ff6dccc, "
+        "7 files changed since).",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+                "the same staleness check, anchored at fixes_verified_at instead of "
+                "reviewed_head: one diff, two anchors.",
+            ),
+        ),
     ),
     Mutation(
         "tick: HALT ignored",
