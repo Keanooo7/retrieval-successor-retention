@@ -81,7 +81,8 @@ def tiny(b1):
 
 
 def test_rows_are_b2_rowset_c_and_target_is_c_at_09(b1, tiny):
-    """PREREG §2: rows = `row_index(cap, "C", m)`, target = `target_matrix(cap, "C", 0.9)`."""
+    """PREREG §2: rows = `row_index(cap, "C", m)`; target = `target_matrix(cap, "C",
+    0.9)`."""
     p = tiny["train"]
     for n, cap in enumerate(tiny["tcaps"]):
         t, i = b1.B2.row_index(cap, "C", TM)
@@ -151,7 +152,9 @@ def _head():
 def test_beta_scales_the_loss_and_never_the_lr_in_the_four_arms(b1):
     for arm in b1.ARMS:
         assert b1.loss_scale(arm, 0.01) == 0.01
-        opt = b1.make_optimizer(arm, list(_head().parameters()), eps=1e-8, beta=0.01, lr=1e-3)
+        opt = b1.make_optimizer(
+            arm, list(_head().parameters()), eps=1e-8, beta=0.01, lr=1e-3
+        )
         assert opt.param_groups[0]["lr"] == 1e-3
 
 
@@ -170,7 +173,9 @@ def test_coupled_l2_is_adam_with_l2_and_the_others_are_adamw_decoupled(b1):
     for arm in b1.ARMS:
         opt = b1.make_optimizer(arm, ps, eps=1e-12, beta=1.0, lr=1e-3)
         g = opt.param_groups[0]
-        assert g["betas"] == (0.9, 0.95) and g["eps"] == 1e-12 and g["weight_decay"] == 0.01
+        assert (
+            g["betas"] == (0.9, 0.95) and g["eps"] == 1e-12 and g["weight_decay"] == 0.01
+        )
         if arm == "coupled_l2":
             assert type(opt) is torch.optim.Adam
         else:
@@ -252,7 +257,8 @@ def test_eps_ratio_uses_the_bias_corrected_second_moment(b1):
     p.grad = torch.tensor([1e-3, 2e-3, 4e-3])
     opt.step()
     r = b1.eps_ratio(opt, 1e-8)
-    assert torch.allclose(r, 1e-8 / torch.tensor([1e-3, 2e-3, 4e-3]), rtol=1e-4)
+    want = 1e-8 / torch.tensor([1e-3, 2e-3, 4e-3], dtype=torch.float64)
+    assert torch.allclose(r.double(), want, rtol=1e-4)
 
 
 def test_classify_thresholds_are_the_prereg_ones(b1):
@@ -271,7 +277,10 @@ def test_compare_reads_every_cell_against_its_own_beta_one(b1):
     """PREREG §6: against beta = 1 of the same seed, arm and eps."""
 
     def run(val, am):
-        return {"phi": {3000: torch.tensor([val, 1.0])}, "argmin": {3000: torch.tensor(am)}}
+        return {
+            "phi": {3000: torch.tensor([val, 1.0])},
+            "argmin": {3000: torch.tensor(am)},
+        }
 
     runs = {
         (0, "decoupled_wd", 1e-8, 1.0): run(1.0, [0, 1]),
