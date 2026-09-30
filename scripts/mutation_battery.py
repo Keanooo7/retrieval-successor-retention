@@ -5833,18 +5833,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    try:\n        try:\n",
         "I2: the done record says the shard's battery RETURNED. Written at the "
         "start, a killed or crashed shard would look finished to the merge.",
-        off_gate_allowed=tuple(
+        off_gate_allowed=(
             (
-                f"tests/test_battery_shards.py::{t}",
+                "tests/test_battery_shards.py::"
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
                 "the SIGKILL end-to-end run asserts its killed shard is DID_NOT_RUN "
                 "for having no done record; written early, the record exists and "
                 "the reason changes.",
-            )
-            for t in (
-                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
-            )
-        )
-        + (
+            ),
             (
                 "tests/test_battery_shards.py::"
                 "test_a_shard_records_the_sha_its_battery_pinned",
