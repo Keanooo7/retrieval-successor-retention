@@ -4311,6 +4311,7 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_missing_row_is_did_not_run_never_a_pass",
                 "test_a_row_for_another_gate_is_did_not_run",
                 "test_a_row_for_another_mutation_is_did_not_run",
+                "test_a_row_with_a_field_of_the_wrong_type_is_did_not_run",
                 "test_a_row_without_the_serial_rows_fields_is_did_not_run",
                 "test_a_shard_process_that_dies_makes_its_mutations_did_not_run",
                 "test_a_shard_record_from_another_run_is_did_not_run[another-index]",
@@ -4468,7 +4469,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the teardown test asserts the pool's teardown ran and reported the "
                 "prune it could not do; a pool that is never torn down reports nothing.",
             )
-            for t in ("test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts",)
+            for t in (
+                "test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts",
+                "test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts",
+            )
         ),
     ),
     Mutation(
@@ -6152,6 +6156,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    proc = git(source, "worktree", "remove", "--force", str(path))',
         "review BLOCKER-1: a remove racing an add reads its half-written admin entry; "
         "and a remove that empties .git/worktrees kills a concurrent list.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_worktree_admin.py::test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts",
+                "the teardown test asserts the remove reports the admin lock it "
+                "could not take; a remove that takes no lock reports nothing "
+                "(observed red, I2-fix2 pass B).",
+            ),
+        ),
     ),
     Mutation(
         "i2: a pool teardown that cannot list worktrees discards the verdicts",
@@ -6162,6 +6174,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "review BLOCKER-1 (second fix): the teardown runs after every verdict is "
         "scored and before _report writes them; a failed prune must be reported, "
         "not raised over finished rows.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_worktree_admin.py::test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts",
+                "review 2 MINOR-1's test breaks common_dir(), which the prune's "
+                "worktree list needs too; with the prune's catch gone that "
+                "Unisolated escapes (observed red, I2-fix2 pass A).",
+            ),
+        ),
     ),
     Mutation(
         "i2: the done record names a second read of HEAD",
@@ -6226,6 +6246,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    code = Exit.OK if diffs else (",
         "review MAJOR-1: a serial/sharded verdict difference is the failure the "
         "equivalence run exists to catch (1).",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_shards.py::test_compare_reports_a_difference_even_beside_a_row_that_did_not_run",
+                "the precedence test's difference must exit 1; with differences "
+                "scored 0 it exits 0 (observed red, I2-fix2 pass A). One exit rule, "
+                "two readers.",
+            ),
+        ),
     ),
     Mutation(
         "i2: compare accepts different mutation sets",
