@@ -290,3 +290,50 @@ scored as a hit or a miss against §9.
 > Per `CLAUDE.md`, this section records the numbers that came out **wrong** as well
 > as the ones that came out right, and section 12.4 applies: documented
 > configuration is not evidence of what was actually run.
+
+## Erratum, 2026-09-29: runner fixes after the data (reported-only and provenance; the verdict stands)
+
+These fixes landed on `run/e0d` **after** the run at `2fd9368` had written its ledger.
+They change no gated statistic, label, class or exit. `PREREG.md` is unchanged. The
+committed record `runs/e0d/*` is untouched, and **the run was not re-run.**
+
+1. **`H_age-oracle` in the A1.3 population (defect).** `ArgminHit` took the min over
+   ages 1..M. A1.3 removes age 1, so that empty column always won: the 0.0000 in the H
+   table above is a runner artifact, not a measurement. The runner now takes the min over
+   the ages the population actually holds (commit `302c692`). On all cells every age is
+   present, so the all-cells values (0.0108 / 0.0099 / 0.0110) are unchanged.
+   - **The A1.3 value cannot be recomputed from the record.** The ledger holds the
+     per-seed analyses but not the cells or the per-age hit table, and the seed cells
+     were never persisted (item 3). It stays **not measured**. It would need a re-run,
+     and none is done.
+   - A derived bound, not a measurement: age 16 is present, so the A1.3 oracle is at
+     most that seed's `H_FIFO` (0.0326 / 0.0311 / 0.0220).
+   - Never gating (A2.6; test T19).
+2. **`commands[0].argv` (defect).** The ledger records `uv run python
+   experiments/e0d/run.py`, a typed string, not the command that ran. The slot-wrapped
+   `.venv/bin/python` command under Reproduction is what actually ran (see Provenance
+   notes). The runner now records `sys.executable` plus the process argv. When the
+   parent process is `orchestrator.slot`, its command line goes in the command's
+   `note` (commit `a869850`). This is provenance only. The committed ledger keeps its
+   original string.
+3. **Crash safety (runner only).** Each seed's cells and analysis are now persisted
+   atomically to `runs/<run_id>/seed-cache/seed<s>.pkl` as soon as the seed finishes.
+   On restart a seed is reused only if its key matches exactly: git sha, run.py sha256,
+   seed, document range, A\*, bootstrap n/seed, batch. Any mismatch, or an unreadable
+   record, exits 3 (commit `3d2889f`). The completed run had no such cache.
+4. **`prereg_amendment` now names Amendment 3 (f5a8752)** for future runs (commit
+   `2d6ddfc`). The committed `runs/e0d/manifest.json` keeps its original string (see
+   Provenance notes).
+
+**Proof that the gated path did not move.** `classify_run` was recomputed from the
+committed `runs/e0d/ledger.json`'s own `seed{0,1,2}.analysis` rows. That was done once
+with the runner at `0becbcc`, before the fixes, and once at `54fce7b` (after all four). Both runs gave
+class `AGREE`, exit 0 and labels `['AGREE', 'AGREE', 'AGREE']`. All 23 other
+`e0d.*` rows `classify_run` writes (pooled aside, since it needs cells) equal the
+ledger's row: 0 mismatches.
+
+Two test-only defects were found on the way. They are not runner changes:
+- `60b0231`: two C8-refusal tests read the real `docs/owner/rulings/`. Those rulings
+  have been committed since `7f9bb10`, so one test failed and the other ran the real
+  E0d measurement in-process.
+- `54fce7b`: the outbox index had not been regenerated after `0becbcc`.
