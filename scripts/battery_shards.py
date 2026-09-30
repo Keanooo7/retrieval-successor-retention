@@ -581,9 +581,9 @@ def main(argv: list[str] | None = None) -> Exit:
             if rc not in tuple(int(e) for e in Exit):
                 # 128+N after a handled signal: the battery's code, verbatim
                 raise SystemExit(rc)
-            return Exit(rc)
+            return status(rc)
         action = {"run": run_all, "plan": run_plan, "merge": run_merge}[args.action]
-        return action(args)
+        return status(action(args))
     except Refused as e:
         refuse(Exit.DID_NOT_RUN, str(e))
 
