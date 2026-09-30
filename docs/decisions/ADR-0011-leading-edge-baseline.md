@@ -117,8 +117,9 @@ the **union of the argument sets of the propositions in that sentence**.
 - **Natural text (E7, unapproved):** an approximation. A sentence holds a number of propositions,
   unmeasured on this project (see D5 for why this matters to `s`). The approximation merges a
   sentence's propositions into one node, and so gives them one level and one fate. That is the same
-  mixed-importance problem §10.1's "unit mapping" row already names for human norms. It is listed
-  as **Q4**.
+  mixed-importance problem §10.1's "unit mapping" row already names for human norms. For NFRD, the
+  human side is coarser than a sentence, not finer (E0g finding 3, `RESEARCH-CONTEXT.md:689–696`).
+  It is listed as **Q4**.
 
 ### D4. The cycle is the TG step, and the protocol forces one departure
 
@@ -221,9 +222,11 @@ step `e`'s forward):
   `k − 1`.
 - So **`k_i = 1 + (e − i)`**. A sentence never evicted is censored at the stream end:
   `k_i = 1 + (S − 1 − i)`, and the end of the passage is the end of the text.
-- Under FIFO this gives `k_i = 1 + min(M, S − 1 − i)`, matching correction 25's
-  "`min(M, S−i)`" up to the off-by-one of where "survival" starts. Which convention E7's three
-  numbers use is **Q11 (OWNER-ONLY)**. The options and what depends on them are listed there.
+- Under FIFO this gives `k_i = 1 + min(M, S − 1 − i)`. Correction 25 writes FIFO's survival as
+  `min(M, S−i)`, which is a different convention and **not** a constant offset from `k_i`. The two
+  agree for censored sentences and differ by exactly 1 for evicted ones. Q11 (OWNER-ONLY) states
+  both conventions in general form, for any policy's eviction step `e`, together with the exact
+  effect of choosing one over the other.
 
 `1 − (1 − p)^k` is strictly increasing in `k` for `p ∈ (0, 1)`. So **every rank-based measure
 (E7's (1)–(3)) depends on `k` alone, and `p` never enters.** `p` is a fitted parameter of KvD's
@@ -266,15 +269,16 @@ become per-row. Whether a single-document convenience constructor is also offere
 
 | State | Keyed by | Lifetime |
 |---|---|---|
-| the coherence graph (nodes, levels, edges). Whether it **keeps evicted nodes** is this ADR's own proposal, and it depends on Q10's attachment option (attach within the buffer only, or anywhere in the graph) | `row`, then **occupant** = `written_at` (sentence index) | cleared in `reset()` |
+| the coherence graph (nodes, levels, edges). **Proposed:** keep evicted sentences' nodes in the graph, so that a new unit can attach to them. This proposal holds only if Q10 chooses "attach anywhere in the graph". If Q10 chooses "attach within the buffer only", evicted nodes are never consulted and need not be kept | `row`, then **occupant** = `written_at` (sentence index) | cleared in `reset()` |
 | `reinstatement_triggers`, `forced_newcomer` counters | `row` | read out by the caller before `reset()` |
 | nothing | slot index | never, because compaction shifts indices (ADR-0006, `write_at`) |
 
 - **Ingestion is lazy and idempotent**: "advance row `r`'s graph to step `t`". It is called from both
   `select_eviction` (which needs sentence `t`, still unwritten) and `on_write`. It is **never** called
   from `observe` alone, because `observe` runs only when `observe=True`. A policy that ingested only
-  there would silently become a different policy with `observe=False`, and that is gauntlet 0.4's
-  exact shape.
+  there would silently become a different policy with `observe=False`. That is gauntlet 0.4's
+  **class** of failure, by a different mechanism. Gauntlet 0.4 was LRU state kept in `MemoryState`
+  and erased by a fresh state each step; here it would be ingestion skipped when `observe` is off.
 - `on_write(slots, slot, step)` asserts `slots.written_at[slot] == step` (the contract's guarantee),
   ingests, and does nothing else. Graph state is per sentence, and a sentence occupies one slot for
   life and never returns. So "a new occupant starts fresh" (the stub's `on_write` docstring) holds
@@ -325,8 +329,9 @@ The coding is an owner decision (Q7, Q8). The options are given below, and neith
 2. **Asserts are mostly isolated until their query.** Two facts share an entity with probability
    1/64 per pair, and an object with probability 1/16 per pair (uniform draws, `:255–257`). So
    before its query arrives, an assert typically overlaps nothing, or overlaps via an object string
-   shared with an unrelated fact. **Prediction (BELIEVED, NOT VERIFIED): on synthetic, the graph is
-   near-flat. Most units sit at the top level, and phase 2 of the rule ("highest numbers first")
+   shared with an unrelated fact. **Prediction (BELIEVED, NOT VERIFIED), conditional on the Q7/Q8 A
+   options *and* on Q10 placing a disconnected input as a new top-level unit: on synthetic, the
+   graph is near-flat. Most units sit at the top level, and phase 2 of the rule ("highest numbers first")
    dominates, so the arm behaves close to a recency policy.** `dispatch-leading-edge.md` reports an
    "independent simulation" in the same direction under its `∅` coding: 741 assert-evicted-while-
    filler-live events for leading-edge against 605 for FIFO, out of 6,144, seeds 0–2, `M = 16`. That
@@ -334,15 +339,20 @@ The coding is an owner decision (Q7, Q8). The options are given below, and neith
 
 **Object identity.** `"a brass key"` in two facts is an indefinite NP, so the same string may not be
 the same referent. Option A: string identity is referent identity (the simplest formal rule). Option
-B: only definite NPs and names are identified across facts. What depends on it: option B removes most
-object-mediated links, which are about 1 in 16 fact pairs. **Q8 (OWNER-ONLY)**.
+B: only definite NPs and names are identified across facts. Of the 16 objects, 6 are definite, 5 take
+*a/an* and 5 are bare plurals or mass nouns. Option B must state how the bare NPs are treated. What
+depends on it: option B removes the object-mediated links (about 1 in 16 fact pairs) for 10 of 16
+objects if bare NPs count as non-definite, or for 5 of 16 if they count as identifiable. Under Q7
+option A it also stops repeats of the indefinite filler `A door closed somewhere.` from overlapping.
+**Q8 (OWNER-ONLY)**.
 
 **Where the coding lives.** A pure function (`sentence_arguments(Sentence) -> frozenset[str]`),
 parsing `Sentence.text` against the generator's own tuples. **Not** a new `Sentence` field:
 `to_bytes` serialises `asdict(Sentence)`, so a new field changes the corpus bytes and every dataset
 hash in `runs/`. This agrees with `dispatch-leading-edge.md` ("the generator is untouched").
 
-**Computable offline on synthetic, without a model:** argument sets; the graph; levels; the pick
+**Computable offline on synthetic, without a model**, either once Q7, Q8 and Q10 are answered or
+else once for each combination of their options: argument sets; the graph; levels; the pick
 order at any `s`; every eviction of role (a) given the write sequence (writes are fixed: every
 sentence is written); `reinstatement_triggers`; `forced_newcomer`; `k_i`; and agreement with FIFO,
 LRU-by-proxy and oracle victims. The graph and the rule need no gestalt. Only the comparison
@@ -367,11 +377,14 @@ Nothing in this section is authorised by this ADR. E7 is C6 (owner), outside §1
 
 ## 5. Consequences
 
-- The baseline's meaning is fixed before its code exists, so the implementing PR cannot quietly pick
-  the macrostructure reading, or FIFO under another name.
+- Before its code exists, this ADR fixes the baseline's **hierarchy** (the KvD microstructure
+  argument-overlap graph) and the readings it rules out (the macrostructure, and FIFO under another
+  name). It does **not** fix the pick order. That stays open until Brendan answers Q7, Q8, Q10 and
+  Q11, and the implementing PR must not settle them.
 - The "no reinstatement" and "newcomer forced" departures are named in the arm's own label and
   counted per run. A reader can then tell how far the arm is from the 1978 procedure on each corpus.
-- On synthetic the arm is expected to sit close to recency (§3, prediction, under the Q7/Q8 A options). **If it does, that is
+- On synthetic the arm is expected to sit close to recency (§3, prediction). That expectation holds
+  only under the Q7/Q8 A options and Q10's new-top-level placement of a disconnected input. **If it does, that is
   a finding about the corpus**, whose facts barely cohere, and not about the strategy. E7-type text
   is where the rule has a graph to walk. That is unapproved.
 - E7's primary number (correction 25 (3)) needs role (b), and role (b) needs propositional coding
@@ -386,14 +399,14 @@ Nothing in this section is authorised by this ADR. E7 is C6 (owner), outside §1
 | **Q1** | Which importance hierarchy does E0g/E7 name as "structural importance": KvD argument overlap, Thorndyke's story grammar, or NFRD's shipped semantic centrality? Correction 27 requires picking one and reporting the correlation between them, and NFRD makes it three | **OWNER-ONLY** |
 | **Q2** | Ratify D5's two roles: `s := M` for the eviction arm, and `s ∈ {1…4}` propositions for the E7 comparator | **OWNER-ONLY** |
 | **Q3** | Correction 26's 📌 compares `s` (propositions) to `M = 8` (sentences). Amend or annotate it? Only Brendan edits the corrections file | **OWNER-ONLY** |
-| **Q4** | For E7, is a sentence-level node (the union of its propositions' arguments) acceptable for role (a), and what mixed-importance fraction voids it (§10.1 already uses ~30% for the human side)? | **OWNER-ONLY** |
-| **Q5** | Does E7 role (b) use hand-coded propositions (KvD's own practice, slow) or an automatic extractor (new dependency, unmeasured error)? Part of C6's cost | **OWNER-ONLY** |
+| **Q4** | For E7, is a sentence-level node (the union of its propositions' arguments) acceptable for role (a), and what mixed-importance fraction voids it? §10.1 uses ~30% on the assumption that human norms are *finer* than sentences. **But** E0g finding 3 (`RESEARCH-CONTEXT.md:689–696`) records that for NFRD, the set ADR-0005 proposes, the mapping "runs the opposite way": NFRD gives one recall probability per *event*, and an event spans several sentences, so effective N is the number of events. That changes what the ~30% threshold means for this stimulus set. Role (b) compares orderings, not norms, so it is unaffected | **OWNER-ONLY** |
+| **Q5** | Does E7 role (b) use hand-coded propositions (KvD's own practice [UNVERIFIED: repo does not quote their coding procedure], slow) or an automatic extractor (new dependency, unmeasured error)? Part of C6's cost | **OWNER-ONLY** |
 | **Q6** | Is a reinstatement *analogue* ever in scope, i.e. re-admitting an evicted gestalt? Keeping an evicted sentence's graph node is D8's own proposal; `MemoryState` says nothing about it. Options: (a) never, so the trigger is only counted; (b) as a separate, labelled arm. What depends on it: (b) changes the write path, and with it §3.1's "only the eviction rule changes" and E0b's premise. D6 records the proposal of (a) and its reason | **OWNER-ONLY** |
-| **Q7** | Filler argument coding. Options: (A) literal nominal referents, hand-coded for the 8 fillers; (B) `∅`, the current brief. Plus the empty-set rule: an empty set neither fires nor satisfies the trigger, or it fires. What depends on it: graph density (repeated fillers link under A), the trigger count (B combined with "empty fires" counts every filler), and whether the baseline encodes the generator's demand structure (B does) | **OWNER-ONLY** (defines the comparator; REDTEAM-v2 X-3) |
-| **Q8** | Synthetic propositionalisation for queries and identity. Options: query args `{E}` or `{E, O}`; predicates excluded or counted as overlap; object identity by string, or definite-only (given indefinite NPs like "a brass key"). What depends on it: the graph's edges and levels, hence every leading-edge eviction on synthetic, and the trigger count | **OWNER-ONLY** (defines the comparator; REDTEAM-v2 X-3) |
+| **Q7** | Filler argument coding. Options: (A) literal nominal referents, hand-coded for the 8 fillers; (B) `∅`, the current brief. Plus the empty-set rule: an empty set neither fires nor satisfies the trigger, or it fires. What depends on it: graph density (repeated fillers link under A), the trigger count (B combined with "empty fires" counts every filler), and whether the baseline encodes the generator's demand structure (B does). **Interaction with Q8:** under A combined with Q8's definite-only identity, repeats of the one indefinite filler (`A door closed somewhere.`) do **not** overlap. Repeats of the definite fillers (`the weather`, `the room`, `the light`, `the hour`) still do | **OWNER-ONLY** (defines the comparator; REDTEAM-v2 X-3) |
+| **Q8** | Synthetic propositionalisation for queries and identity. Options: query args `{E}` or `{E, O}`; predicates excluded or counted as overlap; object identity by string, or definite-only (given indefinite NPs like "a brass key"). `_OBJECTS` holds **6 definite** NPs, **5 with *a/an*** and **5 bare plurals or mass nouns** (`old maps`, `salt marshes`, `wire rope`, `dry timber`, `lamp oil`). The definite-only option must say how bare NPs are treated. If they count as non-definite, 10 of 16 objects lose cross-fact identity. If they count as identifiable, 5 of 16 do. What depends on it: the graph's edges and levels, hence every leading-edge eviction on synthetic, and the trigger count. It also interacts with Q7 on the fillers | **OWNER-ONLY** (defines the comparator; REDTEAM-v2 X-3) |
 | **Q9** | Constructor shape: per-row `arguments(row, i)` only, or also a per-document convenience matching `OraclePolicy`'s one-policy-per-document use in `experiments/*/run.py` | TECH |
 | **Q10** | Graph construction beyond the p. 379 selection rule. The choices: which unit is "top" (the first unit, or another rule); where a new unit attaches (highest-level overlap **in the buffer**, or anywhere in the graph including evicted units, which is what decides whether D8 keeps evicted nodes); what "lower edge" and "highest level possible" mean when a level is exhausted; how a disconnected input is placed (a new top-level unit, or something else). **None of this is quoted in the repo.** What depends on it: every pick order, hence every eviction, and whether the arm reproduces KvD's own example. The options should be quoted from KvD pp. ~370–379 (Q12) before Brendan picks, or labelled as interpretation | **OWNER-ONLY** (defines the comparator; blocked on the source) |
-| **Q11** | Survival convention for E7's three numbers. Options: (A) `k = 1 + (e − i)`, the quoted formula's own count of chances; (B) correction 25's `min(M, S−i)` form, counting carry-overs only. What depends on it: under FIFO the two agree for sentences censored at the stream end and differ by 1 for evicted sentences, so they are **not** a constant offset. Ties between censored and evicted sentences can therefore reorder ranks, and the absolute survival values and any `p`-based level differ too. One must be named before E7's numbers are pre-registered | **OWNER-ONLY** (E7's primary number; correction 25) |
+| **Q11** | Survival convention for E7's three numbers. The definitions hold for any policy (RSR, leading-edge, H2O, LRU, FIFO). Sentence `i` is written at step `i` and evicted at step `e` (after step `e`'s forward). Let `e = ∞` if `i` is never evicted in a stream of `S` sentences. **(A)** `k_i = 1 + (min(e, S − 1) − i)`: the quoted formula's count of chances (1 as input, plus one per forward it is present for). It censors at `S − 1`. **(B)** `min(e, S) − i`: the steps from write to eviction, or to the stream end. It censors at `S`. Under FIFO (`e = i + M`) B reduces to correction 25's `min(M, S−i)`. **Exact effect:** A − B = **1 for every evicted sentence and 0 for every censored one**, under any policy. So ranks within the evicted group and within the censored group are identical under A and B. Only comparisons between an evicted sentence and a censored one change: the gap shrinks by exactly 1 from A to B, so a gap of 1 becomes a tie and a tie becomes a gap of −1. Gaps of 2 or more keep their sign. Under FIFO the only sentence that moves is `i = S − M`. It scores `M` under both, so it ties the evicted group (all `M` under B) but sits just below it (all `M + 1` under A). On synthetic (`S = 48`, `M = 16`) that sentence is `i = 32`. The absolute values and any `p`-based level also differ. One convention must be named before E7's numbers are pre-registered | **OWNER-ONLY** (E7's primary number; correction 25) |
 | **Q12** | Obtain the KvD 1978 PDF into `~/research-corpus` and read Kintsch & Vipond (1978) once. Until then every paper detail here is a repo quote | TECH (acquisition), with the reading's conclusions owner-reviewed |
 
 ---
