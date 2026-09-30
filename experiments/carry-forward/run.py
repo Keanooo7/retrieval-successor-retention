@@ -110,11 +110,15 @@ BANDS = {
 DECISION_BAND = "17_40"
 STATS = ("answer_nll", "answer_acc", "answer_nll_over_16", "answer_brier_over_16")
 
+# PREREG Amendment 1 A4 moved CARRY's baseline to `all_slots_resample`; this string
+# named the original `all_slots_zeroed` until 2026-09-30 (RESULTS.md, Notes; PLAN-v4
+# §2D). runs/carry-forward/ was written with the old text and is left as written.
 FALSIFIER = (
     "Arm B's FIFO memory carries answer information past the eviction of the answer's "
-    "own slot (CARRY: pooled gap 17-40 excess of live over single-step all-slots-zeroed "
-    "accuracy >= 0.03 with its 95% per-document CI lower bound > 0, on 1024 unseen "
-    "documents) on at least one seed at ckpt 3000. Falsified if no seed shows CARRY."
+    "own slot (CARRY: pooled gap 17-40 excess of live over all_slots_resample accuracy "
+    "(PREREG Amendment 1 A4) >= 0.03 with its 95% per-document CI lower bound > 0, on "
+    "1024 unseen documents) on at least one seed at ckpt 3000. Falsified if no seed "
+    "shows CARRY."
 )
 EXPECTED = (
     "MIXED: CARRY on seed 2 only (pooled 17-40 excess ~0.04-0.08, CI clear of 0); L "
