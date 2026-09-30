@@ -4689,6 +4689,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "which reviewed sha sorts first -- the verdict is a coin flip.",
     ),
     Mutation(
+        "merge: a repeated front-matter key is accepted, last wins",
+        "test_a_repeated_front_matter_key_is_malformed",
+        "scripts/orchestrator/merge.py",
+        "        if k in out:\n            if repeated is not None:\n",
+        "        if False:\n            if repeated is not None:\n",
+        "review MINOR-2 (probe N6): a record that reads `verdict: DO NOT MERGE` at "
+        "the top and `verdict: MERGE` below it merges.",
+    ),
+    Mutation(
         "battery-union: a one-sided tail change keeps ours",
         "test_a_tail_change_only_theirs_made_is_taken_from_theirs",
         "scripts/battery_union.py",

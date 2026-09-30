@@ -220,9 +220,11 @@ def _full_sha(value: str) -> bool:
     return len(value) == 40 and all(c in "0123456789abcdef" for c in value)
 
 
-def front_matter(text: str) -> dict[str, str] | None:
+def front_matter(text: str, repeated: list[str] | None = None) -> dict[str, str] | None:
     """`key: value` lines between a leading `---` and the next `---`; None if absent,
-    unterminated, or a line is not `key: value`."""
+    unterminated, a line is not `key: value`, or a key repeats (review MINOR-2,
+    docs/reviews/eng-t5b-review-gate/defe2dd7c489.md: last-wins let a record that
+    reads DO NOT MERGE at the top merge). A repeated key is appended to `repeated`."""
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return None
@@ -235,7 +237,12 @@ def front_matter(text: str) -> dict[str, str] | None:
         if ":" not in line:
             return None
         k, v = line.split(":", 1)
-        out[k.strip()] = v.strip().strip("\"'")
+        k = k.strip()
+        if k in out:
+            if repeated is not None:
+                repeated.append(k)
+            return None
+        out[k] = v.strip().strip("\"'")
     return None
 
 
@@ -274,9 +281,14 @@ def review_gate(
     usable: list[tuple[int, str, dict[str, str]]] = []
     for name in names:
         path = f"{rdir}/{name}"
-        fm = front_matter(_show(root, head, path) or "")
+        repeated: list[str] = []
+        fm = front_matter(_show(root, head, path) or "", repeated)
         if fm is None:
-            malformed.append(f"{path}: no `---` front matter")
+            malformed.append(
+                f"{path}: repeated key {repeated[0]!r} in the front matter"
+                if repeated
+                else f"{path}: no `---` front matter"
+            )
             continue
         missing = [f for f in REVIEW_FIELDS if not fm.get(f)]
         if missing:

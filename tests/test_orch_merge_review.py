@@ -313,6 +313,22 @@ def test_records_at_equal_distance_with_the_same_verdict_merge(orch):
     assert proc.returncode == 0, proc.stderr
 
 
+# --- review MINOR-2 (docs/reviews/eng-t5b-review-gate/defe2dd7c489.md) ------- #
+
+
+@pytest.mark.parametrize("key", ["verdict", "reviewer"])
+def test_a_repeated_front_matter_key_is_malformed(orch, key):
+    """Review MINOR-2 (probe N6): `verdict: DO NOT MERGE` then `verdict: MERGE`
+    merged -- the last line won silently while a reader of the top of the record
+    saw DO NOT MERGE. A repeated key is now malformed, and malformed fails closed."""
+    wt, head = _branch(orch, "eng/x", {"notes/x.md": "x\n"})
+    text = _record("eng/x", head, "MERGE", "reviewer-session")
+    first = {"verdict": "verdict: DO NOT MERGE", "reviewer": "reviewer: author-session"}
+    text = text.replace(f"{key}:", f"{first[key]}\n{key}:", 1)
+    orch.commit(wt, {f"docs/reviews/eng-x/{head[:12]}.md": text}, "review record")
+    _refused(orch, "eng/x", 3, "malformed", f"repeated key {key!r}")
+
+
 # --- run/ still needs verification ------------------------------------------ #
 
 

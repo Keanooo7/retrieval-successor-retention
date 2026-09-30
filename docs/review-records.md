@@ -51,7 +51,9 @@ The review itself: findings, severities, and what was checked.
 | `fixes_verified_at` | no | **informational only**. The gate never uses it to pass a merge. If present, it must be the full 40-hex sha of a commit that exists. A ref name such as `fix/x` or `HEAD` makes the record malformed |
 
 The front matter is plain `key: value` lines between two `---` lines. It is not YAML;
-quotes around values are stripped.
+quotes around values are stripped. **A key may appear only once**: a repeated key
+makes the record malformed rather than letting the last line win (review
+`docs/reviews/eng-t5b-review-gate/defe2dd7c489.md` MINOR-2).
 
 ## The gate
 
@@ -60,8 +62,8 @@ To merge `branch@head`:
 1. **Records are read** from `head:docs/reviews/<branch-slug>/*.md`. If there are
    none, the exit is **3** with the message "no review record", naming the expected
    path.
-2. **Fail closed on malformed records.** If any record has no front matter, a missing
-   field, a `branch` other than this branch, a `reviewed_head` that is not a full sha,
+2. **Fail closed on malformed records.** If any record has no front matter, a
+   repeated front-matter key, a missing field, a `branch` other than this branch, a `reviewed_head` that is not a full sha,
    a file name that does not match `reviewed_head[:12]`, a `fixes_verified_at` that is
    not the full sha of a commit, an unknown verdict, or a self-review, the exit is
    **3** and each problem is named. A malformed record is
