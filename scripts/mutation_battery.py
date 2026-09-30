@@ -4037,6 +4037,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         '        if any(s in row and row[s]["holds"] for s in SEEDS):\n',
         "B5 PREREG common step: E* is the first E at which the rule holds on EVERY "
         "seed -- one common step.",
+        off_gate_allowed=(
+            (
+                "tests/test_b5_convergence.py::test_common_step_is_the_first_common_E",
+                "it asserts the rule holds on every seed at E* and not at E* - 250; an "
+                "any-seed E* lands earlier, where one seed is still steep.",
+            ),
+        ),
     ),
     Mutation(
         "b5-convergence: the rule reads the point slope, not its CI",
