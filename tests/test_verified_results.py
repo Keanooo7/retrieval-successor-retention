@@ -8,6 +8,9 @@ this file -- not pass silently, and not produce a row with a blank in it.
 A clone without those commits cannot build the table: the generator exits 3 and
 these tests FAIL (never skip). CI checks out with `fetch-depth: 0`, which fetches
 them while the branches exist or once they are merged.
+
+A pin failure stays a hard fail, not a skip: battery shards are worktrees of this
+repo and share its objects, so a missing pin there is a real defect, not the checkout.
 """
 
 from __future__ import annotations

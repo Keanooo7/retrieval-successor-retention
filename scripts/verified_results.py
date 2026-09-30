@@ -167,11 +167,12 @@ SOURCES: dict[str, Source] = {
             "B5",
             "b5-convergence",
             "run/b5-convergence",
-            "7677bb396583d371707ef0b151ffc07cd0a4c15d",
+            "deaeaa6f54ba8c7090e0095cc00752a13cb6332b",
             "run/b5-convergence",
             "experiments/b5-convergence/RESULTS.md",
             "Not merged into night/2026-09-30 at the time of writing; read from its run "
-            "branch. "
+            "branch at deaeaa6, which adds only the review record to the verified "
+            "7677bb3. "
             "The ledger's `verdict` field is null; the classification is the "
             "`classification_reported_as` row.",
         ),
@@ -329,6 +330,17 @@ class Row:
     render: Any
     """Called with the resolved values, in `refs` order; returns the values cell."""
     values: str = field(default="")
+    outside: str = ""
+    """Verification outside the repo, cited, not read (printed with re-executed keys)."""
+
+
+#: B2's verifier re-derived the gating contrasts from the phaseB units; its report is
+#: outside the repo, so it is cited, like the B1 replay, and never read here.
+B2_REDERIVED = (
+    "out of repo: independently re-derived from the phaseB units by the B2 verifier, "
+    "2026-09-30 (`~/Documents/RSR-2026-09-29-day/reports/B2-verification.md` §2; "
+    "cited, not read)"
+)
 
 
 def _r(source: str, key: str, *sub, kind: str = "row", path: str = "") -> Ref:
@@ -457,12 +469,14 @@ def _b2_rows() -> list[Row]:
             "B2 gating Δ, psiU (all-query accuracy, arm - ref, paired 95% CI)",
             _b2_delta_refs("ψ̂-U"),
             _b2_delta,
+            outside=B2_REDERIVED,
         ),
         Row(
             S,
             "B2 gating Δ, psiC (all-query accuracy, arm - ref, paired 95% CI)",
             _b2_delta_refs("ψ̂-C"),
             _b2_delta,
+            outside=B2_REDERIVED,
         ),
         Row(
             S,
@@ -968,13 +982,19 @@ def render() -> str:
                     "; ".join(keys),
                     f"`{src.branch}@{src.sha[:7]}`",
                     f"{v.verdict.split(' (')[0]} `{v.path}`",
-                    ", ".join(f"`{h}`" for h in hit) or "—",
+                    "; ".join(
+                        x for x in (", ".join(f"`{h}`" for h in hit), row.outside) if x
+                    )
+                    or "—",
                     rv,
                 )
             )
             + " |"
         )
     L += [
+        "",
+        "E0d and B0 have no T5(b) review record: E0d's merge is blocked on the owner, "
+        "and B0 was merged before T5(b) existed.",
         "",
         "## Verifier claims, as recorded",
         "",
