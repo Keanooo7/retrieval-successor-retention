@@ -253,7 +253,12 @@ def dq3(u_outcomes: list[str], per_seed: list[dict]) -> dict:
             n_st += 1
         else:
             lab = "UNRESOLVED"
-        out["per_seed"][s] = {"label": lab, "monotone": mono, **p}
+        out["per_seed"][s] = {
+            **{k: v for k, v in p.items() if k != "label"},
+            "contrast_label": p["label"],
+            "label": lab,
+            "monotone": mono,
+        }
     if n_tr > len(H) / 2:
         out["class"] = "YES"
     elif n_st > len(H) / 2:

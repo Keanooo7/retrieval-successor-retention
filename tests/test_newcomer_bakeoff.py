@@ -539,6 +539,8 @@ def test_dq3(an):
         [p("WORSE", 0.8, 0.75, 0.7), p("WORSE", 0.8, 0.79, 0.7), p("SAME", 1, 1, 1)],
     )
     assert r["class"] == "YES" and r["harm_seeds"] == [0, 1]
+    assert r["per_seed"][0]["label"] == "TRAVELS"
+    assert r["per_seed"][0]["contrast_label"] == "WORSE"
     r = an.dq3(
         ["LOSS", "LOSS", "EQUIV"],
         [p("WORSE", 0.8, 0.85, 0.7), p("SAME", 0.8, 0.8, 0.8), p("SAME", 1, 1, 1)],
