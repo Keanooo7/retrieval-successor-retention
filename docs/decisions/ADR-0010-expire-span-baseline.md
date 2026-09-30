@@ -32,7 +32,7 @@ table below replaces that one.
 | Attention `a′_ti = m_ti a_ti / Σ_j m_tj a_tj` | Eq. 4, P7:L272–279 | **MATCH**. An all-zero row outputs exactly 0, which the paper does not specify |
 | Heads share one span per layer | P7:L355–356 | **MATCH** |
 | **Spans per layer** ("done independently for each layer") | P7:L81–82, P7:L355 | **FIXED 2026-09-29.** Verification 4b was a MISMATCH: one span was shared by every layer |
-| Aux loss form `L_task + α Σ_i e_i / T` | Eq. 7, P7:L330–335 | **MATCH**. Eq. 7's `/T` is absorbed because the loop's LM term is a sum over `T` steps; batch averaging is not in the paper (q3) |
+| Aux loss `L_task + α Σ_i e_i / T` | Eq. 7, P7:L330–335 | **The form follows §4.2's timing; the scale against Eq. 7 is open (q3).** Each memory is charged `α·e` at each of the ~`R` steps it spends on the ramp, whereas Eq. 7 charges `Σ_i e_i` once, so `α`'s effective scale is coupled to `R`. Eq. 7's `/T` is absorbed because the loop's LM term is a sum over `T` steps. Batch averaging is not in the paper. The loss is charged in training only and only for rows still inside their stream (review MAJOR-1 and MINOR-1) |
 | **Aux loss timing**: charged while `0 < m < 1` | §4.2 "Loss Computation", P7:L368–382 | **FIXED 2026-09-29.** Verification 5c was a MISMATCH: the charge was once at admission, which the paper reports "empirically results in poor performance" |
 | **Structured dropout**: per batch `l ∼ U(0, L)`, `a_ti = 0` for `t − i > l`, training only | §4.2 "Regularization", P7:L387–392; App. A.2, P7:L1055–1064 | **FIXED 2026-09-29.** Verification 6 was a MISMATCH: per-slot Bernoulli(`p`). It is now one cutoff per sentence step, and the config field is an on/off switch |
 | Bias `b` initialised negative | App. A.1, P7:L1013–1015 | **MATCH**, now enforced: `init_span_fraction < 0.5` is validated |
@@ -54,8 +54,10 @@ were working around a non-differentiability that did not need to exist. That ver
 [P7] was written for a token-level transformer with an unbounded memory that simply stops
 attending to expired entries. TG has a hard `M`-slot memory of sentence gestalts. A port
 therefore has to make choices [P7] never faced, and each is listed below. **Where the paper
-speaks, the port matches it** (PM ruling under delegation, 2026-09-29: the paper is the
-authority for its own baseline).
+speaks, the port matches it**. This is a PM ruling under delegation on 2026-09-29: the paper
+is the authority for its own baseline. It is recorded in the day digest
+`~/Documents/RSR-2026-09-29-day/DIGEST.md`: cycle 26 for the paper-authority ruling, and
+cycle 28 for the α ratio (no literal `/T`). **That file is outside this repository.**
 
 ### What the build implements
 
@@ -71,9 +73,11 @@ evict   = argmin_live max_l r_li(t)         only when memory is full (q6)
 
 - The span is **recomputed each step** from the occupant's gestalt, with age taken from
   `written_at`. Reset on admission (gauntlet 0.4) therefore holds **by construction**:
-  there is no per-slot cache to go stale. (`run_policy_loop` passes `on_write` the victim
-  index, which is not where the newcomer lands after `write_at`'s compaction, and is `0`
-  for a row that was not full. A cache keyed on it would be wrong both ways.)
+  there is no per-slot cache to go stale, and `on_write` is a no-op under either loop
+  contract. On `night/2026-09-30`, `fix/on-write-slot-index` makes `run_policy_loop`
+  pass `on_write` the newcomer's post-write slot and gives `MemoryState` a `row`. This
+  branch predates that merge; before it the loop passed the victim index, which would have
+  been wrong for any cache keyed on it.
 - `w = 0` and `b = logit(init_span_fraction) < 0` at construction. **No global RNG draw**
   (the E0b trap). Every gestalt starts with the same span in every layer, so **Expire-Span
   still evicts exactly FIFO at initialisation**
@@ -257,8 +261,11 @@ and `γ`? Until then the config has no defaults, which is the same guard in weak
 
 ## Consequences
 
-- Release condition 3's **"implemented"** half is met by the build, pending review. Its
-  **"run on synthetic at the week-4 gate"** half needs q1, q2 and q9 ruled, a PREREG, and
-  the smoke replaced by a real run.
+- Whether release condition 3 is met is the owner's call. The facts: the policy is
+  implemented on this branch; it is **not** wired into `train()` or `--policy`; it has not
+  been run on synthetic beyond a one-step wiring smoke. The condition's "run on synthetic
+  at the week-4 gate" half would additionally need q1, q2 and q9 ruled, a PREREG, and a
+  real run. If this ADR and the build are accepted, the build would meet the condition's
+  "implemented" half.
 - Nothing about the referendum's outcome is claimed. The build's smoke is one training
   step, and it is a wiring check, not a result.
