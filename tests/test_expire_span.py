@@ -147,7 +147,7 @@ def test_structured_dropout_does_not_consume_the_global_rng():
     torch.manual_seed(0)
     expect = torch.randn(4)
     torch.manual_seed(0)
-    p.memory_weight(mem.kv, mem.valid, mem.step, 6, training=True)
+    p.memory_weight(mem.kv, mem.valid, mem.step, 6, training=True, row_valid=_rows(mem))
     assert torch.equal(expect, torch.randn(4))
 
 
@@ -182,7 +182,9 @@ def test_the_mask_is_the_clamped_ramp():
 def test_memory_weight_is_zero_on_dead_slots_and_follows_age():
     p = _policy(ramp=2.0)
     mem = _memory(batch=1, m=4, written=[[0, 1, 2, -1]], valid=[[1, 1, 1, 0]])
-    w, _ = p.memory_weight(mem.kv, mem.valid, mem.step, 4, training=False)
+    w, _ = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 4, training=False, row_valid=_rows(mem)
+    )
     assert w.shape == (NL, 1, 4)
     # e = 2 everywhere. ages 4,3,2 -> r = -2,-1,0 -> m = 0, 0.5, 1; dead -> 0.
     for layer in range(NL):
@@ -200,7 +202,9 @@ def test_each_cross_layer_gets_its_own_span_and_mask():
     e = p.spans(mem.kv)
     assert e.shape == (NL, 1, 4)
     assert len({round(float(e[layer, 0, 0]), 4) for layer in range(NL)}) == NL
-    w, _ = p.memory_weight(mem.kv, mem.valid, mem.step, 6, training=False)
+    w, _ = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 6, training=False, row_valid=_rows(mem)
+    )
     assert not torch.equal(w[0], w[2])
 
 
@@ -341,11 +345,15 @@ def test_span_resets_on_admission():
     It must not inherit the evictee's age -- which is how LRU silently became FIFO."""
     p = _policy(ramp=2.0)
     mem = _memory(batch=1, m=3, written=[[0, 1, 2]], valid=[[1, 1, 1]])
-    w_old, _ = p.memory_weight(mem.kv, mem.valid, mem.step, 7, training=False)
+    w_old, _ = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 7, training=False, row_valid=_rows(mem)
+    )
     assert float(w_old[:, 0, 0].max()) == 0.0  # slot 0's tenant, age 7, expired
     mem.step[0, 0] = 7
     mem.kv[0, 0] = torch.randn(D, generator=torch.Generator().manual_seed(9))
-    w_new, _ = p.memory_weight(mem.kv, mem.valid, mem.step, 8, training=False)
+    w_new, _ = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 8, training=False, row_valid=_rows(mem)
+    )
     assert float(w_new[:, 0, 0].min()) == 1.0
     st = MemoryState(
         gestalts=mem.kv[0], written_at=mem.step[0], live=mem.valid[0], step=8
@@ -388,11 +396,15 @@ def test_structured_dropout_drops_every_memory_older_than_one_cutoff():
     mem = _memory(batch=4, m=6, written=written)
     ages = _ages(mem, step)
     # Nothing has expired (e = 80 > 59 + R), so every zero below is dropout.
-    w_eval, _ = p.memory_weight(mem.kv, mem.valid, mem.step, step, training=False)
+    w_eval, _ = p.memory_weight(
+        mem.kv, mem.valid, mem.step, step, training=False, row_valid=_rows(mem)
+    )
     assert bool((w_eval == 1.0).all())
     saw_partial = False
     for _ in range(30):
-        w, _ = p.memory_weight(mem.kv, mem.valid, mem.step, step, training=True)
+        w, _ = p.memory_weight(
+            mem.kv, mem.valid, mem.step, step, training=True, row_valid=_rows(mem)
+        )
         dropped = w == 0.0
         if dropped.any():
             cutoff = int(ages[dropped].min())
@@ -409,10 +421,14 @@ def test_structured_dropout_is_off_at_eval_and_when_switched_off():
     long = dict(max_span=1000.0, init_span_fraction=0.4)  # e = 400
     on = _policy(structured_dropout=True, **long)
     off = _policy(structured_dropout=False, **long)
-    w_eval, _ = on.memory_weight(mem.kv, mem.valid, mem.step, 60, training=False)
+    w_eval, _ = on.memory_weight(
+        mem.kv, mem.valid, mem.step, 60, training=False, row_valid=_rows(mem)
+    )
     assert bool((w_eval == 1.0).all())  # long spans: nothing expired
     for _ in range(10):
-        w_off, _ = off.memory_weight(mem.kv, mem.valid, mem.step, 60, training=True)
+        w_off, _ = off.memory_weight(
+            mem.kv, mem.valid, mem.step, 60, training=True, row_valid=_rows(mem)
+        )
         assert bool((w_off == 1.0).all())
 
 
@@ -423,7 +439,9 @@ def test_structured_dropout_is_reproducible_under_its_seed():
         p = _policy(structured_dropout=True, seed=seed, **LONG)
         return torch.stack(
             [
-                p.memory_weight(mem.kv, mem.valid, mem.step, 60, training=True)[0]
+                p.memory_weight(
+                    mem.kv, mem.valid, mem.step, 60, training=True, row_valid=_rows(mem)
+                )[0]
                 for _ in range(8)
             ]
         )
@@ -436,11 +454,13 @@ def test_the_checkpoint_round_trips_the_dropout_generator():
     """A resume that restarted the dropout stream would replay the same cutoffs."""
     mem = _memory(batch=2, m=6, written=[[0, 5, 10, 20, 40, 59]] * 2)
     a = _policy(structured_dropout=True, seed=3, **LONG)
-    a.memory_weight(mem.kv, mem.valid, mem.step, 60, training=True)
+    a.memory_weight(mem.kv, mem.valid, mem.step, 60, training=True, row_valid=_rows(mem))
     state = policy_state_dict(a)
     expect = torch.stack(
         [
-            a.memory_weight(mem.kv, mem.valid, mem.step, 60, training=True)[0]
+            a.memory_weight(
+                mem.kv, mem.valid, mem.step, 60, training=True, row_valid=_rows(mem)
+            )[0]
             for _ in range(4)
         ]
     )
@@ -448,7 +468,9 @@ def test_the_checkpoint_round_trips_the_dropout_generator():
     load_policy_state(b, state)
     got = torch.stack(
         [
-            b.memory_weight(mem.kv, mem.valid, mem.step, 60, training=True)[0]
+            b.memory_weight(
+                mem.kv, mem.valid, mem.step, 60, training=True, row_valid=_rows(mem)
+            )[0]
             for _ in range(4)
         ]
     )
@@ -469,11 +491,15 @@ def test_the_span_loss_charges_memories_on_the_ramp_only():
     mem = _memory(
         batch=2, m=3, written=[[3, 1, 0], [1, 1, -1]], valid=[[1, 1, 1], [1, 1, 0]]
     )
-    _, aux = p.memory_weight(mem.kv, mem.valid, mem.step, 4, training=False)
+    _, aux = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 4, training=True, row_valid=_rows(mem)
+    )
     # Charged: row 0 slot 1, row 1 slots 0 and 1 (all age 3); every layer; e = 2.
     expect = 0.5 * (3 * NL * 2.0) / 2
     torch.testing.assert_close(aux, torch.tensor(expect))
-    _, aux_none = p.memory_weight(mem.kv, mem.valid, mem.step, 7, training=False)
+    _, aux_none = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 7, training=True, row_valid=_rows(mem)
+    )
     # step 7: ages 4/6/7 and 6/6 -> every m = 0: nothing on the ramp.
     assert float(aux_none) == 0.0
 
@@ -483,35 +509,68 @@ def test_the_span_loss_carries_gradient_only_through_the_span():
     differentiated. d(aux)/d(b) = alpha * L * sig'(b) / B for one charged memory."""
     p = _policy(loss_coef=1.0, ramp=2.0, n_layers=1)
     mem = _memory(batch=1, m=2, written=[[1, 3]])  # ages 3 (charged) and 1
-    _, aux = p.memory_weight(mem.kv, mem.valid, mem.step, 4, training=False)
+    _, aux = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 4, training=True, row_valid=_rows(mem)
+    )
     aux.backward()
     # e = 8 sig(b), sig(b) = 0.25, so de/db = 8 * 0.25 * 0.75.
     torch.testing.assert_close(p.bias.grad, torch.tensor([8 * 0.25 * 0.75]))
 
 
-def test_the_loop_adds_the_span_loss():
+def _loop_loss(loss_coef, *, train, lengths=None, steps=8):
     cfg = _tg_cfg()
-    ids, mask, lengths = _stream(cfg, steps=8)
+    ids, mask, full = _stream(cfg, steps=steps)
     torch.manual_seed(0)
-    model = TGModel(cfg).eval()
-    nc = _n_cross(cfg)
-    lo = run_policy_loop(
-        model,
-        ids,
-        mask,
-        lengths,
-        ExpireSpanPolicy(_cfg(loss_coef=0.0), cfg.D, nc),
-        step_fn=_loss,
+    model = TGModel(cfg).train(train)
+    p = ExpireSpanPolicy(_cfg(loss_coef=loss_coef), cfg.D, _n_cross(cfg))
+    return run_policy_loop(
+        model, ids, mask, full if lengths is None else lengths, p, step_fn=_loss
     )
-    hi = run_policy_loop(
-        model,
-        ids,
-        mask,
-        lengths,
-        ExpireSpanPolicy(_cfg(loss_coef=1.0), cfg.D, nc),
-        step_fn=_loss,
+
+
+def test_the_loop_adds_the_span_loss_in_training():
+    assert _loop_loss(1.0, train=True).item() > _loop_loss(0.0, train=True).item()
+
+
+def test_the_span_loss_is_not_charged_at_eval():
+    """Review MAJOR-1. Eq. 7 is a TRAINING objective (P7:L330-335). Charged at eval,
+    every held-out loss read from the loop would bill Expire-Span alone for its
+    spans -- biasing the referendum against the baseline whose win ends the
+    project, the direction B-3 forbids. The eval return must not depend on alpha."""
+    with torch.no_grad():
+        lo = _loop_loss(0.0, train=False)
+        hi = _loop_loss(1.0, train=False)
+    assert lo.item() == hi.item()
+
+
+def test_memory_weight_returns_no_span_loss_at_eval():
+    p = _policy(loss_coef=1.0)
+    mem = _memory(batch=1, m=3, written=[[1, 1, 1]])
+    _, aux = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 4, training=False, row_valid=_rows(mem)
     )
-    assert hi.item() > lo.item()
+    assert aux is None
+
+
+def test_rows_past_their_stream_length_are_not_charged():
+    """Review MINOR-1. After a row's stream ends its memories keep ageing through
+    the ramp, but `step_fn` masks the row, so no LM gradient opposes the charge.
+    Charging it would push spans down for nothing."""
+    p = _policy(loss_coef=1.0, ramp=2.0)
+    mem = _memory(batch=2, m=2, written=[[1, 1], [1, 1]])  # all age 3: on the ramp
+    _, both = p.memory_weight(
+        mem.kv, mem.valid, mem.step, 4, training=True, row_valid=_rows(mem)
+    )
+    _, one = p.memory_weight(
+        mem.kv,
+        mem.valid,
+        mem.step,
+        4,
+        training=True,
+        row_valid=torch.tensor([True, False]),
+    )
+    assert float(both) > 0.0
+    torch.testing.assert_close(one, both / 2)
 
 
 # --------------------------------------------------------------------------- #
@@ -524,7 +583,9 @@ def _weight_grads(grad_path):
     _set_weight(p)
     mem = _memory(batch=2, m=4)
     kv = mem.kv.clone().requires_grad_(True)
-    w, aux = p.memory_weight(kv, mem.valid, mem.step, 5, training=False)
+    w, aux = p.memory_weight(
+        kv, mem.valid, mem.step, 5, training=True, row_valid=_rows(mem)
+    )
     total = w.sum() + aux
     if total.requires_grad:
         total.backward()
@@ -555,7 +616,8 @@ def _model_run(grad_path, *, loss_coef=0.0):
     cfg = _tg_cfg()
     ids, mask, lengths = _stream(cfg, steps=10)
     torch.manual_seed(0)
-    model = TGModel(cfg).eval()
+    # Train mode: the span loss is a training objective and is charged only there.
+    model = TGModel(cfg).train()
     p = ExpireSpanPolicy(
         _cfg(grad_path=grad_path, loss_coef=loss_coef),
         d_model=cfg.D,
@@ -679,6 +741,11 @@ def _loss(t, out, ids, mask, row_valid):
     picked = logp.gather(-1, ids[:, 1:].unsqueeze(-1)).squeeze(-1)
     valid = (mask[:, 1:] == 1) & row_valid.unsqueeze(-1)
     return -(picked * valid).sum() / valid.sum().clamp(min=1)
+
+
+def _rows(mem) -> torch.Tensor:
+    """Every row still inside its stream."""
+    return torch.ones(mem.kv.shape[0], dtype=torch.bool)
 
 
 class _Mem:

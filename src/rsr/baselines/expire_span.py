@@ -33,6 +33,11 @@ negative gradients", not once at admission, which the paper reports "empirically
 results in poor performance". Summed over layers and slots, averaged over rows.
 Eq. 7's `/T` is absorbed: the loop's LM objective is a **sum** over the `T` sentence
 steps, not a mean, so both sides of Eq. 7 are multiplied by `T` (verification 5b).
+**The form follows §4.2's timing; the scale against Eq. 7 is open (ADR-0010 q3):**
+a memory is charged at each of the ~`R` steps it spends on the ramp, where Eq. 7
+charges `Σ_i e_i` once. While `alpha` and `R` are both tuned, `alpha`'s effective
+scale is coupled to `R`. Charged in training only, and only for rows still inside
+their stream.
 
 **Structured dropout** (§4.2 "Regularization", P7:L387-392; App. A.2 P7:L1055-1064):
 "For each batch, we sample l~U(0,L) and set a_ti = 0 for all t-i > l only during
@@ -63,9 +68,11 @@ attention (q5).
 The span is recomputed each step from the occupant's own gestalt, and the age from
 `written_at`, both of which the memory owns and `write_at` updates. A new occupant
 therefore has its own span and age 0 **by construction**: there is no cached value
-that could describe the previous tenant. `run_policy_loop` passes `on_write` the
-victim index, which is not where the newcomer lands (`write_at` compacts), and is
-0 for a row that was not full -- a cache keyed on that index would be wrong twice.
+that could describe the previous tenant. The hook is a no-op under either
+`on_write` contract. (Merged on `night/2026-09-30` by `fix/on-write-slot-index`:
+`run_policy_loop` passes `on_write` the newcomer's post-write slot, and
+`MemoryState` carries `row`. This branch predates that merge; before it the loop
+passed the victim index, which was wrong for any cache keyed on it.)
 
 ## The E0b RNG trap
 
@@ -221,9 +228,10 @@ class ExpireSpanPolicy(nn.Module):
         step: int,
         *,
         training: bool,
-    ) -> tuple[Tensor, Tensor]:
+        row_valid: Tensor,
+    ) -> tuple[Tensor, Tensor | None]:
         """The `[n_layers, B, M]` mask for step `step`'s cross-attention, and the
-        span loss.
+        span loss -- or `None` at eval.
 
         `mem_kv`, `mem_valid`, `mem_step` are the memory the forward pass is about
         to attend over (pre-write). `training` is the **model's** mode, passed by
@@ -234,20 +242,35 @@ class ExpireSpanPolicy(nn.Module):
         (pre-dropout) mask is on the ramp, `0 < m_li < 1` (P7:L368-382), summed
         over layers and slots and averaged over rows. The ramp condition selects;
         it is not differentiated.
+
+        🔴 **Training only** (review MAJOR-1). Eq. 7 is a training objective
+        (P7:L330-335). At eval this returns `None`, so no loss read from
+        `run_policy_loop` bills Expire-Span -- and no other arm -- for its spans;
+        charged at eval it would bias the referendum against the baseline whose win
+        ends the project, the direction B-3 forbids.
+
+        `row_valid` (`[B]` bool, the loop's own) masks the charge (review
+        MINOR-1): after a row's stream ends `step_fn` masks it, so no LM gradient
+        would oppose a charge on its still-ageing memories.
         """
         if self.cfg.grad_path == "none":
             with torch.no_grad():
-                return self._weight(mem_kv, mem_valid, mem_step, step, training)
-        return self._weight(mem_kv, mem_valid, mem_step, step, training)
+                return self._weight(
+                    mem_kv, mem_valid, mem_step, step, training, row_valid
+                )
+        return self._weight(mem_kv, mem_valid, mem_step, step, training, row_valid)
 
-    def _weight(self, mem_kv, mem_valid, mem_step, step, training):
+    def _weight(self, mem_kv, mem_valid, mem_step, step, training, row_valid):
         e = self.spans(self._span_input(mem_kv))  # [n_layers, B, M]
         age = (step - mem_step).to(e.dtype)
         m = self.mask_from_remaining(e - age)
         live = mem_valid.to(e.dtype)
         weight = m * live
-        on_ramp = ((m > 0.0) & (m < 1.0) & mem_valid).to(e.dtype).detach()
-        aux = self.cfg.loss_coef * (e * on_ramp).sum() / mem_kv.shape[0]
+        aux = None
+        if training:
+            charged = (m > 0.0) & (m < 1.0) & mem_valid & row_valid.view(-1, 1)
+            on_ramp = charged.to(e.dtype).detach()
+            aux = self.cfg.loss_coef * (e * on_ramp).sum() / mem_kv.shape[0]
         if training and self.cfg.structured_dropout:
             # CPU on purpose: the private generator is a CPU generator (E0b trap:
             # never the global stream), so the draw is identical on CPU and CUDA.

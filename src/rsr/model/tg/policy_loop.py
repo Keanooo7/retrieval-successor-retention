@@ -338,7 +338,12 @@ def run_policy_loop(
             # Pre-write memory, like `observe`: the mask is for what this step's
             # forward attends over. The MODEL's mode gates structured dropout.
             extra["mem_weight"], span_loss = weight_fn(
-                mem.kv, mem.valid, mem.step, t, training=model.training
+                mem.kv,
+                mem.valid,
+                mem.step,
+                t,
+                training=model.training,
+                row_valid=row_valid,
             )
         out = model(
             ids_t,
@@ -364,9 +369,11 @@ def run_policy_loop(
                     )
         contrib = step_fn(t, out, ids_t, mask_t, row_valid)
         if span_loss is not None:
-            # [P7]'s auxiliary span loss is part of the objective the arm trains
+            # [P7]'s auxiliary span loss is part of the objective the arm TRAINS
             # on. Added here rather than left to the caller: a caller that forgot
-            # it would run `alpha = 0` under a config that says otherwise.
+            # it would run `alpha = 0` under a config that says otherwise. The
+            # policy returns None at eval (review MAJOR-1), so an eval loss read
+            # from this loop never carries it.
             contrib = contrib + span_loss
         acc = contrib if acc is None else acc + contrib
 
