@@ -371,3 +371,16 @@ Nothing about on-policy behaviour after `T_warm`, online MC, μP rates, `b`, ν,
 shadow buffer (L5's query stash is not exercised: the probe recomputes the forward). One corpus
 (S0-03), `M = 16`, one width, FIFO-trained checkpoints, one checkpoint. No scaling claim. No build
 recommendation. The acceptability of the grace rule is OWNER-ONLY.
+
+## Erratum E1 (2026-09-29, pre-data; append-only)
+
+**Written by a model** (the same session), before any bake-off computation: no `runs/newcomer-bakeoff*`
+exists, no `EVAL_NB` document has been generated, and nothing has been fitted. Nothing above this
+heading is edited.
+
+- **§3's sentence "24 arm-runs per (document, seed)" is a miscount of §3's own table.** The table
+  lists 22 keys: `psiC`, `psiU`, `graceU1`, `graceU2`, `graceU4`, `psiR1`, `psiR1L1`, `psiU+`,
+  `psiC+`, `fifo`, `lru`, `ageU`, `ageC`, `ageR1`, `ageR1L1`, `random0..4` (5), `kind`, `oracle`.
+  **The table governs: 22 arm-runs.** No arm is added or removed by this erratum.
+- Found by the build's own test (`test_the_arm_set_is_the_prereg_table_s_22`), which asserts the
+  table's 22 keys.
