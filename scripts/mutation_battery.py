@@ -5604,6 +5604,53 @@ MUTATIONS: tuple[Mutation, ...] = (
         "gradient opposes a span charge on its still-ageing memories; charging it "
         "pushes spans down for nothing.",
     ),
+    # verified-results table (docs/results/2026-09-30-verified.md), 2026-09-30
+    Mutation(
+        "verified-results: a changed number still matches the committed file",
+        "test_the_committed_file_is_the_generators_output",
+        "scripts/verified_results.py",
+        '    return f"{x:.4f}"\n',
+        '    return f"{x:.5f}"\n',
+        "every value is ledger-read at a pinned commit; any drift between the "
+        "generator and the committed Markdown must redden, not pass.",
+    ),
+    Mutation(
+        "verified-results: a timestamp makes two renders differ",
+        "test_two_runs_are_byte_identical",
+        "scripts/verified_results.py",
+        '        "# Verified results, 2026-09-29/30",\n',
+        '        f"# Verified results {__import__(\'time\').time_ns()}",\n',
+        "the brief's determinism requirement: two runs are byte-identical.",
+        off_gate_allowed=(
+            (
+                "test_the_committed_file_is_the_generators_output",
+                "a nondeterministic header also differs from the committed file; the "
+                "same defect seen from the diff test",
+            ),
+            (
+                "test_a_hand_edited_file_exits_1",
+                "its unedited copy is the fixture's render, which the next render "
+                "no longer equals; the same defect seen from --check",
+            ),
+        ),
+    ),
+    Mutation(
+        "verified-results: a missing source is reported as UNKNOWN",
+        "test_a_missing_source_exits_3",
+        "scripts/verified_results.py",
+        "        return did_not_run(str(e))\n",
+        "        return Exit.UNKNOWN\n",
+        "rsr.exit_codes: a source that cannot be read did not run (3); it is not "
+        "'ran, nothing to compare' (2).",
+    ),
+    Mutation(
+        "verified-results: --check passes a hand-edited file",
+        "test_a_hand_edited_file_exits_1",
+        "scripts/verified_results.py",
+        "        return Exit.FAIL\n",
+        "        return Exit.OK\n",
+        "a committed table that differs from the ledgers is a real failure (1).",
+    ),
 )
 
 
