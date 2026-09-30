@@ -5828,7 +5828,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    sys.argv, iso.pinned_sha = argv, pin\n    try:\n        try:\n",
         "    sys.argv, iso.pinned_sha = argv, pin\n"
         '    _write_json(paths.done, {"run_id": args.run_id, "index": args.index, '
-        '"of": args.of, "sha": None, "table": table_fingerprint(table), '
+        '"of": args.of, "sha": real_pin(mb.ROOT), "table": table_fingerprint(table), '
         '"rc": 0})\n'
         "    try:\n        try:\n",
         "I2: the done record says the shard's battery RETURNED. Written at the "
@@ -5843,6 +5843,15 @@ MUTATIONS: tuple[Mutation, ...] = (
             for t in (
                 "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
             )
+        )
+        + (
+            (
+                "tests/test_battery_shards.py::"
+                "test_a_shard_records_the_sha_its_battery_pinned",
+                "review 2 MINOR-3: the early record names the real SHA, so its extra "
+                "read of HEAD takes the first pinned value the SHA test hands out and "
+                "the battery pins the second (observed red, fix round 1 pass A).",
+            ),
         ),
     ),
     Mutation(
@@ -6152,7 +6161,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i2: a pool teardown that cannot list worktrees discards the verdicts",
         "test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts",
         "scripts/battery_isolation.py",
-        '    except Unisolated as e:\n        problems.append(f"prune: {e}")',
+        '    except (Unisolated, OSError) as e:\n        problems.append(f"prune: {e}")',
         '    except KeyError as e:\n        problems.append(f"prune: {e}")',
         "review BLOCKER-1 (second fix): the teardown runs after every verdict is "
         "scored and before _report writes them; a failed prune must be reported, "
@@ -6206,7 +6215,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i2: compare reads whole rows",
         "test_compare_reads_only_the_verdict_fields",
         "scripts/battery_shards.py",
-        "        for f in VERDICT_FIELDS\n        if a[n].get(f) != b[n].get(f)",
+        "        for f in VERDICT_FIELDS\n        if a[n][f] != b[n][f]",
         "        for f in sorted(set(a[n]) | set(b[n]))\n"
         "        if a[n].get(f) != b[n].get(f)",
         "review MAJOR-1: whole rows differ between any two real batteries "
@@ -6217,8 +6226,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i2: compare exits 0 on a difference",
         "test_compare_exits_1_on_a_verdict_field_difference",
         "scripts/battery_shards.py",
-        "    return (Exit.FAIL if diffs else Exit.OK), diffs",
-        "    return Exit.OK, diffs",
+        "    code = Exit.FAIL if diffs else (",
+        "    code = Exit.OK if diffs else (",
         "review MAJOR-1: a serial/sharded verdict difference is the failure the "
         "equivalence run exists to catch (1).",
     ),
@@ -6236,8 +6245,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i2: compare accepts an unreadable record",
         "test_compare_refuses_an_unreadable_record",
         "scripts/battery_shards.py",
-        "        if not isinstance(rows, list) or not all(",
-        "        if isinstance(rows, list) and not all(",
+        "        if not isinstance(rows, list):",
+        "        if False:",
         "review MAJOR-1: an unreadable or non-battery record is DID NOT RUN (3), "
         "not a crash (1).",
     ),
@@ -6245,8 +6254,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i2: compare passes a mutation that did not run",
         "test_compare_of_a_mutation_that_did_not_run_is_not_a_pass",
         "scripts/battery_shards.py",
-        "    if dnr:\n        return Exit.DID_NOT_RUN",
-        "    if False:\n        return Exit.DID_NOT_RUN",
+        "(Exit.DID_NOT_RUN if dnr else Exit.OK)",
+        "(Exit.OK)",
         "review MAJOR-1: two DID_NOT_RUN rows are identical and prove nothing; "
         "'did not run' never becomes 0.",
     ),
@@ -6258,6 +6267,54 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if False:\n        return Exit.UNKNOWN",
         "review MAJOR-1: zero mutations compared is NOTHING TO COMPARE (2), as in "
         "the battery itself (S0-05).",
+    ),
+    # ---------------------------------------------------- I2 fix round 2
+    # docs/reviews/eng-i2-sharding/1b358d7af981.md: MAJOR-1, MINOR-1, MINOR-2.
+    Mutation(
+        "i2: compare accepts rows without the verdict fields",
+        "test_compare_refuses_rows_that_are_not_battery_rows",
+        "scripts/battery_shards.py",
+        '    if bad:\n        return f"its verdict fields',
+        '    if False:\n        return f"its verdict fields',
+        "review 2 MAJOR-1: records of [{'mutation': 'a'}] compared None == None on "
+        "every field and exited 0 -- a 3 collapsing to 0; and True compared equal "
+        "to 1.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_shards.py::"
+                "test_a_row_with_a_field_of_the_wrong_type_is_did_not_run",
+                "the merge's row_problem calls the same field check (one "
+                "validator), so disabling it admits the merge's odd row too.",
+            ),
+        ),
+    ),
+    Mutation(
+        "i2: the merge skips the verdict-field check",
+        "test_a_row_with_a_field_of_the_wrong_type_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    return verdict_field_problem(got)\n",
+        "    return None\n",
+        "review 2 MAJOR-1: the merge shares compare's field check; a shard row whose "
+        "reddened_gate is 1, not True, is not a verdict.",
+    ),
+    Mutation(
+        "i2: compare hides a difference behind a DID_NOT_RUN row",
+        "test_compare_reports_a_difference_even_beside_a_row_that_did_not_run",
+        "scripts/battery_shards.py",
+        "    code = Exit.FAIL if diffs else (Exit.DID_NOT_RUN if dnr else Exit.OK)",
+        "    code = Exit.DID_NOT_RUN if dnr else (Exit.FAIL if diffs else Exit.OK)",
+        "review 2 MINOR-2 (manager's decision): a verdict difference found among the "
+        "mutations that ran in both arms exits 1 even beside a DID_NOT_RUN row; the "
+        "rows that did not run are what races and kills produce.",
+    ),
+    Mutation(
+        "i2: a teardown whose admin lock fails discards the verdicts",
+        "test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts",
+        "scripts/battery_isolation.py",
+        "        except (Unisolated, OSError) as exc:",
+        "        except KeyError as exc:",
+        "review 2 MINOR-1: remove_shard takes the admin lock, whose common_dir() "
+        "raises; outside the teardown's catch that raise escaped over scored rows.",
     ),
 )
 
