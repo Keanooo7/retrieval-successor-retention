@@ -5604,6 +5604,75 @@ MUTATIONS: tuple[Mutation, ...] = (
         "gradient opposes a span charge on its still-ageing memories; charging it "
         "pushes spans down for nothing.",
     ),
+    # --- I6: RSR_* environment (PLAN-v4 §4; red-team m-2) ---
+    Mutation(
+        "battery-env: a stray RSR_* variable is not refused",
+        "test_stray_variable",
+        "scripts/battery_env.py",
+        "    if stray:\n        named = []",
+        "    if False:\n        named = []",
+        "red-team m-2: the battery hands its whole environment to pytest. An "
+        "RSR_* name nothing declares is a typo of a real control or a leftover; "
+        "on 09-26/27 the verdicts moved with ambient state nobody recorded.",
+    ),
+    Mutation(
+        "battery: main() records the RSR_* environment without checking it",
+        "test_stray_variable_stops_main",
+        "scripts/mutation_battery.py",
+        # split literals: this row must not be the occurrence apply() replaces
+        "    print(battery_env.header(battery_env.che" + "ck()))",
+        "    print(battery_env.header(battery_env.present()))",
+        "I6: the refusal is one call in main(). Without it battery_env.check is "
+        "correct and unused, and a stray override runs every suite.",
+    ),
+    Mutation(
+        "battery: the --json record drops the RSR_* environment",
+        "test_declared_variable_is_recorded",
+        "scripts/mutation_battery.py",
+        "json.dumps(battery_env.sta" + "mp(rows), indent=2)",
+        "json.dumps(rows, indent=2)",
+        "I6: the json record is what a later reader has. Until 09-30 it carried "
+        "nothing of the environment the verdicts were issued under.",
+    ),
+    Mutation(
+        "battery-env: the json record carries names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '    return [{**row, "rsr_env": dict(env)} for row in rows]',
+        '    return [{**row, "rsr_env": sorted(env)} for row in rows]',
+        "I6: RSR_BATTERY_THREADS=2 and =14 are the same name; the 09-26/27 "
+        "verdicts differed by the value.",
+    ),
+    Mutation(
+        "battery-env: the header prints names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '        lines.append(f"  {name}={value!r} -- {_role(name)}{note}")',
+        '        lines.append(f"  {name} -- {_role(name)}{note}")',
+        "I6: the stdout header is the record of a battery run without --json.",
+    ),
+    Mutation(
+        "battery-env: a name the tree reads is not declared",
+        "test_inventory_every_rsr_name",
+        "scripts/battery_env.py",
+        '    "RSR_NB_B2_FITS": "experiments/newcomer-bakeoff/run.py: where B2\'s '
+        'fits are",\n',
+        "",
+        "I6: the red team counted twelve RSR_* names; the tree had 35. A declared "
+        "list nothing holds to the tree is stale the day after it is written, and "
+        "a legitimate launch is then refused. (The mutation deletes a line rather "
+        "than renaming the key: a renamed key would itself be a new RSR_* token "
+        "in this file.)",
+    ),
+    Mutation(
+        "battery-env: a variable the battery does not replace is labelled replaced",
+        "test_launch_what_the_battery_sets_per_shard",
+        "scripts/battery_env.py",
+        'REPLACED_IN_SUITE = ("RSR_BATTERY_PROBE", "RSR_ORCH_ROOT", "RSR_TEST_COUNT")',
+        'REPLACED_IN_SUITE = ("RSR_BATTERY_PROBE", "RSR_ORCH_ROOT", "RSR_GIT")',
+        "I6: the header tells the reader which recorded values never reach "
+        "pytest. Saying so of RSR_GIT -- which does reach it -- hides an input.",
+    ),
 )
 
 
@@ -6018,15 +6087,16 @@ def main() -> Exit:
         print(f"no shard worktrees registered under {pool}")
         return Exit.OK
 
+    # 🔴 I6: every RSR_* variable is recorded, and an undeclared one is DID NOT RUN
+    # (3) here -- before the anchor check and before any suite.
+    print(battery_env.header(battery_env.check()))
+
     if not MUTATIONS:
         # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has no
         # unproven gate in it and would otherwise exit 0.
         print("UNKNOWN: the battery has no mutations to run", file=sys.stderr)
         return Exit.UNKNOWN
 
-    # 🔴 I6: every RSR_* variable is recorded, and an undeclared one is DID NOT RUN
-    # (3) here -- before the anchor check and before any suite.
-    print(battery_env.header(battery_env.check()))
     threads, source = suite_threads()
     print(
         f"suite threads: {threads if threads is not None else 'uncapped'} "
