@@ -6,6 +6,7 @@ Regenerate with `PYTHONPATH=scripts .venv/bin/python -m orchestrator.outbox inde
 
 | updated | run_id | status | report |
 |---|---|---|---|
+| 2026-09-30T08:45:00Z | b1-beta-inertness | RETURNED | [b1-beta-inertness.md](b1-beta-inertness.md) |
 | 2026-09-30T06:40:00Z | newcomer-bakeoff | RETURNED | [newcomer-bakeoff.md](newcomer-bakeoff.md) |
 | 2026-09-29T17:40:00-07:00 | b2-psi-probe | RETURNED | [b2-psi-probe.md](b2-psi-probe.md) |
 
