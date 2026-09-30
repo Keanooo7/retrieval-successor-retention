@@ -5814,10 +5814,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i2: the done record is written before the battery runs",
         "test_a_shard_whose_battery_crashed_leaves_no_done_record",
         "scripts/battery_shards.py",
-        "    sys.argv = argv\n    try:\n        try:\n",
-        "    sys.argv = argv\n"
+        "    sys.argv, iso.pinned_sha = argv, pin\n    try:\n        try:\n",
+        "    sys.argv, iso.pinned_sha = argv, pin\n"
         '    _write_json(paths.done, {"run_id": args.run_id, "index": args.index, '
-        '"of": args.of, "sha": sha, "table": table_fingerprint(table), "rc": 0})\n'
+        '"of": args.of, "sha": real_pin(mb.ROOT), "table": table_fingerprint(table), '
+        '"rc": 0})\n'
         "    try:\n        try:\n",
         "I2: the done record says the shard's battery RETURNED. Written at the "
         "start, a killed or crashed shard would look finished to the merge.",
@@ -6044,8 +6045,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "i2: shards are launched in the battery lane",
         "test_a_shard_is_launched_under_one_cpu_det_slot",
         "scripts/battery_shards.py",
-        '    slot += ["--lane", "cpu-det", "--slots", "1"',
-        '    slot += ["--lane", "battery", "--slots", "1"',
+        '    slot += ["--lane", "cpu-det", "--slots", str(threads)',
+        '    slot += ["--lane", "battery", "--slots", str(threads)',
         "I2: each shard takes ONE cpu-det slot. The battery lane has capacity 1 "
         "(ops/lanes.json), so N shards there are one shard and N-1 refusals.",
     ),
@@ -6087,6 +6088,158 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        with contextlib.ExitStack() as logs:",
         "I2: SIGTERM/SIGHUP/SIGINT to the driver stops every shard battery, each "
         "of which tears its own pool down (I1), and no merged verdict is written.",
+    ),
+    # ---------------------------------------------------- I2 fix round 1
+    # docs/reviews/eng-i2-sharding/c4a2dc065a41.md: BLOCKER-1 (the worktree admin
+    # lock and the teardown), MAJOR-1 (compare), MINOR-1/2/3/5. Shown red by hand
+    # on 2026-09-30; no battery has run these entries yet.
+    Mutation(
+        "i2: the worktree admin lock is a no-op",
+        "test_worktree_admin_",
+        "scripts/battery_isolation.py",
+        "        fcntl.flock(f, fcntl.LOCK_EX)\n        yield",
+        "        yield",
+        "review BLOCKER-1: git worktree add/list/remove are not concurrency-safe "
+        "(an in-flight add's empty commondir kills a concurrent one); unserialized, "
+        "N shards lose shards at start and a teardown discards scored rows.",
+    ),
+    Mutation(
+        "i2: worktree list runs outside the admin lock",
+        "test_worktree_admin_list_waits_for_an_add_in_flight",
+        "scripts/battery_isolation.py",
+        '_ok(admin_git(source, "worktree", "list", "--porcelain")',
+        '_ok(git(source, "worktree", "list", "--porcelain")',
+        "review BLOCKER-1: the teardown's worktree list died on another shard's "
+        "in-flight worktree operation; the battery then refused with its rows unwritten.",
+    ),
+    Mutation(
+        "i2: worktree add runs outside the admin lock",
+        "test_worktree_admin_add_waits_for_an_add_in_flight",
+        "scripts/battery_isolation.py",
+        '            admin_git(source, "worktree", "add", "--detach", str(path), sha),',
+        '            git(source, "worktree", "add", "--detach", str(path), sha),',
+        "review BLOCKER-1: 6 shards adding worktrees at once lost one in 2-7% of "
+        "rounds (fatal: failed to read .git/worktrees/<id>/commondir).",
+    ),
+    Mutation(
+        "i2: worktree remove runs outside the admin lock",
+        "test_worktree_admin_remove_waits_for_an_add_in_flight",
+        "scripts/battery_isolation.py",
+        '    proc = admin_git(source, "worktree", "remove", "--force", str(path))',
+        '    proc = git(source, "worktree", "remove", "--force", str(path))',
+        "review BLOCKER-1: a remove racing an add reads its half-written admin entry; "
+        "and a remove that empties .git/worktrees kills a concurrent list.",
+    ),
+    Mutation(
+        "i2: a pool teardown that cannot list worktrees discards the verdicts",
+        "test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts",
+        "scripts/battery_isolation.py",
+        '    except Unisolated as e:\n        problems.append(f"prune: {e}")',
+        '    except KeyError as e:\n        problems.append(f"prune: {e}")',
+        "review BLOCKER-1 (second fix): the teardown runs after every verdict is "
+        "scored and before _report writes them; a failed prune must be reported, "
+        "not raised over finished rows.",
+    ),
+    Mutation(
+        "i2: the done record names a second read of HEAD",
+        "test_a_shard_records_the_sha_its_battery_pinned",
+        "scripts/battery_shards.py",
+        "    sha = pinned[-1] if pinned else None\n",
+        "    sha = pinned_sha()\n",
+        "review MINOR-5: the SHA recorded is the one the battery pinned; a second "
+        "read can see a commit that landed after it.",
+    ),
+    Mutation(
+        "i2: the slot request is one slot whatever --threads",
+        "test_a_shards_slot_request_equals_its_thread_count",
+        "scripts/battery_shards.py",
+        '"--slots", str(threads), "--wait"',
+        '"--slots", "1", "--wait"',
+        "review MINOR-1: one slot reserved for a suite that runs --threads threads "
+        "oversubscribes the lane.",
+    ),
+    Mutation(
+        "i2: stale anchors are left to the shards",
+        "test_run_refuses_a_stale_anchor_before_any_shard_starts",
+        "scripts/battery_shards.py",
+        "    stale = mb.anchor_problems()\n",
+        "    stale = []\n",
+        "review MINOR-2: a stale anchor refuses only the shard whose slice holds it; "
+        "the other N-1 run for hours toward a merged exit 3.",
+    ),
+    Mutation(
+        "i2: a row for another gate is accepted",
+        "test_a_row_for_another_gate_is_did_not_run",
+        "scripts/battery_shards.py",
+        '    if got.get("mutation") != m.name or got.get("gate") != m.gate:',
+        '    if got.get("mutation") != m.name:',
+        "review MINOR-3: a row is this mutation's only if its gate matches too.",
+    ),
+    Mutation(
+        "i2: a done record's rc of false reads as 0",
+        "test_a_shard_that_exited_outside_0_and_3_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if isinstance(rc, bool) or rc not in ROWS_EXIT:",
+        "    if rc not in ROWS_EXIT:",
+        "review MINOR-3: False == 0 in Python; a bool is never an exit status "
+        "(rsr.exit_codes.status refuses one).",
+    ),
+    Mutation(
+        "i2: compare reads whole rows",
+        "test_compare_reads_only_the_verdict_fields",
+        "scripts/battery_shards.py",
+        "        for f in VERDICT_FIELDS\n        if a[n].get(f) != b[n].get(f)",
+        "        for f in sorted(set(a[n]) | set(b[n]))\n"
+        "        if a[n].get(f) != b[n].get(f)",
+        "review MAJOR-1: whole rows differ between any two real batteries "
+        "(failure_reasons' tmp paths, env stamps); the equivalence is on the "
+        "verdict fields.",
+    ),
+    Mutation(
+        "i2: compare exits 0 on a difference",
+        "test_compare_exits_1_on_a_verdict_field_difference",
+        "scripts/battery_shards.py",
+        "    return (Exit.FAIL if diffs else Exit.OK), diffs",
+        "    return Exit.OK, diffs",
+        "review MAJOR-1: a serial/sharded verdict difference is the failure the "
+        "equivalence run exists to catch (1).",
+    ),
+    Mutation(
+        "i2: compare accepts different mutation sets",
+        "test_compare_refuses_mismatched_mutation_sets",
+        "scripts/battery_shards.py",
+        "    if sorted(a) != sorted(b) or len(a) != len(serial) "
+        "or len(b) != len(sharded):",
+        "    if False:",
+        "review MAJOR-1: comparing different mutation sets proves nothing about the "
+        "missing ones; it is not a comparison (3).",
+    ),
+    Mutation(
+        "i2: compare accepts an unreadable record",
+        "test_compare_refuses_an_unreadable_record",
+        "scripts/battery_shards.py",
+        "        if not isinstance(rows, list) or not all(",
+        "        if isinstance(rows, list) and not all(",
+        "review MAJOR-1: an unreadable or non-battery record is DID NOT RUN (3), "
+        "not a crash (1).",
+    ),
+    Mutation(
+        "i2: compare passes a mutation that did not run",
+        "test_compare_of_a_mutation_that_did_not_run_is_not_a_pass",
+        "scripts/battery_shards.py",
+        "    if dnr:\n        return Exit.DID_NOT_RUN",
+        "    if False:\n        return Exit.DID_NOT_RUN",
+        "review MAJOR-1: two DID_NOT_RUN rows are identical and prove nothing; "
+        "'did not run' never becomes 0.",
+    ),
+    Mutation(
+        "i2: compare of nothing is a pass",
+        "test_compare_of_zero_mutations_is_unknown",
+        "scripts/battery_shards.py",
+        "    if not a:\n        return Exit.UNKNOWN",
+        "    if False:\n        return Exit.UNKNOWN",
+        "review MAJOR-1: zero mutations compared is NOTHING TO COMPARE (2), as in "
+        "the battery itself (S0-05).",
     ),
 )
 
