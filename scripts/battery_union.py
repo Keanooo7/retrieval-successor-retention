@@ -29,7 +29,8 @@ Rules (``ours`` = the checked-out side, ``theirs`` = the side being merged in):
   entry in base and theirs but missing from ours -> REFUSE (ours deleted it);
 * constants: the same one-sided rule; a constant new in theirs is appended;
 * head code: taken from theirs only if ours == base; both changed -> REFUSE;
-* tail: see `_merge_tail`;
+* tail: taken from theirs only if ours == base; both changed -> REFUSE
+  (`_merge_tail`; the one-sided rule was added 2026-09-30);
 * trailing text in the body: theirs may not change it (REFUSE) unless ours made
   the same change.
 
@@ -132,9 +133,19 @@ def split(src: str) -> Parts:
 
 
 def _merge_tail(b: Parts, o: Parts, t: Parts, refuse: list[str]) -> tuple[str, str]:
-    """The code after MUTATIONS. Returns (tail, which side it came from)."""
-    if t.tail != b.tail and t.tail != o.tail:
-        refuse.append("theirs changed code after MUTATIONS")
+    """The code after MUTATIONS. Returns (tail, which side it came from).
+
+    * theirs == base, or theirs == ours: ours' tail;
+    * ours == base and theirs differs: **theirs' tail** -- a one-sided change. Added
+      2026-09-30: union.py refused this twice on 09-29 (main's I5 edit to
+      run_suite/parse_failures, merged into run/e0d and run/newcomer-bakeoff);
+    * both changed, differently: REFUSE. There is no line merge here.
+    """
+    if t.tail == b.tail or t.tail == o.tail:
+        return o.tail, "ours"
+    if o.tail == b.tail:
+        return t.tail, "theirs"
+    refuse.append("theirs changed code after MUTATIONS, and so did ours")
     return o.tail, "ours"
 
 
