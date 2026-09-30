@@ -324,7 +324,8 @@ def row_problem(row: object, m: mb.Mutation) -> str | None:
     absent = sorted(set(mb._row(m, {}, None)) - set(got))
     if absent:
         return f"its row lacks the serial row's fields {absent}"
-    return None
+    # the same field check `compare` applies (review 2 MAJOR-1): one validator
+    return verdict_field_problem(got)
 
 
 def merge_rows(
@@ -393,16 +394,55 @@ Never whole rows: ``failure_reasons`` carry per-run tmp paths, and environment
 stamps differ between a serial and a sharded run by design."""
 
 
+VERDICTS = ("PROVEN", "LEAKS", "ADDS NOTHING", "DID_NOT_RUN")
+
+_FIELD_OK = {
+    "mutation": lambda v: type(v) is str,
+    "gate": lambda v: type(v) is str,
+    "verdict": lambda v: v in VERDICTS,
+    "reddened_gate": lambda v: type(v) is bool,
+    "n_on_gate": lambda v: type(v) is int,  # exactly int: True is not 1
+    "off_gate": lambda v: type(v) is list,
+    "off_gate_undeclared": lambda v: type(v) is list,
+    "off_gate_allowed": lambda v: type(v) is list,
+}
+"""A real battery row's type for each of `VERDICT_FIELDS` (`mutation_battery._row`).
+Exact types, so ``True`` never passes for ``1`` nor ``1`` for ``True``."""
+
+
+def verdict_field_problem(row: object) -> str | None:
+    """Why ``row`` does not carry every verdict field with a battery row's type.
+
+    Review 2 MAJOR-1: `compare` read each field with ``.get()``, so records of
+    ``[{"mutation": "a"}]`` compared ``None == None`` everywhere and exited 0 -- a
+    3 collapsing to 0. Shared with the merge (`row_problem`).
+    """
+    got = row if isinstance(row, dict) else {}
+    bad = [f for f in VERDICT_FIELDS if f not in got or not _FIELD_OK[f](got[f])]
+    if bad:
+        return f"its verdict fields {bad} are missing or not a battery row's types"
+    return None
+
+
 def compare_rows(serial: object, sharded: object) -> tuple[Exit, list[str]]:
-    """``(exit, lines)``: 0 identical on `VERDICT_FIELDS`, 1 any difference, 2 no
-    mutations, 3 unreadable, different mutation sets, or a mutation that did not
-    run in either arm (identical DID_NOT_RUN rows are not evidence of anything)."""
+    """``(exit, lines)`` on `VERDICT_FIELDS`, per mutation.
+
+    Every difference among mutations that ran in BOTH arms is listed, and any one
+    exits 1 -- even beside a DID_NOT_RUN row (review 2 MINOR-2, the manager's
+    decision). With no difference: 3 if a row is DID_NOT_RUN in either arm
+    (identical DID_NOT_RUN rows prove nothing), else 0. Also 3 for an unreadable
+    record, a row without every verdict field at a battery row's type, or
+    different mutation sets; 2 for no mutations.
+    """
     arms = {"serial": serial, "sharded": sharded}
     for name, rows in arms.items():
-        if not isinstance(rows, list) or not all(
-            isinstance(r, dict) and "mutation" in r for r in rows
-        ):
+        if not isinstance(rows, list):
             return Exit.DID_NOT_RUN, [f"{name}: not a battery --json record"]
+        bad = [(i, p) for i, r in enumerate(rows) if (p := verdict_field_problem(r))]
+        if bad:
+            return Exit.DID_NOT_RUN, [
+                f"{name}: not a battery --json record: row {i}: {p}" for i, p in bad
+            ]
     a = {r["mutation"]: r for r in serial}
     b = {r["mutation"]: r for r in sharded}
     if sorted(a) != sorted(b) or len(a) != len(serial) or len(b) != len(sharded):
@@ -413,16 +453,17 @@ def compare_rows(serial: object, sharded: object) -> tuple[Exit, list[str]]:
         ]
     if not a:
         return Exit.UNKNOWN, ["no mutations to compare"]
-    dnr = [n for n in a if "DID_NOT_RUN" in (a[n].get("verdict"), b[n].get("verdict"))]
-    if dnr:
-        return Exit.DID_NOT_RUN, [f"did not run in at least one arm: {dnr}"]
+    dnr = [n for n in a if "DID_NOT_RUN" in (a[n]["verdict"], b[n]["verdict"])]
     diffs = [
-        f"DIFFERS {n}: {f}: serial {a[n].get(f)!r} != sharded {b[n].get(f)!r}"
+        f"DIFFERS {n}: {f}: serial {a[n][f]!r} != sharded {b[n][f]!r}"
         for n in a
+        if n not in dnr
         for f in VERDICT_FIELDS
-        if a[n].get(f) != b[n].get(f)
+        if a[n][f] != b[n][f]
     ]
-    return (Exit.FAIL if diffs else Exit.OK), diffs
+    lines = diffs + ([f"did not run in at least one arm: {dnr}"] if dnr else [])
+    code = Exit.FAIL if diffs else (Exit.DID_NOT_RUN if dnr else Exit.OK)
+    return code, lines
 
 
 def run_compare(args) -> Exit:

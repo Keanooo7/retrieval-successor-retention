@@ -404,6 +404,19 @@ def test_a_row_without_the_serial_rows_fields_is_did_not_run(table, work):
     assert "off_gate" in by_name["m3"]["did_not_run"]
 
 
+def test_a_row_with_a_field_of_the_wrong_type_is_did_not_run(table, work):
+    """Review 2 MAJOR-1: the merge shares compare's field check, so a shard row
+    whose `reddened_gate` is 1 (not True) is not taken as a verdict either."""
+    _write_all(work, 2, table, skip=(1,))
+    odd = {**_proven(table[3]), "reddened_gate": 1}
+    _write_shard(work, 1, 2, [_proven(table[1]), odd])
+    rc, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
+    assert rc == 3
+    assert by_name["m3"]["verdict"] == "DID_NOT_RUN"
+    assert "reddened_gate" in by_name["m3"]["did_not_run"]
+
+
 @pytest.mark.parametrize(
     "stale",
     [
@@ -525,6 +538,52 @@ def test_compare_of_a_mutation_that_did_not_run_is_not_a_pass(tmp_path):
     sharded[2] = mb._row(_mutation(2), {}, "shard 1 of 2: no done record")
     # a DID_NOT_RUN row in both arms is still not evidence of equivalence
     assert _compare(tmp_path, sharded, sharded) == 3
+    assert _compare(tmp_path, serial, sharded) == 3
+
+
+def test_compare_reports_a_difference_even_beside_a_row_that_did_not_run(
+    tmp_path, capsys
+):
+    """Review 2 MINOR-2 (manager's decision): every difference among mutations
+    that ran in both arms is printed, and a difference exits 1 even when another
+    row is DID_NOT_RUN; 3 only when there is no difference."""
+    serial = [_proven(_mutation(i)) for i in range(3)]
+    sharded = [dict(r) for r in serial]
+    sharded[0] = mb._row(_mutation(0), {}, "shard 0 of 2: no done record")
+    sharded[1] = {**sharded[1], "verdict": "LEAKS", "off_gate_undeclared": ["t::x"]}
+    assert _compare(tmp_path, serial, sharded) == 1
+    out = capsys.readouterr().out
+    assert "DIFFERS m1: verdict" in out and "DIFFERS m1: off_gate_undeclared" in out
+    assert "did not run in at least one arm: ['m0']" in out
+    assert "DIFFERS m0" not in out  # a row that did not run is not a verdict
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "no-verdict-fields",
+        "reddened-gate-int",
+        "n-on-gate-bool",
+        "unknown-verdict",
+        "off-gate-none",
+    ],
+)
+def test_compare_refuses_rows_that_are_not_battery_rows(tmp_path, bad):
+    """Review 2 MAJOR-1: `[{"mutation": "a"}, ...]` in both arms compared
+    `None == None` on every field and exited 0 -- a 3 collapsing to 0. Every
+    verdict field must be present with a real row's type; `True` is not `1`."""
+    serial = [_proven(_mutation(i)) for i in range(3)]
+    sharded = [dict(r) for r in serial]
+    if bad == "no-verdict-fields":
+        serial = sharded = [{"mutation": r["mutation"]} for r in serial]
+    elif bad == "reddened-gate-int":
+        serial[1] = {**serial[1], "reddened_gate": 1}
+    elif bad == "n-on-gate-bool":
+        sharded[1] = {**sharded[1], "n_on_gate": True}
+    elif bad == "unknown-verdict":
+        sharded[2] = {**sharded[2], "verdict": "GREEN"}
+    else:
+        serial[0] = {**serial[0], "off_gate": None}
     assert _compare(tmp_path, serial, sharded) == 3
 
 
