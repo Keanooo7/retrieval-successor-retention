@@ -6,6 +6,6 @@ Regenerate with `PYTHONPATH=scripts .venv/bin/python -m orchestrator.outbox inde
 
 | updated | run_id | status | report |
 |---|---|---|---|
-| - | (no per-run reports yet) | - | - |
+| 2026-09-29T22:45:00Z | e0d | RETURNED | [e0d.md](e0d.md) |
 
 Reports filed before per-run files (prepend-only, 2026-09-18 .. 2026-09-21): [_legacy-researcher.md](_legacy-researcher.md).
