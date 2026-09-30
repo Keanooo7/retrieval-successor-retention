@@ -192,8 +192,11 @@ def test_lru_on_write_is_defensive_and_the_mutation_battery_says_so():
         live=torch.ones(4, dtype=torch.bool),
         step=26,
     )
-    p._last_used[1] = 20  # a stale record from the previous tenant of slot 1
-    # The max() discards it without help: the slot's own write step is later.
+    # A stale record from the previous tenant of slot 1 (written at 1, row 0).
+    # Since 2026-09-29 records are keyed by (row, written_at), so the newcomer
+    # (written at 25) cannot even look it up -- and the max() would discard it
+    # anyway, since the slot's own write step is later.
+    p._last_used[0] = {1: 20}
     assert p.select_eviction(st, torch.zeros(2), 26) == 0
     p.on_write(st, 1, 25)
     assert p.select_eviction(st, torch.zeros(2), 26) == 0

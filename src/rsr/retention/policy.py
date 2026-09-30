@@ -68,9 +68,20 @@ class MemoryState:
     policy that depended on it degrades **silently into a different policy**. LRU
     kept `last_used` here and became FIFO.
 
-    Cross-step per-slot state belongs on the policy object, keyed by slot index and
-    invalidated through `on_write`. Anything that must survive a *stream* boundary
-    belongs on the policy object too, cleared in `reset`."""
+    Cross-step per-slot state belongs on the policy object, keyed by `row` and by
+    occupant (see `RetentionPolicy.on_write`), and invalidated through `on_write`.
+    Anything that must survive a *stream* boundary belongs on the policy object
+    too, cleared in `reset`."""
+
+    row: int = 0
+    """Which batch row of the model's `Memory` this state describes.
+
+    **One policy object serves every row of a batch**, and `run_policy_loop` calls
+    `observe` / `select_eviction` / `on_write` once per row. Any state a policy
+    keeps across calls must therefore be keyed by `row` as well as by slot, or
+    row A's history leaks into row B's decision (2026-09-29: LRU's `_last_used`
+    was one dict for the whole batch). Defaults to 0 for single-row callers
+    (`headroom.simulate`, unit tests)."""
 
     @property
     def capacity(self) -> int:
@@ -245,6 +256,25 @@ class RetentionPolicy(Protocol):
            the same shape.
 
         A policy with no per-slot state implements this as a no-op, and says so.
+
+        **What `slot` is** (fixed 2026-09-29). `slot` is the index the newcomer
+        now occupies in `slots` -- `slots.written_at[slot] == step` and
+        `slots.live[slot]` hold on every call. It is **not** the evicted index:
+        `write_at` compacts the prefix behind the victim and writes the newcomer at
+        `M - 1` (or at `k` on an underfull row), so the victim's index names a
+        different occupant afterwards. `rsr.model.tg.policy_loop.newcomer_slot`
+        is the single source of that rule.
+
+        **Two consequences for any per-slot state:**
+
+        1. **Key it by `slots.row`.** One policy object serves the whole batch;
+           the protocol is called once per row with that row's `MemoryState`.
+        2. **Do not key it by slot index across steps.** Compaction shifts every
+           slot behind a mid-memory victim one to the left, so an index-keyed
+           record is left behind while its occupant moves. Key by occupant --
+           `written_at` is unique among a row's live slots, since a row writes at
+           most once per step -- or re-map on every write. LRU keys by
+           `(row, written_at)`.
         """
         ...
 
