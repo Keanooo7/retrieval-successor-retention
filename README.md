@@ -15,13 +15,17 @@ lowest predicted *future* retrieval demand given the current discourse state.
 
 ## Status
 
-Sprint 2, as of 2026-09-27 (`main` at `941a68e`). **Only weeks 1–4 are approved**
-(spec §16); everything downstream is a projection, not a permission.
+Sprint 2, as of 2026-09-30 (`main` at `f7a6b10`; the newest results sit on
+`night/2026-09-30` at `898628a`, and E0d and B5 on their own run branches). **Only
+weeks 1–4 are approved** (spec §16); everything downstream is a projection, not a
+permission.
 
-**No RSR policy has been trained yet.** Every result below was measured under FIFO
-eviction or is model-free, on the synthetic corpus at `M = 16`. None is evidence
-for or against the hypothesis; they establish that the instrument is sound and
-that the question has room.
+**No RSR policy has been trained yet: no ψ̂ has been trained in the loop (by `L_MC`
+in `train()`).** Most results below were measured under FIFO eviction or are
+model-free. The two newest (B2 and the newcomer bake-off) run *offline*, closed-form
+ψ̂ fits as fixed eviction rules through the model. All are on the synthetic corpus at
+`M = 16`, and none is a test of the hypothesis: they establish whether the instrument
+is sound, whether the question has room, and what an untrained-in-the-loop ψ̂ does.
 
 **Standing** means a committed test that runs on every commit. **Preliminary** means
 three seeds on the synthetic corpus, read from a verified ledger, and not yet
@@ -35,12 +39,22 @@ commit and the date the ledger landed.
 | An oracle beats FIFO on the synthetic corpus (E-feas, model-free) | `headroom_oracle_minus_fifo` 0.1807 ± 0.0123 at `M = 16` | Preliminary | run `efeas-synthetic` · `1fc8199` · 2026-09-20 |
 | The memory is live under the masked objective, but training from scratch does not retrieve | `armB.ratio` 9.33 ± 4.68 (unmasked: 0.0030); held-out answer NLL 2.90 ± 0.06 against chance ln 16 ≈ 2.77 | Preliminary | run `decisive-shuffle` · `90438f3` · 2026-09-21 |
 | Memorise-then-stream retrieves on unseen documents; a fresh start does not by step 9000 | `classification` SCAFFOLD; `classification_reported_as` NO_ESCAPE by 9000 | Preliminary | runs `fresh-stream` · `e45e4fe` · 2026-09-25; `fresh-escape` · `cdaa871` · 2026-09-26 |
-| The retention target `r_i` barely separates pending facts from filler (FIFO-world, hindsight proxy; no RSR head trained) | mean demand 0.071 / 0.069 / 0.079 (pending) vs 0.057 / 0.061 / 0.054 (filler); a `γ = 0` rule on it hits 0.79–0.85 against FIFO's 0.81 and a causal fact/filler rule's 0.97 | **Preliminary, pending E0d** | run `lookahead-room-r2`, keys `B.ckpt3000.*` · `a0cc85a` · 2026-09-26 |
+| The retention target `r_i` barely separates pending facts from filler (FIFO-world, hindsight proxy; no RSR head trained) | mean demand 0.071 / 0.069 / 0.079 (pending) vs 0.057 / 0.061 / 0.054 (filler); a `γ = 0` rule on it hits 0.79–0.85 against FIFO's 0.81 and a causal fact/filler rule's 0.97 | Preliminary | run `lookahead-room-r2`, keys `B.ckpt3000.*` · `a0cc85a` · 2026-09-26 |
+| `r_i` agrees with leave-one-out Δloss **at the moment of retrieval** (E0d, spec §3.2.1). It does not show that `r_i` predicts later demand | `e0d.class` AGREE; `primary.AUROC_strat_pct` 0.9423 / 0.9313 / 0.9433 against A\* = 0.85 | Preliminary | run `e0d` · `2fd9368` · 2026-09-29 |
+| An offline ψ̂ eviction rule is harmful through the model (B2; closed-form ridge fit, not a trained head) | `classification` row 1, HARMFUL: ψ̂-U LOSS / LOSS / EQUIV, ψ̂-C EQUIV ×3 | Preliminary | run `b2-psi-probe` · `80c1cd7` · 2026-09-29 |
+| Hard grace does not rescue it; the harm travels with the counterfactual target (newcomer bake-off, offline) | `decision.DQ1` NO; `decision.DQ2` INTERMEDIATE; `decision.DQ3` YES | Preliminary | run `newcomer-bakeoff` · `16f867a` · 2026-09-30 |
+| `β` is not inert under AdamW at `ε = 1e-8` with `φ`-only gradient (B1, open-loop) | `verdict.outcome` falsified: decoupled_wd LIVE at 1e-8, INERT at 1e-12 | Preliminary | run `b1-beta-inertness` · `412f136` · 2026-09-30 |
+| Arm B's stream loss has not plateaued by step 9000, and retrieval holds throughout (B5; FIFO only) | `classification_reported_as` NO_PLATEAU by 9000; `B.ckpt9000.R_quantity` 0.8683 / 0.8546 / 0.8573 | Preliminary | run `b5-convergence` · `b9595e0` · 2026-09-30 |
 
 Ledgers are at `runs/<run id>/ledger.json`, beside the verifier's
-`verification.json`. The last row is the open question: the headroom exists, and the
-signal RSR learns from points at it only weakly. E0d (`r_i` against leave-one-out
-Δloss) tests it next, and its result will be recorded here either way.
+`verification.json`. The rows dated 2026-09-29/30 are generated, with their keys,
+verifier verdicts and review records, in
+[`docs/results/2026-09-30-verified.md`](docs/results/2026-09-30-verified.md)
+(`scripts/verified_results.py`; a test fails if that file and the ledgers disagree).
+The open question has narrowed but not closed: the headroom exists; `r_i` ranks the
+slot being retrieved *now* well (E0d) but its bottom-of-ranking agreement is poor, and
+eviction is an argmin; an offline ψ̂ fitted to it was harmful (B2). Whether a ψ̂
+trained in the loop behaves differently has not been measured.
 
 **Where to find the audit trail**
 
