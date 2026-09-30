@@ -25,8 +25,9 @@ Two sources are not ledger keys and say so in their row:
 
 * B2's gating Δs live in gitignored ``phaseB/*.pt`` files. They are parsed from the
   committed ``experiments/b2-psi-probe/RESULTS.md`` §2.1, which
-  ``results_report.py`` generated from those files; the verifier re-derived the
-  classification from them, not the Δs.
+  ``results_report.py`` generated from those files. The B2 verifier independently
+  re-derived the Δs and the classification from those units (out-of-repo report,
+  cited, not read).
 * E0h's R² is read from the committed ``runs/b2-psi-probe/phaseB/e0h-ckpt*.json``.
   E0h's thresholds are **unratified** (exit 2); no class is read.
 """
@@ -121,6 +122,11 @@ class Source:
     """The run's own branch; its review records live under docs/reviews/<slug>/."""
     results: str
     note: str = ""
+    """Author note, printed as such: not derived from any source."""
+    review_note: str = ""
+    """Author note on why there is no review record, when there is none."""
+    tag: str = ""
+    """An annotated tag that keeps an unmerged pin reachable (review m-7)."""
 
 
 SOURCES: dict[str, Source] = {
@@ -135,6 +141,8 @@ SOURCES: dict[str, Source] = {
             "experiments/e0d/RESULTS.md",
             "Not merged into night/2026-09-30 at the time of writing; read from its run "
             "branch.",
+            review_note="its merge is blocked on the owner",
+            tag="verified/e0d-0e51139",
         ),
         Source(
             "B2",
@@ -175,6 +183,7 @@ SOURCES: dict[str, Source] = {
             "7677bb3. "
             "The ledger's `verdict` field is null; the classification is the "
             "`classification_reported_as` row.",
+            tag="verified/b5-deaeaa6",
         ),
         Source(
             "B0",
@@ -183,6 +192,7 @@ SOURCES: dict[str, Source] = {
             "run/b0-ceilings",
             "experiments/b0-ceilings/RESULTS.md",
             "Merged at f7a6b10 (night/2026-09-27); read here from night/2026-09-30.",
+            review_note="it was merged before T5(b) existed",
         ),
     )
 }
@@ -269,12 +279,19 @@ def resolve(ref: Ref) -> Any:
     if ref.kind == "md":
         lines = _section(_text(src.sha, ref.file), ref.sub[0], what)
         hits = [ln for ln in lines if ref.key in ln]
-        if len(hits) != 1:
-            raise Missing(
-                f"{what} {ref.sub[0]!r}: {len(hits)} lines contain {ref.key!r}, need 1"
-            )
+        if not hits:
+            raise Missing(f"{what} {ref.sub[0]!r}: no line contains {ref.key!r}")
+        if len(hits) > 1:
+            raise Missing(f"{what} {ref.sub[0]!r}: {len(hits)} lines contain {ref.key!r}")
         return hits[0]
-    doc = _json(src.sha, ref.file)
+    val = _value(ref, _json(src.sha, ref.file), what)
+    # 🔴 Every kind: a null is refused, never printed as `None` (review M-1).
+    if val is None:
+        raise Missing(f"{what}: {ref.label()} is null")
+    return val
+
+
+def _value(ref: Ref, doc: Any, what: str) -> Any:
     if ref.kind == "json":
         return _dig(doc, (ref.key, *ref.sub), what)
     if ref.kind == "top":
@@ -282,14 +299,20 @@ def resolve(ref: Ref) -> Any:
     if ref.kind != "row":
         raise ValueError(ref.kind)
     rows = [r for r in doc.get("rows", []) if r.get("key") == ref.key]
-    if len(rows) != 1:
+    if not rows:
+        raise Missing(f"{what}: no row keyed {ref.key!r}")
+    if len(rows) > 1:
         raise Missing(f"{what}: {len(rows)} rows keyed {ref.key!r}, need exactly 1")
     row = rows[0]
-    base = row.get("value", row)
-    val = _dig(base, ref.sub, f"{what} {ref.key}")
-    if val is None:
-        raise Missing(f"{what}: {ref.key} {ref.sub} is null")
-    return val
+    if "value" in row:
+        base = row["value"]
+    elif row.get("kind") == "statistic" and ref.sub:
+        # A statistic row carries its numbers beside `key` (`samples`, `sd`, ...);
+        # only a named field of it is read, never the whole row (review M-1).
+        base = row
+    else:
+        raise Missing(f"{what}: row {ref.key!r} has no value field")
+    return _dig(base, ref.sub, f"{what} {ref.key}")
 
 
 # --------------------------------------------------------------------------- #
@@ -365,13 +388,16 @@ def _e0d_rows() -> list[Row]:
     return [
         Row(
             S,
-            "E0d class (A2.8; gating; exit 0) and per-seed labels",
+            "E0d class (A2.8; gating), per-seed labels and the run's exit code",
             [
                 _r(S, "e0d.class"),
                 _r(S, "e0d.labels"),
                 _r(S, "verdict", "outcome", kind="top"),
+                _r(S, "commands", -1, "exit_code", kind="top"),
             ],
-            lambda c, lab, out: f"**{c}**; labels {labels(lab)}; ledger verdict `{out}`",
+            lambda c, lab, out, ec: (
+                f"**{c}**; labels {labels(lab)}; ledger verdict `{out}`; exit {ec}"
+            ),
         ),
         Row(
             S,
@@ -494,16 +520,16 @@ def _b2_rows() -> list[Row]:
         rows.append(
             Row(
                 S,
-                f"E0h (falsifier 3c) within-step R² of psiU(gamma=0), ckpt{c} — "
-                "**UNRATIFIED**",
+                f"E0h (falsifier 3c) within-step R² of psiU(gamma=0), ckpt{c}",
                 [Ref(S, "json", "e0h.r2_headline", p, (s,)) for s in ("0", "1", "2")]
                 + [
                     Ref(S, "json", k, p)
                     for k in ("rc", "e0h.ratified", "e0h.class_unratified_reading")
                 ],
                 lambda a, b, cc, rc, rat, rd: (
-                    f"{seeds([a, b, cc])}; rc {rc}; ratified {rat}; "
-                    f"unratified reading {rd} (no class is read)"
+                    f"{seeds([a, b, cc])}; rc {rc}; "
+                    + ("ratified" if rat is True else f"**UNRATIFIED** (ratified {rat})")
+                    + f"; unratified reading {rd}"
                 ),
             )
         )
@@ -614,20 +640,28 @@ def _b1_rows() -> list[Row]:
     return rows
 
 
+def _holds(trace: dict) -> int:
+    """How many (E, seed) cells of B5's `rule_trace` have `holds` exactly True."""
+    return sum(x["holds"] is True for e in trace.values() for x in e.values())
+
+
 def _b5_rows() -> list[Row]:
     S = "B5"
     return [
         Row(
             S,
-            "B5 classification (plateau rule over E in 7000..9000, every seed)",
+            "B5 classification (plateau rule, E in 7000..9000)",
             [
                 _r(S, "classification_reported_as"),
                 _r(S, "reached_cap"),
                 _r(S, "steps_done", kind="top"),
                 _r(S, "seeds_actually_run", kind="top"),
+                _r(S, "rule_trace"),
             ],
-            lambda c, cap, st, sd: (
-                f"**{c}**; reached cap {cap}; steps_done {st}; seeds {sd}"
+            lambda c, cap, st, sd, tr: (
+                f"**{c}**; reached cap {cap}; steps_done {st}; seeds {sd}; "
+                f"the rule holds at {_holds(tr)} of {sum(len(e) for e in tr.values())} "
+                "(E, seed) cells"
             ),
         ),
         Row(
@@ -645,7 +679,7 @@ def _b5_rows() -> list[Row]:
         *(
             Row(
                 S,
-                f"B5 retrieval quantity R at ckpt{c} (R holds on every seed)",
+                f"B5 retrieval quantity R at ckpt{c}",
                 [_r(S, f"B.ckpt{c}.R_quantity", "samples"), _r(S, f"B.ckpt{c}.R_holds")],
                 lambda q, h: f"{seeds(q)}; R_holds {h}",
             )
@@ -661,7 +695,7 @@ def _b0_rows() -> list[Row]:
         Row(
             S,
             "B0 kind-oracle share of the fact/filler gain (cap), ckpt3000 gamma 0.9 "
-            "[paired 95% CI] — descriptive, no gate",
+            "[paired 95% CI]",
             [_r(S, k.format("ko", f), "samples") for f in ("point", "lo", "hi")],
             lambda p, lo, hi: " / ".join(
                 f"{s4(a)} {ci(b, c, s4)}" for a, b, c in zip(p, lo, hi, strict=True)
@@ -809,7 +843,8 @@ SCOPE: tuple[tuple[str, str, str], ...] = (
     (
         "E0d",
         "experiments/e0d/RESULTS.md",
-        "`r_i` and leave-one-out agree **at the moment of retrieval**",
+        "AGREE certifies that `r_i` and leave-one-out agree **at the moment of "
+        "retrieval**.",
     ),
     (
         "E0d",
@@ -859,7 +894,10 @@ SCOPE: tuple[tuple[str, str, str], ...] = (
         "B1",
         "experiments/b1-beta-inertness/PREREG.md",
         "It does not measure closed-loop policy divergence, `T_warm`, `b`, or the online "
-        "(non-repeating)",
+        "(non-repeating) stream: the 256-document pool repeats (≈ 187 epochs over 3000 "
+        "steps), which **lets `φ` fit further and shrinks gradients late**, i.e. it "
+        "makes ε matter more than a non-repeating stream would. The direction of that "
+        "bias is toward finding β live; declared.",
     ),
     (
         "B1",
@@ -893,10 +931,20 @@ SCOPE: tuple[tuple[str, str, str], ...] = (
 )
 
 
+def _flat(text: str) -> str:
+    """Markdown as one line: blockquote markers dropped, whitespace collapsed, so a
+    whole sentence that wraps across lines can be quoted (review m-2)."""
+    return " ".join(" ".join(ln.lstrip("> ") for ln in text.splitlines()).split())
+
+
 def scope_line(source: str, path: str, quote: str) -> str:
-    text = _text(SOURCES[source].sha, path)
-    n = text.count(quote)
-    if n != 1:
+    text = _flat(_text(SOURCES[source].sha, path))
+    n = text.count(_flat(quote))
+    if not n:
+        raise Missing(
+            f"{SOURCES[source].sha[:7]}:{path}: quote not found: {quote[:60]!r}"
+        )
+    if n > 1:
         raise Missing(
             f"{SOURCES[source].sha[:7]}:{path}: quote occurs {n} times: {quote[:60]!r}"
         )
@@ -991,10 +1039,19 @@ def render() -> str:
             )
             + " |"
         )
+    unreviewed = [n for n in SOURCES if not revs[n]]
+    if unreviewed:
+        L += [
+            "",
+            f"{' and '.join(unreviewed)} have no review record under "
+            "`docs/reviews/<run-branch>/` at their pinned commit.",
+        ]
+        why = [
+            f"{n}: {SOURCES[n].review_note}" for n in unreviewed if SOURCES[n].review_note
+        ]
+        if why:
+            L += ["", "*(author note)* " + "; ".join(why) + "."]
     L += [
-        "",
-        "E0d and B0 have no T5(b) review record: E0d's merge is blocked on the owner, "
-        "and B0 was merged before T5(b) existed.",
         "",
         "## Verifier claims, as recorded",
         "",
@@ -1010,7 +1067,7 @@ def render() -> str:
             extra = "" if obs == str(c.get("expected")) else f" Observed: {obs}"
             L.append(f"- match `{c.get('match')}`: {c.get('claim')}.{extra}")
         if SOURCES[n].note:
-            L.append(f"- *Note:* {SOURCES[n].note}")
+            L.append(f"- *(author note)* {SOURCES[n].note}")
         L.append("")
     L += [
         "## What this does NOT show",
@@ -1022,6 +1079,8 @@ def render() -> str:
     for source, path, quote in SCOPE:
         L.append(f"- **{source}** (`{path}`): {scope_line(source, path, quote)}")
     L += [
+        "",
+        "## Generator's note (author note, not quoted)",
         "",
         "Not shown by any row above: anything about a ψ̂ trained in the loop (by `L_MC` "
         "in "
