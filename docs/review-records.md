@@ -69,7 +69,11 @@ To merge `branch@head`:
 3. Records whose `reviewed_head` is **not an ancestor of head**, for example a
    rebased-away commit, are ignored. If no record is left, the exit is **3**.
 4. **The record nearest head governs**, meaning the one with the fewest commits in
-   `reviewed_head..head`.
+   `reviewed_head..head`. Two or more records can tie only across a merge (parallel
+   lines). If tied records **disagree on the verdict**, the exit is **3**
+   ("conflicting review records"); the tie is never broken on the file name (review
+   `docs/reviews/eng-t5b-review-gate/defe2dd7c489.md` MINOR-1). A record at head
+   decides.
 5. A verdict of `DO NOT MERGE` exits **1**.
 6. A verdict of `MERGE WITH FIXES` exits **3**: **it is never mergeable on its own**
    (PM decision, 2026-09-30). The fixes are code that no record covers, and

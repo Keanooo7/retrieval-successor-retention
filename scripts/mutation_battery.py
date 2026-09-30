@@ -4675,6 +4675,19 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
         ),
     ),
+    # T5(b) round-2 minors, 2026-09-30 (docs/reviews/eng-t5b-review-gate/
+    # defe2dd7c489.md). Proven by hand on tests/test_orch_merge*.py only (the
+    # integration battery holds the CPU; branch fix/review-minors-0930).
+    Mutation(
+        "merge: review records tied in distance are decided by sha order",
+        "test_records_at_equal_distance_with_different_verdicts_are_refused",
+        "scripts/orchestrator/merge.py",
+        '    if len({fm["verdict"] for _, _, fm in tied}) > 1:\n',
+        "    if False:\n",
+        "review MINOR-1 (probes N8/N8b): a DO NOT MERGE and a MERGE record at the "
+        "same distance from head, on parallel lines over identical code, resolve by "
+        "which reviewed sha sorts first -- the verdict is a coin flip.",
+    ),
     Mutation(
         "battery-union: a one-sided tail change keeps ours",
         "test_a_tail_change_only_theirs_made_is_taken_from_theirs",

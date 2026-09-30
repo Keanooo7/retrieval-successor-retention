@@ -249,6 +249,70 @@ def test_an_unknown_verdict_is_refused(orch):
     _refused(orch, "a", 3, "verdict")
 
 
+# --- review MINOR-1 (docs/reviews/eng-t5b-review-gate/defe2dd7c489.md) ------- #
+
+
+def _record(branch: str, reviewed_head: str, verdict: str, reviewer: str) -> str:
+    return "\n".join(
+        [
+            "---",
+            f"branch: {branch}",
+            f"reviewed_head: {reviewed_head}",
+            "author: author-session",
+            f"reviewer: {reviewer}",
+            f"verdict: {verdict}",
+            "---",
+            "",
+            "Adversarial review body.",
+            "",
+        ]
+    )
+
+
+def _two_parallel_reviewed_lines(orch: Orch, verdict_a: str, verdict_b: str):
+    """Two empty commits A and B on parallel lines from the same code, merged, then
+    one commit adding a record for each: both are the same distance from head, and
+    the tree the two records cover is identical (probes N8/N8b)."""
+    wt, code = _branch(orch, "eng/x", {"notes/x.md": "x\n"})
+    orch.git("commit", "-q", "--allow-empty", "-m", "line A", cwd=wt)
+    a = orch.git("rev-parse", "HEAD", cwd=wt)
+    orch.git("checkout", "-q", "--detach", code, cwd=wt)
+    orch.git("commit", "-q", "--allow-empty", "-m", "line B", cwd=wt)
+    b = orch.git("rev-parse", "HEAD", cwd=wt)
+    orch.git("checkout", "-q", "eng/x", cwd=wt)
+    orch.git("merge", "-q", "--no-ff", "--no-edit", b, cwd=wt)
+    orch.commit(
+        wt,
+        {
+            f"docs/reviews/eng-x/{a[:12]}.md": _record("eng/x", a, verdict_a, "rev-a"),
+            f"docs/reviews/eng-x/{b[:12]}.md": _record("eng/x", b, verdict_b, "rev-b"),
+        },
+        "two reviews",
+    )
+    head = orch.git("rev-parse", "HEAD", cwd=wt)
+    dist = {r: orch.git("rev-list", "--count", f"{r}..{head}", cwd=wt) for r in (a, b)}
+    assert dist[a] == dist[b], dist  # the tie the finding is about
+    return a, b
+
+
+@pytest.mark.parametrize(
+    "verdicts", [("DO NOT MERGE", "MERGE"), ("MERGE", "DO NOT MERGE")]
+)
+def test_records_at_equal_distance_with_different_verdicts_are_refused(orch, verdicts):
+    """Review MINOR-1: `min(usable)` broke a distance tie on the file name, i.e. on
+    the reviewed sha's hex prefix, so DO NOT MERGE vs MERGE on the same code was
+    decided by sha order (probe N8: each verdict won at least once in 4 runs). The
+    gate now fails closed, whichever record sorts first."""
+    _two_parallel_reviewed_lines(orch, *verdicts)
+    _refused(orch, "eng/x", 3, "conflicting review records")
+
+
+def test_records_at_equal_distance_with_the_same_verdict_merge(orch):
+    _two_parallel_reviewed_lines(orch, "MERGE", "MERGE")
+    proc = orch.run("merge", "eng/x")
+    assert proc.returncode == 0, proc.stderr
+
+
 # --- run/ still needs verification ------------------------------------------ #
 
 

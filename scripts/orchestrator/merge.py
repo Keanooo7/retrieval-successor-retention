@@ -321,7 +321,19 @@ def review_gate(
             + "; ".join(elsewhere)
             + f" -- expected {want}; not merged"
         )
-    _, path, fm = min(usable)  # the record nearest head governs
+    nearest = min(d for d, _, _ in usable)  # the record nearest head governs
+    tied = sorted(u for u in usable if u[0] == nearest)
+    # Review MINOR-1 (docs/reviews/eng-t5b-review-gate/defe2dd7c489.md): a tie in
+    # distance (parallel lines, then a merge) used to be broken on the file name,
+    # i.e. on a sha prefix. Records that tie and disagree fail closed.
+    if len({fm["verdict"] for _, _, fm in tied}) > 1:
+        return Exit.DID_NOT_RUN, (
+            "conflicting review records at the same distance from "
+            f"{head[:12]}: "
+            + "; ".join(f"{p} says {fm['verdict']}" for _, p, fm in tied)
+            + f" -- a record at {head[:12]} decides; not merged"
+        )
+    _, path, fm = tied[0]
     who = f"{path} (reviewer {fm['reviewer']})"
     if fm["verdict"] == "DO NOT MERGE":
         return Exit.FAIL, f"review verdict DO NOT MERGE: {who} -- not merged"
