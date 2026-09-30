@@ -563,6 +563,17 @@ def _env(tmp_path, **extra: str) -> dict[str, str]:
     return clean_env(HOME=str(tmp_path / "home"), **extra)
 
 
+def _shard_logs(work: Path, n: int) -> str:
+    """Every shard's own log, for the failure message: the driver prints only the
+    merged verdicts, and a shard's reason lives in its log (I5: capture it)."""
+    out = []
+    for k in range(n):
+        log = bs.shard_paths(work, k, n).log
+        text = log.read_text() if log.exists() else "<no log>"
+        out.append(f"\n--- shard {k} of {n} log ---\n{text}")
+    return "".join(out)
+
+
 def _run_argv(stub, names, work, merged) -> list[str]:
     """The real driver's ``run`` with 2 shards, on the stub."""
     stub_argv = [sys.executable, str(SHARDS_STUB), "drive", str(stub), "good"]
@@ -681,7 +692,7 @@ def test_sharded_verdicts_equal_the_serial_ones_on_the_stub(stub, tmp_path):
         env=_env(tmp_path),
         timeout=300,
     )
-    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert proc.returncode == 0, proc.stdout + proc.stderr + _shard_logs(work, 2)
     assert json.loads(merged.read_text()) == json.loads(serial.read_text())
     assert _verdicts(json.loads(merged.read_text())) == [
         "PROVEN",
