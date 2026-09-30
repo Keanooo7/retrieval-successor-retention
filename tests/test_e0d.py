@@ -573,6 +573,7 @@ class _FakeLedger:
 
     def command(self, argv, *, exit_code, **kw):
         self.commands.append(exit_code)
+        self.argvs = [*getattr(self, "argvs", []), (argv, kw.get("note", ""))]
 
     def verdict(self, **kw):
         self.v = kw
@@ -1320,6 +1321,129 @@ def test_claims_json_is_written_only_by_a_real_run(e0d, cleared, fake_ledger):
             assert proc.stdout.strip() == c["expected"], c["claim"]
 
 
+def test_the_ledger_records_the_launched_argv(e0d, cleared, fake_ledger, monkeypatch):
+    """RESULTS.md erratum (post-data, provenance only): `commands[].argv` is the
+    command that was launched -- the interpreter and the process's own argv --
+    not a typed `uv run python ...`; a lane-slot wrapper, when the parent process
+    is one, is named in the note. The entry point still resolves to run.py."""
+    import shlex
+
+    monkeypatch.setattr(sys, "argv", ["experiments/e0d/run.py", "--run-id", "argv-t"])
+    monkeypatch.setattr(e0d, "_parent_command", lambda: None)
+    assert int(e0d.main()) == 1
+    argv, note = fake_ledger.last.argvs[-1]
+    assert argv == shlex.join(
+        [sys.executable, "experiments/e0d/run.py", "--run-id", "argv-t"]
+    )
+    assert not argv.startswith("uv run")
+    assert "slot" not in note
+    spec = importlib.util.spec_from_file_location("ledger_real", ROOT / "scripts" / "ledger.py")
+    lm = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lm)
+    assert lm.entry_point(argv) == "experiments/e0d/run.py"
+    # under the slot wrapper, the wrapper is recorded beside the argv
+    slot = ("/x/.venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 3 -- "
+            ".venv/bin/python experiments/e0d/run.py")  # fmt: skip
+    monkeypatch.setattr(e0d, "_parent_command", lambda: slot)
+    assert int(e0d.main()) == 1
+    argv2, note2 = fake_ledger.last.argvs[-1]
+    assert argv2 == argv and slot in note2
+    # an in-process call says so rather than passing pytest's argv off as the run's
+    monkeypatch.setattr(e0d, "_parent_command", lambda: None)
+    assert int(e0d.main(["--run-id", "argv-t2"])) == 1
+    argv3, note3 = fake_ledger.last.argvs[-1]
+    assert argv3 == shlex.join([sys.executable, e0d.EXPERIMENT, "--run-id", "argv-t2"])
+    assert "in-process" in note3
+
+
+def test_the_manifest_names_amendment_3(e0d, cleared, fake_ledger):
+    """RESULTS.md provenance note: the run executed under A3 (f5a8752 is an
+    ancestor of 2fd9368); the manifest's amendment label says so."""
+    cleared["score"] = "good"
+    assert int(e0d.main([])) == 0
+    lab = fake_ledger.last.cfg["prereg_amendment"]
+    assert "Amendment 3 (f5a8752)" in lab and "Amendment 2 (8c63ecd)" in lab
+
+
+def _seed_cache(fake_ledger, run_id="e0d"):
+    return fake_ledger.root / run_id / "seed-cache"
+
+
+def test_each_seed_is_persisted_as_it_completes_and_reused_on_restart(
+    e0d, cleared, fake_ledger, monkeypatch
+):
+    """Crash safety (runner only, post-data): a seed's cells and analysis are
+    written atomically as soon as the seed completes; a restart with the same key
+    reuses them and measures only the seeds that were lost. The resumed run's
+    class, labels and statistics equal an uninterrupted run's."""
+    cleared["score"] = "good"
+    assert int(e0d.main(["--run-id", "whole"])) == 0
+    whole = {k: v for k, v in fake_ledger.last.rows.items() if k != "seed_cache"}
+
+    measured = []
+    real = e0d.measure_seed
+
+    def dies_on_seed_1(seed, **kw):
+        measured.append(seed)
+        if seed == 1:
+            raise KeyboardInterrupt  # a kill mid-run
+        return real(seed, **kw)
+
+    monkeypatch.setattr(e0d, "measure_seed", dies_on_seed_1)
+    assert int(e0d.main(["--run-id", "killed"])) == 3
+    cache = _seed_cache(fake_ledger, "killed")
+    assert sorted(p.name for p in cache.glob("seed*.pkl")) == ["seed0.pkl"]
+    assert not list(cache.glob("*.tmp*"))  # atomic: nothing half-written left
+
+    measured.clear()
+    monkeypatch.setattr(e0d, "measure_seed", lambda seed, **kw: (measured.append(seed),
+                                                               real(seed, **kw))[1])
+    assert int(e0d.main(["--run-id", "killed"])) == 0
+    assert measured == [1, 2]  # seed 0 reused, not re-measured
+    assert fake_ledger.last.rows["seed_cache"]["reused_seeds"] == [0]
+    assert sorted(p.name for p in cache.glob("seed*.pkl")) == [
+        "seed0.pkl", "seed1.pkl", "seed2.pkl"]  # fmt: skip
+    resumed = {k: v for k, v in fake_ledger.last.rows.items() if k != "seed_cache"}
+    assert json.dumps(resumed, sort_keys=True, default=str) == json.dumps(
+        whole, sort_keys=True, default=str
+    )
+
+
+@pytest.mark.parametrize("field", ["git_sha", "run_py_sha256", "seed", "doc_range"])
+def test_a_seed_cache_whose_key_does_not_match_exits_3(
+    e0d, cleared, fake_ledger, monkeypatch, field
+):
+    """A persisted seed is reused only when its key -- git sha, run.py sha, seed,
+    document range -- matches this run's exactly. Any mismatch is exit 3 before a
+    seed is measured, and the file is left as it was (never deleted)."""
+    import pickle
+
+    cleared["score"] = "good"
+    assert int(e0d.main([])) == 0
+    p = _seed_cache(fake_ledger) / "seed1.pkl"
+    rec = pickle.loads(p.read_bytes())
+    rec["key"][field] = {"git_sha": "0" * 40, "run_py_sha256": "f" * 64, "seed": 7,
+                         "doc_range": [0, 1]}[field]  # fmt: skip
+    p.write_bytes(pickle.dumps(rec))
+    before = p.read_bytes()
+    measured = []
+    monkeypatch.setattr(e0d, "measure_seed", lambda seed, **kw: measured.append(seed))
+    assert int(e0d.main([])) == 3
+    assert fake_ledger.last.rows["control_failed"]["control"] == "RESUME"
+    assert field in fake_ledger.last.rows["control_failed"]["msg"]
+    assert measured == []
+    assert p.read_bytes() == before
+    assert fake_ledger.last.rows.get("e0d.class") is None
+
+
+def test_an_unreadable_seed_cache_exits_3(e0d, cleared, fake_ledger):
+    cleared["score"] = "good"
+    assert int(e0d.main([])) == 0
+    (_seed_cache(fake_ledger) / "seed2.pkl").write_bytes(b"not a pickle")
+    assert int(e0d.main([])) == 3
+    assert fake_ledger.last.rows["control_failed"]["control"] == "RESUME"
+
+
 def test_a_refused_run_writes_no_claims(e0d, monkeypatch, fake_ledger, tmp_path):
     """C8 refuses on a rulings directory without the rulings. (Until 2026-09-29
     this passed no --rulings-dir and relied on the real rulings being absent; with
@@ -2024,6 +2148,31 @@ def test_h_is_the_critical_share_of_the_tied_minima(e0d):
     assert fam["H"] == pytest.approx(0.5)  # (1 + 1/2 + 0) / 3
     assert fam["H_FIFO"] == pytest.approx(1 / 3)
     assert fam["H_age_oracle"] == 0.0
+
+
+def test_h_age_oracle_is_the_min_over_the_ages_present(e0d):
+    """A2.6 `H_age-oracle` (reported, never gating; RESULTS.md erratum, post-data):
+    the best fixed age is chosen among the ages the population holds. Under A1.3
+    rank M - 1 (age 1) is out, so an empty age-1 column must not win the min; on
+    all cells age 1 is present and may. Here every present slot is critical except
+    age 1 everywhere and age 5 at step 2: A1.3 oracle = 2/3, all-cells oracle = 0."""
+    D = np.ones((3, 16))
+    D[:, 15] = 0.0  # rank 15 = age 1: never critical
+    D[2, 11] = 0.0  # rank 11 = age 5: not critical at step 2
+    R = np.random.default_rng(7).random((3, 16))
+    c = _grid_cells(D, R, q=[True] * 3, gap=[40] * 3, docs=[0, 1, 2])
+    a13 = _fam(e0d, c, c["r"], tau=0.5)
+    assert a13["n_t_values"] == [15]
+    assert a13["H_age_oracle"] == pytest.approx(2 / 3)
+    allc = _fam(e0d, c, c["r"], tau=0.5, keep=np.ones(48, dtype=bool))
+    assert allc["H_age_oracle"] == 0.0
+    # a resample reads the same present ages: with step 2's document out, every
+    # present age is critical on every step, so the oracle is 1, not the absent 0
+    pop = e0d.q_population(c, e0d.bos_keep(c, 16), M=16)
+    y = c["d_resample"][pop["idx"]] > 0.5
+    hit = e0d.ArgminHit(c["r"][pop["idx"]], y, np.ones(len(y), dtype=bool), pop)
+    assert hit(np.array([1.0, 1.0, 0.0]))["H_age_oracle"] == 1.0
+    assert hit(np.array([0.0, 0.0, 3.0]))["H_age_oracle"] == 0.0  # age 5 at step 2
 
 
 def test_t17_one_bootstrap_matrix_per_seed(e0d, monkeypatch):
