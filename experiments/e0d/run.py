@@ -1446,7 +1446,12 @@ class ArgminHit:
     value are counted). `h_t` = the critical share of the step's tied minima of r.
     H, H_random (k_t / n_t), H_age-random (pi from r's own tied minima on Q_crit,
     re-estimated per resample), R_H, R_H,uniform, H_FIFO (the oldest slot) and
-    H_age-oracle (the best fixed age)."""
+    H_age-oracle (the best fixed age).
+
+    `H_age-oracle` is the min over the ages the population actually holds: under
+    A1.3 rank M - 1 (age 1) is out, and its empty column is not an age a fixed
+    policy could evict (RESULTS.md erratum, 2026-09-29, post-data and reported
+    only; the 1..M min read 0.0 on every seed there)."""
 
     def __init__(self, score, y, has, pop) -> None:
         ns, step = pop["n_steps"], pop["step"]
@@ -1472,6 +1477,7 @@ class ArgminHit:
         self.kn = k[qc] / pop["n_t"][qc]
         self.step_doc = pop["step_doc"][qc]
         self.fifo = self.Y[:, pop["M"] - 1] if nq else np.zeros(0)
+        self.present = np.unique(pop["age"]) - 1  # column index of each held age
 
     def __call__(self, w_doc=None) -> dict:
         nq = len(self.steps)
@@ -1493,7 +1499,7 @@ class ArgminHit:
             "R_H": H / h_ar if h_ar > 0 else math.nan,
             "R_H_uniform": H / H_random if H_random > 0 else math.nan,
             "H_FIFO": _wavg(self.fifo, w),
-            "H_age_oracle": float(np.min(by_age)),
+            "H_age_oracle": float(np.min(by_age[self.present])),
         }
 
 
