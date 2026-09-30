@@ -55,6 +55,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -449,6 +450,22 @@ def open_pool(
             yield shards
         finally:
             if not keep:
-                for s in shards:
-                    remove_shard(source, s.root)
-                _prune_unlocked(source, pool)
+                teardown(source, pool, shards)
+
+
+def teardown(source: Path, pool: Path, shards: list[Shard]) -> None:
+    """Remove the pool's shards; say what could not be removed, never raise.
+
+    I2 fix round 1 (review BLOCKER-1, second fix): this runs in ``open_pool``'s
+    ``finally``, AFTER every verdict was scored and before ``_report`` writes them.
+    A ``git worktree list`` that failed here used to raise, and the battery refused
+    3 with its finished rows discarded. A worktree left registered is cleanup
+    (``--prune-shards``), not evidence against a verdict.
+    """
+    problems = [e for s in shards if (e := remove_shard(source, s.root))]
+    try:
+        problems += _prune_unlocked(source, pool)
+    except Unisolated as e:
+        problems.append(f"prune: {e}")
+    for p in problems:
+        print(f"SHARD TEARDOWN (verdicts kept; run --prune-shards): {p}", file=sys.stderr)

@@ -12,6 +12,9 @@ worktree-admin lock, leaves exactly the state an in-flight ``worktree add`` leav
 (an admin dir with an empty ``commondir``), holds it briefly, then completes and
 releases. Each battery worktree call made meanwhile must wait for the lock and then
 succeed. Without the lock it reads the half-written entry and dies -- every time.
+
+The last test is the second fix: a teardown that cannot list worktrees must not
+throw away verdicts that were already scored.
 """
 
 from __future__ import annotations
@@ -120,4 +123,27 @@ def test_worktree_admin_remove_waits_for_an_add_in_flight(stub, tmp_path):
         err = iso.remove_shard(stub, wt)  # `failed to read commondir`, left in place
         assert held.done.exists(), "the remove ran while an add was in flight"
     assert err is None and not wt.exists()
+    assert iso._registered(stub) == {stub}
+
+
+def test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts(
+    stub, tmp_path, monkeypatch, capsys
+):
+    """The failure the review found in a shard log: shard 1 scored its mutation,
+    then its teardown's `git worktree list` died on another shard's remove, and the
+    battery refused 3 with the scored rows unwritten."""
+    monkeypatch.setattr(iso, "sync_venv", stub_sync("good"))
+    scored = []
+    with iso.open_pool(stub, iso.pinned_sha(stub), pool=tmp_path / "pool") as (shard,):
+        scored.append("verdict")
+
+        def cannot_list(source):
+            raise iso.Unisolated("git worktree list -> rc=128: fatal: Invalid path")
+
+        monkeypatch.setattr(iso, "_registered", cannot_list)
+    # the body's verdicts survive the pool's exit; the problem is said, not raised
+    assert scored == ["verdict"]
+    assert "SHARD TEARDOWN" in capsys.readouterr().err
+    monkeypatch.undo()
+    assert not shard.root.exists()
     assert iso._registered(stub) == {stub}
