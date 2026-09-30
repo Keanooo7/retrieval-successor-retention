@@ -5,7 +5,8 @@ review record. The record format and the gate are specified in
 `docs/review-records.md`; in short, merging `branch@head` needs
 `docs/reviews/<branch-slug>/<reviewed_head[:12]>.md` on the branch, whose
 `reviewed_head` is `head` or an ancestor of it with only exempt paths
-(`docs/reviews/`, `runs/<id>/verification.json`, `.orchestrator/outbox/`) changed
+(`docs/reviews/<branch-slug>/*.md`, the merging run's own
+`runs/<id>/verification.json`, `.orchestrator/outbox/`) changed
 since, a reviewer who is not the author, and a verdict of MERGE (or MERGE WITH
 FIXES with `fixes_verified_at` an ancestor of head). Missing / stale / malformed
 -> 3 naming what is missing; DO NOT MERGE -> 1.
@@ -99,17 +100,43 @@ def test_a_record_older_than_head_with_a_code_change_since_is_refused(orch):
 def test_exempt_paths_after_the_reviewed_head_do_not_stale_the_record(orch):
     wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
     orch.review(wt, "run/a", head)
+    record = f"docs/reviews/run-a/{head[:12]}.md"
     orch.commit(
         wt,
         {
             "runs/a/verification.json": json.dumps({"status": "ok"}),
             ".orchestrator/outbox/a.md": "status: RETURNED\n",
-            "docs/reviews/run-a/notes.txt": "follow-up\n",
+            # this branch's own record, amended (review MINOR-3 narrowed the
+            # exemption to docs/reviews/<this slug>/*.md; a notes.txt here stales)
+            record: (wt / record).read_text() + "\nFollow-up note.\n",
         },
         "exempt follow-ups",
     )
     proc = orch.run("merge", "a")
     assert proc.returncode == 0, proc.stderr
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "docs/reviews/eng-victim/0123456789ab.md",  # another branch's record
+        "docs/reviews/payload.py",  # not a record, not in any slug
+        "docs/reviews/run-a/payload.py",  # not a record, in this slug
+        "docs/reviews/run-a/notes.txt",
+        "docs/reviews/run-a/sub/0123456789ab.md",  # not read as a record
+    ],
+)
+def test_only_this_branchs_own_review_records_are_exempt(orch, path):
+    """Review MINOR-3 (docs/reviews/eng-t5b-review-gate/defe2dd7c489.md, probe N9):
+    every path under docs/reviews/ was exempt, so after review a branch could add
+    another branch's record, or a non-record file such as docs/reviews/payload.py,
+    and both rode into the night branch unreviewed. Only
+    docs/reviews/<this branch's slug>/*.md is exempt now."""
+    wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
+    orch.review(wt, "run/a", head)
+    orch.commit(wt, {path: "rides in after review\n"}, "after review")
+    _verify(orch)
+    _refused(orch, "a", 3, "review is stale", path)
 
 
 def test_do_not_merge_is_refused_as_a_failure(orch):

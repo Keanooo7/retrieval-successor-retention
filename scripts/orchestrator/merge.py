@@ -206,12 +206,19 @@ def resolve_target(target: str) -> tuple[str | None, str | None, str]:
     return target, (rest if prefix == "run" else None), ""
 
 
-def review_exempt(path: str, run_item: str | None = None) -> bool:
+def review_exempt(path: str, rdir: str, run_item: str | None = None) -> bool:
     """Paths that may change after the reviewed head without staling the record.
     Only the merging `run/<item>`'s OWN verification.json is exempt (review
     MINOR-2): another run's record would ride into the night branch unreviewed and
-    then satisfy gate 1 for that run. No verification.json is exempt off `run/`."""
-    if path.startswith((f"{REVIEW_DIR}/", ".orchestrator/outbox/")):
+    then satisfy gate 1 for that run. No verification.json is exempt off `run/`.
+    Under docs/reviews/, only this branch's own records -- `<rdir>/*.md`, directly
+    in its slug directory -- are exempt (review MINOR-3,
+    docs/reviews/eng-t5b-review-gate/defe2dd7c489.md, probe N9): another branch's
+    record or a non-record file such as docs/reviews/payload.py rode in unreviewed."""
+    if path.startswith(".orchestrator/outbox/"):
+        return True
+    name = path.removeprefix(f"{rdir}/")
+    if name != path and "/" not in name and name.endswith(".md"):
         return True
     return run_item is not None and path == f"runs/{run_item}/verification.json"
 
@@ -365,7 +372,7 @@ def review_gate(
     if diff.returncode != 0:
         return Exit.DID_NOT_RUN, f"git diff {anchor[:12]}..{head[:12]} failed: {who}"
     unreviewed = [
-        p for p in diff.stdout.splitlines() if p and not review_exempt(p, run_item)
+        p for p in diff.stdout.splitlines() if p and not review_exempt(p, rdir, run_item)
     ]
     if unreviewed:
         return Exit.DID_NOT_RUN, (

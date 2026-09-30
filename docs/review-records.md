@@ -3,8 +3,9 @@
 `orchestrator.merge` refuses to merge a branch into `night/<date>` unless the branch
 carries a **committed adversarial-review record**. This file is the format and the
 rule. The code is `review_gate()` in `scripts/orchestrator/merge.py`; the tests are
-`tests/test_orch_merge_review.py`. The battery has five mutations whose names start
-with "merge:" and cover the review gate.
+`tests/test_orch_merge_review.py`. The battery has eight mutations whose names start
+with "merge:" and cover the review gate (five from the gate's first two rounds, three
+from the round-2 minors of `docs/reviews/eng-t5b-review-gate/defe2dd7c489.md`).
 
 These are tech decisions made under the PM's delegation on 2026-09-30 (T5B). They were
 revised on the same day after the adversarial review
@@ -85,7 +86,10 @@ To merge `branch@head`:
    governs.
 7. **Staleness.** `git diff --name-only reviewed_head..head` may change only exempt
    paths:
-   - `docs/reviews/**`
+   - **this branch's own records**, `docs/reviews/<branch-slug>/*.md`, directly in
+     its slug directory. Another branch's record, a subdirectory, or a non-`.md` file
+     under `docs/reviews/` is **not** exempt (review
+     `docs/reviews/eng-t5b-review-gate/defe2dd7c489.md` MINOR-3);
    - `.orchestrator/outbox/**`
    - when the target is `run/<item>`, **that run's own**
      `runs/<item>/verification.json`, and nothing else under `runs/`. On any other
@@ -141,8 +145,8 @@ Any other prefix exits 3.
   matches a git author of `base..head`. It cannot prove that a different session, or
   a different mind, wrote the review. Anyone who can commit to the branch can commit
   a forged record.
-- **Records can be edited after the fact (review MINOR-1).** `docs/reviews/**` is
-  exempt from staleness, so a later commit can edit an existing record, for example
+- **Records can be edited after the fact (review MINOR-1).** A branch's own records
+  (`docs/reviews/<branch-slug>/*.md`) are exempt from staleness, so a later commit can edit an existing record, for example
   flipping `DO NOT MERGE` to `MERGE`, and the gate will accept it. Making records
   append-only would close the accidental case, but it was left as a documented limit
   by decision. Whoever merges should read the record's history

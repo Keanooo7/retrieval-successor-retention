@@ -4596,7 +4596,31 @@ MUTATIONS: tuple[Mutation, ...] = (
         "no adversarial review on record.",
         off_gate_allowed=tuple(
             (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
-            for t in _REVIEW_GATE_REFUSALS
+            for t in (
+                *_REVIEW_GATE_REFUSALS,
+                # the round-2 minors' refusals (docs/reviews/eng-t5b-review-gate/
+                # defe2dd7c489.md MINOR-1..3), listed here because
+                # fix/review-minors-0930 was scoped to the MUTATIONS table
+                *(
+                    "test_records_at_equal_distance_with_different_verdicts_are_"
+                    f"refused[{v}]"
+                    for v in ("verdicts0", "verdicts1")
+                ),
+                *(
+                    f"test_a_repeated_front_matter_key_is_malformed[{k}]"
+                    for k in ("verdict", "reviewer")
+                ),
+                *(
+                    f"test_only_this_branchs_own_review_records_are_exempt[{p}]"
+                    for p in (
+                        "docs/reviews/eng-victim/0123456789ab.md",
+                        "docs/reviews/payload.py",
+                        "docs/reviews/run-a/payload.py",
+                        "docs/reviews/run-a/notes.txt",
+                        "docs/reviews/run-a/sub/0123456789ab.md",
+                    )
+                ),
+            )
         ),
     ),
     Mutation(
@@ -4605,7 +4629,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scripts/orchestrator/merge.py",
         "    unreviewed = [\n"
         "        p for p in diff.stdout.splitlines() if p and not review_exempt(p, "
-        "run_item)\n"
+        "rdir, run_item)\n"
         "    ]\n",
         "    unreviewed = []\n",
         "a review of an early head waves through every commit made after it -- "
@@ -4620,6 +4644,22 @@ MUTATIONS: tuple[Mutation, ...] = (
             for t in (
                 "test_only_the_merging_runs_own_verification_is_exempt",
                 "test_no_verification_json_is_exempt_on_other_prefixes",
+            )
+        )
+        + tuple(
+            (
+                "tests/test_orch_merge_review.py::"
+                f"test_only_this_branchs_own_review_records_are_exempt[{p}]",
+                "review MINOR-3 (defe2dd7c489.md): a path under docs/reviews/ that is "
+                "not this branch's own record is refused by the same staleness diff; "
+                "no diff, no refusal.",
+            )
+            for p in (
+                "docs/reviews/eng-victim/0123456789ab.md",
+                "docs/reviews/payload.py",
+                "docs/reviews/run-a/payload.py",
+                "docs/reviews/run-a/notes.txt",
+                "docs/reviews/run-a/sub/0123456789ab.md",
             )
         ),
     ),
@@ -4696,6 +4736,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        if False:\n            if repeated is not None:\n",
         "review MINOR-2 (probe N6): a record that reads `verdict: DO NOT MERGE` at "
         "the top and `verdict: MERGE` below it merges.",
+    ),
+    Mutation(
+        "merge: every path under docs/reviews/ is staleness-exempt",
+        "test_only_this_branchs_own_review_records_are_exempt",
+        "scripts/orchestrator/merge.py",
+        '    if name != path and "/" not in name and name.endswith(".md"):\n',
+        '    if path.startswith("docs/reviews/"):\n',
+        "review MINOR-3 (probe N9): after review, another branch's record or a "
+        "non-record file such as docs/reviews/payload.py rides into the night "
+        "branch without staling the record.",
     ),
     Mutation(
         "battery-union: a one-sided tail change keeps ours",
