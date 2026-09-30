@@ -5961,6 +5961,12 @@ def reset(shard: iso.Shard) -> None:
     iso.reset_shard(shard)
 
 
+# I6 (PLAN-v4 §4). Imported here, not with the imports above MUTATIONS, so that the
+# whole I6 diff outside the table is in this file's tail: `battery_union` refuses a
+# merge in which both sides changed the head.
+import battery_env  # noqa: E402
+
+
 def main() -> Exit:
     ap = ArgumentParser()
     ap.add_argument(
@@ -6018,6 +6024,9 @@ def main() -> Exit:
         print("UNKNOWN: the battery has no mutations to run", file=sys.stderr)
         return Exit.UNKNOWN
 
+    # 🔴 I6: every RSR_* variable is recorded, and an undeclared one is DID NOT RUN
+    # (3) here -- before the anchor check and before any suite.
+    print(battery_env.header(battery_env.check()))
     threads, source = suite_threads()
     print(
         f"suite threads: {threads if threads is not None else 'uncapped'} "
@@ -6142,7 +6151,7 @@ def _row(m: Mutation, failing, did_not_run: str | None) -> dict:
 def _report(args, rows: list[dict]) -> Exit:
     if args.json:
         # A run record: DID_NOT_RUN rows belong in it.
-        args.json.write_text(json.dumps(rows, indent=2) + "\n")
+        args.json.write_text(json.dumps(battery_env.stamp(rows), indent=2) + "\n")
     did_not_run = [r for r in rows if r["verdict"] == "DID_NOT_RUN"]
     if args.markdown and did_not_run:
         # 🔴 The committed table is a record of verdicts; a mutation that did not

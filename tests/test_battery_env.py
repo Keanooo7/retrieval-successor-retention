@@ -159,9 +159,8 @@ def test_inventory_every_rsr_name_the_tree_reads_is_declared():
     """The declared list is measured, not copied: a name that appears in ``src/``,
     ``scripts/`` or ``experiments/`` and is not declared fails here, naming where."""
     found = battery_env.inventory(_REPO)
-    assert len(found) > 12, (
-        found
-    )  # the red team's count; a scan that finds less is broken
+    # 12 was the red team's count (m-2); a scan that finds fewer is broken
+    assert len(found) > 12, found
     assert "RSR_BATTERY_THREADS" in found and "RSR_LEDGER" in found
     missing = {
         name: sites[:3]
@@ -215,9 +214,18 @@ def test_launch_through_the_slot_wrapper_is_not_refused(tmp_path):
         "RSR_ORCH_ROOT": str(root),
         "PYTHONPATH": str(_REPO / "scripts"),
     }
+    child = [sys.executable, "-c", code, str(_REPO / "scripts")]
     r = subprocess.run(
-        [sys.executable, "-m", "orchestrator.slot", "run", "--lane", "battery", "--"]
-        + [sys.executable, "-c", code, str(_REPO / "scripts")],
+        [
+            sys.executable,
+            "-m",
+            "orchestrator.slot",
+            "run",
+            "--lane",
+            "battery",
+            "--",
+            *child,
+        ],
         env=env,
         cwd=root,
         capture_output=True,
