@@ -4822,6 +4822,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "FileNotFoundError and four tests ERROR instead of running.",
     ),
     Mutation(
+        "battery-union: a new constant is anchored on any line naming its successor",
+        "test_a_new_constant_is_anchored_on_its_successors_definition",
+        "scripts/battery_union.py",
+        r'    m = re.search(rf"^{re.escape(succ)}(?:: [^\n=]+)? = \(\n", h, re.M)',
+        r'    m = re.search(rf"^{re.escape(succ)}\b", h, re.M)',
+        "review 66d1dfa5c440 MINOR-1: a column-0 head-code line that starts with the "
+        "successor's name (an annotation-only declaration, `_A[0] = ...`) above its "
+        "definition gets the new constant inserted above it, silently.",
+    ),
+    Mutation(
         "b2-psi-probe: age leaks into psi-hat",
         "test_no_age_in_psi_hat_permuting_written_at_and_step_changes_nothing",
         "experiments/b2-psi-probe/run.py",

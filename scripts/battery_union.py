@@ -300,7 +300,9 @@ def _insert_new_const(h: str, k: str, t: Parts, o: Parts) -> str:
     succ = next((s for s in later if s in o.consts), None)
     if succ is None:
         return h + t.consts[k] + "\n"
-    m = re.search(rf"^{re.escape(succ)}\b", h, re.M)
+    # the definition line itself, not any column-0 line that starts with the name
+    # (review 66d1dfa5c440 MINOR-1); the same shape _CONST keys on
+    m = re.search(rf"^{re.escape(succ)}(?:: [^\n=]+)? = \(\n", h, re.M)
     if m is None:  # cannot happen for a constant split() found; refuse, don't guess
         raise Refused([f"constant {succ} not found in the merged head"])
     text = t.consts[k] + t.const_gap.get(k, "\n")

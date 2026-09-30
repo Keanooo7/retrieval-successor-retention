@@ -317,6 +317,20 @@ def test_a_constant_new_in_theirs_lands_where_theirs_put_it():
     assert res.text.index("_R:") < res.text.index("_A_COUPLING")
 
 
+def test_a_new_constant_is_anchored_on_its_successors_definition():
+    """Review 66d1dfa5c440 MINOR-1: the successor was found by the first column-0
+    line starting with its name, so a head-code line such as an annotation-only
+    `_A_COUPLING: tuple[str, ...]` above the definition got the new constant
+    inserted above it -- silently, since the output still parses and counts."""
+    decl = "_A_COUPLING: tuple[str, ...]\n\n"
+    head_b = _HEAD.replace("_A_COUPLING = (", decl + "_A_COUPLING = (")
+    head_t = head_b.replace("_A_COUPLING = (", _ANNOTATED + "_A_COUPLING = (")
+    head_o = head_b.replace("import os", "import os\nimport signal")
+    res = bu.union(_src(head=head_b), _src(head=head_o), _src(head=head_t))
+    assert res.new_consts == ["_R"]
+    assert res.text == _src(head=head_t.replace("import os", "import os\nimport signal"))
+
+
 # -- constant deletions (review MINOR-1) ------------------------------------------
 
 _HEAD_NO_A = _HEAD.replace('_A_COUPLING = (\n    "a",\n)\n\n', "")
