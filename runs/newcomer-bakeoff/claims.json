@@ -1,0 +1,117 @@
+[
+  {
+    "claim": "DQ1 (grace over psi-C) class",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(R['decision.DQ1']['class'])\"",
+    "expected": "NO"
+  },
+  {
+    "claim": "DQ1 per-seed labels by g",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(R['decision.DQ1']['labels'])\"",
+    "expected": "{'1': ['WORSE', 'WORSE', 'SAME'], '2': ['SAME', 'WORSE', 'SAME'], '4': ['SAME', 'UNRESOLVED', 'SAME']}"
+  },
+  {
+    "claim": "DQ2 ((d) R1 position) class and per-seed labels",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print((R['decision.DQ2']['class'], R['decision.DQ2']['per_seed']))\"",
+    "expected": "('INTERMEDIATE', ['BETWEEN', 'NEAR-C', 'INDISTINGUISHABLE'])"
+  },
+  {
+    "claim": "DQ3 (harm travels with counterfactual target) class and harm seeds",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print((R['decision.DQ3']['class'], R['decision.DQ3']['harm_seeds']))\"",
+    "expected": "('YES', [0, 1])"
+  },
+  {
+    "claim": "B2 replication class on EVAL_NB (non-binding)",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print((R['decision.replication']['class'], R['decision.replication']['psiU'], R['decision.replication']['psiC']))\"",
+    "expected": "('HARMFUL', ['LOSS', 'LOSS', 'EQUIV'], ['EQUIV', 'EQUIV', 'EQUIV'])"
+  },
+  {
+    "claim": "seed 0 per-arm \u00a79.5 outcome labels",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print({a: o['label'] for a, o in R['seed0.outcome'].items()})\"",
+    "expected": "{'psiU': 'LOSS', 'graceU1': 'LOSS', 'graceU2': 'EQUIV', 'graceU4': 'EQUIV', 'psiU+': 'LOSS', 'psiC': 'EQUIV', 'psiC+': 'EQUIV', 'psiR1': 'UNRESOLVED', 'psiR1L1': 'LOSS'}"
+  },
+  {
+    "claim": "seed 0 psi-U age-1 eviction share",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(round(R['seed0.readouts.psiU']['age1_share'], 4))\"",
+    "expected": "0.3688"
+  },
+  {
+    "claim": "seed 0 grace flip shares g=1,2,4",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print([round(R['seed0.readouts.graceU'+str(g)]['grace_flip_share'], 4) for g in (1, 2, 4)])\"",
+    "expected": "[0.3011, 0.4797, 0.6883]"
+  },
+  {
+    "claim": "seed 0 C5: C@0.9 refit bit-identical to B2",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(R['fit.seed0']['controls']['C5']['w_bit_identical'])\"",
+    "expected": "True"
+  },
+  {
+    "claim": "seed 0 C6: FIT_VAL accuracies equal B2's",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(all(v['equal'] for v in R['fit.seed0']['controls']['C6'].values()))\"",
+    "expected": "True"
+  },
+  {
+    "claim": "seed 1 per-arm \u00a79.5 outcome labels",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print({a: o['label'] for a, o in R['seed1.outcome'].items()})\"",
+    "expected": "{'psiU': 'LOSS', 'graceU1': 'LOSS', 'graceU2': 'LOSS', 'graceU4': 'EQUIV', 'psiU+': 'LOSS', 'psiC': 'EQUIV', 'psiC+': 'EQUIV', 'psiR1': 'EQUIV', 'psiR1L1': 'LOSS'}"
+  },
+  {
+    "claim": "seed 1 psi-U age-1 eviction share",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(round(R['seed1.readouts.psiU']['age1_share'], 4))\"",
+    "expected": "0.2338"
+  },
+  {
+    "claim": "seed 1 grace flip shares g=1,2,4",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print([round(R['seed1.readouts.graceU'+str(g)]['grace_flip_share'], 4) for g in (1, 2, 4)])\"",
+    "expected": "[0.2064, 0.3686, 0.5858]"
+  },
+  {
+    "claim": "seed 1 C5: C@0.9 refit bit-identical to B2",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(R['fit.seed1']['controls']['C5']['w_bit_identical'])\"",
+    "expected": "True"
+  },
+  {
+    "claim": "seed 1 C6: FIT_VAL accuracies equal B2's",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(all(v['equal'] for v in R['fit.seed1']['controls']['C6'].values()))\"",
+    "expected": "True"
+  },
+  {
+    "claim": "seed 2 per-arm \u00a79.5 outcome labels",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print({a: o['label'] for a, o in R['seed2.outcome'].items()})\"",
+    "expected": "{'psiU': 'EQUIV', 'graceU1': 'EQUIV', 'graceU2': 'EQUIV', 'graceU4': 'EQUIV', 'psiU+': 'EQUIV', 'psiC': 'EQUIV', 'psiC+': 'EQUIV', 'psiR1': 'EQUIV', 'psiR1L1': 'EQUIV'}"
+  },
+  {
+    "claim": "seed 2 psi-U age-1 eviction share",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(round(R['seed2.readouts.psiU']['age1_share'], 4))\"",
+    "expected": "0.4622"
+  },
+  {
+    "claim": "seed 2 grace flip shares g=1,2,4",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print([round(R['seed2.readouts.graceU'+str(g)]['grace_flip_share'], 4) for g in (1, 2, 4)])\"",
+    "expected": "[0.344, 0.5383, 0.7317]"
+  },
+  {
+    "claim": "seed 2 C5: C@0.9 refit bit-identical to B2",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(R['fit.seed2']['controls']['C5']['w_bit_identical'])\"",
+    "expected": "True"
+  },
+  {
+    "claim": "seed 2 C6: FIT_VAL accuracies equal B2's",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print(all(v['equal'] for v in R['fit.seed2']['controls']['C6'].values()))\"",
+    "expected": "True"
+  },
+  {
+    "claim": "T0 shasum -c rc and OK count at start and end",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r['value'] for r in json.load(open('runs/newcomer-bakeoff/ledger.json'))['rows']};print((R['T0.start']['shasum'], R['T0.end']['shasum']))\"",
+    "expected": "({'rc': 0, 'n_ok': 435, 'ok': True}, {'rc': 0, 'n_ok': 435, 'ok': True})"
+  },
+  {
+    "claim": "RESULTS.md is exactly what results_report.py renders from the ledger",
+    "command": ".venv/bin/python experiments/newcomer-bakeoff/results_report.py --check; echo rc=$?",
+    "expected": "rc=0"
+  },
+  {
+    "claim": "the bake-off unit tests pass",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 2 -- .venv/bin/pytest -p no:cacheprovider -q tests/test_newcomer_bakeoff.py",
+    "expected": "passed=33 failed=0 skipped=0 errors=0"
+  }
+]
