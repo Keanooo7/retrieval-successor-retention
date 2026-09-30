@@ -147,3 +147,28 @@ def test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts(
     monkeypatch.undo()
     assert not shard.root.exists()
     assert iso._registered(stub) == {stub}
+
+
+def test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts(
+    stub, tmp_path, monkeypatch, capsys
+):
+    """Review 2 MINOR-1: `remove_shard` now takes the admin lock, whose path comes
+    from `common_dir()`, which raises. That raise must not escape the teardown
+    over scored rows either (a moved invoking tree, a missing git, an OSError on
+    the lock file)."""
+    monkeypatch.setattr(iso, "sync_venv", stub_sync("good"))
+    scored = []
+    with iso.open_pool(stub, iso.pinned_sha(stub), pool=tmp_path / "pool") as (shard,):
+        scored.append("verdict")
+
+        def no_common_dir(root):
+            raise iso.Unisolated("git rev-parse --git-common-dir -> rc=128: fatal")
+
+        monkeypatch.setattr(iso, "common_dir", no_common_dir)
+    assert scored == ["verdict"]
+    err = capsys.readouterr().err
+    assert "SHARD TEARDOWN" in err and "remove" in err
+    monkeypatch.undo()
+    # left registered: the documented cleanup still works
+    assert iso.remove_shard(stub, shard.root) is None
+    assert iso._registered(stub) == {stub}

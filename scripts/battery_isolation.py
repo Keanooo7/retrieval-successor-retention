@@ -377,7 +377,12 @@ def make_shard(source: Path, pool: Path, index: int, sha: str) -> Shard:
 
 
 def remove_shard(source: Path, path: Path) -> str | None:
-    """Unregister and remove one shard worktree; returns an error line or None."""
+    """Unregister and remove one shard worktree; returns an error line or None.
+
+    Raises `Unisolated` (or `OSError`) when the worktree-admin lock cannot be taken
+    -- ``common_dir()`` failing, or the lock file not opening. `teardown` catches
+    both; any other caller is before a verdict, where refusing is right.
+    """
     proc = admin_git(source, "worktree", "remove", "--force", str(path))
     if proc.returncode != 0 and path.exists():
         return f"git worktree remove {path}: {proc.stderr.strip()}"
@@ -462,10 +467,21 @@ def teardown(source: Path, pool: Path, shards: list[Shard]) -> None:
     3 with its finished rows discarded. A worktree left registered is cleanup
     (``--prune-shards``), not evidence against a verdict.
     """
-    problems = [e for s in shards if (e := remove_shard(source, s.root))]
+    problems = []
+    for s in shards:
+        # Review 2 MINOR-1: `remove_shard` takes the admin lock, whose path comes
+        # from `common_dir()` -- which raises. Caught per shard rather than by
+        # resolving the lock path once in `open_pool`: that would still leave the
+        # lock file's open() and the git call itself able to raise here.
+        try:
+            err = remove_shard(source, s.root)
+        except (Unisolated, OSError) as exc:
+            err = f"remove {s.root}: {exc}"
+        if err:
+            problems.append(err)
     try:
         problems += _prune_unlocked(source, pool)
-    except Unisolated as e:
+    except (Unisolated, OSError) as e:
         problems.append(f"prune: {e}")
     for p in problems:
         print(f"SHARD TEARDOWN (verdicts kept; run --prune-shards): {p}", file=sys.stderr)
