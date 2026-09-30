@@ -1,0 +1,40 @@
+{
+  "checkpoint_sha256": {
+    "2500.0": "26c4162e7dc6ef1f80dffa451e4ee75c56360bc94227533b38a45b62003e3176",
+    "2500.1": "327c3facde61ef9a7f4b9fcaeb31efcf40ab36d65a5d584ec97637db334bdadd",
+    "2500.2": "74b026f1dd3fe59eb473e501c37ed9bb7d836276270ec875939e5654d8e86ddd",
+    "3000.0": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+    "3000.1": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+    "3000.2": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8"
+  },
+  "checkpoints": [
+    2500,
+    3000
+  ],
+  "child_threads": 1,
+  "expected": "capture ~1-4 s/doc at 1 thread; U=1128 and C=632 rows per doc; eigh at p=16640 minutes, not hours",
+  "falsifier": "NONE: sizing only (PREREG fence item 1 and 2)",
+  "gram_docs": 16,
+  "gram_threads": 8,
+  "n_arm_docs": 8,
+  "n_docs": 32,
+  "parallel_children": 6,
+  "prereg": "experiments/b2-psi-probe/PREREG.md",
+  "prereg_commits": {
+    "amendment1": "2ec60dd",
+    "b0_addendum": "99a6626",
+    "base": "e5ab398"
+  },
+  "range": "FIT_VAL",
+  "range_ids": [
+    936000,
+    937024
+  ],
+  "run_id": "b2-psi-probe-sizing",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "source": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream"
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "claim": "Sizing ledger status ok, run at 9b76963, seeds 0,1,2",
+    "command": ".venv/bin/python -c \"import json; d=json.load(open('runs/b2-psi-probe-sizing/ledger.json')); print(d['status'], d['provenance']['git_sha'][:7], d['seeds_actually_run'])\"",
+    "expected": "ok 9b76963 [0, 1, 2]"
+  },
+  {
+    "claim": "Every FIT_VAL document has 1128 U rows and 632 C rows at both checkpoints",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x for x in json.load(open('runs/b2-psi-probe-sizing/ledger.json'))['rows']}; print([r[k]['samples'] for k in ('ckpt3000.rows_U_per_doc','ckpt3000.rows_C_per_doc','ckpt2500.rows_U_per_doc','ckpt2500.rows_C_per_doc')])\"",
+    "expected": "[[1128.0, 1128.0, 1128.0], [632.0, 632.0, 632.0], [1128.0, 1128.0, 1128.0], [632.0, 632.0, 632.0]]"
+  },
+  {
+    "claim": "Mean capture cost per FIT_VAL document at ckpt3000 is ~3.05 s (1 thread, 6 concurrent children)",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x for x in json.load(open('runs/b2-psi-probe-sizing/ledger.json'))['rows']}; print([round(x,2) for x in r['ckpt3000.capture_s_per_doc.mean']['samples']])\"",
+    "expected": "[3.04, 3.05, 3.05]"
+  },
+  {
+    "claim": "One Gram eigendecomposition at p=16640, 8 threads, takes ~263 s and peaks at ~9.6 GB RSS",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x for x in json.load(open('runs/b2-psi-probe-sizing/ledger.json'))['rows']}; print(round(r['gram.eigh_seconds']['value']), round(r['gram.peak_rss_gb']['value'],1), r['gram.p']['value'])\"",
+    "expected": "263 9.6 16640"
+  },
+  {
+    "claim": "N_F = ceil(10 p / 632) = 264 at d = 128",
+    "command": ".venv/bin/python -c \"import math; print(math.ceil(10*(128*128+2*128)/632))\"",
+    "expected": "264"
+  },
+  {
+    "claim": "T0 manifest verified 435/435 at start and end of the sizing run",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x for x in json.load(open('runs/b2-psi-probe-sizing/ledger.json'))['rows']}; print(r['T0.start']['value']['n'], r['T0.start']['value']['n_bad'], r['T0.end']['value']['n'], r['T0.end']['value']['n_bad'])\"",
+    "expected": "435 0 435 0"
+  },
+  {
+    "claim": "B2's ranges clear every used range incl. E0d [262144, 263168) and do not alias across seeds",
+    "command": ".venv/bin/python experiments/b2-psi-probe/run.py check 2>/dev/null; echo rc=$?",
+    "expected": "{\"problems\": []}\nrc=0"
+  },
+  {
+    "claim": "The b2 unit suite passes (70 tests)",
+    "command": "RSR_TEST_COUNT=/tmp/b2v-count.json PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 2 -- .venv/bin/pytest -p no:cacheprovider -q tests/test_b2_psi_probe.py | tail -1",
+    "expected": "passed=70 failed=0 skipped=0 errors=0"
+  },
+  {
+    "claim": "Recapturing FIT_VAL docs 936000-1 at ckpt3000 seed 1 reproduces 1128/632 rows and identity probes <= 1e-6",
+    "command": "RSR_B2_THREADS=1 PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/b2-psi-probe/run.py size-child --checkpoint 3000 --seed 1 --out /tmp/b2v/c.json --n-docs 2 --n-arm-docs 1 >/dev/null 2>&1; .venv/bin/python -c \"import json; v=json.load(open('/tmp/b2v/c.json')); print(v['rows'], max(v['identity_worst'].values())<=1e-6)\"",
+    "expected": "{'U': [1128, 1128], 'C': [632, 632]} True"
+  },
+  {
+    "claim": "eval refuses (exit 3) while N_E is TBD-3",
+    "command": ".venv/bin/python experiments/b2-psi-probe/run.py eval >/dev/null 2>&1; echo rc=$?",
+    "expected": "rc=3"
+  }
+]
