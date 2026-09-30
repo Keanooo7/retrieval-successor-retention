@@ -502,8 +502,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "LRU state back in MemoryState.accum",
         "test_lru_and_fifo_choose_different_slots_in_a_real_eviction_loop",
         "src/rsr/baselines/lru.py",
-        "        self._last_used[winner] = step",
-        "        slots.accum.setdefault('lru', {})[winner] = step",
+        "        self._last_used.setdefault(slots.row, {})[occupant] = step",
+        "        slots.accum.setdefault('lru', {})[occupant] = step",
         "gauntlet 0.4: LRU silently becomes FIFO",
         off_gate_allowed=(
             (
@@ -518,6 +518,20 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "state; moving it into MemoryState.accum is exactly what that test "
                 "is checking cannot happen",
             ),
+            (
+                "tests/test_on_write_slot.py::test_lru_state_is_per_batch_row",
+                "2026-09-29: with recency in the per-step accum no record survives "
+                "to select_eviction, so row B falls back to write order and the "
+                "per-row assertion fails -- LRU losing all cross-step state, seen "
+                "from the per-row test",
+            ),
+            (
+                "tests/test_on_write_slot.py::"
+                "test_lru_recency_follows_the_occupant_through_compaction",
+                "2026-09-29: the step-3 use of occupant 1 is forgotten by step 4, "
+                "so LRU evicts it as FIFO would -- the same lost cross-step state, "
+                "seen from the compaction test",
+            ),
         ),
     ),
     Mutation(
@@ -531,6 +545,30 @@ MUTATIONS: tuple[Mutation, ...] = (
         "max(written_at, last_used) and a stale record is always older than the new "
         "occupant's write step, so the hook is defensive for LRU and load-bearing "
         "for H2O. Recorded in the table rather than papered over.",
+    ),
+    Mutation(
+        "on_write is told the victim index again",
+        "test_on_write_receives_the_newcomers_slot_after_an_eviction",
+        "src/rsr/model/tg/policy_loop.py",
+        "                    policy.on_write(memory_state(mem, t, row), slot, t)",
+        "                    policy.on_write(memory_state(mem, t, row), "
+        "int(victim[row]), t)",
+        "2026-09-29, gauntlet 0.4 one level down: `write_at` compacts behind the "
+        "victim and writes the newcomer at M-1 (§3.1, ADR-0006), so after the "
+        "write the victim index names a different occupant -- and on an underfull "
+        "row it is the placeholder 0. Any policy keying state on `slot` (LRU, "
+        "H2O, E1's per-slot baselines) would update the wrong slot. The loop's "
+        "own written_at guard checks `slot`, not the argument actually passed, so "
+        "it cannot catch this mutation; only the recording-policy test does.",
+        off_gate_allowed=(
+            (
+                "tests/test_on_write_slot.py::"
+                "test_on_write_receives_the_newly_filled_slot_on_a_non_full_row",
+                "the same call site: the old call passed the placeholder 0 on an "
+                "underfull row, which is the other half of the defect this gate "
+                "names",
+            ),
+        ),
     ),
     Mutation(
         "scope-free MEASURED read leaks again",

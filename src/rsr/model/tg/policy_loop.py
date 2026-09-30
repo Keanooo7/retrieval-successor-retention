@@ -42,6 +42,7 @@ __all__ = [
     "CrossCapture",
     "cross_capture",
     "memory_state",
+    "newcomer_slot",
     "run_policy_loop",
     "trace_for_row",
     "write_at",
@@ -62,6 +63,22 @@ positions are excluded because their residual stream is discarded.
 changes only the *unnormalised* `contribution()` diagnostic. **EOS-only does not
 cancel** and is the real alternative; ADR-0008 says what would distinguish them.
 """
+
+
+def newcomer_slot(valid: Tensor) -> Tensor:
+    """`[B]` the index `write_at` writes the newcomer to, given the PRE-write mask.
+
+    A full row compacts behind its victim and the newcomer takes the last slot,
+    `M - 1`; an underfull row appends at `k`, its occupied count. This is the
+    single source of that rule -- `write_at` calls it, and `run_policy_loop`
+    passes its value to `policy.on_write`. **Not the victim index**: until
+    2026-09-29 the loop passed `victim[row]`, which after compaction names a slot
+    now holding a *different* occupant (and is the placeholder 0 on an underfull
+    row), so any policy keying state on `slot` updated the wrong slot.
+    """
+    m = valid.shape[-1]
+    k = valid.to(torch.int64).sum(dim=-1)
+    return torch.where(k >= m, torch.full_like(k, m - 1), k)
 
 
 def write_at(
@@ -97,7 +114,7 @@ def write_at(
     valid_base = torch.where(full.unsqueeze(-1), valid_shift, valid)
     step_base = torch.where(full.unsqueeze(-1), step_shift, mem.step)
 
-    slot = torch.where(full, torch.full_like(k, m - 1), k)
+    slot = newcomer_slot(valid)
     onehot = torch.nn.functional.one_hot(slot, m).to(kv.dtype)
     kv_new = kv_base * (1.0 - onehot.unsqueeze(-1)) + srep.unsqueeze(
         1
@@ -125,6 +142,7 @@ def memory_state(mem: Memory, step: int, row: int = 0) -> MemoryState:
         written_at=mem.step[row].clone(),
         live=mem.valid[row].clone(),
         step=step,
+        row=row,
     )
 
 
@@ -365,10 +383,20 @@ def run_policy_loop(
         victim = torch.tensor(victims, device=device, dtype=torch.long)
 
         if cfg.use_memory:
+            # The newcomer's slot is fixed by the PRE-write occupancy; after
+            # `write_at` compacts, `victim[row]` holds someone else (§3.1, ADR-0006).
+            landed = newcomer_slot(mem.valid)
             mem = write_at(mem, srep_mem, write, victim, t)
             for row in range(batch):
                 if bool(write[row]):
-                    policy.on_write(memory_state(mem, t, row), int(victim[row]), t)
+                    slot = int(landed[row])
+                    if int(mem.step[row, slot]) != t:  # gauntlet 0.4, one level down
+                        raise RuntimeError(
+                            f"on_write would name slot {slot} in row {row} at step "
+                            f"{t}, which holds the gestalt written at "
+                            f"{int(mem.step[row, slot])}"
+                        )
+                    policy.on_write(memory_state(mem, t, row), slot, t)
 
         if cfg.bos_replacement_mode == "copy":
             bos_ctx = (
