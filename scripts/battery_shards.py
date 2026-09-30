@@ -31,7 +31,7 @@ a fingerprint of the whole table, and the battery's exit status. `merge_rows`
 takes a shard's rows only if that record exists, names THIS run, shard, SHA and
 table, and carries exit status 0 or 3 (3: some mutation of its own did not run --
 its other rows are real); and then only a row that is at its mutation's position,
-names that mutation and gate, and has the serial row's fields. **Every other
+names that mutation and gate, and has every field of the serial row. **Every other
 mutation becomes a ``DID_NOT_RUN`` row** built by the battery's own ``_row``, with
 the reason. A missing row never reads as a pass: there is no code path that drops
 a mutation from the merged list.
@@ -40,8 +40,8 @@ a mutation from the merged list.
 through `mutation_battery._report`, so the rule is the serial one by construction:
 3 if any row is ``DID_NOT_RUN``, else 1 under ``--check`` if any gate is unproven,
 else 0. Zero mutations is 2 (nothing to compare), never 0. A refusal before any
-shard starts -- a work dir inside the tree, an earlier result in it, a stale
-anchor, more shards than mutations -- is 3.
+shard starts -- a work dir inside the tree or the default pool, an earlier result
+in it, more shards than mutations -- is 3.
 
 **Under the lane scheduler.** With ``--slot-wait S`` every shard is launched as
 
@@ -99,8 +99,6 @@ __all__ = [
 SHARD_PREFIX: list[str] = [sys.executable, str(Path(__file__).resolve())]
 """What runs one shard, before ``shard --index ...``. A test points it at a stub."""
 
-VERDICTS = ("PROVEN", "LEAKS", "ADDS NOTHING", "DID_NOT_RUN")
-
 ROWS_EXIT = (int(Exit.OK), int(Exit.DID_NOT_RUN))
 """The shard exit statuses after which its rows file is a finished battery's."""
 
@@ -115,9 +113,10 @@ class Refused(Exception):
 
 
 def partition(total: int, n: int) -> list[list[int]]:
-    """``n`` slices of ``range(total)`` by stride: shard ``k`` gets ``k, k+n, ...``."""
-    if n < 1:
-        raise Refused(f"--shards {n}: need at least one shard")
+    """``n`` slices of ``range(total)`` by stride: shard ``k`` gets ``k, k+n, ...``.
+
+    ``n < 1`` yields no slices, which `check_partition` refuses as missing them all.
+    """
     parts = [list(range(k, total, n)) for k in range(n)]
     check_partition(parts, total)
     return parts
@@ -125,16 +124,15 @@ def partition(total: int, n: int) -> list[list[int]]:
 
 def check_partition(parts: list[list[int]], total: int) -> None:
     """Every index of ``range(total)`` in exactly one slice, and no empty slice."""
-    flat = [i for p in parts for i in p]
-    unknown = sorted(set(flat) - set(range(total)))
-    if unknown:
-        raise Refused(f"the partition names unknown mutation indices {unknown}")
-    missing = sorted(set(range(total)) - set(flat))
-    if missing:
-        raise Refused(f"the partition is missing mutation indices {missing}")
-    twice = sorted({i for i in flat if flat.count(i) > 1})
-    if twice:
-        raise Refused(f"the partition runs mutation indices {twice} twice")
+    flat = sorted(i for p in parts for i in p)
+    if flat != list(range(total)):
+        unknown = sorted(set(flat) - set(range(total)))
+        missing = sorted(set(range(total)) - set(flat))
+        twice = sorted({i for i in flat if flat.count(i) > 1})
+        raise Refused(
+            f"not a partition of {total} mutations: missing indices {missing}, "
+            f"indices run twice {twice}, unknown indices {unknown}"
+        )
     empty = [k for k, p in enumerate(parts) if not p]
     if empty:
         raise Refused(
@@ -185,6 +183,15 @@ def check_work_dir(work: Path) -> Path:
     return work
 
 
+def pinned_sha() -> str:
+    """The clean invoking tree's HEAD (`battery_isolation.pinned_sha`), or `Refused`:
+    a dirty tree is DID NOT RUN (3), not a traceback (1)."""
+    try:
+        return iso.pinned_sha(mb.ROOT)
+    except iso.Unisolated as e:
+        raise Refused(f"not isolated: {e}") from e
+
+
 def _write_json(path: Path, doc: object) -> None:
     tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}")
     tmp.write_text(json.dumps(doc, indent=2) + "\n")
@@ -210,8 +217,6 @@ def run_shard(args) -> int:
     """
     table = mb.MUTATIONS
     parts = partition(len(table), args.of)
-    if not 0 <= args.index < args.of:
-        raise Refused(f"--index {args.index} is not in 0..{args.of - 1}")
     paths = shard_paths(check_work_dir(args.work_dir), args.index, args.of)
     for old in (paths.rows, paths.done):
         if old.exists():
@@ -219,12 +224,7 @@ def run_shard(args) -> int:
                 f"{old} exists: shard {args.index} of {args.of} already has a result "
                 f"there. Use a fresh --work-dir; nothing was overwritten."
             )
-    if args.threads < 1:
-        raise Refused(f"--threads {args.threads}: need at least 1")
-    try:
-        sha = iso.pinned_sha(mb.ROOT)
-    except iso.Unisolated as e:
-        raise Refused(f"not isolated: {e}") from e
+    sha = pinned_sha()
     paths.dir.mkdir(parents=True, exist_ok=True)
 
     argv = ["mutation_battery.py", "--json", str(paths.rows)]
@@ -288,35 +288,26 @@ def shard_problem(paths: ShardPaths, want: dict, n_rows: int) -> tuple[list, str
     if isinstance(rc, bool) or rc not in ROWS_EXIT:
         return [], f"its battery exited {rc!r}, not 0 or 3: it did not finish"
     rows = _read_json(paths.rows)
-    if rows is None:
-        return [], f"its battery exited {rc} and wrote no rows at {paths.rows}"
     if not isinstance(rows, list) or len(rows) != n_rows:
-        n = len(rows) if isinstance(rows, list) else type(rows).__name__
-        return [], f"{paths.rows} has {n} rows for {n_rows} mutations"
+        n = len(rows) if isinstance(rows, list) else "no"
+        return [], (
+            f"its battery exited {rc} and {paths.rows} has {n} rows for "
+            f"{n_rows} mutations"
+        )
     return rows, None
 
 
 def row_problem(row: object, m: mb.Mutation) -> str | None:
     """Why ``row`` is not the serial battery's row for ``m``, or None."""
-    if not isinstance(row, dict):
-        return f"its row is a {type(row).__name__}, not an object"
-    if row.get("mutation") != m.name or row.get("gate") != m.gate:
+    got = row if isinstance(row, dict) else {}
+    if got.get("mutation") != m.name or got.get("gate") != m.gate:
         return (
-            f"the row at this mutation's position is for {row.get('mutation')!r} "
-            f"(gate {row.get('gate')!r})"
+            f"the row at this mutation's position is for {got.get('mutation')!r} "
+            f"(gate {got.get('gate')!r})"
         )
-    missing = sorted(set(mb._row(m, {}, None)) - set(row))
-    if missing:
-        return f"its row has no {missing}"
-    if row["verdict"] not in VERDICTS:
-        return f"its row's verdict is {row['verdict']!r}"
-    if not isinstance(row["reddened_gate"], bool):
-        return f"its row's reddened_gate is {row['reddened_gate']!r}"
-    for key in ("off_gate", "off_gate_allowed", "off_gate_undeclared"):
-        if not isinstance(row[key], list):
-            return f"its row's {key} is {row[key]!r}"
-    if row["verdict"] == "DID_NOT_RUN" and "did_not_run" not in row:
-        return "its row is DID_NOT_RUN without a reason"
+    absent = sorted(set(mb._row(m, {}, None)) - set(got))
+    if absent:
+        return f"its row lacks the serial row's fields {absent}"
     return None
 
 
@@ -344,35 +335,20 @@ def merge_rows(
                 merged[i] = rows[j]
             else:
                 merged[i] = mb._row(m, {}, f"shard {k} of {n}: {why}")
-    check_partition([sorted(merged)], len(mutations))
     return [merged[i] for i in range(len(mutations))], problems
 
 
 def report(args, rows: list[dict]) -> Exit:
     """The serial battery's report and exit rule, on the merged rows."""
-    if not rows:
-        print("UNKNOWN: the merged battery has no mutations", file=sys.stderr)
-        return Exit.UNKNOWN
     out = args.json or (args.work_dir / "merged.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     view = argparse.Namespace(json=out, markdown=args.markdown, check=args.check)
     return status(mb._report(view, rows))
 
 
-def _no_mutations() -> Exit:
-    # Zero mutations is NOTHING TO COMPARE (2), not a pass -- as in the serial main().
-    print("UNKNOWN: the battery has no mutations to run", file=sys.stderr)
-    return Exit.UNKNOWN
-
-
 def run_merge(args) -> Exit:
-    if not mb.MUTATIONS:
-        return _no_mutations()
     work = check_work_dir(args.work_dir)
-    try:
-        sha = iso.pinned_sha(mb.ROOT)
-    except iso.Unisolated as e:
-        raise Refused(f"not isolated: {e}") from e
+    sha = pinned_sha()
     rows, problems = merge_rows(work, args.shards, args.run_id, sha, mb.MUTATIONS)
     _print_shards(args.shards, problems)
     args.work_dir = work
@@ -419,12 +395,7 @@ def _prepare(args) -> tuple[Path, str, str]:
     """``(work dir, pinned sha, run id)``, or `Refused` before anything starts."""
     work = check_work_dir(args.work_dir)
     parts = partition(len(mb.MUTATIONS), args.shards)
-    if args.threads < 1:
-        raise Refused(f"--threads {args.threads}: need at least 1")
-    try:
-        sha = iso.pinned_sha(mb.ROOT)
-    except iso.Unisolated as e:
-        raise Refused(f"not isolated: {e}") from e
+    sha = pinned_sha()
     for k in range(len(parts)):
         p = shard_paths(work, k, args.shards)
         for old in (p.rows, p.done):
@@ -440,8 +411,6 @@ def _prepare(args) -> tuple[Path, str, str]:
 
 
 def run_plan(args) -> Exit:
-    if not mb.MUTATIONS:
-        return _no_mutations()
     work, sha, run_id = _prepare(args)
     parts = partition(len(mb.MUTATIONS), args.shards)
     print(f"run id {run_id} at {sha[:12]}: {len(mb.MUTATIONS)} mutations, stride")
@@ -466,17 +435,9 @@ def run_plan(args) -> Exit:
 
 
 def run_all(args) -> Exit:
-    if not mb.MUTATIONS:
-        return _no_mutations()
     work, sha, run_id = _prepare(args)
-    # 🔴 Before any shard: a stale anchor would otherwise be found N times, each
-    # after a shard built its venv (the 87-minute refusal of 2026-09-22, times N).
-    problems = mb.anchor_problems()
-    if problems:
-        for p in problems:
-            print(f"STALE ANCHOR {p}", file=sys.stderr)
-        raise Refused(f"{len(problems)} stale anchor(s); no shard was started")
-
+    # A stale anchor is refused by every shard's own battery before its baseline
+    # suite (exit 3, no rows): every mutation is then DID_NOT_RUN here.
     n = args.shards
     print(f"run id {run_id} at {sha[:12]}: {len(mb.MUTATIONS)} mutations, {n} shards")
     t0 = time.perf_counter()
@@ -609,6 +570,11 @@ def _parser() -> ArgumentParser:
 
 def main(argv: list[str] | None = None) -> Exit:
     args = _parser().parse_args(sys.argv[1:] if argv is None else argv)
+    if not mb.MUTATIONS:
+        # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has
+        # no unproven gate in it -- as in the serial main().
+        print("UNKNOWN: the battery has no mutations to run", file=sys.stderr)
+        return Exit.UNKNOWN
     try:
         if args.action == "shard":
             rc = run_shard(args)

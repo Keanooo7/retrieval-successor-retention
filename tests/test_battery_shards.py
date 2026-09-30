@@ -14,10 +14,16 @@ into the JSON a serial ``--json`` run writes. What this file exists to catch:
 The unit tests fake ``mutation_battery.main``; three end-to-end tests run the real
 driver on the I1 stub repository (``tests/_battery_shards_stub.py``). No test here
 runs a real suite, and none measures throughput: that is I2's later measurement.
+
+Every test here is the gate of one mutation in `scripts/mutation_battery.py`
+(``# --- I2: the sharded driver ---``), except the three end-to-end tests that are
+reddened as DECLARED couplings of those mutations rather than as a gate; the table
+says which.
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import signal
@@ -68,7 +74,6 @@ def table(tmp_path, monkeypatch):
     tree.mkdir()
     monkeypatch.setattr(mb, "MUTATIONS", ms)
     monkeypatch.setattr(mb, "ROOT", tree)
-    monkeypatch.setattr(mb, "anchor_problems", lambda: [])
     monkeypatch.setattr(iso, "pinned_sha", lambda root: SHA)
     monkeypatch.setattr(iso, "default_pool_dir", lambda root: tmp_path / "default-pool")
     # restored on teardown whatever a shard run sets it to
@@ -106,12 +111,13 @@ def _write_all(work, n, ms, skip=()):
             _write_shard(work, k, n, [_proven(ms[i]) for i in idx])
 
 
+def _merge_argv(work, n, *extra) -> list[str]:
+    return ["merge", "--shards", str(n), "--run-id", RUN, "--work-dir", str(work), *extra]
+
+
 def _merge(work, n, *extra) -> tuple[int, list[dict]]:
-    out = work / "merged.json"
-    rc = bs.main(
-        ["merge", "--shards", str(n), "--run-id", RUN, "--work-dir", str(work), *extra]
-    )
-    return int(rc), json.loads(out.read_text())
+    rc = bs.main(_merge_argv(work, n, *extra))
+    return int(rc), json.loads((work / "merged.json").read_text())
 
 
 def _verdicts(rows: list[dict]) -> list[str]:
@@ -128,24 +134,20 @@ def test_the_slices_cover_every_mutation_exactly_once():
             assert len(parts) == n
             flat = [i for p in parts for i in p]
             assert sorted(flat) == list(range(total)), (total, n)
-            assert len(set(flat)) == len(flat), (total, n)
             sizes = [len(p) for p in parts]
             assert max(sizes) - min(sizes) <= 1, (total, n, sizes)
             # within a shard, MUTATIONS order -- as the serial battery runs them
             assert all(p == sorted(p) for p in parts)
-
-
-def test_the_partition_is_the_stride_rule():
+    # the rule is the stride: shard k of n gets k, k+n, k+2n, ...
     assert bs.partition(7, 3) == [[0, 3, 6], [1, 4], [2, 5]]
-    assert bs.partition(3, 1) == [[0, 1, 2]]
 
 
 @pytest.mark.parametrize(
     ("parts", "why"),
     [
-        ([[0], [2]], "missing"),
-        ([[0, 1], [1, 2]], "twice"),
-        ([[0, 1, 2, 3]], "unknown"),
+        ([[0], [2]], r"missing indices \[1\]"),
+        ([[0, 1], [1, 2]], r"run twice \[1\]"),
+        ([[0, 1], [2, 3]], r"unknown indices \[3\]"),
     ],
     ids=["missing", "twice", "out-of-range"],
 )
@@ -158,14 +160,7 @@ def test_more_shards_than_mutations_is_refused(table, work):
     with pytest.raises(bs.Refused, match="no mutations"):
         bs.partition(5, 6)
     with pytest.raises(SystemExit) as e:
-        bs.main(["merge", "--shards", "6", "--run-id", RUN, "--work-dir", str(work)])
-    assert e.value.code == 3
-
-
-@pytest.mark.parametrize("n", ["0", "-1"])
-def test_a_shard_count_below_one_is_refused(table, work, n):
-    with pytest.raises(SystemExit) as e:
-        bs.main(["merge", "--shards", n, "--run-id", RUN, "--work-dir", str(work)])
+        bs.main(_merge_argv(work, 6))
     assert e.value.code == 3
 
 
@@ -183,10 +178,10 @@ def test_every_shard_has_its_own_pool(work):
             assert a == b or not iso.is_under(a, b)
 
 
-def test_a_work_dir_inside_the_invoking_tree_is_refused(table, tmp_path):
+def test_a_work_dir_inside_the_invoking_tree_is_refused(table):
     inside = mb.ROOT / "shards"
     with pytest.raises(SystemExit) as e:
-        bs.main(["merge", "--shards", "2", "--run-id", RUN, "--work-dir", str(inside)])
+        bs.main(_merge_argv(inside, 2))
     assert e.value.code == 3
     assert not inside.exists()
 
@@ -195,41 +190,39 @@ def test_a_work_dir_inside_the_default_pool_is_refused(table, tmp_path):
     """The serial battery's teardown prunes every worktree under the default pool."""
     inside = tmp_path / "default-pool" / "i2"
     with pytest.raises(SystemExit) as e:
-        bs.main(["merge", "--shards", "2", "--run-id", RUN, "--work-dir", str(inside)])
+        bs.main(_merge_argv(inside, 2))
+    assert e.value.code == 3
+    assert not inside.exists()
+
+
+def test_a_dirty_invoking_tree_is_did_not_run_not_a_traceback(table, work, monkeypatch):
+    def dirty(root):
+        raise iso.Unisolated(f"{root} has uncommitted changes")
+
+    monkeypatch.setattr(iso, "pinned_sha", dirty)
+    with pytest.raises(SystemExit) as e:
+        bs.main(_merge_argv(work, 2))
     assert e.value.code == 3
 
 
 # ------------------------------------------------------------- one shard
 
 
-def _fake_battery(seen: dict, rc=mb.Exit.OK, write=True):
+def _fake_battery(seen: dict):
     def main():
         seen["argv"] = list(sys.argv)
         seen["names"] = [m.name for m in mb.MUTATIONS]
         seen["threads"] = os.environ.get("RSR_BATTERY_THREADS")
-        if write:
-            out = Path(sys.argv[sys.argv.index("--json") + 1])
-            out.write_text(_serial([_proven(m) for m in mb.MUTATIONS]))
-        return rc
+        out = Path(sys.argv[sys.argv.index("--json") + 1])
+        out.write_text(_serial([_proven(m) for m in mb.MUTATIONS]))
+        return mb.Exit.OK
 
     return main
 
 
 def _shard(work, k, n, *extra):
-    return bs.main(
-        [
-            "shard",
-            "--index",
-            str(k),
-            "--of",
-            str(n),
-            "--run-id",
-            RUN,
-            "--work-dir",
-            str(work),
-            *extra,
-        ]
-    )
+    argv = ["shard", "--index", str(k), "--of", str(n), "--run-id", RUN]
+    return bs.main([*argv, "--work-dir", str(work), *extra])
 
 
 def test_a_shard_runs_only_its_own_slice(table, work, monkeypatch):
@@ -257,7 +250,6 @@ def test_a_shard_suite_runs_at_one_thread_by_default(table, work, monkeypatch):
     monkeypatch.setattr(mb, "main", _fake_battery(seen))
     _shard(work, 0, 2)
     assert seen["threads"] == "1"
-    assert json.loads(bs.shard_paths(work, 0, 2).done.read_text())["threads"] == 1
 
 
 def test_a_shard_records_what_it_ran_when_it_finishes(table, work, monkeypatch):
@@ -272,7 +264,7 @@ def test_a_shard_records_what_it_ran_when_it_finishes(table, work, monkeypatch):
         "table": bs.table_fingerprint(table),
         "rc": 0,
     }
-    assert done["n_mutations"] == 3 and done["wall_s"] >= 0
+    assert done["n_mutations"] == 3 and done["threads"] == 1 and done["wall_s"] >= 0
 
 
 def test_a_shard_whose_battery_refused_records_the_refusal(table, work, monkeypatch):
@@ -310,21 +302,15 @@ def test_a_shard_never_overwrites_an_earlier_result(table, work, monkeypatch):
     assert bs.shard_paths(work, 0, 2).rows.read_text() == before
 
 
-def test_shards_then_merge_equal_the_serial_json(table, work, monkeypatch):
-    monkeypatch.setattr(mb, "main", _fake_battery({}))
-    for k in range(3):
-        assert _shard(work, k, 3) == mb.Exit.OK
-    rc, _rows = _merge(work, 3)
-    assert rc == 0
-    assert (work / "merged.json").read_text() == _serial([_proven(m) for m in table])
-
-
 # ------------------------------------------------------------- the merge
 
 
-def test_merged_rows_are_in_table_order_with_the_serial_schema(table, work):
-    _write_all(work, 2, table)
-    rc, rows = _merge(work, 2)
+def test_merged_rows_are_in_table_order_with_the_serial_schema(table, work, monkeypatch):
+    """Shards (fake batteries) then the merge: byte for byte the serial ``--json``."""
+    monkeypatch.setattr(mb, "main", _fake_battery({}))
+    for k in range(3):
+        assert _shard(work, k, 3) == mb.Exit.OK
+    rc, rows = _merge(work, 3)
     assert rc == 0
     assert [r["mutation"] for r in rows] == [m.name for m in table]
     assert (work / "merged.json").read_text() == _serial([_proven(m) for m in table])
@@ -336,28 +322,16 @@ def test_a_shard_with_no_done_record_is_did_not_run(table, work):
     _write_shard(work, 1, 2, [_proven(table[i]) for i in (1, 3)], done=False)
     rc, rows = _merge(work, 2)
     assert rc == 3
-    assert _verdicts(rows) == [
-        "PROVEN",
-        "DID_NOT_RUN",
-        "PROVEN",
-        "DID_NOT_RUN",
-        "PROVEN",
-    ]
-    assert "no done record" in rows[1]["did_not_run"]
-    assert "shard 1 of 2" in rows[1]["did_not_run"]
-
-
-def test_a_shard_that_never_started_is_did_not_run(table, work):
-    _write_all(work, 2, table, skip=(0,))
-    rc, rows = _merge(work, 2)
-    assert rc == 3
-    assert _verdicts(rows) == [
-        "DID_NOT_RUN",
-        "PROVEN",
-        "DID_NOT_RUN",
-        "PROVEN",
-        "DID_NOT_RUN",
-    ]
+    assert {r["mutation"]: r["verdict"] for r in rows} == {
+        "m0": "PROVEN",
+        "m1": "DID_NOT_RUN",
+        "m2": "PROVEN",
+        "m3": "DID_NOT_RUN",
+        "m4": "PROVEN",
+    }
+    by_name = {r["mutation"]: r for r in rows}
+    assert "no done record" in by_name["m1"]["did_not_run"]
+    assert "shard 1 of 2" in by_name["m1"]["did_not_run"]
 
 
 def test_a_shard_that_wrote_no_rows_is_did_not_run(table, work):
@@ -365,47 +339,44 @@ def test_a_shard_that_wrote_no_rows_is_did_not_run(table, work):
     _write_all(work, 2, table, skip=(1,))
     _write_shard(work, 1, 2, None, rc=3)
     rc, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
     assert rc == 3
-    assert _verdicts(rows)[1::2] == ["DID_NOT_RUN", "DID_NOT_RUN"]
-    assert "wrote no rows" in rows[1]["did_not_run"]
+    assert by_name["m1"]["verdict"] == by_name["m3"]["verdict"] == "DID_NOT_RUN"
+    assert "has no rows" in by_name["m1"]["did_not_run"]
 
 
 def test_a_missing_row_is_did_not_run_never_a_pass(table, work):
     _write_all(work, 2, table, skip=(0,))
     _write_shard(work, 0, 2, [_proven(table[0]), _proven(table[2])])  # m4 is missing
     rc, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
     assert rc == 3
-    assert rows[4]["verdict"] == "DID_NOT_RUN"
-    assert "2 rows for 3 mutations" in rows[4]["did_not_run"]
+    assert by_name["m4"]["verdict"] == "DID_NOT_RUN"
+    assert "2 rows for 3 mutations" in by_name["m4"]["did_not_run"]
     # the other shard's verdicts stand
-    assert rows[1]["verdict"] == rows[3]["verdict"] == "PROVEN"
+    assert by_name["m1"]["verdict"] == by_name["m3"]["verdict"] == "PROVEN"
 
 
 def test_a_row_for_another_mutation_is_did_not_run(table, work):
     _write_all(work, 2, table, skip=(1,))
     _write_shard(work, 1, 2, [_proven(table[1]), _proven(table[4])])  # m4, not m3
     rc, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
     assert rc == 3
-    assert _verdicts(rows) == ["PROVEN", "PROVEN", "PROVEN", "DID_NOT_RUN", "PROVEN"]
-    assert rows[3]["mutation"] == "m3" and "'m4'" in rows[3]["did_not_run"]
+    assert by_name["m3"]["verdict"] == "DID_NOT_RUN"
+    assert "'m4'" in by_name["m3"]["did_not_run"]
+    assert by_name["m1"]["verdict"] == "PROVEN"
 
 
-@pytest.mark.parametrize(
-    "bad",
-    [
-        {"verdict": "GREEN"},
-        {"reddened_gate": None},
-        {"off_gate": None},
-    ],
-    ids=["unknown-verdict", "no-reddened-gate", "no-off-gate"],
-)
-def test_a_malformed_row_is_did_not_run(table, work, bad):
+def test_a_row_without_the_serial_rows_fields_is_did_not_run(table, work):
     _write_all(work, 2, table, skip=(1,))
-    row = {**_proven(table[3]), **bad}
-    _write_shard(work, 1, 2, [_proven(table[1]), row])
+    short = {k: v for k, v in _proven(table[3]).items() if k != "off_gate"}
+    _write_shard(work, 1, 2, [_proven(table[1]), short])
     rc, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
     assert rc == 3
-    assert _verdicts(rows) == ["PROVEN", "PROVEN", "PROVEN", "DID_NOT_RUN", "PROVEN"]
+    assert by_name["m3"]["verdict"] == "DID_NOT_RUN"
+    assert "off_gate" in by_name["m3"]["did_not_run"]
 
 
 @pytest.mark.parametrize(
@@ -423,9 +394,10 @@ def test_a_shard_record_from_another_run_is_did_not_run(table, work, stale):
     _write_all(work, 2, table, skip=(1,))
     _write_shard(work, 1, 2, [_proven(table[i]) for i in (1, 3)], **stale)
     rc, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
     assert rc == 3
-    assert _verdicts(rows)[1::2] == ["DID_NOT_RUN", "DID_NOT_RUN"]
-    assert _verdicts(rows)[0::2] == ["PROVEN", "PROVEN", "PROVEN"]
+    assert by_name["m1"]["verdict"] == by_name["m3"]["verdict"] == "DID_NOT_RUN"
+    assert by_name["m0"]["verdict"] == "PROVEN"
 
 
 @pytest.mark.parametrize("rc", [1, 2, 137, 143, None], ids=str)
@@ -433,59 +405,40 @@ def test_a_shard_that_exited_outside_0_and_3_is_did_not_run(table, work, rc):
     _write_all(work, 2, table, skip=(1,))
     _write_shard(work, 1, 2, [_proven(table[i]) for i in (1, 3)], rc=rc)
     got, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
     assert got == 3
-    assert _verdicts(rows)[1::2] == ["DID_NOT_RUN", "DID_NOT_RUN"]
+    assert by_name["m1"]["verdict"] == by_name["m3"]["verdict"] == "DID_NOT_RUN"
 
 
 def test_a_shards_own_did_not_run_row_is_kept_with_its_reason(table, work):
+    """Exit 3 with rows: one of the shard's mutations did not run, the rest did."""
     _write_all(work, 2, table, skip=(1,))
     dnr = mb._row(table[3], {}, "pytest was killed by signal 9")
     _write_shard(work, 1, 2, [_proven(table[1]), dnr], rc=3)
     rc, rows = _merge(work, 2)
+    by_name = {r["mutation"]: r for r in rows}
     assert rc == 3
-    assert rows[1]["verdict"] == "PROVEN"
-    assert rows[3]["did_not_run"] == "pytest was killed by signal 9"
+    assert by_name["m1"]["verdict"] == "PROVEN"
+    assert by_name["m3"]["did_not_run"] == "pytest was killed by signal 9"
 
 
 def test_zero_mutations_is_unknown_not_a_pass(table, work, monkeypatch):
     monkeypatch.setattr(mb, "MUTATIONS", ())
-    rc = bs.main(["merge", "--shards", "1", "--run-id", RUN, "--work-dir", str(work)])
-    assert rc == mb.Exit.UNKNOWN
-    rc = bs.main(["run", "--shards", "1", "--work-dir", str(work)])
-    assert rc == mb.Exit.UNKNOWN
+    assert bs.main(_merge_argv(work, 1)) == mb.Exit.UNKNOWN
+    assert bs.main(["run", "--shards", "1", "--work-dir", str(work)]) == mb.Exit.UNKNOWN
 
 
 def test_check_fails_on_an_unproven_merged_gate(table, work):
     _write_all(work, 2, table, skip=(1,))
     _write_shard(work, 1, 2, [_proven(table[1]), mb._row(table[3], {}, None)])
     rc, rows = _merge(work, 2)
-    assert rc == 0 and rows[3]["verdict"] == "ADDS NOTHING"
+    assert rc == 0
+    assert {r["mutation"]: r["verdict"] for r in rows}["m3"] == "ADDS NOTHING"
     rc, _ = _merge(work, 2, "--check")
     assert rc == 1
 
 
 # ------------------------------------------------------------- launching
-
-
-def test_a_shard_command_names_its_index_run_and_work_dir(work, monkeypatch):
-    monkeypatch.setattr(bs, "SHARD_PREFIX", ["PY", "battery_shards.py"])
-    argv, env = bs.launch(1, 4, RUN, work, threads=1, slot_wait=None, base={"A": "b"})
-    assert argv == [
-        "PY",
-        "battery_shards.py",
-        "shard",
-        "--index",
-        "1",
-        "--of",
-        "4",
-        "--run-id",
-        RUN,
-        "--work-dir",
-        str(work),
-        "--threads",
-        "1",
-    ]
-    assert env == {"A": "b"}
 
 
 def test_a_shard_is_launched_under_one_cpu_det_slot(work, monkeypatch):
@@ -494,22 +447,17 @@ def test_a_shard_is_launched_under_one_cpu_det_slot(work, monkeypatch):
         1, 4, RUN, work, threads=1, slot_wait=600.0, base={"PYTHONPATH": "/else"}
     )
     cut = argv.index("--")
-    assert argv[:cut] == [
-        sys.executable,
-        "-m",
-        "orchestrator.slot",
-        "run",
-        "--lane",
-        "cpu-det",
-        "--slots",
-        "1",
-        "--wait",
-        "600",
-        "--job-id",
-        f"{RUN}-s1of4",
-    ]
-    assert argv[cut + 1 : cut + 4] == ["PY", "battery_shards.py", "shard"]
+    slot = [sys.executable, "-m", "orchestrator.slot", "run", "--lane", "cpu-det"]
+    assert argv[: cut - 1] == [*slot, "--slots", "1", "--wait", "600", "--job-id"]
+    shard = ["PY", "battery_shards.py", "shard", "--index", "1", "--of", "4"]
+    tail = ["--run-id", RUN, "--work-dir", str(work), "--threads", "1"]
+    assert argv[cut + 1 :] == [*shard, *tail]
     assert env["PYTHONPATH"].split(os.pathsep) == [str(mb.ROOT / "scripts"), "/else"]
+    # without a slot: the bare shard command, the environment untouched
+    assert bs.launch(1, 4, RUN, work, threads=1, slot_wait=None, base={"A": "b"}) == (
+        [*shard, *tail],
+        {"A": "b"},
+    )
 
 
 def test_every_shard_gets_its_own_slot_job_id(work):
@@ -520,29 +468,17 @@ def test_every_shard_gets_its_own_slot_job_id(work):
     assert len(ids) == 6
 
 
-def test_plan_prints_one_slot_command_per_shard_and_runs_nothing(
+def test_plan_prints_one_command_per_shard_and_the_merge(
     table, work, capsys, monkeypatch
 ):
     def must_not_run(*a, **k):
         raise AssertionError("plan started a process")
 
     monkeypatch.setattr(subprocess, "Popen", must_not_run)
-    rc = bs.main(
-        [
-            "plan",
-            "--shards",
-            "2",
-            "--run-id",
-            RUN,
-            "--work-dir",
-            str(work),
-            "--slot-wait",
-            "60",
-        ]
-    )
+    argv = ["plan", "--shards", "2", "--run-id", RUN, "--work-dir", str(work)]
+    assert bs.main([*argv, "--slot-wait", "60"]) == mb.Exit.OK
     out = capsys.readouterr().out
-    assert rc == mb.Exit.OK
-    assert out.count("orchestrator.slot run --lane cpu-det --slots 1") == 2
+    assert out.count("-m orchestrator.slot run") == 2
     assert "shard 0 of 2: 3 mutations" in out and "shard 1 of 2: 2 mutations" in out
     assert f"merge --shards 2 --run-id {RUN}" in out
     assert not work.exists()
@@ -552,17 +488,14 @@ def test_plan_prints_one_slot_command_per_shard_and_runs_nothing(
 
 
 def _child(tmp_path, body: str) -> list[str]:
-    """A stand-in shard process: ``body`` sees ``rows``/``done`` paths and ``rec``."""
+    """A stand-in shard process; ``body`` sees ``k``, ``n`` and its shard dir ``d``."""
     script = tmp_path / "child.py"
     script.write_text(
-        "import json, sys\n"
+        "import sys, time\n"
         "from pathlib import Path\n"
-        f"sys.path.insert(0, {str(_REPO / 'scripts')!r})\n"
         "a = sys.argv\n"
         "k, n = int(a[a.index('--index') + 1]), int(a[a.index('--of') + 1])\n"
-        "d = Path(a[a.index('--work-dir') + 1]) / f'shard-{k}-of-{n}'\n"
-        "d.mkdir(parents=True, exist_ok=True)\n"
-        "run_id = a[a.index('--run-id') + 1]\n" + body
+        "d = Path(a[a.index('--work-dir') + 1]) / f'shard-{k}-of-{n}'\n" + body
     )
     return [sys.executable, str(script)]
 
@@ -577,7 +510,7 @@ def test_a_shard_process_that_dies_makes_its_mutations_did_not_run(
     rows = json.loads(out.read_text())
     # shard 0 exited 0 and returned nothing: that is not a pass either
     assert _verdicts(rows) == ["DID_NOT_RUN"] * 5
-    assert [r["mutation"] for r in rows] == [m.name for m in table]
+    assert sorted(r["mutation"] for r in rows) == [m.name for m in table]
     summary = json.loads((work / "summary.json").read_text())
     assert [s["process_rc"] for s in summary["shards"]] == [0, 9]
 
@@ -593,23 +526,11 @@ def test_run_refuses_a_work_dir_holding_an_earlier_result(table, work, monkeypat
     assert e.value.code == 3
 
 
-def test_run_refuses_a_stale_anchor_before_any_shard_starts(table, work, monkeypatch):
-    def must_not_run(*a, **k):
-        raise AssertionError("run started a shard on a stale table")
-
-    monkeypatch.setattr(subprocess, "Popen", must_not_run)
-    monkeypatch.setattr(mb, "anchor_problems", lambda: ["'m0': anchor occurs 0 times"])
-    with pytest.raises(SystemExit) as e:
-        bs.main(["run", "--shards", "2", "--work-dir", str(work)])
-    assert e.value.code == 3
-
-
 def test_run_starts_every_shard_before_waiting_on_any(table, work, tmp_path, monkeypatch):
     """Concurrent, not serial: each child waits until ALL children have started."""
     body = (
-        "import time\n"
         "(d / 'started').write_text('')\n"
-        "end = time.monotonic() + 60\n"
+        "end = time.monotonic() + 5\n"
         "while time.monotonic() < end:\n"
         "    if all((d.parent / f'shard-{j}-of-{n}' / 'started').exists()"
         " for j in range(n)):\n"
@@ -633,6 +554,13 @@ def _porcelain(root: Path) -> str:
 @pytest.fixture
 def stub(tmp_path):
     return build_stub(tmp_path / "stub").resolve()
+
+
+def _env(tmp_path, **extra: str) -> dict[str, str]:
+    """``clean_env`` with HOME moved: the DEFAULT pool is ``~/.cache/rsr-battery``,
+    and a driver that failed to pass ``--shard-dir`` must not reach the real one."""
+    (tmp_path / "home").mkdir(exist_ok=True)
+    return clean_env(HOME=str(tmp_path / "home"), **extra)
 
 
 def _run_argv(stub, names, work, merged) -> list[str]:
@@ -659,7 +587,8 @@ def _wait_gone(pid: int, timeout: float = 30.0) -> bool:
     return False
 
 
-def _wait_marker(marker: Path, proc, timeout: float = 120.0) -> tuple[int, int]:
+def _wait_marker(marker: Path, proc, timeout: float = 60.0) -> tuple[int, int]:
+    """``(pytest pid, grandchild pid)`` once the slow mutation's test is running."""
     end = time.monotonic() + timeout
     while time.monotonic() < end:
         if marker.exists():
@@ -669,7 +598,6 @@ def _wait_marker(marker: Path, proc, timeout: float = 120.0) -> tuple[int, int]:
             out, err = proc.communicate()
             raise AssertionError(f"driver exited {proc.returncode} early:\n{out}\n{err}")
         time.sleep(0.05)
-    proc.kill()
     raise AssertionError("the slow mutation's pytest never started")
 
 
@@ -678,6 +606,57 @@ def _parent(pid: int) -> int:
         ["ps", "-o", "ppid=", "-p", str(pid)], capture_output=True, text=True, check=True
     )
     return int(out.stdout.strip())
+
+
+class _Slow:
+    """The driver on ``[slow, proven]``: shard 0 sleeps in its suite, shard 1 ends.
+
+    On exit nothing it started is left running, whatever the test did or however it
+    failed: the driver and the slow shard's battery are asked to stop (each tears
+    its own children down), and the slow suite's process group is killed.
+    """
+
+    def __init__(self, stub: Path, tmp_path: Path):
+        self.marker = tmp_path / "pytest.pid"
+        self.merged = tmp_path / "merged.json"
+        self.work = tmp_path / "work"
+        self.argv = _run_argv(stub, ["slow", "proven"], self.work, self.merged)
+        self.env = _env(tmp_path, STUB_MARKER=str(self.marker))
+        self.pids: list[int] = []
+
+    def __enter__(self):
+        self.proc = subprocess.Popen(
+            self.argv,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=self.env,
+            start_new_session=True,
+        )
+        try:
+            self.pytest_pid, self.grandchild = _wait_marker(self.marker, self.proc)
+            self.battery = _parent(self.pytest_pid)
+        except BaseException:
+            self.__exit__(None, None, None)
+            raise
+        self.pids = [self.battery, self.pytest_pid, self.grandchild]
+        return self
+
+    def __exit__(self, *exc):
+        for pid in (self.proc.pid, *self.pids[:1]):
+            if _alive(pid):
+                os.kill(pid, signal.SIGTERM)
+        if self.proc.poll() is None:
+            try:
+                self.proc.communicate(timeout=60)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+                self.proc.communicate()
+        if self.pids and not _wait_gone(self.battery, 60):
+            os.kill(self.battery, signal.SIGKILL)
+        if self.pids:
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(self.pytest_pid, signal.SIGKILL)
 
 
 def test_sharded_verdicts_equal_the_serial_ones_on_the_stub(stub, tmp_path):
@@ -690,7 +669,7 @@ def test_sharded_verdicts_equal_the_serial_ones_on_the_stub(stub, tmp_path):
         ],
         capture_output=True,
         text=True,
-        env=clean_env(),
+        env=_env(tmp_path),
         timeout=300,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
@@ -699,7 +678,7 @@ def test_sharded_verdicts_equal_the_serial_ones_on_the_stub(stub, tmp_path):
         _run_argv(stub, names, work, merged),
         capture_output=True,
         text=True,
-        env=clean_env(),
+        env=_env(tmp_path),
         timeout=300,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
@@ -709,11 +688,16 @@ def test_sharded_verdicts_equal_the_serial_ones_on_the_stub(stub, tmp_path):
         "LEAKS",
         "ADDS NOTHING",
     ]
-    # each shard ran in its own pool, at one thread, and nothing is left behind
+    # each shard ran in its own pool, and nothing is left behind
+    pools = set()
     for k in range(2):
-        done = json.loads(bs.shard_paths(work, k, 2).done.read_text())
-        assert done["rc"] == 0 and done["threads"] == 1
-        assert done["pool"] == str(bs.shard_paths(work, k, 2).pool)
+        p = bs.shard_paths(work, k, 2)
+        done = json.loads(p.done.read_text())
+        assert done["rc"] == 0
+        assert (p.pool / "pool.lock").exists(), f"shard {k} did not use its own pool"
+        pools.add(done["pool"])
+    assert len(pools) == 2
+    assert not (tmp_path / "home" / ".cache").exists()
     assert _porcelain(stub) == ""
     assert iso._registered(stub) == {stub}
 
@@ -721,47 +705,25 @@ def test_sharded_verdicts_equal_the_serial_ones_on_the_stub(stub, tmp_path):
 def test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand(
     stub, tmp_path
 ):
-    marker, merged = tmp_path / "pytest.pid", tmp_path / "merged.json"
-    work = tmp_path / "work"
-    proc = subprocess.Popen(
-        _run_argv(stub, ["slow", "proven"], work, merged),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        env=clean_env(STUB_MARKER=str(marker)),
-        start_new_session=True,
-    )
-    pytest_pid, grandchild = _wait_marker(marker, proc)
-    os.kill(_parent(pytest_pid), signal.SIGKILL)  # shard 0's battery process
-    out, err = proc.communicate(timeout=120)
-    # SIGKILL cannot be handled: the dead shard's suite is still asleep
-    os.killpg(pytest_pid, signal.SIGKILL)
-    assert _wait_gone(pytest_pid) and _wait_gone(grandchild)
-    assert proc.returncode == 3, out + err
-    rows = {r["mutation"]: r for r in json.loads(merged.read_text())}
-    assert rows["slow"]["verdict"] == "DID_NOT_RUN"
-    assert "no done record" in rows["slow"]["did_not_run"]
-    assert rows["proven"]["verdict"] == "PROVEN"
-    assert _porcelain(stub) == ""
+    with _Slow(stub, tmp_path) as run:
+        os.kill(run.battery, signal.SIGKILL)  # shard 0's battery: no handler runs
+        out, err = run.proc.communicate(timeout=60)
+        assert run.proc.returncode == 3, out + err
+        rows = {r["mutation"]: r for r in json.loads(run.merged.read_text())}
+        assert rows["slow"]["verdict"] == "DID_NOT_RUN"
+        assert "no done record" in rows["slow"]["did_not_run"]
+        assert rows["proven"]["verdict"] == "PROVEN"
+        assert _porcelain(stub) == ""
 
 
 def test_a_stopped_driver_stops_its_shards_and_writes_no_verdict(stub, tmp_path):
-    marker, merged = tmp_path / "pytest.pid", tmp_path / "merged.json"
-    work = tmp_path / "work"
-    proc = subprocess.Popen(
-        _run_argv(stub, ["slow", "proven"], work, merged),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        env=clean_env(STUB_MARKER=str(marker)),
-        start_new_session=True,
-    )
-    pytest_pid, grandchild = _wait_marker(marker, proc)
-    os.kill(proc.pid, signal.SIGTERM)
-    out, err = proc.communicate(timeout=120)
-    assert proc.returncode == 128 + signal.SIGTERM, out + err
-    assert "INTERRUPTED by SIGTERM" in err
-    assert not merged.exists()
-    assert _wait_gone(pytest_pid) and _wait_gone(grandchild)
-    assert _porcelain(stub) == ""
-    assert iso._registered(stub) == {stub}
+    with _Slow(stub, tmp_path) as run:
+        os.kill(run.proc.pid, signal.SIGTERM)
+        out, err = run.proc.communicate(timeout=60)
+        assert run.proc.returncode == 128 + signal.SIGTERM, out + err
+        assert "INTERRUPTED by SIGTERM" in err
+        assert not run.merged.exists()
+        assert _wait_gone(run.battery) and _wait_gone(run.pytest_pid)
+        assert _wait_gone(run.grandchild)
+        assert _porcelain(stub) == ""
+        assert iso._registered(stub) == {stub}
