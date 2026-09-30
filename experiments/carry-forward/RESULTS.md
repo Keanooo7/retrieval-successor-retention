@@ -101,6 +101,8 @@ Band CIs are uncorrected across the band x seed cells; the decision is the poole
 
 **A defect in the ledger's text, not in the decision.** `verdict.falsifier` in `runs/carry-forward/ledger.json` says the excess is "over single-step all-slots-zeroed accuracy". That was the original PREREG baseline. The first amendment (A4) moved CARRY to `all_slots_resample`, and `run.py::reach_readout` computes `excess.acc` over `all_slots_resample`. It does, and `test_reach_baseline_is_all_slots_resample_on_evicted_targets` pins it. The `FALSIFIER` constant string was never updated. The ledger is left as written. Under the original baseline the classification is the same: `s2.ckpt3000.EXT.reach.17_40.excess_zeroed.acc` is 0.1403 [0.1261, 0.1546], while `s0.ckpt3000.EXT.reach.17_40.excess_zeroed.acc` (0.0119) and `s1.ckpt3000.EXT.reach.17_40.excess_zeroed.acc` (0.0048) are below the 0.03 of `thresholds.REACH_DELTA` in the manifest.
 
+*(2026-09-30.)* The `FALSIFIER` constant in `run.py` now names `all_slots_resample` (commit `924d60d`, pinned by `test_the_falsifier_names_the_baseline_reach_readout_uses`; PLAN-v4 §2D). `runs/carry-forward/ledger.json` and `manifest.json` keep the text they were written with.
+
 **The prediction against the result.**
 - MIXED, carried by seed two only: as predicted.
 - The size of seed two's carry was **wrong**. The prediction was 0.04–0.08. `s2.ckpt3000.EXT.reach.17_40.excess.acc` is 0.1346 [0.1198, 0.1498].
