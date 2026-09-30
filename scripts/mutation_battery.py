@@ -413,7 +413,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "gauntlet 0.1: the reduction stops reaching the score path",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                "ep",
                 _REDUCTION_WARMUP_LOUD_COUPLING,
             ),
             (
@@ -432,7 +433,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the §3.7 reduction is no longer argmin(-a_i)",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                "ep",
                 "it builds RSRConfig.reduction_to_tg() and asserts the one eviction is "
                 "attributed to neg_age -- the psi_override this mutation clears "
                 "(measured under it, W11: {'psi': 1} != {'neg_age': 1}). The "
@@ -482,7 +484,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         + (
             # W11: RSRConfig(...) missing 'nu' at construction, measured under it.
             (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                "ep",
                 _REDUCTION_TABLE_COUPLING,
             ),
         ),
@@ -732,7 +735,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 _DISPLACEMENT_COUPLING,
             ),
             (
-                "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_most",
+                "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_"
+                "most",
                 _DISPLACEMENT_COUPLING,
             ),
             (
@@ -1156,7 +1160,8 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
             (
                 "tests/test_lookahead_room.py::"
-                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe"
+                "_holds",
                 "lookahead-room records r_i and runs its probes and online_g0 rule from "
                 "observe(); never reached, no demand is recorded: the same call site, "
                 "seen from W10.",
@@ -1197,11 +1202,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "genuine.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_traini"
+                "ng_steps",
                 _BUILD_POLICY_INJECTION_COUPLING,
             ),
             (
-                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one"
+                "_stream",
                 _BUILD_POLICY_INJECTION_COUPLING,
             ),
         ),
@@ -1222,7 +1229,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "and two warmup tests that fed `select_eviction` the sentence index.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one"
+                "_stream",
                 _T_WARM_COUPLING,
             ),
             (
@@ -1243,7 +1251,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "FIFO arm.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_traini"
+                "ng_steps",
                 _T_WARM_COUPLING,
             ),
         ),
@@ -1269,7 +1278,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a ledger exists, not at all.",
         off_gate_allowed=(
             (
-                "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_not_build",
+                "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_no"
+                "t_build",
                 "train() reaches the epoch refusal through build_policy: one "
                 "refusal, two call sites, and the S0-01 test matches its message "
                 "to prove `iters` is no longer passed.",
@@ -1528,7 +1538,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "anti-oracle fails both, the oracle seen from that control.",
             ),
             (
-                "tests/test_retention_readability.py::test_oracle_keeps_every_queried_fact",
+                "tests/test_retention_readability.py::test_oracle_keeps_every_queried_f"
+                "act",
                 "retention-readability's arm A is OraclePolicy(discounted_demand(doc)); "
                 "the test asserts it keeps every queried fact resident, which an "
                 "oracle evicting the most-needed sentence cannot: the oracle, seen "
@@ -1567,7 +1578,8 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
             (
                 "tests/test_lookahead_room.py::"
-                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe"
+                "_holds",
                 _LOOKAHEAD_S003_COUPLING,
             ),
             (
@@ -1706,7 +1718,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 for t in _READABILITY_WORLD_READERS
             ),
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_S003_COUPLING,
             ),
         ),
@@ -1822,7 +1835,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "collapse into 'real failure'",
         off_gate_allowed=(
             (
-                "tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plus_n",
+                "tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plu"
+                "s_n",
                 _SLOT_RC_COUPLING,
             ),
             (
@@ -2536,7 +2550,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
             ),
             (
-                "tests/test_retention_readability.py::test_documents_are_E_then_P_and_closed",
+                "tests/test_retention_readability.py::test_documents_are_E_then_P_and_c"
+                "losed",
                 _HELDOUT_READERS_COUPLING,
             ),
         ),
@@ -2552,7 +2567,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "primary readout must be the squared distance.",
         off_gate_allowed=(
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
             (
@@ -3220,7 +3236,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
             ),
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
         ),
@@ -3380,7 +3397,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         ),
         off_gate_allowed=(
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
             (
@@ -4315,6 +4333,178 @@ MUTATIONS: tuple[Mutation, ...] = (
         "B0 PREREG §6 C3: the reproduction of lookahead-room-r2's U.hit keys is exact "
         "(same tensors, same documents, same simulate); a tolerance would hide a "
         "different reading of D.pt.",
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace protects the newest slot even when switched off",
+        "test_grace_g0_is_the_inner_policy",
+        "experiments/newcomer-bakeoff/run.py",
+        "        ok = [a > self.g for a in ages]\n",
+        "        ok = [a > max(self.g, 1) for a in ages]\n",
+        "PREREG §4: g = 0 is the grace rule's off-switch and must return exactly the "
+        "inner psi-U victim (the pack's reduction requirement, stated for this "
+        "experiment-local wrapper).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::test_grace_protects_the_g_newest",
+                "its first assertion is the g = 0 case (the newest slot, the inner "
+                "argmin), which the mutation protects",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_units_are_atomic_resumable_and_keyed",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace lets the g-th newest slot be evicted",
+        "test_grace_protects_the_g_newest",
+        "experiments/newcomer-bakeoff/run.py",
+        "        ok = [a > self.g for a in ages]\n",
+        "        ok = [a >= self.g for a in ages]\n",
+        "PREREG §4: a slot of age <= g is ineligible (the g newest are protected; B2's "
+        "convention, newest = age 1).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_grace_falls_back_when_every_slot_is_protected",
+                "at g = 4 with ages 1..4, `>=` makes the age-4 slot eligible, so the "
+                "fallback is never reached and the victim changes",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "it asserts graceU1 never evicts age 1 and graceU2 never age <= 2 on "
+                "the tiny model; `>=` lets exactly those through",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace has no fallback when every slot is protected",
+        "test_grace_falls_back_when_every_slot_is_protected",
+        "experiments/newcomer-bakeoff/run.py",
+        '        return ok if any(ok) else [True] * len(ages)  # "unless all are"\n',
+        '        return ok  # "unless all are"\n',
+        "PREREG §4: 'ineligible unless all are' -- with every slot protected the rule "
+        "falls back to the unmasked argmin.",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_units_are_atomic_resumable_and_keyed",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: the R1 shadow part is not down-weighted",
+        "test_r1_at_half_weight_is_resident_plus_half_the_shadow",
+        "experiments/newcomer-bakeoff/run.py",
+        "torch.where(in_win, lam * base, torch.zeros_like(base))",
+        "torch.where(in_win, base, torch.zeros_like(base))",
+        "PREREG §5 / ADR-0009 L3 R1: the shadow r~ enters the return at weight "
+        "lambda_shadow (FROZEN 0.5, read from the registry).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_r1_at_zero_weight_is_the_censored_target",
+                "at lambda 0 R1 must equal B2's censored target; ignoring lambda gives "
+                "U's demand instead",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::test_r1_window_truncates_at_k",
+                "it checks the in-window cells equal 0.5 * D0, which the mutation makes"
+                " D0",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: the R1 shadow window is one step too deep",
+        "test_r1_window_truncates_at_k",
+        "experiments/newcomer-bakeoff/run.py",
+        "    in_win = after & ((t - t_e.unsqueeze(0)) < K)\n",
+        "    in_win = after & ((t - t_e.unsqueeze(0)) <= K)\n",
+        "PREREG §5: a slot stays in the depth-K shadow buffer while fewer than K "
+        "evictions followed its own (t - t_e < K).",
+    ),
+    Mutation(
+        "newcomer-bakeoff: partial rho does not partial out content",
+        "test_partial_rho_removes_an_age_signal_carried_by_content",
+        "experiments/newcomer-bakeoff/analysis.py",
+        "    P = torch.linalg.pinv(dZ.T @ dZ)\n",
+        "    P = 0 * torch.linalg.pinv(dZ.T @ dZ)\n",
+        "PREREG §6.3: the §7.1 vacuity statistic on the effective rule is a PARTIAL rho"
+        " given content; without the content regression it is the raw within-step "
+        "Spearman.",
     ),
 )
 
