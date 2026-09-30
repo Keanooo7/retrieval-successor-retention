@@ -1,0 +1,81 @@
+{
+  "adam_betas": [
+    0.9,
+    0.95
+  ],
+  "argmin_docs": [
+    936000,
+    936064
+  ],
+  "arms": [
+    "decoupled_wd",
+    "phi_clip",
+    "joint_clip",
+    "coupled_l2"
+  ],
+  "base_lr": 0.001,
+  "base_width": 128,
+  "batch": 16,
+  "beta_sweep": [
+    0.01,
+    0.1,
+    1.0
+  ],
+  "checkpoint": 3000,
+  "ckpt_sha256": {
+    "0": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+    "1": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+    "2": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8"
+  },
+  "controls": {
+    "I": "decoupled_wd eps 1e-8 beta 1, init seed 1100+s",
+    "N": "decoupled_wd eps 1e-8 beta 1, re-run",
+    "P": "decoupled_wd with lr = beta * lr_phi, loss unscaled"
+  },
+  "epsilons": [
+    1e-08,
+    1e-12
+  ],
+  "expected": "PREREG \u00a79: decoupled_wd INERT at 1e-12, INERT more likely than not at 1e-8 (else INTERMEDIATE via beta=0.01); phi_clip = decoupled_wd (clip never binds); joint_clip INERT on phi, m4 nonzero but tiny; coupled_l2 LIVE; P LIVE; N bit-identical.",
+  "falsifier": "ADR-0009 L7's premise ('beta is inert under AdamW + isolation'), not a spec falsifier: LIVE in arm decoupled_wd at eps 1e-8 falsifies it at real scale.",
+  "g_T_steps": [
+    2000,
+    3000
+  ],
+  "gamma": 0.9,
+  "init_seed_base": 1000,
+  "joint_clip": 1.0,
+  "l2_CHOSEN": 0.01,
+  "order_seed_base": 2000,
+  "phi_clip_CHOSEN": 1.0,
+  "prereg": "experiments/b1-beta-inertness/PREREG.md",
+  "prereg_commit": "a0c2b30",
+  "rowset": "C",
+  "run_id": "b1-beta-inertness",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "snaps": [
+    100,
+    300,
+    1000,
+    3000
+  ],
+  "source": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream",
+  "steps": 3000,
+  "threads": 3,
+  "thresholds": {
+    "inert_agree": 0.99,
+    "inert_rel": 0.01,
+    "live_agree": 0.95,
+    "live_rel": 0.1
+  },
+  "torch": "2.14.0",
+  "train_docs": [
+    920000,
+    920256
+  ],
+  "wd": 0.01
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "claim": "decoupled_wd at eps 1e-8 is LIVE (max rel 0.176 > 0.10), min agreement 0.9707",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print(v('class.decoupled_wd.eps1e-08')['class'], round(v('class.decoupled_wd.eps1e-08')['max_rel'],3), round(v('class.decoupled_wd.eps1e-08')['min_agreement'],4))\"",
+    "expected": "LIVE 0.176 0.9707"
+  },
+  {
+    "claim": "decoupled_wd at eps 1e-12 is INERT (agreement 1, max rel 0.000156)",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print(v('class.decoupled_wd.eps1e-12')['class'], v('class.decoupled_wd.eps1e-12')['min_agreement'], round(v('class.decoupled_wd.eps1e-12')['max_rel'],6))\"",
+    "expected": "INERT 1.0 0.000156"
+  },
+  {
+    "claim": "the phi clip at 1.0 never binds in any phi_clip run (clip_frac 0)",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print(sorted({v(k)['clip_frac'] for k in R if k.startswith('run.') and '.phi_clip.' in k}))\"",
+    "expected": "[0.0]"
+  },
+  {
+    "claim": "joint_clip at eps 1e-8 is LIVE, min agreement 0.81494",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print(v('class.joint_clip.eps1e-08')['class'], round(v('class.joint_clip.eps1e-08')['min_agreement'],5))\"",
+    "expected": "LIVE 0.81494"
+  },
+  {
+    "claim": "the joint clip's transformer-coefficient deviation is nonzero at beta=1 (max over seeds 1.9e-06)",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print('%.1e' % max(v(f'run.seed{s}.joint_clip.eps1e-08.beta1')['joint_dev']['max'] for s in (0,1,2)))\"",
+    "expected": "1.9e-06"
+  },
+  {
+    "claim": "coupled_l2 is LIVE at both eps",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print(v('class.coupled_l2.eps1e-08')['class'], v('class.coupled_l2.eps1e-12')['class'])\"",
+    "expected": "LIVE LIVE"
+  },
+  {
+    "claim": "positive control P is LIVE at both eps and N is bit-identical; nothing VOID",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print(v('class.P.eps1e-08')['class'], v('class.P.eps1e-12')['class'], v('N_ok'), v('void'))\"",
+    "expected": "LIVE LIVE True []"
+  },
+  {
+    "claim": "median eps/sqrt(vhat) at beta=0.01, eps=1e-8, arm decoupled_wd is 0.13-0.15 across seeds",
+    "command": ".venv/bin/python -c \"import json;R={r['key']:r for r in json.load(open('runs/b1-beta-inertness/ledger.json'))['rows']};v=lambda k:R[k]['value'];print([round(v(f'run.seed{s}.decoupled_wd.eps1e-08.beta0.01')['eps_ratio']['p50'],2) for s in (0,1,2)])\"",
+    "expected": "[0.14, 0.15, 0.13]"
+  },
+  {
+    "claim": "the B1 tests and the exit-code protocol tests pass",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python -m pytest -q tests/test_b1_beta_inertness.py tests/test_exit_codes.py",
+    "expected": "passed=36 failed=0 skipped=0 errors=0"
+  },
+  {
+    "claim": "RESULTS.md regenerates byte-identically from the ledger",
+    "command": ".venv/bin/python experiments/b1-beta-inertness/results_report.py && /opt/homebrew/bin/git diff --exit-code experiments/b1-beta-inertness/RESULTS.md",
+    "expected": "exit 0"
+  }
+]
