@@ -5626,11 +5626,29 @@ MUTATIONS: tuple[Mutation, ...] = (
         "correct and unused, and a stray override runs every suite.",
     ),
     Mutation(
-        "battery: the --json record drops the RSR_* environment",
+        "battery: a driver that skips main() is not checked",
+        "test_stray_variable_stops_a_driver",
+        "scripts/mutation_battery.py",
+        "        own = battery_env.che" + "ck()",
+        "        own = battery_env.present()",
+        "I6 fix round 1: I2's sharded driver runs shards through _run_isolated "
+        "without main(); the check there is the only one it passes.",
+    ),
+    Mutation(
+        "battery-env: RSR_ORCH_CMD_ with any suffix is declared",
+        "test_stray_variable_orch_cmd",
+        "scripts/battery_env.py",
+        "    return name in DECLARED or name in ORCH_CMD_NAMES",
+        "    return name in DECLARED or name.startswith(ORCH_CMD_PREFIX)",
+        "review MINOR-5: orch_cmd reads RSR_ORCH_CMD_<module.upper()>; a misspelled "
+        "module stubs nothing, the typo class the gate exists for.",
+    ),
+    Mutation(
+        "battery: the --json rows drop the RSR_* environment",
         "test_declared_variable_is_recorded",
         "scripts/mutation_battery.py",
-        "json.dumps(battery_env.sta" + "mp(rows), indent=2)",
-        "json.dumps(rows, indent=2)",
+        "rows.append(battery_env.sta" + "mp(_row(m, failing, did_not_run), own, suite))",
+        "rows.append(_row(m, failing, did_not_run))",
         "I6: the json record is what a later reader has. Until 09-30 it carried "
         "nothing of the environment the verdicts were issued under.",
     ),
@@ -5638,18 +5656,45 @@ MUTATIONS: tuple[Mutation, ...] = (
         "battery-env: the json record carries names without values",
         "test_declared_variable_is_recorded",
         "scripts/battery_env.py",
-        '    return [{**row, "rsr_env": dict(env)} for row in rows]',
-        '    return [{**row, "rsr_env": sorted(env)} for row in rows]',
+        '    out.setdefault("rsr_env", dict(own))',
+        '    out.setdefault("rsr_env", sorted(own))',
         "I6: RSR_BATTERY_THREADS=2 and =14 are the same name; the 09-26/27 "
         "verdicts differed by the value.",
+    ),
+    Mutation(
+        "battery-env: the json record carries the suite's names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '    out.setdefault("rsr_env_suite", dict(suite))',
+        '    out.setdefault("rsr_env_suite", sorted(suite))',
+        "review MAJOR-3: the suite's values are the ones pytest ran under.",
     ),
     Mutation(
         "battery-env: the header prints names without values",
         "test_declared_variable_is_recorded",
         "scripts/battery_env.py",
-        '        lines.append(f"  {name}={value!r} -- {_role(name)}{note}")',
-        '        lines.append(f"  {name} -- {_role(name)}{note}")',
+        '        lines.append(f"  {name}={value!r} -- {_role(name)}")',
+        '        lines.append(f"  {name} -- {_role(name)}")',
         "I6: the stdout header is the record of a battery run without --json.",
+    ),
+    Mutation(
+        "battery-env: the suite header does not mark a replaced value",
+        "test_suite_header_marks",
+        "scripts/battery_env.py",
+        '            note = f" [replaced by the battery; its own value is '
+        '{own[name]!r}]"',
+        '            note = ""',
+        "review MAJOR-3/MINOR-6: ambient RSR_TORCH_THREADS=14 under a cap of 2 was "
+        "recorded as 14 with nothing to say the suite ran with 2.",
+    ),
+    Mutation(
+        "battery-env: stamp overwrites a row's recorded environment",
+        "test_stamp_keeps",
+        "scripts/battery_env.py",
+        '    out.setdefault("rsr_env", dict(own))',
+        '    out["rsr_env"] = dict(own)',
+        "review MAJOR-4: a driver merging per-shard rows would record its own "
+        "environment on every row instead of each shard's.",
     ),
     Mutation(
         "battery-env: a name the tree reads is not declared",
@@ -5657,22 +5702,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scripts/battery_env.py",
         '    "RSR_NB_B2_FITS": "experiments/newcomer-bakeoff/run.py: where B2\'s '
         'fits are",\n',
-        "",
-        "I6: the red team counted twelve RSR_* names; this tree has 36 and one "
-        "prefix family. A declared list nothing holds to the tree is stale the "
-        "day after it is written, and a legitimate launch is then refused. (The "
-        "mutation deletes a line rather "
-        "than renaming the key: a renamed key would itself be a new RSR_* token "
-        "in this file.)",
-    ),
-    Mutation(
-        "battery-env: a variable the battery does not replace is labelled replaced",
-        "test_launch_what_the_battery_sets_per_shard",
-        "scripts/battery_env.py",
-        'REPLACED_IN_SUITE = ("RSR_BATTERY_PROBE", "RSR_ORCH_ROOT", "RSR_TEST_COUNT")',
-        'REPLACED_IN_SUITE = ("RSR_BATTERY_PROBE", "RSR_ORCH_ROOT", "RSR_GIT")',
-        "I6: the header tells the reader which recorded values never reach "
-        "pytest. Saying so of RSR_GIT -- which does reach it -- hides an input.",
+        "    # (declaration removed)\n",
+        "I6: the red team counted twelve RSR_* names; this tree has 36 and a "
+        "family of per-module names. A declared list nothing holds to the tree is "
+        "stale the day after it is written, and a legitimate launch is then "
+        "refused. (The mutation replaces the line with a comment rather than "
+        "renaming the key: a renamed key would itself be a new RSR_* token in "
+        "this file.)",
     ),
 )
 
@@ -6145,6 +6181,12 @@ def _run_isolated(args) -> Exit:
             f"shard: {shard.root} at {shard.sha[:12]} "
             + " ".join(f"{k}={v:.2f}" for k, v in shard.timings.items())
         )
+        # 🔴 I6 (review MAJOR-3): the RSR_* environment pytest receives, beside the
+        # battery's own. check() again, so a driver that enters here without main()
+        # is gated too; the suite env is built by the functions run_suite uses.
+        own = battery_env.check()
+        suite = battery_env.present(iso.shard_env(shard, _suite_env()))
+        print(battery_env.suite_header(own, suite))
         try:
             baseline = run_suite(shard)
         except SuiteDidNotRun as e:
@@ -6172,7 +6214,7 @@ def _run_isolated(args) -> Exit:
                 t0 = time.perf_counter()
                 reset(shard)
                 resets.append(time.perf_counter() - t0)
-            rows.append(_row(m, failing, did_not_run))
+            rows.append(battery_env.stamp(_row(m, failing, did_not_run), own, suite))
             print(
                 f"{rows[-1]['verdict']:13s} {m.name:42s} "
                 f"-> {rows[-1]['n_on_gate']} on gate, {len(rows[-1]['off_gate'])} off "
@@ -6222,7 +6264,7 @@ def _row(m: Mutation, failing, did_not_run: str | None) -> dict:
 def _report(args, rows: list[dict]) -> Exit:
     if args.json:
         # A run record: DID_NOT_RUN rows belong in it.
-        args.json.write_text(json.dumps(battery_env.stamp(rows), indent=2) + "\n")
+        args.json.write_text(json.dumps(rows, indent=2) + "\n")
     did_not_run = [r for r in rows if r["verdict"] == "DID_NOT_RUN"]
     if args.markdown and did_not_run:
         # 🔴 The committed table is a record of verdicts; a mutation that did not
