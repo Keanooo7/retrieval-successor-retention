@@ -478,6 +478,11 @@ def _prepare(args) -> tuple[Path, str, str]:
         for s in stale:
             print(f"STALE ANCHOR {s}", file=sys.stderr)
         raise Refused(f"{len(stale)} stale anchor(s); no shard was started")
+    # TODO(integration, I6 + I2): call `battery_env.check()` HERE, before any shard
+    # starts, and refuse (3) on an undeclared RSR_* override. Without it each shard's
+    # battery refuses on its own and the offender is named only in the per-shard
+    # logs. Not wired on this branch: battery_env lands with I6 (eng/i6-env-record),
+    # which is not merged; the integrator wires it when both branches land.
     sha = pinned_sha()
     for k in range(len(parts)):
         p = shard_paths(work, k, args.shards)
