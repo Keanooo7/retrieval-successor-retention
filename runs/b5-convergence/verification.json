@@ -1,0 +1,28 @@
+{
+ "status": "ok",
+ "seed": "ca36f05cb1e83f8a2b3f1965e00f30fbdcf47ea46df48a71f995f9f6532629bb",
+ "claims": [
+  {
+   "claim": "measurement path unchanged: re-measured B.ckpt3000 copies match the fresh-stream ledger exactly",
+   "command": "python3 -c \"import json;d=json.load(open('runs/b5-convergence/ledger.json'));r={x['key']:x['value'] for x in d['rows'] if x['kind']=='observation'};print(r['control_measurement_path.passed'],r['control_measurement_path.max_abs_diff'])\"",
+   "expected": "True [0.0, 0.0, 0.0]",
+   "observed": "True [0.0, 0.0, 0.0]",
+   "match": true
+  },
+  {
+   "claim": "resume proof: (a) 5-thread 2900->3000 equals arm B ckpt-003000; (b) 4-thread does not; (c) 4-thread kill-resume is bit-exact",
+   "command": "python3 -c \"import json;d=json.load(open('runs/b5-convergence/proof/proof.json'));print([d[k]['equal'] for k in 'abc'])\"",
+   "expected": "[True, False, True]",
+   "observed": "[True, False, True]",
+   "match": true
+  },
+  {
+   "claim": "NO_PLATEAU by 9000; every seed reached 9000; ledger ok",
+   "command": "python3 -c \"import json;d=json.load(open('runs/b5-convergence/ledger.json'));r={x['key']:x.get('value') for x in d['rows']};print(d['status'],d['steps_done'],r['classification_reported_as'])\"",
+   "expected": "ok 9000 NO_PLATEAU by 9000",
+   "observed": "ok 9000 NO_PLATEAU by 9000",
+   "match": true
+  }
+ ],
+ "verifier_sha": "ab483d0930eb7e21963aaf6ceedd2b816d6de29e"
+}
