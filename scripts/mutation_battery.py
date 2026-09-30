@@ -4010,6 +4010,32 @@ MUTATIONS: tuple[Mutation, ...] = (
         "(same tensors, same documents, same simulate); a tolerance would hide a "
         "different reading of D.pt.",
     ),
+    Mutation(
+        "battery-union: a one-sided tail change keeps ours",
+        "test_a_tail_change_only_theirs_made_is_taken_from_theirs",
+        "scripts/battery_union.py",
+        '        return t.tail, "theirs"',
+        '        return o.tail, "ours"',
+        "the 2026-09-30 rule: theirs' post-MUTATIONS tail is taken iff ours' tail == "
+        "base. Keeping ours silently drops main's I5 edit, which is what 13ea9ae and "
+        "74dec77 would have lost.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_union.py::"
+                "test_cli_one_sided_tail_exits_0_and_writes_the_union",
+                "the same rule through the CLI: the written file keeps ours' tail",
+            ),
+            *(
+                (
+                    "tests/test_battery_union.py::"
+                    f"test_reproduces_the_mutation_battery_the_0929_merges_committed[{m}]",
+                    "both real 09-29 merges took theirs' tail; keeping ours cannot "
+                    "reproduce the committed file",
+                )
+                for m in ("13ea9ae", "74dec77")
+            ),
+        ),
+    ),
 )
 
 
