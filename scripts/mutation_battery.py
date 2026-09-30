@@ -5160,6 +5160,40 @@ MUTATIONS: tuple[Mutation, ...] = (
         "about 2x more frequent on A-cells, so NaN depends on y, as on set E (11/663 "
         "vs 105/13,481).",
     ),
+    # ----------------------------------------------------------------------- #
+    # E0d runner fixes, 2026-09-29, post-data (RESULTS.md erratum): reported-only
+    # and provenance; no gated statistic, label, class or exit.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "e0d: H_age-oracle takes the min over absent ages again",
+        "test_h_age_oracle_is_the_min_over_the_ages_present",
+        "experiments/e0d/run.py",
+        '            "H_age_oracle": float(np.min(by_age[self.present])),',
+        '            "H_age_oracle": float(np.min(by_age)),',
+        "PREREG A2.6 H_age-oracle (reported): the best fixed age is chosen among the "
+        "ages the population holds. Under A1.3 age 1 is absent, and a 1..M min read "
+        "its empty column: 0.0000 on every seed of the completed run.",
+    ),
+    Mutation(
+        "e0d: the ledger argv is typed, not launched",
+        "test_the_ledger_records_the_launched_argv",
+        "experiments/e0d/run.py",
+        "        cmd = [sys.executable, *sys.argv]\n",
+        '        cmd = ["uv", "run", "python", EXPERIMENT, *sys.argv[1:]]\n',
+        "§12.4 / RESULTS.md provenance: commands[].argv must be the command that "
+        "ran; the completed run's ledger recorded a typed `uv run python ...` while "
+        "the slot-wrapped .venv/bin/python was launched.",
+    ),
+    Mutation(
+        "e0d: a persisted seed is reused whatever its key",
+        "test_a_seed_cache_whose_key_does_not_match_exits_3",
+        "experiments/e0d/run.py",
+        "        if got != key:\n",
+        "        if False:\n",
+        "A1.4 crash safety: a persisted seed is reused only when git sha, run.py "
+        "sha, seed and document range all match; any mismatch is exit 3, never a "
+        "silent reuse of cells from other code or other documents.",
+    ),
     Mutation(
         "the battery drops the failure reason",
         "test_a_mutation_row_carries_the_failure_reasons",
