@@ -145,15 +145,15 @@ NOT_VARIABLES: dict[str, str] = {
 declared: set in the environment, either is refused like any other stray."""
 
 SCANNED = ("src", "scripts", "experiments", "tests", "ops", ".claude")
-"""Where `inventory` looks -- TRACKED files only (``git ls-files``). In ``tests/``
+"""Where `inventory` looks -- files git does not ignore (``git ls-files``). In ``tests/``
 only files whose name does not start with ``test_`` (conftest, ``_battery_*``
 helpers): test files hold made-up names on purpose. Review MINOR-7 widened the
 scan (``tests/conftest.py``, ``ops/launchd/*.plist`` and ``.claude/settings.*.json``
 read or set names too); the second review's MAJOR-1 found that a filesystem walk
 of ``.claude/`` also read the git-ignored agent checkouts under
 ``.claude/worktrees/`` -- whole trees of other branches' code -- so the result
-depended on machine-local state. Tracked files are the same set in a checkout
-and in a battery shard."""
+depended on machine-local state. Non-ignored files are the same set in a
+checkout and in a battery shard, except the author's own not-yet-added files."""
 _SUFFIXES = (".py", ".zsh", ".sh", ".json", ".plist", ".env")
 _NAME = re.compile(r"RSR_[A-Z0-9_]+")
 _SELF = "scripts/battery_env.py"
@@ -276,27 +276,56 @@ def stamp(row: dict, own: Mapping[str, str], suite: Mapping[str, str]) -> dict:
     return out
 
 
-def tracked(root: Path) -> list[str]:
-    """The tracked files under `SCANNED` in the git checkout ``root`` (a main
-    checkout or a worktree, whose ``.git`` is a file). Raises ``RuntimeError`` when
-    ``root`` is not one: an inventory of an unknown file set is not a measurement."""
+def _git_out(root: Path, *args: str) -> str:
     proc = subprocess.run(
-        [iso._git_bin(), "-C", str(root), "ls-files", "-z", "--", *SCANNED],
-        capture_output=True,
-        text=True,
+        [iso._git_bin(), "-C", str(root), *args], capture_output=True, text=True
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"git ls-files in {root} -> rc={proc.returncode}: {proc.stderr.strip()}"
+            f"git {' '.join(args[:2])} in {root} -> rc={proc.returncode}: "
+            f"{proc.stderr.strip()}"
         )
-    return sorted(f for f in proc.stdout.split("\0") if f)
+    return proc.stdout
+
+
+def tracked(root: Path) -> list[str]:
+    """The files under `SCANNED` that git does not ignore -- tracked, or new and not
+    yet added -- in the git checkout whose top level is ``root`` (a main checkout or
+    a worktree, whose ``.git`` is a file).
+
+    Raises ``RuntimeError`` when ``root`` is not the top of a checkout: not in one at
+    all, or a directory inside one (a subdirectory, or a copy of the tree under an
+    ignored path), where ``ls-files`` exits 0 and lists nothing (third review,
+    MINOR-2). An inventory of an unknown file set is not a measurement.
+
+    ``--others --exclude-standard`` (third review, MINOR-3): a new file that reads an
+    ``RSR_*`` name is inventoried before it is committed; git-ignored files --
+    ``/.claude/worktrees/`` (``.gitignore``), ``*.local.json`` -- still are not.
+    """
+    top = _git_out(root, "rev-parse", "--show-toplevel").strip()
+    if Path(top).resolve() != Path(root).resolve():
+        raise RuntimeError(
+            f"git ls-files: {root} is not the top of a checkout (its checkout's top "
+            f"is {top}); the inventory would read nothing"
+        )
+    out = _git_out(
+        root,
+        "ls-files",
+        "-z",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "--",
+        *SCANNED,
+    )
+    return sorted({f for f in out.split("\0") if f})
 
 
 def inventory(root: Path) -> dict[str, list[str]]:
-    """``{RSR_* token: ["path:line", ...]}`` over the tracked files of `SCANNED`.
+    """``{RSR_* token: ["path:line", ...]}`` over the non-ignored files of `SCANNED`.
 
     Not this file, which would find every name it declares; not ``test_*`` files.
-    Untracked and ignored files are never read (second review, MAJOR-1).
+    Ignored files are never read (second review, MAJOR-1).
     """
     found: dict[str, list[str]] = {}
     for rel in tracked(root):

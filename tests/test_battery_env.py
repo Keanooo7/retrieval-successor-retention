@@ -31,6 +31,7 @@ suite runs with the shard's own ``RSR_ORCH_ROOT``, ``RSR_BATTERY_PROBE`` and
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import subprocess
@@ -230,12 +231,24 @@ def test_declared_variable_is_recorded_as_the_env_the_suite_got(tmp_path, monkey
 def test_rows_do_not_depend_on_where_the_shard_lives(tmp_path, monkeypatch, capsys):
     """Second review, MAJOR-2 (the manager's decision): two batteries at one SHA
     whose shards live at different paths produce equal rows for the same failing
-    set -- what I2 compares a serial and a sharded run by."""
+    set.
+
+    Third review, MAJOR-1: the shard is laid out as `battery_isolation.make_shard`
+    lays it out -- root ``<pool>/shard-0``, probe ``<pool>/probe-0.json``, OUTSIDE
+    the root. ``use_fake_shard`` puts the probe inside the root, where the
+    ``<shard>`` token swallows it and the ``<probe>`` token goes untested."""
     rows = []
     for name in ("pool-a", "pool-b"):
-        root = tmp_path / name
-        root.mkdir()
+        pool = tmp_path / name / "pool"
+        root = pool / "shard-0"
+        root.mkdir(parents=True)
         _one_mutation(root, monkeypatch)
+        shard = iso.Shard(root, "0" * 40, 0, pool / "probe-0.json")
+        monkeypatch.setattr(
+            mb,
+            "open_workspace",
+            lambda args, shard=shard: contextlib.nullcontext([shard]),
+        )
         runs = iter([{}, {"tests/t.py::test_gate": "AssertionError: gate"}])
         monkeypatch.setattr(mb, "run_suite", lambda *a, runs=runs: next(runs))
         out = root / "v.json"
@@ -348,31 +361,66 @@ def test_inventory_finds_a_name_by_file_and_line(tmp_path):
     assert battery_env.inventory(_repo(tmp_path / "repo")) == _TRACKED
 
 
-def test_inventory_reads_only_tracked_files_in_a_checkout_and_a_worktree(tmp_path):
-    """Second review, MAJOR-1: an ignored agent checkout under ``.claude/worktrees/``
-    (Claude Code's ``isolation: worktree``), an ignored ``*.local.json`` and an
-    untracked file are never read -- in a main checkout, and in a worktree whose
-    ``.git`` is a file, as a battery shard is."""
+def _checkout_and_worktree(tmp_path: Path) -> tuple[Path, Path]:
     repo = _repo(tmp_path / "repo")
     _git(repo, "worktree", "add", "-q", "--detach", str(tmp_path / "shard"), "HEAD")
-    for root in (repo, tmp_path / "shard"):
-        planted = {
-            ".claude/worktrees/agent-x/scripts/battery_env.py": '"RSR_BATTERY_THREAD"\n',
-            ".claude/settings.local.json": '"RSR_LOCAL"\n',
-            "scripts/untracked.py": '"RSR_UNTRACKED"\n',
-        }
-        for rel, text in planted.items():
-            (root / rel).parent.mkdir(parents=True, exist_ok=True)
-            (root / rel).write_text(text)
-        assert battery_env.inventory(root) == _TRACKED, root
     assert (tmp_path / "shard" / ".git").is_file()
+    return repo, tmp_path / "shard"
+
+
+def _plant(root: Path, files: dict[str, str]) -> None:
+    for rel, text in files.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text)
+
+
+_AGENT_COPY = ".claude/worktrees/agent-x/scripts/battery_env.py"
+
+
+def test_inventory_skips_ignored_files_in_a_checkout_and_a_worktree(tmp_path):
+    """Second review, MAJOR-1: an ignored agent checkout under ``.claude/worktrees/``
+    (Claude Code's ``isolation: worktree``) and an ignored ``*.local.json`` are never
+    read -- in a main checkout, and in a worktree whose ``.git`` is a file, as a
+    battery shard is."""
+    for root in _checkout_and_worktree(tmp_path):
+        _plant(
+            root,
+            {
+                _AGENT_COPY: '"RSR_BATTERY_THREAD"\n',
+                ".claude/settings.local.json": '"RSR_LOCAL"\n',
+            },
+        )
+        assert battery_env.inventory(root) == _TRACKED, root
+
+
+def test_inventory_reads_a_new_untracked_file(tmp_path):
+    """Third review, MINOR-3: a new file that reads an ``RSR_*`` name is inventoried
+    before it is ``git add``ed, so the author's own pre-commit run goes red."""
+    for root in _checkout_and_worktree(tmp_path):
+        _plant(root, {"scripts/untracked.py": '"RSR_UNTRACKED"\n'})
+        assert battery_env.inventory(root) == {
+            **_TRACKED,
+            "RSR_UNTRACKED": ["scripts/untracked.py:1"],
+        }, root
 
 
 def test_inventory_refuses_a_tree_that_is_not_a_checkout(tmp_path):
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts" / "a.py").write_text('"RSR_NEW"\n')
-    with pytest.raises(RuntimeError, match="git ls-files"):
+    with pytest.raises(RuntimeError, match="git rev-parse"):
         battery_env.inventory(tmp_path)
+
+
+def test_inventory_refuses_a_directory_inside_a_checkout(tmp_path):
+    """Third review, MINOR-2: inside a checkout, ``ls-files`` exits 0 and lists
+    nothing -- for a subdirectory, and for a copy of the tree under an ignored
+    path. Both are refused, not inventoried as empty."""
+    repo = _repo(tmp_path / "repo")
+    copy = repo / ".claude" / "worktrees" / "copy"
+    _plant(copy, {"scripts/a.py": '"RSR_NEW"\n'})
+    for root in (repo / "scripts", copy):
+        with pytest.raises(RuntimeError, match="not the top of a checkout"):
+            battery_env.inventory(root)
 
 
 # ------------------------------------------ what the battery and the slot set

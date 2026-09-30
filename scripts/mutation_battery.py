@@ -5731,13 +5731,41 @@ MUTATIONS: tuple[Mutation, ...] = (
         "os.environ, and was measured to drift from the recorded one mid-run.",
     ),
     Mutation(
-        "battery-env: the inventory reads untracked and ignored files",
-        "test_inventory_reads_only_tracked",
+        "battery-env: the inventory reads ignored files",
+        "test_inventory_skips_ignored",
         "scripts/battery_env.py",
-        '"ls-files", "-z", "--", *SCANNED]',
-        '"ls-files", "-z", "--cached", "--others", "--", *SCANNED]',
+        '        "--exclude-standard",\n',
+        "        # (ignored files not excluded)\n",
         "I6 second review MAJOR-1: git-ignored agent checkouts under "
         ".claude/worktrees/ made the inventory test red on a machine-local file.",
+    ),
+    Mutation(
+        "battery-env: the inventory misses a new untracked file",
+        "test_inventory_reads_a_new_untracked",
+        "scripts/battery_env.py",
+        '        "--others",\n',
+        "        # (new files not listed)\n",
+        "I6 third review MINOR-3: a new file reading an RSR_* name was invisible "
+        "until committed, so the author's run was green and CI red.",
+    ),
+    Mutation(
+        "battery-env: the inventory accepts a directory inside a checkout",
+        "test_inventory_refuses_a_directory_inside",
+        "scripts/battery_env.py",
+        "    if Path(top).resolve() != Path(root).resolve():",
+        "    if False:",
+        "I6 third review MINOR-2: inside a checkout ls-files exits 0 and lists "
+        "nothing, so an empty inventory passed as a measurement.",
+    ),
+    Mutation(
+        "battery-env: rows carry the probe's path",
+        "test_rows_do_not_depend_on_where_the_shard_lives",
+        "scripts/battery_env.py",
+        "        (str(probe), PROBE_TOKEN),\n",
+        "        # (probe not replaced)\n",
+        "I6 third review MAJOR-1: the probe lives in the pool, outside the shard "
+        "root (battery_isolation.make_shard); without its token a row carries the "
+        "pool's absolute path, which differs between a serial and a sharded run.",
     ),
 )
 
