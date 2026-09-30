@@ -246,3 +246,126 @@ def test_reproduces_the_mutation_battery_the_0929_merges_committed(merge):
     res = bu.union(show(base), show(ours), show(theirs))
     assert res.text == show(merge)
     assert res.tail_from == "theirs"
+
+
+# -- annotated constants (the i1 merge, 2026-09-30) ------------------------------
+#
+# `_REVIEW_GATE_REFUSALS: tuple[str, ...] = (` did not match the constant regex, so
+# it travelled as head code; when ours also changed head code (i1's imports) the
+# union refused a merge it should have resolved, and i1 was merged by hand
+# (7eda821). ~/Documents/RSR-2026-09-29-day/reports/P1-I1.md.
+
+_ANNOTATED = '_R: tuple[str, ...] = (\n    "r1",\n    "r2",\n)\n'
+_HEAD_ANN = _HEAD.replace("_A_COUPLING = (", _ANNOTATED + "_A_COUPLING = (")
+
+
+def test_an_annotated_constant_is_split_out_as_a_constant():
+    p = bu.split(_src(head=_HEAD_ANN))
+    assert p.const_order == ["_R", "_A_COUPLING"]
+    assert p.consts["_R"] == _ANNOTATED
+    assert "_R" not in p.head_code
+
+
+def test_an_annotated_constant_new_in_theirs_merges_when_ours_changed_head_code():
+    """The i1 case: ours changed imports, theirs added an annotated constant."""
+    ho = _HEAD.replace("import os", "import os\nimport signal")
+    res = bu.union(_src(), _src(("m1", "m2", "o"), head=ho), _src(head=_HEAD_ANN))
+    assert res.new_consts == ["_R"]
+    assert res.text == _src(
+        ("m1", "m2", "o"), head=_HEAD_ANN.replace("import os", "import os\nimport signal")
+    )
+
+
+def test_an_annotated_constant_only_theirs_changed_is_updated():
+    ho = _HEAD_ANN.replace("import os", "import os\nimport signal")
+    ht = _HEAD_ANN.replace('"r2",', '"r2",\n    "r3",')
+    res = bu.union(_src(head=_HEAD_ANN), _src(head=ho), _src(head=ht))
+    assert res.text == _src(head=ht.replace("import os", "import os\nimport signal"))
+
+
+def test_a_constant_new_in_theirs_lands_where_theirs_put_it():
+    """Before the constant that follows it in theirs, when ours has that one."""
+    ho = _HEAD.replace("import os", "import os\nimport signal")
+    res = bu.union(_src(), _src(head=ho), _src(head=_HEAD_ANN))
+    assert res.text.index("_R:") < res.text.index("_A_COUPLING")
+
+
+# -- constant deletions (review MINOR-1) ------------------------------------------
+
+_HEAD_NO_A = _HEAD.replace('_A_COUPLING = (\n    "a",\n)\n\n', "")
+
+
+def test_a_constant_ours_deleted_and_theirs_kept_is_refused_not_resurrected():
+    with pytest.raises(bu.Refused, match="constant _A_COUPLING: ours deleted it"):
+        bu.union(_src(), _src(head=_HEAD_NO_A), _src())
+
+
+def test_a_constant_theirs_deleted_and_ours_kept_is_refused_not_dropped():
+    with pytest.raises(bu.Refused, match="constant _A_COUPLING deleted by theirs"):
+        bu.union(_src(), _src(), _src(head=_HEAD_NO_A))
+
+
+def test_a_constant_both_sides_deleted_stays_deleted():
+    res = bu.union(_src(), _src(head=_HEAD_NO_A), _src(head=_HEAD_NO_A))
+    assert "_A_COUPLING" not in res.text
+
+
+# -- malformed input and output (review MINOR-2) ----------------------------------
+
+_UNTERMINATED = '    Mutation(\n        "bad",\n        "test_x",\n        "y",\n'
+
+
+def test_a_last_entry_without_its_terminator_is_refused_not_a_crash():
+    bad = _HEAD + _entry("m1") + _UNTERMINATED + _TAIL
+    with pytest.raises(bu.Refused, match="no terminating"):
+        bu.union(_src(), _src(), bad)
+
+
+def test_a_mid_entry_without_its_terminator_is_refused_for_that_reason():
+    bad = _HEAD + _UNTERMINATED + _entry("m1") + _entry("m2") + _TAIL
+    with pytest.raises(bu.Refused, match="no terminating"):
+        bu.union(_src(), bad, _src())
+
+
+def test_a_union_that_does_not_parse_is_refused():
+    broken = '    Mutation(\n        "m9",\n        "test_x",\n        (,\n    ),\n'
+    theirs = _HEAD + _entry("m1") + _entry("m2") + broken + _TAIL
+    with pytest.raises(bu.Refused, match="does not parse"):
+        bu.union(_src(), _src(), theirs)
+
+
+def test_cli_malformed_entry_exits_3_and_writes_nothing(repo):
+    b = _commit(repo, _src(), "b")
+    t = _commit(repo, _HEAD + _entry("m1") + _UNTERMINATED + _TAIL, "t")
+    o = b  # ours == base
+    out = repo / "out.py"
+    r = _cli(repo, "--path", "mb.py", "--revs", b, o, t, "--out", str(out))
+    assert r.returncode == 3, (r.returncode, r.stderr)
+    assert "REFUSED" in r.stderr
+    assert not out.exists()
+
+
+# -- the real i1 merge of 2026-09-30 ----------------------------------------------
+
+
+def test_reproduces_the_mutation_battery_the_i1_merge_committed():
+    """7eda821 merged night/2026-09-30 (1b8495e) into eng/i1-isolation (83bd910),
+    base f7a6b10, by hand, because this tool refused. The fixed tool must produce
+    its `scripts/mutation_battery.py` byte for byte."""
+    merge = "7eda821"
+    if not _have(merge):
+        pytest.skip(f"{merge} is not in this clone (fetch eng/i1-isolation)")
+    ours, theirs = _git(_REPO, "log", "-1", "--format=%P", merge).split()
+    base = _git(_REPO, "merge-base", ours, theirs)
+
+    def show(rev: str) -> str:
+        return subprocess.run(
+            [bu.GIT, "-C", str(_REPO), "show", f"{rev}:{bu.PATH}"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+
+    res = bu.union(show(base), show(ours), show(theirs))
+    assert res.new_consts == ["_REVIEW_GATE_COUPLING", "_REVIEW_GATE_REFUSALS"]
+    assert res.text == show(merge)
