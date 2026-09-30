@@ -4193,8 +4193,9 @@ MUTATIONS: tuple[Mutation, ...] = (
         "expire-span: span loss charged once at admission",
         "test_the_span_loss_charges_memories_on_the_ramp_only",
         "src/rsr/baselines/expire_span.py",
-        "        on_ramp = ((m > 0.0) & (m < 1.0) & mem_valid).to(e.dtype).detach()",
-        "        on_ramp = ((mem_step == step - 1) & mem_valid).to(e.dtype).detach()",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid & row_valid.view(-1, 1)",
+        "            charged = (mem_step == step - 1) & mem_valid"
+        " & row_valid.view(-1, 1)",
         "[P7] §4.2 Loss Computation (P7:L368-382): charging at admission "
         "'empirically results in poor performance'; the loss is charged while "
         "0 < m < 1. This mutation restores this branch's own first (wrong) "
@@ -4226,6 +4227,33 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0010 q6: a slot any layer still reads is alive (as P7:L353-355 "
         "says for heads). min over layers evicts a slot a deep layer is still "
         "retaining.",
+    ),
+    Mutation(
+        "expire-span: span loss charged at eval",
+        "test_the_span_loss_is_not_charged_at_eval",
+        "src/rsr/baselines/expire_span.py",
+        "        if training:\n            charged",
+        "        if True:\n            charged",
+        "review MAJOR-1 (feat-expire-span @ 49027dd): Eq. 7 is a training objective "
+        "(P7:L330-335). Charged at eval, every loss read from the loop bills "
+        "Expire-Span alone for its spans -- biasing the referendum against the "
+        "baseline whose win ends the project, the direction B-3 forbids.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_memory_weight_returns_no_span_loss_at_eval",
+                "the unit form of the same guard: the policy returns None at eval.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: rows past their stream are charged",
+        "test_rows_past_their_stream_length_are_not_charged",
+        "src/rsr/baselines/expire_span.py",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid & row_valid.view(-1, 1)",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid",
+        "review MINOR-1: after a row's stream ends step_fn masks it, so no LM "
+        "gradient opposes a span charge on its still-ageing memories; charging it "
+        "pushes spans down for nothing.",
     ),
 )
 
