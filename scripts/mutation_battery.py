@@ -30,15 +30,26 @@ table stood at "17/17, 11 off-gate" from 0a9f5d8 while the suite had grown to 19
 off-gate on that same mutation, and a record that has to be retyped is a record
 that goes stale.
 
-The source tree is restored after every mutation, including on failure.
+🔴 **The tree you run this from is never mutated** (I1, 2026-09-29). Every suite
+run -- the baseline and each mutation -- happens in a shard: a git worktree of the
+invoking tree's HEAD (which must be clean) with its own venv, outside the invoking
+tree (`scripts/battery_isolation.py`). A suite whose `rsr` does not resolve under
+its shard, in the pytest process or in a child of it, is `DID_NOT_RUN` -- never
+`PROVEN` or `LEAKS`. After a SIGKILL, which no handler sees, the only leftovers
+are shard worktrees:
+
+    uv run python scripts/mutation_battery.py --prune-shards
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import signal
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,9 +57,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import battery_isolation as iso  # noqa: E402
 from orchestrator import lanes  # noqa: E402
 
-from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main, status  # noqa: E402
 
 PYTEST = ROOT / ".venv" / "bin" / "pytest"
 
@@ -429,6 +441,48 @@ _LIVENESS_BATCH_STAMP_COUPLING = (
     "test that reads it reddens: the default-path config, seen from liveness."
 )
 
+_I1_E2E_WIRING = (
+    "I1: the end-to-end stub tests run the real battery; each depends on the "
+    "guard this mutation disables for its own assertion, so one edit reddens the "
+    "unit gate and every end-to-end path through the same guard. Asserted both "
+    "ways on purpose: a unit test alone would pass a guard that is never called."
+)
+_I1_SHARD_MUTATION = (
+    "I1: every end-to-end stub test either asserts the invoking tree stays clean "
+    "mid-run and after, or needs the mutation to land in the shard to get its "
+    "verdict; a battery that mutates the invoking tree breaks each by construction."
+)
+_I1_TEARDOWN = (
+    "I1: every end-to-end stub test that finishes or stops a battery asserts no "
+    "worktree registration is left; a pool never torn down leaves one in each."
+)
+_I1_DIRTY = (
+    "I1: tracked edits and untracked files are the two halves of 'dirty'; one "
+    "check covers both, so one edit reddens both tests."
+)
+
+
+_I1_RESET_E2E = (
+    "I1 review: every end-to-end stub test runs more than one suite in one shard, "
+    "so the reset between them is on its path; a reset that leaves state behind "
+    "fails verify_clean or changes the next verdict in each."
+)
+_I1_POOL_LOCK = (
+    "I1 review: --prune-shards and a battery take the same pool lock; one edit to "
+    "the lock reddens both tests."
+)
+_I1_GROUP = (
+    "I1 review: every test that stops a suite -- the battery or the pytest child -- "
+    "asserts the suite's grandchild is gone; one edit to the group kill reddens "
+    "each."
+)
+
+
+def _i1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
+    """Declared couplings on tests/test_battery_isolation.py nodes, one reason."""
+    return tuple((f"tests/test_battery_isolation.py::{n}", reason) for n in nodes)
+
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -574,30 +628,6 @@ MUTATIONS: tuple[Mutation, ...] = (
         "max(written_at, last_used) and a stale record is always older than the new "
         "occupant's write step, so the hook is defensive for LRU and load-bearing "
         "for H2O. Recorded in the table rather than papered over.",
-    ),
-    Mutation(
-        "on_write is told the victim index again",
-        "test_on_write_receives_the_newcomers_slot_after_an_eviction",
-        "src/rsr/model/tg/policy_loop.py",
-        "                    policy.on_write(memory_state(mem, t, row), slot, t)",
-        "                    policy.on_write(memory_state(mem, t, row), "
-        "int(victim[row]), t)",
-        "2026-09-29, gauntlet 0.4 one level down: `write_at` compacts behind the "
-        "victim and writes the newcomer at M-1 (§3.1, ADR-0006), so after the "
-        "write the victim index names a different occupant -- and on an underfull "
-        "row it is the placeholder 0. Any policy keying state on `slot` (LRU, "
-        "H2O, E1's per-slot baselines) would update the wrong slot. The loop's "
-        "own written_at guard checks `slot`, not the argument actually passed, so "
-        "it cannot catch this mutation; only the recording-policy test does.",
-        off_gate_allowed=(
-            (
-                "tests/test_on_write_slot.py::"
-                "test_on_write_receives_the_newly_filled_slot_on_a_non_full_row",
-                "the same call site: the old call passed the placeholder 0 on an "
-                "underfull row, which is the other half of the defect this gate "
-                "names",
-            ),
-        ),
     ),
     Mutation(
         "scope-free MEASURED read leaks again",
@@ -1078,10 +1108,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a red baseline exits 1 again",
         "test_a_red_baseline_exits_3",
         "scripts/mutation_battery.py",
-        "        refuse(\n"
-        "            Exit.DID_NOT_RUN,\n"
-        '            f"the suite is not green',
-        '        refuse(\n            Exit.FAIL,\n            f"the suite is not green',
+        # 📌 Re-anchored 2026-09-29 (I1): the baseline now runs inside the shard's
+        # `with`, four columns deeper. Same edit.
+        "            refuse(\n"
+        "                Exit.DID_NOT_RUN,\n"
+        '                f"the suite is not green',
+        "            refuse(\n"
+        "                Exit.FAIL,\n"
+        '                f"the suite is not green',
         "S0-05: a suite red before mutating means no mutation ran.",
     ),
     Mutation(
@@ -2028,100 +2062,6 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if rec is None and False:\n        return Exit.DID_NOT_RUN,",
         "the verification gate stops being a gate: with no record the merge crashes "
         "(1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.",
-    ),
-    # T5(b), 2026-09-30: the review gate (docs/review-records.md). Proven by hand
-    # at authoring time against tests/test_orch_merge*.py only (battery lane busy).
-    Mutation(
-        "merge: the review gate is skipped",
-        "test_merge_is_refused_without_a_review_record",
-        "scripts/orchestrator/merge.py",
-        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
-        "    if code != Exit.OK:\n",
-        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
-        "    if False:\n",
-        "PLAN-v4 §4 T5(b) stops being a mechanism: any verified run/ branch, and "
-        "any fix/ eng/ feat/ docs/ branch at all, merges into the night branch with "
-        "no adversarial review on record.",
-        off_gate_allowed=tuple(
-            (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
-            for t in _REVIEW_GATE_REFUSALS
-        ),
-    ),
-    Mutation(
-        "merge: a stale review record is accepted",
-        "test_a_record_older_than_head_with_a_code_change_since_is_refused",
-        "scripts/orchestrator/merge.py",
-        "    unreviewed = [\n"
-        "        p for p in diff.stdout.splitlines() if p and not review_exempt(p, "
-        "run_item)\n"
-        "    ]\n",
-        "    unreviewed = []\n",
-        "a review of an early head waves through every commit made after it -- "
-        "the census shape of 2026-09-29 (eng/i1-isolation reviewed at ff6dccc, "
-        "7 files changed since).",
-        off_gate_allowed=tuple(
-            (
-                f"tests/test_orch_merge_review.py::{t}",
-                "a forged verification.json is refused by the same staleness diff; "
-                "no diff, no refusal. One check, two path classes.",
-            )
-            for t in (
-                "test_only_the_merging_runs_own_verification_is_exempt",
-                "test_no_verification_json_is_exempt_on_other_prefixes",
-            )
-        ),
-    ),
-    # T5(b) review fixes, 2026-09-30 (docs/reviews/eng-t5b-review-gate/
-    # bbfa38c9bade.md). Proven by hand, targeted files only (B5 holds the CPU).
-    Mutation(
-        "merge: MERGE WITH FIXES merges on its own",
-        "test_merge_with_fixes_is_never_mergeable_on_its_own",
-        "scripts/orchestrator/merge.py",
-        '    if fm["verdict"] == "MERGE WITH FIXES":\n'
-        "        # Review MAJOR-2, PM decision",
-        "    if False:\n        # Review MAJOR-2, PM decision",
-        "review MAJOR-2 (probe P3): the author commits a 'fix', edits the "
-        "reviewer's record to attest it, and the unreviewed fix merges.",
-        off_gate_allowed=tuple(
-            (
-                f"tests/test_orch_merge_review.py::{t}",
-                "every MERGE WITH FIXES record is refused by this one branch; "
-                "without it each falls through to the MERGE path.",
-            )
-            for t in (
-                "test_merge_with_fixes_without_fixes_verified_at_is_refused",
-                "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
-                "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
-            )
-        ),
-    ),
-    Mutation(
-        "merge: fixes_verified_at is not validated",
-        "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit",
-        "scripts/orchestrator/merge.py",
-        "        if fixes is not None and not (_full_sha(fixes) and _commit(root, "
-        "fixes)):",
-        "        if False:",
-        "review MAJOR-1 (probe P1): a record naming a moving ref (`fix/x`, `HEAD`) "
-        "is accepted as if it named a commit.",
-    ),
-    Mutation(
-        "merge: every runs/*/verification.json is staleness-exempt",
-        "test_only_the_merging_runs_own_verification_is_exempt",
-        "scripts/orchestrator/merge.py",
-        '    return run_item is not None and path == f"runs/{run_item}/'
-        'verification.json"',
-        '    return path.startswith("runs/") and path.endswith("/verification.json")',
-        "review MINOR-2 (probe P4): a forged verification.json for another run id "
-        "rides in after review and then satisfies gate 1 for that run from the "
-        "night branch.",
-        off_gate_allowed=(
-            (
-                "tests/test_orch_merge_review.py::"
-                "test_no_verification_json_is_exempt_on_other_prefixes",
-                "the same exemption, reached from a non-run/ prefix.",
-            ),
-        ),
     ),
     Mutation(
         "tick: HALT ignored",
@@ -4110,10 +4050,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the battery drops the failure reason",
         "test_a_mutation_row_carries_the_failure_reasons",
         "scripts/mutation_battery.py",
-        # 📌 split so this literal is not itself the first match in this file
-        '                "failure_reasons": {f: reasons[f] '
-        + "for f in sorted(reasons)},",
-        '                "failure_reasons": dict.fromkeys(' + "sorted(reasons)),",
+        # 📌 split so this literal is not itself the first match in this file.
+        # Re-anchored 2026-09-29 (I1): the row is built in `_row`, eight columns
+        # shallower. Same edit.
+        '        "failure_reasons": {f: reasons[f] ' + "for f in sorted(reasons)},",
+        '        "failure_reasons": dict.fromkeys(' + "sorted(reasons)),",
         "I5: the 09-26 dispatch red left only a node id because the battery ran "
         "--tb=no. A row whose reasons are all null is that blindness back.",
     ),
@@ -4185,6 +4126,554 @@ MUTATIONS: tuple[Mutation, ...] = (
         "B0 PREREG §6 C3: the reproduction of lookahead-room-r2's U.hit keys is exact "
         "(same tensors, same documents, same simulate); a tolerance would hide a "
         "different reading of D.pt.",
+    ),
+    # ------------------------------------------------------------------ I1
+    # P1.1 (2026-09-29): battery isolation. Each guard in
+    # scripts/battery_isolation.py and in this file's shard wiring, disabled.
+    # 📌 anchors in THIS file are split so the table's own text never matches.
+    Mutation(
+        "i1: the battery mutates the invoking tree again",
+        "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+        "scripts/mutation_battery.py",
+        "            original = apply(m, " + "shard.root)",
+        "            original = apply(" + "m)",
+        "I1: the live checkout the battery is invoked from is never mutated; a "
+        "stopped battery left mutated loop.py and lanes.py behind twice.",
+        off_gate_allowed=tuple(
+            (n, _I1_SHARD_MUTATION)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_check_still_fails_on_an_unproven_gate",
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+                "tests/test_battery_isolation.py::"
+                "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGTERM]",
+                "tests/test_battery_isolation.py::"
+                "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGHUP]",
+                "tests/test_battery_isolation.py::"
+                "test_a_sigkilled_battery_leaves_only_shards_and_prune_removes_them",
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        )
+        + _i1_declare(
+            _I1_SHARD_MUTATION,
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_markdown_is_written_when_every_row_ran",
+            "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+            "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGINT]",
+            "test_a_stopped_battery_kills_its_suites_grandchildren",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: the path assertion accepts any rsr",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        "        if not is_under(probe.get(key), root):",
+        "        if False:",
+        "I1: rsr must resolve under the shard or the suite DID NOT RUN; the 09-27 "
+        "suite ran on the main checkout's venv (DIGEST cycle 16b).",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_suite_on_another_checkouts_venv_did_not_run",
+            )
+        ),
+    ),
+    Mutation(
+        "i1: the path assertion skips the pytest child",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '    for key in ("in_process", "child"):',
+        '    for key in ("in_process",):',
+        "I1: a test's sys.path.insert can put the shard's src first in the pytest "
+        "process while every child it spawns imports another checkout's rsr.",
+        off_gate_allowed=tuple(
+            (f"tests/test_battery_isolation.py::{t}", _I1_E2E_WIRING)
+            for t in ("test_a_suite_on_another_checkouts_venv_did_not_run",)
+        ),
+    ),
+    Mutation(
+        "i1: a missing probe is accepted",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '        return "no probe: the suite did not report where it imported rsr from"',
+        "        return None",
+        "I1: a suite that says nothing about where it imported rsr from has not "
+        "shown that it ran in the shard.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+            )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_completed_suite_is_judged_by_its_probe",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: run_suite never reads the probe",
+        "test_a_suite_on_another_checkouts_venv_did_not_run",
+        "scripts/mutation_battery.py",
+        # 📌 Re-anchored for the review fixes: run_suite consults suite_problem
+        # (completion AND probe) now. Same edit, and it disables every layer at
+        # once, so it is also the mutation that gates the end-to-end tests.
+        "    problem = iso.suite_problem(proc.returncode, "
+        + "iso.read_probe(shard.probe), shard.root)",
+        "    problem = None",
+        "I1: the path assertion and the completion check exist only if the battery "
+        "consults them.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+            )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_killed_pytest_is_did_not_run_not_a_failure",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: a killed pytest is scored as a verdict",
+        "test_a_killed_pytest_is_did_not_run_not_a_failure",
+        # 📌 Re-anchored for the review fixes: the check moved into
+        # battery_isolation.suite_problem. Same edit.
+        "scripts/battery_isolation.py",
+        "    if returncode < 0:",
+        "    if False:",
+        "I1: a pytest killed by a signal became a '<collection/exit -9>' failure and "
+        "was scored LEAKS or ADDS NOTHING; it is DID NOT RUN.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        ),
+    ),
+    Mutation(
+        "i1: a DID_NOT_RUN row exits 0",
+        "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+        "scripts/mutation_battery.py",
+        '    if any(r["verdict"] == "DID_NOT_' + 'RUN" for r in rows):',
+        "    if False:",
+        "I1 / exit-code protocol: a mutation that did not run is not a table entry; "
+        "'did not run' never becomes exit 0.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: RSR_ORCH_ROOT is not the shard's",
+        "test_the_suite_env_is_the_shards_own",
+        "scripts/battery_isolation.py",
+        '    env["RSR_ORCH_ROOT"] = str(shard.root)\n',
+        "    pass\n",
+        "I1: without it an orchestrator write from a test resolves the MAIN "
+        "checkout (lanes.orch_root), the stray-write class of 2026-09-27.",
+    ),
+    Mutation(
+        "i1: a dirty invoking tree is battery'd at HEAD",
+        "test_a_dirty_invoking_tree_is_refused",
+        "scripts/battery_isolation.py",
+        '    if dirty.strip():\n        raise Unisolated(\n            f"{root} has',
+        '    if False:\n        raise Unisolated(\n            f"{root} has',
+        "I1: a shard is a commit; uncommitted edits in the invoking tree would not "
+        "be in it, and the record would certify a tree the battery never ran.",
+        off_gate_allowed=tuple(
+            (n, _I1_DIRTY)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_an_untracked_file_in_the_invoking_tree_is_refused",
+            )
+        ),
+    ),
+    Mutation(
+        "i1: a shard pool inside the invoking tree is accepted",
+        "test_a_pool_inside_the_invoking_tree_is_refused",
+        "scripts/battery_isolation.py",
+        "    if is_under(pool, source):",
+        "    if False:",
+        "I1: shards live outside the invoking tree, so no path under it is written.",
+    ),
+    Mutation(
+        "i1: the shard reset leaves untracked files",
+        "test_reset_restores_the_pinned_tree",
+        "scripts/battery_isolation.py",
+        # 📌 Re-anchored for the review fixes: the clean is CLEAN_ARGV now.
+        '    _ok(git(shard.root, *CLEAN_ARGV), f"git clean in {shard.root}")\n',
+        "    pass\n",
+        "I1: a file one mutated suite created must not be in the next one's tree.",
+        off_gate_allowed=_i1_declare(
+            _I1_RESET_E2E,
+            "test_an_ignored_file_left_in_a_shard_is_not_clean",
+            "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+            "test_check_still_fails_on_an_unproven_gate",
+            "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        ),
+    ),
+    Mutation(
+        "i1: a shard suite writes bytecode again",
+        "test_a_shard_suite_writes_no_bytecode",
+        "scripts/battery_isolation.py",
+        '    env["PYTHONDONTWRITEBYTECODE"] = "1"\n',
+        "    pass\n",
+        "I1: a same-size mutation restored within one second passes the .pyc "
+        "mtime+size check, so the next suite ran the previous mutation's code "
+        "(observed on the stub battery, 2026-09-29).",
+    ),
+    Mutation(
+        "i1: the reset keeps __pycache__",
+        "test_reset_purges_bytecode_outside_the_venv",
+        "scripts/battery_isolation.py",
+        '            shutil.rmtree(Path(dirpath) / "__pycache__", ignore_errors=True)\n',
+        "            pass\n",
+        "I1: the second layer under PYTHONDONTWRITEBYTECODE, for caches written by "
+        "anything that sets its own env.",
+    ),
+    Mutation(
+        "i1: the shard interpreter is not checked",
+        "test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite",
+        "scripts/battery_isolation.py",
+        "    check_interpreter(shard, shard_env(shard, dict(os.environ)))\n",
+        "    pass\n",
+        "I1: an editable install pointing at another checkout is refused before the "
+        "first (multi-minute) suite, not after it.",
+    ),
+    Mutation(
+        "i1: the shard pool is never torn down",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean",
+        "scripts/battery_isolation.py",
+        "            if not keep:",
+        "            if keep:",
+        "I1: a finished or stopped battery leaves no worktree registration behind.",
+        off_gate_allowed=tuple(
+            (n, _I1_TEARDOWN)
+            for n in (
+                "tests/test_battery_isolation.py::test_reset_restores_the_pinned_tree",
+                "tests/test_battery_isolation.py::"
+                "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+                "tests/test_battery_isolation.py::"
+                "test_a_suite_on_another_checkouts_venv_did_not_run",
+                "tests/test_battery_isolation.py::"
+                "test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite",
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+                "tests/test_battery_isolation.py::"
+                "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+                "tests/test_battery_isolation.py::test_two_batteries_never_share_a_pool",
+            )
+        )
+        + _i1_declare(
+            _I1_TEARDOWN,
+            "test_prune_refuses_while_a_battery_holds_the_pool",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: two batteries share a shard pool",
+        "test_two_batteries_never_share_a_pool",
+        "scripts/battery_isolation.py",
+        "        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)",
+        "        pass",
+        "I1: a shard is reset between mutations; a second battery in the same pool "
+        "would reset or mutate the tree under the first one's suite.",
+        off_gate_allowed=_i1_declare(
+            _I1_POOL_LOCK,
+            "test_prune_refuses_while_a_battery_holds_the_pool",
+        ),
+    ),
+    Mutation(
+        "i1: a foreign directory in the pool is taken over",
+        "test_a_directory_in_the_pool_that_is_not_our_worktree_is_refused",
+        "scripts/battery_isolation.py",
+        "        if path not in _registered(source):",
+        "        if False:",
+        "I1: the pool only ever resets worktrees of this repository; anything else "
+        "at a shard path is refused, never checked out over or cleaned.",
+    ),
+    # ------------------------------------------------ I1 review fixes (09-29)
+    Mutation(
+        "i1: an incomplete pytest run is scored",
+        "test_a_suite_that_did_not_complete_did_not_run",
+        "scripts/battery_isolation.py",
+        "    if returncode not in COMPLETED_EXIT:",
+        "    if False:",
+        "Review MAJOR-1: pytest exiting 2 (SIGINT), 3 or 4 did not run the suite to "
+        "the end; it was scored, and an interrupt after the gate failed is a "
+        "false PROVEN.",
+    ),
+    Mutation(
+        "i1: pytest's own exit status is not checked",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '    if probe.get("exitstatus") not in COMPLETED_EXIT:',
+        "    if False:",
+        "Review MAJOR-1: the probe's exitstatus is pytest's own verdict on whether "
+        "the session completed, independent of how the process ended.",
+    ),
+    Mutation(
+        "i1: the reset keeps ignored files",
+        "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+        "scripts/battery_isolation.py",
+        'CLEAN_ARGV = ("clean", "-ffdxq", "-e", "/.venv/")',
+        'CLEAN_ARGV = ("clean", "-ffdq", "-e", "/.venv/")',
+        "Review MAJOR-2: an ignored runs/ or .orchestrator/ file one mutation's "
+        "suite wrote changed the next mutation's verdict.",
+        off_gate_allowed=_i1_declare(
+            _I1_RESET_E2E,
+            "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+            "test_an_ignored_file_left_in_a_shard_is_not_clean",
+            "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+            "test_check_still_fails_on_an_unproven_gate",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        ),
+    ),
+    Mutation(
+        "i1: the clean check cannot see ignored files",
+        "test_an_ignored_file_left_in_a_shard_is_not_clean",
+        "scripts/battery_isolation.py",
+        '        git(shard.root, "status", "--porcelain", "--ignored"),',
+        '        git(shard.root, "status", "--porcelain"),',
+        "Review MAJOR-2: `verify_clean` claimed a pinned tree while ignored files "
+        "from a previous suite were in it.",
+    ),
+    Mutation(
+        "i1: a reused shard keeps ignored files",
+        "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+        "scripts/battery_isolation.py",
+        '        _ok(git(path, *CLEAN_ARGV), f"git clean in {path}")',
+        '        _ok(git(path, "clean", "-fdq"), f"git clean in {path}")',
+        "Review MAJOR-2: a --keep-shards pool carries one battery's ignored state "
+        "into the next battery.",
+    ),
+    Mutation(
+        "i1: --prune-shards takes no lock",
+        "test_prune_refuses_while_a_battery_holds_the_pool",
+        "scripts/battery_isolation.py",
+        "    with pool_lock(pool):\n        return _prune_unlocked(source, pool)",
+        "    return _prune_unlocked(source, pool)",
+        "Review MAJOR-3: the default pool is shared by every worktree; an unlocked "
+        "prune removes another battery's live shard mid-suite.",
+    ),
+    Mutation(
+        "i1: the suite inherits PYTHONPATH",
+        "test_the_suite_never_inherits_pythonpath_or_a_pycache_prefix",
+        "scripts/battery_isolation.py",
+        '_SUITE_STRIP = ("PYTHONPATH", "PYTHONPYCACHEPREFIX")',
+        "_SUITE_STRIP = ()",
+        "Review MINOR-1: another checkout's scripts/ via PYTHONPATH passes the rsr "
+        "probe; a pycache prefix escapes the reset.",
+    ),
+    Mutation(
+        "i1: the suite's process group outlives it",
+        "test_a_stopped_battery_kills_its_suites_grandchildren",
+        "scripts/mutation_battery.py",
+        "    finally:\n        _kill_" + "group(proc)\n",
+        "    finally:\n        proc.kill()\n        proc.wait()\n",
+        "Review MINOR-2: a grandchild of the suite kept writing into the shard under "
+        "the next suite or the teardown.",
+        off_gate_allowed=_i1_declare(
+            _I1_GROUP,
+            "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: SIGINT is not handled",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGINT]",
+        "scripts/mutation_battery.py",
+        "_HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGHUP, " + "signal.SIGINT)",
+        "_HANDLED_SIGNALS = (signal.SIGTERM, " + "signal.SIGHUP)",
+        "Review MINOR-3: a Ctrl-C exited with a traceback, and a second Ctrl-C cut "
+        "the teardown short.",
+    ),
+    Mutation(
+        "i1: --markdown records DID_NOT_RUN rows",
+        "test_markdown_is_not_written_while_a_row_did_not_run",
+        "scripts/mutation_battery.py",
+        "    if args.markdown and " + "did_not_run:",
+        "    if False:",
+        "Review MINOR-4: the committed table records verdicts; a mutation that did "
+        "not run has none.",
+    ),
+    Mutation(
+        "i1: a baseline that did not run exits 1",
+        "test_a_baseline_that_did_not_run_exits_3",
+        "scripts/mutation_battery.py",
+        "            refuse(Exit.DID_NOT_RUN, "
+        + 'f"the baseline suite did not run: {e}")',
+        '            refuse(Exit.FAIL, f"the baseline suite did not ' + 'run: {e}")',
+        "Review MINOR-8: nothing was mutated, so nothing was tested: 3, not 1.",
+        off_gate_allowed=_i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_suite_on_another_checkouts_venv_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: battery_subset drops --shard-dir",
+        "test_battery_subset_passes_the_shard_dir_through",
+        "scripts/battery_subset.py",
+        '        extra, rest = ["--shard-dir", rest[1]], rest[2:]',
+        "        rest = rest[2:]",
+        "Review MINOR-7 / pool policy: a subset beside another battery needs its "
+        "own pool, or it exits 3.",
+    ),
+    Mutation(
+        "i1: no SIGTERM/SIGHUP handler",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean",
+        "scripts/mutation_battery.py",
+        "    old = {s: signal.signal(s, _raise_"
+        + "signalled) for s in _HANDLED_SIGNALS}",
+        "    old = {}",
+        "I1 defence in depth: a stopped battery kills its pytest child and tears its "
+        "shards down; without the handler both outlive it.",
+        off_gate_allowed=_i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_stopped_battery_kills_its_suites_grandchildren",
+        ),
+    ),
+    Mutation(
+        "on_write is told the victim index again",
+        "test_on_write_receives_the_newcomers_slot_after_an_eviction",
+        "src/rsr/model/tg/policy_loop.py",
+        "                    policy.on_write(memory_state(mem, t, row), slot, t)",
+        "                    policy.on_write(memory_state(mem, t, row), "
+        "int(victim[row]), t)",
+        "2026-09-29, gauntlet 0.4 one level down: `write_at` compacts behind the "
+        "victim and writes the newcomer at M-1 (§3.1, ADR-0006), so after the "
+        "write the victim index names a different occupant -- and on an underfull "
+        "row it is the placeholder 0. Any policy keying state on `slot` (LRU, "
+        "H2O, E1's per-slot baselines) would update the wrong slot. The loop's "
+        "own written_at guard checks `slot`, not the argument actually passed, so "
+        "it cannot catch this mutation; only the recording-policy test does.",
+        off_gate_allowed=(
+            (
+                "tests/test_on_write_slot.py::"
+                "test_on_write_receives_the_newly_filled_slot_on_a_non_full_row",
+                "the same call site: the old call passed the placeholder 0 on an "
+                "underfull row, which is the other half of the defect this gate "
+                "names",
+            ),
+        ),
+    ),
+    # T5(b), 2026-09-30: the review gate (docs/review-records.md). Proven by hand
+    # at authoring time against tests/test_orch_merge*.py only (battery lane busy).
+    Mutation(
+        "merge: the review gate is skipped",
+        "test_merge_is_refused_without_a_review_record",
+        "scripts/orchestrator/merge.py",
+        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
+        "    if code != Exit.OK:\n",
+        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
+        "    if False:\n",
+        "PLAN-v4 §4 T5(b) stops being a mechanism: any verified run/ branch, and "
+        "any fix/ eng/ feat/ docs/ branch at all, merges into the night branch with "
+        "no adversarial review on record.",
+        off_gate_allowed=tuple(
+            (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
+            for t in _REVIEW_GATE_REFUSALS
+        ),
+    ),
+    Mutation(
+        "merge: a stale review record is accepted",
+        "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+        "scripts/orchestrator/merge.py",
+        "    unreviewed = [\n"
+        "        p for p in diff.stdout.splitlines() if p and not review_exempt(p, "
+        "run_item)\n"
+        "    ]\n",
+        "    unreviewed = []\n",
+        "a review of an early head waves through every commit made after it -- "
+        "the census shape of 2026-09-29 (eng/i1-isolation reviewed at ff6dccc, "
+        "7 files changed since).",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_orch_merge_review.py::{t}",
+                "a forged verification.json is refused by the same staleness diff; "
+                "no diff, no refusal. One check, two path classes.",
+            )
+            for t in (
+                "test_only_the_merging_runs_own_verification_is_exempt",
+                "test_no_verification_json_is_exempt_on_other_prefixes",
+            )
+        ),
+    ),
+    # T5(b) review fixes, 2026-09-30 (docs/reviews/eng-t5b-review-gate/
+    # bbfa38c9bade.md). Proven by hand, targeted files only (B5 holds the CPU).
+    Mutation(
+        "merge: MERGE WITH FIXES merges on its own",
+        "test_merge_with_fixes_is_never_mergeable_on_its_own",
+        "scripts/orchestrator/merge.py",
+        '    if fm["verdict"] == "MERGE WITH FIXES":\n'
+        "        # Review MAJOR-2, PM decision",
+        "    if False:\n        # Review MAJOR-2, PM decision",
+        "review MAJOR-2 (probe P3): the author commits a 'fix', edits the "
+        "reviewer's record to attest it, and the unreviewed fix merges.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_orch_merge_review.py::{t}",
+                "every MERGE WITH FIXES record is refused by this one branch; "
+                "without it each falls through to the MERGE path.",
+            )
+            for t in (
+                "test_merge_with_fixes_without_fixes_verified_at_is_refused",
+                "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+                "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
+            )
+        ),
+    ),
+    Mutation(
+        "merge: fixes_verified_at is not validated",
+        "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit",
+        "scripts/orchestrator/merge.py",
+        "        if fixes is not None and not (_full_sha(fixes) and _commit(root, "
+        "fixes)):",
+        "        if False:",
+        "review MAJOR-1 (probe P1): a record naming a moving ref (`fix/x`, `HEAD`) "
+        "is accepted as if it named a commit.",
+    ),
+    Mutation(
+        "merge: every runs/*/verification.json is staleness-exempt",
+        "test_only_the_merging_runs_own_verification_is_exempt",
+        "scripts/orchestrator/merge.py",
+        '    return run_item is not None and path == f"runs/{run_item}/'
+        'verification.json"',
+        '    return path.startswith("runs/") and path.endswith("/verification.json")',
+        "review MINOR-2 (probe P4): a forged verification.json for another run id "
+        "rides in after review and then satisfies gate 1 for that run from the "
+        "night branch.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_no_verification_json_is_exempt_on_other_prefixes",
+                "the same exemption, reached from a non-run/ prefix.",
+            ),
+        ),
     ),
     Mutation(
         "battery-union: a one-sided tail change keeps ours",
@@ -4905,6 +5394,11 @@ def _markdown(rows: list[dict]) -> str:
         "present reddens under every mutation by construction — it made all 32 score "
         "`LEAKS` the first time clause 2 was enforced. `apply()` raises on a stale "
         "anchor instead.",
+        "- **The probe writer (`tests/_battery_probe.py`) cannot be mutated here.** "
+        "A suite that writes no probe, or a wrong one, is `DID_NOT_RUN` by design "
+        "(I1), so its mutation could never score `PROVEN`. Proved on a stub "
+        "repository instead: `test_a_mutation_whose_suite_reports_no_probe_did_not_run` "
+        "and `test_a_suite_on_another_checkouts_venv_did_not_run`.",
         "",
     ]
     return "\n".join(out)
@@ -4993,29 +5487,75 @@ the width, and drops it altogether when the node id alone fills 80 columns."""
 _SUMMARY_HEADER = "short test summary info"
 
 
-def run_suite() -> dict[str, str | None]:
+class SuiteDidNotRun(Exception):
+    """This suite run is not evidence: killed by a signal, or not isolated (I1)."""
+
+
+def _kill_group(proc: subprocess.Popen) -> None:
+    """SIGKILL pytest's whole process group, then reap pytest.
+
+    Called on EVERY exit from a shard suite, normal or not (review MINOR-2): the
+    real suite spawns grandchildren -- nested stub batteries, ``python -m venv``,
+    experiment ``run.py`` -- and one left alive would keep writing into the shard
+    while the next mutation's suite runs there, or under a teardown's
+    ``git worktree remove``.
+    """
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(proc.pid, signal.SIGKILL)
+    proc.wait()
+
+
+def _spawn(argv: list[str], cwd: Path, env: dict[str, str]):
+    """Run one shard suite as the leader of its own session; group-killed on exit.
+
+    Its own session also means a terminal Ctrl-C reaches only the battery, whose
+    SIGINT handler then stops the suite -- not pytest first, behind its back.
+    """
+    proc = subprocess.Popen(
+        argv,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        out, err = proc.communicate()
+    finally:
+        _kill_group(proc)
+    return subprocess.CompletedProcess(argv, proc.returncode, out, err)
+
+
+def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     """Return ``{failing node id: one-line reason}`` (``None`` if pytest printed none).
+
+    🔴 I1: with a ``shard``, the suite runs there on the shard's own pytest, and
+    raises ``SuiteDidNotRun`` if the suite did not complete -- pytest killed by a
+    signal, or exiting 2/3/4 -- or if its probe does not put ``rsr`` under the shard
+    root (`battery_isolation.suite_problem`). A killed pytest used to become a
+    ``<collection/exit -9>`` "failure" and be scored; a SIGINTed one still was,
+    as ``<collection/exit 2>`` (review MAJOR-1).
 
     📌 I5 (PLAN-v4 §4): this ran ``--tb=no`` until 2026-09-27, so the 09-26 red on
     ``test_submit_launches_the_slot_detached_at_the_pinned_sha`` left only a node
     id. The reason is recorded on the verdict row; it never enters a verdict --
     the node set is parsed exactly as before (`parse_failures`).
     """
-    proc = subprocess.run(
-        [
-            str(PYTEST),
-            "-p",
-            "no:cacheprovider",
-            "-rfE",
-            "--tb=line",
-            "-q",
-            "--no-header",
-        ],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        env={**_suite_env(), "COLUMNS": REASON_COLUMNS},
-    )
+    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    argv = ["-p", "no:cacheprovider", "-rfE", "--tb=line", "-q", "--no-header"]
+    if shard is None:
+        proc = subprocess.run(
+            [str(PYTEST), *argv], cwd=ROOT, capture_output=True, text=True, env=env
+        )
+        return parse_failures(proc.stdout + proc.stderr, proc.returncode)
+    env = iso.shard_env(shard, env)
+    with contextlib.suppress(FileNotFoundError):
+        shard.probe.unlink()
+    proc = _spawn([str(shard.root / ".venv" / "bin" / "pytest"), *argv], shard.root, env)
+    problem = iso.suite_problem(proc.returncode, iso.read_probe(shard.probe), shard.root)
+    if problem:
+        raise SuiteDidNotRun(f"{problem} (in {shard.root})")
     return parse_failures(proc.stdout + proc.stderr, proc.returncode)
 
 
@@ -5071,8 +5611,9 @@ def anchor_problems() -> list[str]:
     return out
 
 
-def apply(mutation: Mutation) -> str:
-    path = ROOT / mutation.path
+def apply(mutation: Mutation, root: Path | None = None) -> str:
+    """Write ``mutation`` into ``root`` (a shard; ``ROOT`` only for the anchor tests)."""
+    path = (ROOT if root is None else root) / mutation.path
     original = path.read_text()
     if mutation.old not in original:
         # 🔴 DID NOT RUN (3), not 1: nothing was mutated, so nothing was tested.
@@ -5085,6 +5626,51 @@ def apply(mutation: Mutation) -> str:
         )
     path.write_text(original.replace(mutation.old, mutation.new, 1))
     return original
+
+
+_HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)
+"""SIGINT too (review MINOR-3): a Ctrl-C tears down exactly as SIGTERM does, and a
+second Ctrl-C during the teardown is ignored rather than cutting it short."""
+
+
+class _Signalled(BaseException):
+    """Raised by the SIGTERM/SIGHUP/SIGINT handler so every ``finally`` runs."""
+
+    def __init__(self, signum: int):
+        super().__init__(signum)
+        self.signum = signum
+
+
+def _raise_signalled(signum, _frame):
+    # One signal is enough: ignore repeats so the teardown is not interrupted too.
+    for s in _HANDLED_SIGNALS:
+        signal.signal(s, signal.SIG_IGN)
+    raise _Signalled(signum)
+
+
+@contextlib.contextmanager
+def signal_handlers():
+    """Defence in depth (I1). The live tree does not depend on these -- no suite
+    ever runs in it. They let a stopped battery kill its pytest child
+    (``subprocess.run`` does on any exception) and tear its shards down. The
+    previous handlers come back on exit, so an in-process ``main()`` (the unit
+    tests) leaves its host's handlers as it found them."""
+    old = {s: signal.signal(s, _raise_signalled) for s in _HANDLED_SIGNALS}
+    try:
+        yield
+    finally:
+        for s, h in old.items():
+            signal.signal(s, h)
+
+
+def open_workspace(args) -> contextlib.AbstractContextManager[list[iso.Shard]]:
+    """The shard(s) every suite run happens in: HEAD of the clean invoking tree."""
+    sha = iso.pinned_sha(ROOT)
+    return iso.open_pool(ROOT, sha, n=1, pool=args.shard_dir, keep=args.keep_shards)
+
+
+def reset(shard: iso.Shard) -> None:
+    iso.reset_shard(shard)
 
 
 def main() -> Exit:
@@ -5105,7 +5691,38 @@ def main() -> Exit:
         default=None,
         help="regenerate docs/mutation-battery.md from this run",
     )
+    ap.add_argument(
+        "--shard-dir",
+        type=Path,
+        default=None,
+        help="where the shard worktrees live (default ~/.cache/rsr-battery/<repo>); "
+        "must be outside this tree",
+    )
+    ap.add_argument(
+        "--keep-shards",
+        action="store_true",
+        help="leave the shard worktrees for reuse instead of removing them",
+    )
+    ap.add_argument(
+        "--prune-shards",
+        action="store_true",
+        help="only remove this repo's shard worktrees under --shard-dir (the cleanup "
+        "after a SIGKILL); exit 3 if any could not be removed",
+    )
     args = ap.parse_args()
+
+    if args.prune_shards:
+        pool = (args.shard_dir or iso.default_pool_dir(ROOT)).resolve()
+        try:
+            errors = iso.prune_shards(ROOT, pool)
+        except iso.Unisolated as e:
+            refuse(Exit.DID_NOT_RUN, f"--prune-shards: {e}; nothing removed")
+        for e in errors:
+            print(e, file=sys.stderr)
+        if errors:
+            return Exit.DID_NOT_RUN
+        print(f"no shard worktrees registered under {pool}")
+        return Exit.OK
 
     if not MUTATIONS:
         # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has no
@@ -5137,58 +5754,116 @@ def main() -> Exit:
             f"{len(problems)} stale anchor(s); nothing was mutated. Fix the anchors "
             f"(`--check-anchors`), do not drop the mutations.",
         )
-    baseline = run_suite()
-    if baseline:
-        # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
-        # `raise SystemExit(msg)` (S0-05).
-        refuse(
-            Exit.DID_NOT_RUN,
-            f"the suite is not green before mutating: {sorted(baseline)}",
-        )
 
-    rows = []
-    for m in MUTATIONS:
-        path = ROOT / m.path
-        original = apply(m)
-        try:
-            failing = run_suite()
-        finally:
-            path.write_text(original)
-        reasons = _reasons(failing)
-        on_gate = sorted(f for f in failing if m.gate in f)
-        off_gate = sorted(f for f in failing if m.gate not in f)
-        declared = {node for node, _reason in m.off_gate_allowed}
-        leaked = [f for f in off_gate if f not in declared]
-        if on_gate and leaked:
-            verdict = "LEAKS"
-        elif on_gate:
-            verdict = "PROVEN"
-        else:
-            verdict = "ADDS NOTHING"
-        rows.append(
-            {
-                "mutation": m.name,
-                "gate": m.gate,
-                "why": m.why,
-                "reddened_gate": bool(on_gate),
-                "n_on_gate": len(on_gate),
-                "off_gate": off_gate,
-                "off_gate_allowed": [list(x) for x in m.off_gate_allowed],
-                "off_gate_undeclared": leaked,
-                "verdict": verdict,
-                # I5: one line per failing node. Data, never a verdict input.
-                "failure_reasons": {f: reasons[f] for f in sorted(reasons)},
-            }
-        )
+    try:
+        with signal_handlers():
+            return status(_run_isolated(args))
+    except iso.Unisolated as e:
+        refuse(Exit.DID_NOT_RUN, f"not isolated: {e}")
+    except _Signalled as e:
+        name = signal.Signals(e.signum).name
         print(
-            f"{rows[-1]['verdict']:13s} {m.name:42s} "
-            f"-> {len(on_gate)} on gate, {len(off_gate)} off "
-            f"({len(leaked)} undeclared)"
+            f"INTERRUPTED by {name}: shards torn down, no verdicts; the invoking "
+            f"tree was never mutated",
+            file=sys.stderr,
         )
+        raise SystemExit(128 + e.signum) from None
 
+
+def _run_isolated(args) -> Exit:
+    with open_workspace(args) as shards:
+        shard = shards[0]
+        print(
+            f"shard: {shard.root} at {shard.sha[:12]} "
+            + " ".join(f"{k}={v:.2f}" for k, v in shard.timings.items())
+        )
+        try:
+            baseline = run_suite(shard)
+        except SuiteDidNotRun as e:
+            refuse(Exit.DID_NOT_RUN, f"the baseline suite did not run: {e}")
+        if baseline:
+            # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
+            # `raise SystemExit(msg)` (S0-05).
+            refuse(
+                Exit.DID_NOT_RUN,
+                f"the suite is not green before mutating: {sorted(baseline)}",
+            )
+
+        rows = []
+        resets: list[float] = []
+        for m in MUTATIONS:
+            path = shard.root / m.path
+            original = apply(m, shard.root)
+            did_not_run = None
+            try:
+                failing = run_suite(shard)
+            except SuiteDidNotRun as e:
+                failing, did_not_run = {}, str(e)
+            finally:
+                path.write_text(original)
+                t0 = time.perf_counter()
+                reset(shard)
+                resets.append(time.perf_counter() - t0)
+            rows.append(_row(m, failing, did_not_run))
+            print(
+                f"{rows[-1]['verdict']:13s} {m.name:42s} "
+                f"-> {rows[-1]['n_on_gate']} on gate, {len(rows[-1]['off_gate'])} off "
+                f"({len(rows[-1]['off_gate_undeclared'])} undeclared)"
+            )
+        if resets:
+            print(
+                f"shard reset: {len(resets)} x, mean {sum(resets) / len(resets):.3f} s, "
+                f"max {max(resets):.3f} s"
+            )
+    return _report(args, rows)
+
+
+def _row(m: Mutation, failing, did_not_run: str | None) -> dict:
+    reasons = _reasons(failing)
+    on_gate = sorted(f for f in failing if m.gate in f)
+    off_gate = sorted(f for f in failing if m.gate not in f)
+    declared = {node for node, _reason in m.off_gate_allowed}
+    leaked = [f for f in off_gate if f not in declared]
+    if did_not_run is not None:
+        # 🔴 I1: not isolated, or killed. Nothing here is evidence either way.
+        verdict = "DID_NOT_RUN"
+    elif on_gate and leaked:
+        verdict = "LEAKS"
+    elif on_gate:
+        verdict = "PROVEN"
+    else:
+        verdict = "ADDS NOTHING"
+    row = {
+        "mutation": m.name,
+        "gate": m.gate,
+        "why": m.why,
+        "reddened_gate": bool(on_gate),
+        "n_on_gate": len(on_gate),
+        "off_gate": off_gate,
+        "off_gate_allowed": [list(x) for x in m.off_gate_allowed],
+        "off_gate_undeclared": leaked,
+        "verdict": verdict,
+        # I5: one line per failing node. Data, never a verdict input.
+        "failure_reasons": {f: reasons[f] for f in sorted(reasons)},
+    }
+    if did_not_run is not None:
+        row["did_not_run"] = did_not_run
+    return row
+
+
+def _report(args, rows: list[dict]) -> Exit:
     if args.json:
+        # A run record: DID_NOT_RUN rows belong in it.
         args.json.write_text(json.dumps(rows, indent=2) + "\n")
-    if args.markdown:
+    did_not_run = [r for r in rows if r["verdict"] == "DID_NOT_RUN"]
+    if args.markdown and did_not_run:
+        # 🔴 The committed table is a record of verdicts; a mutation that did not
+        # run has none (review MINOR-4). Leave the old record in place.
+        print(
+            f"NOT WRITING {args.markdown}: {len(did_not_run)} mutation(s) did not run",
+            file=sys.stderr,
+        )
+    elif args.markdown:
         args.markdown.write_text(_markdown(rows))
 
     bad = unproven(rows)
@@ -5196,7 +5871,11 @@ def main() -> Exit:
     if bad:
         print("UNPROVEN:")
         for r in bad:
-            if not r["reddened_gate"]:
+            if r["verdict"] == "DID_NOT_RUN":
+                print(
+                    f"  {r['gate']}  ({r['mutation']}) -- DID NOT RUN: {r['did_not_run']}"
+                )
+            elif not r["reddened_gate"]:
                 print(f"  {r['gate']}  ({r['mutation']}) -- reddens nothing")
             else:
                 print(
@@ -5211,6 +5890,10 @@ def main() -> Exit:
             "that reddens tests it did not declare has not isolated the defect. "
             "Declare the coupling with a reason, or narrow the mutation."
         )
+    # 🔴 I1: a mutation that did not run is not a table entry, with or without
+    # --check. "Did not run" never becomes exit 0.
+    if any(r["verdict"] == "DID_NOT_RUN" for r in rows):
+        return Exit.DID_NOT_RUN
     # Without --check this is the table renderer and exits 0 once the table is
     # rendered; --check is the gate. Documented in the module docstring, and
     # decided in S0-05's RESULTS.md.
