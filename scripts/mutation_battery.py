@@ -5981,6 +5981,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass  # MUTATED\n",
         "m-1: the source's path and sha256 must be in the hash: a frozen config "
         "that does not say which substrate it started from proves nothing.",
+        off_gate_allowed=_r1_declare(
+            "the relative-step test also reads frozen['warm_start']['source_step'] "
+            "to prove the source sat past T_warm; unstamped, that key is missing "
+            "(KeyError) -- the same record, read from the warmup gate.",
+            "test_the_warm_start_runs_t_warm_at_relative_steps",
+        ),
     ),
     Mutation(
         "run1: a non-FIFO warm-start source accepted",
@@ -6048,6 +6054,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass  # MUTATED\n",
         "m-4: freezing removes the update only; dropout stays live, and nothing "
         "else in the config says so.",
+        off_gate_allowed=_r1_declare(
+            "the frozen warm-start test asserts the same record on a frozen arm "
+            "(KeyError 'frozen_model_mode'); one stamp, read from two frozen arms.",
+            "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+        ),
     ),
     Mutation(
         "run1: no_warmup_ablation accepted on the FIFO arm",
@@ -6065,6 +6076,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADAMW_EPS: float = 1e-12\n",
         "P-2: B1 measured beta live at eps 1e-8 and inert at 1e-12; the pin is "
         "what makes beta mean what B1 measured.",
+        off_gate_allowed=_s1_declare(
+            "the slice-1 eps test asserts torch's default == the recorded default "
+            "== ADAMW_EPS at torch 2.14.0; moving the pin off 1e-8 breaks that "
+            "equality, which is the point of keeping it.",
+            "test_the_adamw_eps_is_torchs_default_and_recorded",
+        ),
     ),
     Mutation(
         "run1: the §7.1 diagnostics are not logged on the beat",
@@ -6083,6 +6100,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        self._diag_from = 0  # MUTATED\n",
         "m-8: a per-step histogram that silently grows into a cumulative one "
         "mixes warmup and scored evictions in one beat.",
+        off_gate_allowed=_r1_declare(
+            "the train()-level diagnostics test asserts the same histogram through "
+            "the beat (88 evictions/step, all age 4 in warmup); the mutation "
+            "shows there as 176 == 88 on the second beat.",
+            "test_the_section_7_1_diagnostics_are_logged_every_step",
+        ),
     ),
     Mutation(
         "run1: the victim age is recorded as its rank",
@@ -6092,6 +6115,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            victim_age=victim_rank,  # MUTATED\n",
         "m-8 / §7.1: age and rank coincide only under FIFO; RSR breaks the map "
         "(ADR-0006), which is why both histograms exist.",
+        off_gate_allowed=_r1_declare(
+            "the train()-level diagnostics test asserts the same histogram through "
+            "the beat (88 evictions/step, all age 4 in warmup); the mutation "
+            "shows there as {'1': 88} == {'4': 88}.",
+            "test_the_section_7_1_diagnostics_are_logged_every_step",
+        ),
     ),
     Mutation(
         "run1: victim ages not counted by the rank-shift log",
@@ -6102,6 +6131,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass  # MUTATED\n",
         "m-8: the victim-age histogram is the log's to aggregate; an empty one "
         "reads as 'no evictions'.",
+        off_gate_allowed=_r1_declare(
+            "the train()-level diagnostics test asserts the same histogram through "
+            "the beat (88 evictions/step, all age 4 in warmup); the mutation "
+            "shows there as an empty age histogram.",
+            "test_the_section_7_1_diagnostics_are_logged_every_step",
+        ),
     ),
     Mutation(
         "run1: rankdata gives tied values distinct ranks",
@@ -6120,6 +6155,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        Z = ones  # MUTATED\n",
         "m-8 / §7.1 item 1: 'partial correlation, not raw rho' -- without the "
         "covariates it is v0.1's raw Spearman under the partial's name.",
+        off_gate_allowed=_r1_declare(
+            "both assert None where the covariates leave nothing defined: content "
+            "that determines age (now 1.0) and 32 covariates over 8 samples (now "
+            "-0.258). Without the residualisation neither case is undefined.",
+            "test_partial_rho_is_one_for_a_score_that_is_age_and_none_when_undefined",
+            "test_victim_age_and_rank_histograms_by_hand",
+        ),
     ),
     Mutation(
         "run1: age enters the content head's score",
@@ -6139,6 +6181,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        return self.table[torch.zeros_like(idx)]  # MUTATED\n",
         "m-8 / §7.1 item 2: an 'age-only' arm that is a constant is not recency "
         "at its strongest; content+age ~= age-only would then mean nothing.",
+        off_gate_allowed=_r1_declare(
+            "both drive AgeOnlyValueHead with a hand-set table: the histogram test "
+            "picks its middle-slot victim by theta[age] (now slot 0, all ties), and "
+            "the content-head test's age-only half expects theta[age] = (4,3,2,1).",
+            "test_victim_age_and_rank_histograms_by_hand",
+            "test_the_content_head_never_reads_age",
+        ),
     ),
     Mutation(
         "run1: diagnostics on for a directly built policy",
