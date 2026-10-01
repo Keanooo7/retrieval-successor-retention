@@ -52,6 +52,7 @@ ARM_ITERS = 3  # pool 2 at batch 2 -> T_warm = 1 step; CKPT = 1 -> snapshots 1, 
 POOL = (993000, 993002)
 EVAL = (998000, 998002)  # NOT the run's EVAL: the fixture's held-out range (MINOR-7)
 O5 = "eval"  # exercises C-1 end to end; the train branch is rendered separately
+DIAG = 2  # A4.2's DIAGNOSTIC step, shrunk with the run (160 of 3000 in the run)
 
 
 @pytest.fixture(scope="session")
@@ -198,6 +199,7 @@ def tiny_cfg(r1, sub: dict, **kw):
         c4_ledger=str(sub["ledger"]),
         n_boot=200,
         owner_prereg=str(sub["owner_prereg"]),
+        diag_step=DIAG,
         prereg_strict=False,
     )
     base.update(kw)
@@ -1058,6 +1060,7 @@ def _launcher_command(
         ('"${P[@]}"', p),
         ("${SHA[$s]}", s["sha256"]),
         ("$STEPS", "3000"),
+        ("$EVERY", "40"),  # launcher v6 (A4.2): gcd(160, 1000)
         ("$CKPT", "1000"),
         ("$OUT/$a/seed$s", out),
         ("$B", b),
@@ -2090,3 +2093,102 @@ def test_measure_seed_passes_every_arms_sampler_into_c2(r1, e2e, tmp_path):
     assert doc["controls"]["C2"]["b_fingerprint"]["sampling_agrees"] is False
     assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
     assert "C2" in doc["controls_failed"]
+
+
+# --------------------------------------------------------------------------- #
+# A4.2: the file cadence EVERY and the DIAGNOSTIC step-160 reading
+# --------------------------------------------------------------------------- #
+
+
+def test_every_is_gcd_of_the_diagnostic_step_and_ckpt(r1, monkeypatch):
+    """A4.2 / launcher v6: EVERY = gcd(160, CKPT) for STEPS >= 160 and CKPT > 0, else
+    CKPT. At 3000 steps: CKPT 1000, EVERY 40, 75 files; snapshots 160, 1000, 2000 and
+    the final 3000. Under v5 (`LAUNCHER_V6` False) the files stay at CKPT and there is
+    no step-160 checkpoint, so no diagnostic reading."""
+    assert r1.DIAG_STEP == 160
+    assert r1.derive_every(3000, 1000, 160) == 40
+    assert r1.derive_every(150, 50, 160) == 50  # STEPS < 160
+    assert r1.derive_every(0, 0, 160) == 0  # the dry run
+    assert r1.derive_every(3001, 3001, 160) == math.gcd(160, 3001)
+    cfg = r1.prereg_config(0, 3000)
+    monkeypatch.setattr(r1, "LAUNCHER_V6", False)
+    assert cfg.file_every == 1000 and cfg.diag is None
+    assert cfg.snapshots == [1000, 2000, 3000]
+    monkeypatch.setattr(r1, "LAUNCHER_V6", True)
+    assert cfg.file_every == 40 and len(cfg.checkpoint_files) == 75
+    assert cfg.diag == 160 and cfg.snapshots == [160, 1000, 2000, 3000]
+    ow = owner(r1, iters=3000)
+    argv = r1.cli_argv(cfg, "psiC", ow, Path("x"))
+    assert argv[argv.index("--ckpt-every") + 1] == "40"
+    names = [n for n, _src, _z in r1.heldout_passes([160, 1000, 2000], cfg.diag)]
+    for n in ("psiC@160", "age@160", "sz_psiC@160", "sz_age@160", "psiC@1000",
+              "age@2000"):  # fmt: skip
+        assert names.count(n) == 1, n
+    assert not any(n.startswith(("fifo@", "lru@", "oracle@", "sz_fifo@")) for n in names)
+    assert "sz_psiC@1000" not in names  # the floors are re-run at 160 only
+
+
+def test_the_step_diag_reading_is_diagnostic_and_never_the_headline(r1, e2e):
+    """A4.2: psiC@d, age@d, sz_psiC@d, sz_age@d on the same EVAL documents; fifo, LRU
+    and sz_fifo reused from the final reading; the §7.1 contrast set labelled
+    DIAGNOSTIC; the headline is the final reading's alone."""
+    cfg, doc = e2e["cfg"], e2e["doc"]
+    assert cfg.diag == DIAG
+    hd = e2e["out_root"] / "heldout" / "seed0"
+    for n in (f"psiC@{DIAG}", f"age@{DIAG}", f"sz_psiC@{DIAG}", f"sz_age@{DIAG}"):
+        assert [r["doc"] for r in r1.read_pass(hd, n)] == list(range(*EVAL)), n
+    ho = doc["heldout"]
+    dg = ho["diagnostic_step"]
+    assert dg["step"] == DIAG and "DIAGNOSTIC" in dg["label"] and "never" in dg["label"]
+    acc, con = ho["accuracy"]["all"], dg["contrasts"]
+    want = acc[f"psiC@{DIAG}"]["point"] - acc["fifo"]["point"]
+    assert con["acc.all.psiC_minus_fifo"]["point"] == pytest.approx(want)
+    want = acc[f"psiC@{DIAG}"]["point"] - acc["lru"]["point"]
+    assert con["acc.all.psiC_minus_lru"]["point"] == pytest.approx(want)
+    assert con["acc.all.lru_minus_fifo"] == ho["contrasts"]["acc.all.lru_minus_fifo"]
+    g = ho["accuracy"]["gap_2_to_M"]
+    want = g[f"age@{DIAG}"]["point"] - g[f"sz_age@{DIAG}"]["point"]
+    assert con["R_own_floor.age"]["point"] == pytest.approx(want)
+    assert set(dg["accuracy"]["all"]) == {
+        f"psiC@{DIAG}",
+        f"age@{DIAG}",
+        f"sz_psiC@{DIAG}",
+        f"sz_age@{DIAG}",
+    }
+    assert not any("oracle" in k for k in con)  # no oracle-derived number here
+    head = r1.headline([doc])["per_seed"][0]
+    assert head["point"] == ho["contrasts"][r1.HEADLINE]["point"]  # the final reading
+    text = e2e["results"].read_text()
+    assert f"### Step-{DIAG} phi reading -- {r1.DIAG_LABEL}" in text
+    assert f"- DIAGNOSTIC step {DIAG} `acc.all.psiC_minus_fifo`" in text
+    assert r1.DIAG_COST_NOTE in text and "EXTRAPOLATED" in r1.DIAG_COST_NOTE
+    assert "1,090 s per seed" in r1.DIAG_COST_NOTE
+
+
+def test_c10_under_v6_checks_every_and_the_new_launch_fields(r1, e2e, monkeypatch):
+    """A4.2 C10: launch-git's `ckpt_every` (EVERY, and the v6 rule on steps),
+    `ckpt_every_rule` and `diag_step`; each job's `--ckpt-every` == EVERY; the CKPT
+    derivation is still checked."""
+    monkeypatch.setattr(r1, "LAUNCHER_V6", True)
+    lg = json.loads((e2e["out_root"] / "launch-git.json").read_text())
+    assert (lg["ckpt_every"], lg["diag_step"]) == ("1", str(DIAG))
+    assert _c10(r1, e2e)["ok"], _problems(_c10(r1, e2e))
+    for key, val, why in (
+        ("ckpt_every", "2", "ckpt_every"),
+        ("ckpt_every_rule", "CKPT", "ckpt_every_rule"),
+        ("diag_step", "160", "diag_step"),
+        ("ckpt", "3", "ckpt"),
+    ):
+        c = _c10(r1, e2e, launch={**lg, key: val})
+        assert not c["ok"] and any(why in p for p in c["launch_problems"]), key
+    cfg = r1.dataclasses.replace(e2e["cfg"], iters=3000, diag_step=160)
+    ran = {  # the commands that actually ran: --ckpt-every 1
+        a: {"cmd": r1.cli_argv(e2e["cfg"], a, e2e["owner"], Path("x"))} for a in r1.ARMS
+    }
+    c = _c10(r1, e2e, cfg=cfg, owner_=owner(r1, iters=3000), jobs=ran)
+    assert c["derived_ckpt"] == 1000 and c["derived_every"] == 40
+    probs = c["per_arm"]["psiC"]["problems"]
+    assert any("--ckpt-every '1' != 40" in p for p in probs)
+    assert any("derived cadence [40, 80," in p for p in probs)
+    monkeypatch.setattr(r1, "LAUNCHER_V6", False)  # v5: the fields are not v5's
+    assert _c10(r1, e2e, launch={**lg, "diag_step": "160"})["ok"]

@@ -262,6 +262,24 @@ def derive_ckpt(steps: int) -> int:
     return steps // 3 if steps > 0 and steps % 3 == 0 else steps
 
 
+#: A4.2 (the owner's ruling, "take the recommendations"): a DIAGNOSTIC held-out phi
+#: reading at step 160 -- never the headline, never gated. TO-CONFIRM against A4.2's text.
+DIAG_STEP = 160
+#: Launcher v6's recorded rule for the file cadence (`ckpt_every_rule`), verbatim.
+#: TO-CONFIRM: filled from the v6 text when the drafter commits it.
+EVERY_RULE = "TO-CONFIRM (launcher v6)"
+
+
+def derive_every(steps: int, ckpt: int, diag: int = DIAG_STEP) -> int:
+    """A4.2 / launcher v6: the arms write a checkpoint every EVERY steps, EVERY =
+    gcd(diag, CKPT) when STEPS >= diag and CKPT > 0, else CKPT -- so the diagnostic
+    step and every CKPT snapshot exist on disk (3000 steps: CKPT 1000, EVERY 40, 75
+    files). Training is bitwise unaffected by the cadence (the drafter's proof)."""
+    if diag > 0 and steps >= diag and ckpt > 0:
+        return math.gcd(diag, ckpt)
+    return ckpt
+
+
 class ControlFailure(RuntimeError):
     """A PREREG §8 control failed: inconclusive, exit 3."""
 
@@ -332,19 +350,49 @@ class Run1Config:
     #: The file C10 reads the owner's registered values from (A3.7a; `OWNER_TABLE_*`).
     #: Tests point it at a synthetic PREREG; C10 under `prereg_strict` requires PREREG.
     owner_prereg: str = PREREG
+    #: A4.2's DIAGNOSTIC held-out step (160); the fixture shrinks it with the run.
+    diag_step: int = DIAG_STEP
     prereg_strict: bool = True
 
     @property
     def ckpt_every(self) -> int:
+        """CKPT (A1.8 m-9): the snapshot cadence. Not the file cadence under v6."""
         return derive_ckpt(self.iters)
 
     @property
+    def file_every(self) -> int:
+        """ADAPTER (launcher v6, A4.2): the `--ckpt-every` the arms run -- EVERY under
+        v6, CKPT under v5 (`LAUNCHER_V6`)."""
+        if LAUNCHER_V6:
+            return derive_every(self.iters, self.ckpt_every, self.diag_step)
+        return self.ckpt_every
+
+    @property
+    def checkpoint_files(self) -> list[int]:
+        """Every checkpoint step the arms write: EVERY, 2 EVERY, ..., iters. None at
+        STEPS = 0 (CKPT = 0: the only dry run the launcher allows, A3c.1)."""
+        if self.file_every <= 0:
+            return []
+        return list(range(self.file_every, self.iters + 1, self.file_every))
+
+    @property
+    def diag(self) -> int | None:
+        """The DIAGNOSTIC step (A4.2) if this run reads one: before the final step and
+        on disk at the file cadence; else None."""
+        d = self.diag_step
+        ok = 0 < d < self.iters and d in self.checkpoint_files
+        return d if ok else None
+
+    @property
     def snapshots(self) -> list[int]:
-        """Every checkpoint step the arms write: CKPT, 2 CKPT, ..., iters. None at
-        STEPS = 0 (CKPT = 0: the only dry run launcher v5 allows, A3c.1)."""
+        """The held-out reading steps: CKPT, 2 CKPT, ..., iters (A1.8 m-9), plus the
+        DIAGNOSTIC step (A4.2) when there is one. Sorted, distinct."""
         if self.ckpt_every <= 0:
             return []
-        return list(range(self.ckpt_every, self.iters + 1, self.ckpt_every))
+        out = set(range(self.ckpt_every, self.iters + 1, self.ckpt_every))
+        if self.diag is not None:
+            out.add(self.diag)
+        return sorted(out)
 
     @property
     def pool_length(self) -> int:
@@ -497,7 +545,7 @@ def cli_argv(cfg: Run1Config, arm: str, owner: OwnerValues, out_dir: Path) -> li
         "--beat-every",
         str(cfg.beat_every),
         "--ckpt-every",
-        str(cfg.ckpt_every),
+        str(cfg.file_every),
         "--device",
         cfg.device,
         "--freeze-transformer",
@@ -862,6 +910,9 @@ def env_problems(env: dict[str, str | None], *, dry_run: bool) -> list[str]:
 #: T14: the PREREG heading the committed launcher is extracted from. Switching launcher
 #: versions is this one line (and the expected sha in the test).
 LAUNCHER_HEADING = "### A3c.1 Launcher, version 5"
+#: Launcher v6 (A4.2) passes `--ckpt-every $EVERY` and records `ckpt_every`,
+#: `ckpt_every_rule` and `diag_step`; it follows from the heading, never set apart.
+LAUNCHER_V6 = "version 6" in LAUNCHER_HEADING
 
 
 #: A3.7a: "Each owner value is compared both with `launch-git.json` and with the value
@@ -1198,6 +1249,9 @@ def launch_direct(
                 "wd": repr(owner.phi_weight_decay),
                 "steps": str(owner.iters),
                 "ckpt": str(derive_ckpt(owner.iters)),
+                "ckpt_every": str(cfgs[0].file_every),
+                "ckpt_every_rule": EVERY_RULE,
+                "diag_step": str(cfgs[0].diag_step),
                 "o5": owner.o5,
                 "c1_flags": " ".join(C1_FLAGS[owner.o5]),
                 "c2_flags": " ".join(C2_FLAGS),
@@ -1552,16 +1606,23 @@ def reference_policy(name: str, docs: list, seed: int):
 
 def heldout_passes(
     snapshot_steps: list[int] | None = None,
+    diag_step: int | None = None,
 ) -> list[tuple[str, str, bool]]:
     """Every held-out pass: (name, payload key, slots zeroed). `sz_fifo` is S0-03's
     floor; `sz_psiC` / `sz_age` are §7.2's "under each arm". `psiC@k` / `age@k` are the
-    A1.8 m-9 snapshots (DIAGNOSTIC)."""
+    A1.8 m-9 snapshots (DIAGNOSTIC). At A4.2's DIAGNOSTIC step d the phi-dependent
+    passes are re-run -- `psiC@d`, `age@d`, `sz_psiC@d`, `sz_age@d` -- on the same EVAL
+    documents; fifo, the oracle, LRU, random x5 and sz_fifo do not depend on phi and
+    are reused from the final reading."""
     passes = [(a, a, False) for a in ARMS]
     passes += [("oracle", "fifo", False), ("lru", "fifo", False)]
     passes += [(f"random{k}", "fifo", False) for k in range(N_RANDOM)]
     passes += [(f"sz_{a}", a, True) for a in ARMS]
-    for k in snapshot_steps or []:
+    steps = sorted(set(snapshot_steps or []) | ({diag_step} if diag_step else set()))
+    for k in steps:
         passes += [(f"{a}@{k}", f"{a}@{k}", False) for a in RSR_ARMS]
+    if diag_step:
+        passes += [(f"sz_{a}@{diag_step}", f"{a}@{diag_step}", True) for a in RSR_ARMS]
     return passes
 
 
@@ -1968,6 +2029,7 @@ def c10_launch_values(
       with ``pinned_sha`` = run_sha, ``threads`` = 1 (§6, A1.6) and ``rc`` = the
       launcher's ``logs/<k>.rc``; ``cfg.owner_prereg`` is the PREREG itself."""
     ckpt = derive_ckpt(owner.iters)
+    every = derive_every(owner.iters, ckpt, cfg.diag_step) if LAUNCHER_V6 else ckpt
     problems: list[str] = []
     rcs = rcs or {}
 
@@ -2039,6 +2101,29 @@ def c10_launch_values(
         and str(launch.get("ckpt")) == str(derive_ckpt(int(steps_rec))),
         f"launch ckpt {launch.get('ckpt')!r} is not the A3.7 rule applied to steps",
     )
+    if LAUNCHER_V6:  # A4.2: the file cadence and the diagnostic step, recorded
+        want(
+            str(launch.get("ckpt_every")) == str(every),
+            f"launch ckpt_every {launch.get('ckpt_every')!r} != EVERY {every}",
+        )
+        want(
+            launch.get("ckpt_every_rule") == EVERY_RULE,
+            f"launch ckpt_every_rule {launch.get('ckpt_every_rule')!r}",
+        )
+        want(
+            str(launch.get("diag_step")) == str(cfg.diag_step),
+            f"launch diag_step {launch.get('diag_step')!r} != {cfg.diag_step}",
+        )
+        want(
+            steps_rec.isdigit()
+            and str(launch.get("ckpt_every"))
+            == str(
+                derive_every(
+                    int(steps_rec), derive_ckpt(int(steps_rec)), int(cfg.diag_step)
+                )
+            ),
+            f"launch ckpt_every {launch.get('ckpt_every')!r} is not the v6 rule on steps",
+        )
     orch = launch.get("rsr_orch_root")
     want(
         orch is not None
@@ -2121,8 +2206,10 @@ def c10_launch_values(
         srep = row["srep_norm_reg_weight"]
         if not (_finite(srep) and srep == SREP_NORM_REG_WEIGHT):  # A3c.5: a number
             rp.append(f"config srep_norm_reg_weight {srep!r} != 0.0 (A3c.5)")
-        if files != cfg.snapshots:
-            rp.append(f"checkpoints {files} != the derived cadence {cfg.snapshots}")
+        if files != cfg.checkpoint_files:
+            rp.append(
+                f"checkpoints {files} != the derived cadence {cfg.checkpoint_files}"
+            )
         if hb_sha != sha:
             rp.append(f"heartbeat git_sha {hb_sha!r} != launch run_sha {sha!r}")
         if cmd is None:
@@ -2137,8 +2224,8 @@ def c10_launch_values(
                 rp.append(f"command --iters {row['cmd_iters']!r} != {owner.iters}")
             if row["cmd_seed"] != str(cfg.seed):
                 rp.append(f"command --seed {row['cmd_seed']!r} != {cfg.seed}")
-            if row["cmd_ckpt_every"] != str(ckpt):
-                rp.append(f"command --ckpt-every {row['cmd_ckpt_every']!r} != {ckpt}")
+            if row["cmd_ckpt_every"] != str(every):  # EVERY under v6, else CKPT
+                rp.append(f"command --ckpt-every {row['cmd_ckpt_every']!r} != {every}")
             fl = C1_FLAGS[owner.o5]
             want_fm = dict(zip(fl[0::2], fl[1::2], strict=True))
             if row["cmd_frozen_model_mode"] != want_fm.get("--frozen-model-mode"):
@@ -2175,6 +2262,7 @@ def c10_launch_values(
     env = launch.get("env")
     return {
         "derived_ckpt": ckpt,
+        "derived_every": every,
         "registered": reg,
         "launch": {
             k: launch.get(k)
@@ -2185,6 +2273,9 @@ def c10_launch_values(
                 "wd",
                 "steps",
                 "ckpt",
+                "ckpt_every",
+                "ckpt_every_rule",
+                "diag_step",
                 "o5",
                 "c1_flags",
                 "c2_flags",
@@ -2350,7 +2441,7 @@ def analyse_heldout(out_dir: Path, cfg: Run1Config, passes) -> dict:
     W = boot_weights(len(order), cfg.seed, cfg.n_boot)
     buckets = buckets_for(cfg.memory_slots)
     rnd = [f"random{k}" for k in range(N_RANDOM)]
-    snaps = [n for n in names if "@" in n]
+    snaps = [n for n in names if "@" in n and not n.startswith("sz_")]
     out: dict[str, Any] = {
         "n_documents": len(order),
         "n_boot": cfg.n_boot,
@@ -2414,6 +2505,45 @@ def analyse_heldout(out_dir: Path, cfg: Run1Config, passes) -> dict:
     out["heldout_evictions"] = ev
     fills = [n / cfg.memory_slots for r in recs["fifo"] for n in r["n_live_before"]]
     out["fill_fraction_heldout"] = sum(fills) / len(fills) if fills else None
+    d = cfg.diag
+    if d is not None and all(f"sz_{a}@{d}" in recs for a in RSR_ARMS):
+        out["diagnostic_step"] = diagnostic_contrasts(recs, d, W, buckets)
+    return out
+
+
+DIAG_LABEL = "DIAGNOSTIC (A4.2): never the headline, never gated"
+
+
+def diagnostic_contrasts(recs: dict, d: int, W: torch.Tensor, buckets: dict) -> dict:
+    """A4.2: the §7.1 contrast set at the DIAGNOSTIC step d -- psiC and age read from
+    their step-d phi (`psiC@d`, `age@d`, their floors `sz_psiC@d`, `sz_age@d`); fifo,
+    LRU and sz_fifo from the final reading, which phi does not touch. The same EVAL
+    documents and bootstrap draw as the final reading. No oracle-derived number."""
+    at = {"psiC": f"psiC@{d}", "age": f"age@{d}"}
+
+    def m(x: str) -> str:
+        return at.get(x, x)
+
+    lv_names = [*at.values(), *(f"sz_{a}@{d}" for a in RSR_ARMS)]
+    out: dict[str, Any] = {"step": d, "label": DIAG_LABEL, "accuracy": {}, "nll": {}}
+    con: dict[str, dict] = {}
+    for bname in BUCKET_NAMES:
+        per = {n: answer_counts(rs, buckets[bname]) for n, rs in recs.items()}
+        out["accuracy"][bname] = {n: level(per[n], W) for n in lv_names}
+        for cname, (a, b) in CONTRASTS.items():
+            con[f"acc.{bname}.{cname}"] = contrast(per, m(a), m(b), W)
+        if bname == "gap_2_to_M":
+            for arm in RSR_ARMS:
+                con[f"R.{arm}"] = contrast(per, m(arm), "sz_fifo", W)
+                con[f"R_own_floor.{arm}"] = contrast(per, m(arm), f"sz_{arm}@{d}", W)
+                key = f"floor_difference.sz_{arm}_minus_sz_fifo"
+                con[key] = contrast(per, f"sz_{arm}@{d}", "sz_fifo", W)
+    for kind in ("real", "answer"):
+        per = {n: loss_counts(rs, kind) for n, rs in recs.items()}
+        out["nll"][kind] = {n: level(per[n], W) for n in lv_names}
+        for cname, (a, b) in CONTRASTS.items():
+            con[f"nll_{kind}.{cname}"] = contrast(per, m(a), m(b), W)
+    out["contrasts"] = con
     return out
 
 
@@ -2850,7 +2980,7 @@ def measure_seed(
     vmap = vocab_map(cfg)
     fifo_model = model_from_payload(payloads["fifo"]).to(cfg.device)
     doc["scoped_controls"]["C9_C9b"] = c9_oracle(fifo_model, cfg, vmap)
-    passes = heldout_passes(snaps)
+    passes = heldout_passes(snaps, cfg.diag)
     hd = out_root / "heldout" / f"seed{cfg.seed}"
     ho = run_heldout(cfg, payloads, hd, passes=passes, limit=limit)
     ok7 = all(v["n_mismatched"] == 0 for v in ho["residency"].values())
@@ -3130,6 +3260,15 @@ TIMING_CAVEAT = (
     "the run. The measured step_s and wall-clock are below (A1.6)."
 )
 BROKEN = " **sd exactly 0: broken, not clean**"
+#: A4.2's added cost, EXTRAPOLATED (never measured as a whole): the four step-160
+#: passes at T5's one-batch-per-pass rates x 128 batches -- psiC 1.7108, age 1.7156,
+#: sz_psiC 2.5410 and sz_age (assumed equal to sz_psiC) -> 219 + 220 + 325 + 325.
+DIAG_COST_NOTE = (
+    "The step-160 DIAGNOSTIC passes (psiC@160, age@160, sz_psiC@160, sz_age@160; A4.2) "
+    "add about 1,090 s per seed. That figure is EXTRAPOLATED from build-time T5 (one "
+    "batch per pass, x 128 batches; sz_age assumed equal to sz_psiC), not measured; "
+    "this run's own per-pass timing follows."
+)
 
 
 def _f(x, nd: int = 4) -> str:
@@ -3465,6 +3604,7 @@ def _render_seed(d: dict, w, ow: dict) -> None:
     w("- The censored-target caveat, verbatim from the PREREG:\n")
     w(caveat_text())
     w("\n### T5 (held-out cost, measured in this run; DIAGNOSTIC)\n")
+    w(DIAG_COST_NOTE + "\n")
     for n, t in (d.get("T5") or {}).items():
         w(
             _join(
@@ -3537,6 +3677,7 @@ def _render_heldout(ho: dict, w, ow: dict, oracle_read: bool) -> None:
             f"{_ci_str(v['level'], reading=False)}; "
             f"minus final fifo {_ci_str(v['minus_final_fifo'])}"
         )
+    _render_diagnostic_step(ho.get("diagnostic_step"), w, conf)
     for n, e in (ho.get("heldout_evictions") or {}).items():
         w(
             _join(
@@ -3551,6 +3692,25 @@ def _render_heldout(ho: dict, w, ow: dict, oracle_read: bool) -> None:
                 "`",
             )
         )
+
+
+def _render_diagnostic_step(dg: dict | None, w, conf: str) -> None:
+    """A4.2: the step-d reading, every line labelled DIAGNOSTIC; never the headline."""
+    if not dg:
+        return
+    d = dg["step"]
+    w(f"\n### Step-{d} phi reading -- {dg['label']}\n")
+    w(
+        f"psiC and age read with their step-{d} phi (`psiC@{d}`, `age@{d}`, floors "
+        f"`sz_psiC@{d}`, `sz_age@{d}`); fifo, LRU and sz_fifo are the final reading's, "
+        "which phi does not touch. Same EVAL documents, batch and bootstrap draw.\n"
+    )
+    for b, row in dg["accuracy"].items():
+        cells = "; ".join(f"{n} {_ci_str(v, reading=False)}" for n, v in row.items())
+        w(f"- DIAGNOSTIC step {d} accuracy `{b}`: {cells}")
+    for key in sorted(dg["contrasts"]):
+        psic = conf if "psiC" in key else ""
+        w(f"- DIAGNOSTIC step {d} `{key}`{psic}: {_ci_str(dg['contrasts'][key])}")
 
 
 def _confound_tagger(w, conf: str):
