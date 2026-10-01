@@ -247,9 +247,12 @@ class DocumentPool:
     are the ones the warm-start substrate was trained with. The closure (every
     pool word in that vocabulary) is checked before any step.
 
-    The sampler is today's: ``torch.randint`` over the pool, **with replacement**
-    (m-3). One epoch (31(b)) is ``length / batch`` optimizer steps. The pool's
-    identity is stamped into ``frozen``, so two pools cannot share a config hash.
+    The sampler is a **per-epoch permutation** (`PermutationEpochs`; 31(b), PREREG
+    rsr-run1 Amendment 1 A1.7): each epoch reads every pool document exactly
+    once, in an order drawn from the data-order generator, and ``length`` must be
+    a multiple of the batch. One epoch is ``length / batch`` optimizer steps. The
+    pool's identity and its sampler are stamped into ``frozen``, so two pools --
+    or one pool under two samplers -- cannot share a config hash.
     """
 
     offset: int
@@ -713,6 +716,38 @@ class PermutationEpochs:
         self.epochs_drawn = int(st["epochs_drawn"])
 
 
+def _max_step_row(path: Path, *, list_rows: bool) -> int | None:
+    """The largest step a per-step file already holds, or None if it holds none."""
+    if not path.exists():
+        return None
+    top = None
+    for line in path.read_text().splitlines():
+        row = json.loads(line)
+        if list_rows:
+            if isinstance(row, dict):  # the header line
+                continue
+            k = int(row[EVICTION_FIELDS.index("train_step")])
+        else:
+            k = int(row["step"])
+        top = k if top is None else max(top, k)
+    return top
+
+
+def _refuse_rows_past(out: Path, start: int) -> None:
+    """Review MINOR-3 (c02b16d): evictions.jsonl and diagnostics.jsonl are
+    append-only, so resuming at ``start`` into a directory that already holds
+    rows for steps >= ``start`` would write those steps twice. Refused -- nothing
+    written is deleted or rewritten; resume into a fresh out_dir."""
+    for name, list_rows in ((EVICTIONS_FILE, True), (DIAGNOSTICS_FILE, False)):
+        top = _max_step_row(out / name, list_rows=list_rows)
+        if top is not None and top >= start:
+            raise ValueError(
+                f"resume at step {start} into {out}: {name} already holds rows up "
+                f"to step {top}. The file is append-only, so those steps would be "
+                "written twice. Resume into a fresh out_dir."
+            )
+
+
 def _drain_evictions(policy, path: Path) -> int:
     """Append the policy's records to ``path`` and drop them from memory (defect
     2): one header line, then one compact JSON list per eviction. Returns the
@@ -984,10 +1019,18 @@ def train(
     and `W_sent` get **no
     update** -- `requires_grad` off, out of the optimizer, `L_NTP` reported but not
     optimised -- so a FIFO and an RSR arm on the same substrate differ only in the
-    eviction rule. The model's train/eval MODE is unchanged (dropout stays as in
-    any training run); only the update is removed. Stamped into `frozen`, the hash
+    eviction rule. By default the model's train/eval MODE is unchanged (dropout
+    stays live, as in any training run) and only the update is removed;
+    ``frozen_model_mode="eval"`` (C-1, PREREG rsr-run1 Amendment 1 A1.3) also runs
+    the frozen model in eval mode, dropout off. Stamped into `frozen`, the hash
     and the label. ADR-0009 T4 is vacuous under it, which is why the isolation
     tests also run non-frozen.
+
+    **Resume** continues the data order (the sampler's generator and a pool's
+    permutation position are checkpointed) and refuses an `out_dir` whose
+    per-step files already hold rows at or past the checkpoint's step: they are
+    append-only, so a resume there would write those steps twice. Resume into a
+    fresh `out_dir` instead.
     """
     # fresh-stream (experiments/fresh-stream/PREREG.md): `stream=None` is today's
     # path byte for byte -- nothing below runs differently and nothing is stamped.
@@ -1165,6 +1208,11 @@ def train(
         # m-2: stamped only when set, like n_documents and stream -- two pools
         # cannot share a config hash, and the default path's is unchanged.
         frozen["pool"] = {**asdict(pool), "ids": [pool.offset, pool.offset + pool.length]}
+        # Review MINOR-1 (c02b16d): the sampler is in EVERY pool arm's hash, FIFO
+        # included -- not only in the RSR arm's epoch block -- so a FIFO pool run
+        # under the permutation pass cannot share a hash with a with-replacement
+        # one. (This changes FIFO pool run_ids relative to c02b16d.)
+        frozen["sampling"] = SAMPLING_PERMUTATION
     if ws_record is not None:
         # m-1: the source's path, manifest entry and sha256, in the hash.
         frozen["warm_start"] = ws_record
@@ -1194,9 +1242,9 @@ def train(
             "definition": "one pass over the document pool (R-2026-09-30-rsr-run-1-"
             "scope 31(b)): pool_documents / batch optimizer steps",
             "pool_documents": pool_docs,
-            # m-3: the count follows the ruling (pool / batch draws), but the
-            # draws are torch.randint over the pool, WITH replacement: one epoch
-            # covers about 1 - 1/e of the documents, not each exactly once.
+            # m-3 / R-2: a pool run draws per-epoch permutations (each document
+            # once per epoch, A1.7); only outside pool mode do the draws stay
+            # torch.randint WITH replacement (~1 - 1/e of the corpus per epoch).
             "sampling": (
                 SAMPLING_PERMUTATION if pool is not None else SAMPLING_WITH_REPLACEMENT
             ),
@@ -1215,6 +1263,7 @@ def train(
             resume, model=model, optimizer=opt, policy=policy, restore_rng=True
         )
         start = int(state.get("step", 0))
+        _refuse_rows_past(out, start)  # review MINOR-3: append-only files
         if stream is None:
             # PREREG-drafter defect 3: the with-replacement sampler draws from
             # `gen`, which the global-RNG capture does not cover. Restarted from
