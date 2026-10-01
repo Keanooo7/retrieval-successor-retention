@@ -869,6 +869,9 @@ def test_owner_values_the_code_would_not_run_are_refused(r1):
     ):
         with pytest.raises(r1.Refused):
             r1.validate_owner_values(owner(r1, **bad))
+    with pytest.raises(r1.Refused, match="O5 must be one of"):
+        r1.validate_owner_values(owner(r1, o5="maybe"))  # whatever C-1 says
+    assert not r1.frozen_mode_supported("maybe")
     if not r1.frozen_mode_supported("eval"):  # no C-1 on this tree
         with pytest.raises(r1.Refused, match="C-1"):
             r1.validate_owner_values(owner(r1, o5="eval"))

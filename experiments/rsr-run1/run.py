@@ -389,6 +389,8 @@ def frozen_mode_supported(o5: str) -> bool:
     """ADAPTER (C-1): "train" is as built; "eval" needs `train(frozen_model_mode)`."""
     if o5 == "train":
         return True
+    if o5 != "eval":
+        return False
     return "frozen_model_mode" in inspect.signature(loop.train).parameters
 
 
