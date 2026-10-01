@@ -2219,3 +2219,410 @@ A2.2) is to be read as this restatement.
   `--iters 0` dry run (rcs and records only).
 - **The harness report and code:** read, not run. The test result quoted above is the PM's.
 - **No EVAL document has gone through any model.** No φ has been trained.
+
+
+---
+
+## AMENDMENT 3b (2026-10-01): DRY_RUN can no longer train; the tmux command strips leaked variables; launcher v4
+
+**Written 2026-10-01 by a model** (Claude Opus 5.5, the PREREG author, on the PM's instruction).
+**Not written by Brendan.** It is committed alone, before any run-1 step and before any EVAL
+document has gone through any model. Everything above this heading is unedited.
+
+**What prompted it.** The review of Amendment 3, `docs/reviews/prereg-rsr-run1/58a9216e51bf.md`
+(commit `3ef97c8`), returned MERGE WITH FIXES with one MAJOR finding and six MINOR findings.
+
+**🔴 The owner slots stay BLANK.** O1, O4, R-1 and O5 are not filled here; Amendment 4 fills them.
+The values `GAMMA=0.9`, `WD=0.01` and `O5=train` in the probes below are placeholders, not
+registered values.
+
+**Precedence.** Where this amendment and anything above it disagree, this amendment governs.
+Superseded:
+
+- A3.7's launcher → A3b.1;
+- A3.8's tmux command and its claim about leaked variables → A3b.2;
+- A3.11's status table → A3b.3;
+- A3.6's tagging scope → A3b.4;
+- A3.13's status and exit rule → A3b.5;
+- A3.15's bound → A3b.6.
+
+### A3b.1 Launcher, version 4
+
+**MAJOR-A3-1: `DRY_RUN=1` now requires `STEPS=0`.**
+
+**The defect, confirmed.** In launcher v3, the environment guard runs only
+`if [[ -z ${DRY_RUN:-} ]]`, and nothing ties `DRY_RUN` to `STEPS`. So `DRY_RUN=1` with
+`STEPS=3000` skips the root, `OUT` and `JOB_SUFFIX` checks, and trains. The review measured this
+leaking through tmux.
+
+**Changes from v3:**
+
+1. `DRY_RUN=1` with any `STEPS ≠ 0` is refused: exit 3, `DRY_RUN=1 needs STEPS=0 (a dry run never
+   trains)`. **A dry run can no longer train**, so the guard bypass can no longer start a training
+   job.
+2. Review MINOR-A3-6: `launch-git.json` is written by Python's `json.dump`, run by the worktree's
+   `.venv/bin/python`, not by string interpolation.
+   - Values arrive as argv pairs; `dirty: false` and `porcelain_lines: 0` stay typed.
+   - A failed write refuses with exit 3.
+   - Key order differs from v3. The set of keys is v3's.
+
+Everything else is v3's, byte for byte: the slot checks, the environment guard when `DRY_RUN` is
+unset, the CKPT derivation, the clean-head check, `--pinned-sha`, `--wait 3600`, one rc per
+arm × seed, and the `p=$!; pid[$k]=$p` form.
+
+**Coordination.** `experiments/rsr-run1/launch_run1.zsh` must be **byte-identical** to the text
+below.
+
+- The harness extracts it with its own rule: `t.index(heading)`, then the next zsh fence, up to
+  the closing fence, plus a trailing newline.
+- The heading to use is **"### A3b.1 Launcher, version 4"**, this subsection's heading. TO-CONFIRM
+  T14, updated.
+- sha256 under that rule: **`5cd6e5fd712ffab036d87ea6481b3220a3669f071ba955255511fc840b3f7946`**.
+
+```zsh
+#!/bin/zsh
+# RSR run 1 launch, version 4 (PREREG Amendment 3b, A3b.1; supersedes A3.7's text).
+# Run with /bin/zsh INSIDE tmux (A2.4), from the dedicated run worktree at the final
+# reviewed commit. Owner slots: GAMMA (O1), WD (O4), STEPS (R-1), O5 (eval|train).
+# CKPT is DERIVED here from STEPS (A1.8 m-9), never read from input. Code-change flags:
+# C1_FLAGS (C-1), C2_FLAGS (C-2), C3_FLAGS (C-3, only if O4 != 0.01).
+# RSR_ORCH_ROOT must be unset or the shared root, and OUT / JOB_SUFFIX unset, unless
+# DRY_RUN=1, and DRY_RUN=1 requires STEPS=0 (a dry run never trains). All four are
+# recorded in launch-git.json, written by a JSON encoder. OUT defaults to runs/rsr-run1.
+# Any unfilled or inconsistent slot exits 3 ("did not run"). One rc per arm x seed.
+R=/Users/keanooo7/retrieval-successor-retention
+GIT=/opt/homebrew/bin/git
+refuse() { print -u2 "DID NOT RUN: $1"; exit 3 }
+[[ -z ${DRY_RUN:-} || $DRY_RUN == 1 ]] || refuse "DRY_RUN must be unset or 1, got '$DRY_RUN'"
+if [[ -z ${DRY_RUN:-} ]]; then
+  [[ -z ${RSR_ORCH_ROOT:-} || ${RSR_ORCH_ROOT:A} == ${R:A} ]] \
+    || refuse "RSR_ORCH_ROOT=$RSR_ORCH_ROOT is not the shared root $R"
+  [[ -z ${OUT:-} ]] || refuse "OUT=$OUT is set (a dry-run hook)"
+  [[ -z ${JOB_SUFFIX:-} ]] || refuse "JOB_SUFFIX=$JOB_SUFFIX is set (a dry-run hook)"
+fi
+[[ -z ${CKPT:-} ]] || refuse "CKPT is derived from STEPS (A1.8 m-9); do not set it"
+for v in GAMMA WD STEPS O5; do [[ -n ${(P)v} ]] || refuse "slot $v unfilled"; done
+[[ $STEPS == <-> ]] || refuse "STEPS must be a non-negative integer, got '$STEPS'"
+[[ -n ${DRY_RUN:-} ]] && (( STEPS != 0 )) && refuse "DRY_RUN=1 needs STEPS=0 (a dry run never trains), got STEPS=$STEPS"
+(( STEPS >= 1 )) || [[ -n ${DRY_RUN:-} ]] || refuse "STEPS must be >= 1"
+[[ $O5 == eval || $O5 == train ]] || refuse "O5 must be eval or train, got '$O5'"
+[[ $O5 == eval && -z ${C1_FLAGS:-} ]] && refuse "O5=eval needs C1_FLAGS (C-1's flag)"
+[[ $O5 == train && -n ${C1_FLAGS:-} ]] && refuse "O5=train: C1_FLAGS must be empty"
+[[ $WD != 0.01 && -z ${C3_FLAGS:-} ]] && refuse "O4=$WD needs C3_FLAGS (code change C-3)"
+[[ $WD == 0.01 && -n ${C3_FLAGS:-} ]] && refuse "O4=0.01 is the built value: C3_FLAGS must be empty"
+if (( STEPS > 0 && STEPS % 3 == 0 )); then CKPT=$(( STEPS / 3 )); else CKPT=$STEPS; fi
+ORCH_REC=${RSR_ORCH_ROOT:-} ; OUT_REC=${OUT:-} ; SUFFIX_REC=${JOB_SUFFIX:-}
+: ${OUT:=runs/rsr-run1}
+C1=(${=C1_FLAGS:-}) ; C2=(${=C2_FLAGS:-}) ; C3=(${=C3_FLAGS:-})
+
+RUN_SHA=$($GIT rev-parse HEAD); rc_sha=$?
+PORCELAIN=$($GIT status --porcelain); rc_status=$?
+if (( rc_sha != 0 || rc_status != 0 )) || [[ -n $PORCELAIN ]]; then
+  refuse "not a clean committed head (rc_sha=$rc_sha rc_status=$rc_status)"
+fi
+mkdir -p $OUT/logs; rc_mkdir=$?
+(( rc_mkdir == 0 )) || refuse "mkdir $OUT/logs rc=$rc_mkdir"
+LAUNCHED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+.venv/bin/python -c 'import json, sys
+a = sys.argv[2:]
+d = dict(zip(a[0::2], a[1::2]))
+d["dirty"] = False
+d["porcelain_lines"] = 0
+with open(sys.argv[1], "w") as f:
+    json.dump(d, f)
+    f.write("\n")' $OUT/launch-git.json \
+  run_sha "$RUN_SHA" gamma "$GAMMA" wd "$WD" steps "$STEPS" ckpt "$CKPT" \
+  ckpt_rule "STEPS/3 if STEPS>0 and STEPS%3==0 else STEPS (A1.8 m-9)" o5 "$O5" \
+  c1_flags "${C1_FLAGS:-}" c2_flags "${C2_FLAGS:-}" c3_flags "${C3_FLAGS:-}" \
+  rsr_orch_root "$ORCH_REC" out "$OUT_REC" job_suffix "$SUFFIX_REC" \
+  dry_run "${DRY_RUN:-}" launched_utc "$LAUNCHED_UTC"; rc_json=$?
+(( rc_json == 0 )) || refuse "writing $OUT/launch-git.json rc=$rc_json"
+
+typeset -A SHA
+SHA[0]=0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60
+SHA[1]=dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8
+SHA[2]=b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8
+SLOT=(env PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run
+      --lane cpu-det --slots 1 --wait 3600 --pinned-sha $RUN_SHA)
+RSR=(--policy rsr --policy-override b_enabled=false --policy-override shadow_enabled=false
+     --policy-override nu=0 --policy-override beta=1 --policy-override gamma=$GAMMA)
+
+typeset -A pid rcs
+for s in 0 1 2; do
+  B=$R/.worktrees/fresh-stream/runs/fresh-stream/B/seed$s
+  for a in psiC fifo age; do
+    case $a in
+      psiC) P=("${RSR[@]}") ;;
+      fifo) P=(--policy fifo) ;;
+      age)  P=("${RSR[@]}" --policy-override psi_override=age_only) ;;
+    esac
+    k=$a-s$s
+    "${SLOT[@]}" --job-id rsr-run1-$k${JOB_SUFFIX:-} -- \
+      .venv/bin/python -m rsr.train.loop \
+        --d 128 --batch 16 --iters $STEPS --steps-per-stream 48 --memory-slots 16 \
+        --lr 0.001 --seed $s --beat-every 1 --ckpt-every $CKPT --device cpu \
+        --freeze-transformer "${C1[@]}" "${C3[@]}" \
+        --pool-offset 993000 --pool-length 256 --pool-vocab-documents 64 "${C2[@]}" \
+        --warm-start $B/ckpt-003000.pt --warm-start-sha256 ${SHA[$s]} \
+        --warm-start-manifest /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256 \
+        --warm-start-root $R --warm-start-source-config $B/result.json \
+        "${P[@]}" --out-dir $OUT/$a/seed$s \
+      > $OUT/logs/$k.log 2>&1 &
+    p=$!; pid[$k]=$p      # measured: pid[$k]=$! stores the literal string "$!" in zsh 5.9
+  done
+done
+for k in ${(ok)pid}; do
+  wait ${pid[$k]}; rcs[$k]=$?
+  print -r -- ${rcs[$k]} > $OUT/logs/$k.rc
+  print -r -- "rc[$k]=${rcs[$k]}"
+done
+```
+
+**Measured: refusals** (`exitprobe/v4/`; `env -i HOME PATH` plus the listed variables; `GAMMA=0.9
+WD=0.01 O5=train` placeholders):
+
+| case | rc | message |
+|---|---|---|
+| `DRY_RUN=1 STEPS=3000` | **3** | `DRY_RUN=1 needs STEPS=0 (a dry run never trains), got STEPS=3000` |
+| `DRY_RUN=1 STEPS=3000` plus a foreign `RSR_ORCH_ROOT`, `OUT`, `JOB_SUFFIX` (the review's case) | **3** | the same |
+| `DRY_RUN=1 STEPS=1` | **3** | the same, `got STEPS=1` |
+| `DRY_RUN=1 STEPS=0` plus an isolated root, `OUT`, `JOB_SUFFIX` (dirty scratch repo) | **3**, at the clean-head check | the guards passed (a dry run is allowed) |
+| leftover `OUT` / `JOB_SUFFIX` / foreign root / `CKPT` given / `STEPS=abc` / `STEPS=0` without `DRY_RUN` / `DRY_RUN=2` / nothing set | **3** each | exactly v3's messages |
+| `RSR_ORCH_ROOT` = the shared root (dirty scratch repo) | **3**, at the clean-head check | the guard passed |
+
+No case created an output directory. `runs/rsr-run1` was absent in the worktree afterwards.
+
+**Measured: the JSON encoder** (review MINOR-A3-6).
+
+- The launch ran in a **clean** scratch git repo with a committed `.gitignore` (`.venv`) and
+  `.venv` symlinked to the worktree's.
+- Settings: `DRY_RUN=1`, `STEPS=0`, and `GAMMA='0.9"q\b'` (a double quote and a backslash).
+- Nothing could train. Every slot call failed with rc 1 (`No module named 'orchestrator'`).
+
+| launcher | rc | `launch-git.json` parses? | `gamma` read back |
+|---|---|---|---|
+| **v4** | 0 | **yes** | `'0.9"q\\b'`, exact; `dirty` `False`, `porcelain_lines` `0` |
+| v3 (counterfactual) | 0 | **no**: `JSONDecodeError: Expecting ',' delimiter: line 1 column 109` | — |
+
+**Measured: the nine-job dry run, inside tmux, with the A3b.2 command shape, at `3ef97c8`.**
+
+- Settings: `DRY_RUN=1`, isolated root, `STEPS=0`, `O5=train`, set **after** the `env -u` in the
+  pane.
+- `rc_tmux` 0, launcher rc 0, 10 s wall.
+- All nine `rc[…]=0`.
+- Nine job records: `done 0 threads 1 pinned 3ef97c887c98`, `--ckpt-every 0`.
+- `launch-git.json` parsed, with `dirty: False`, `porcelain_lines: 0` and `dry_run: '1'`.
+
+The CKPT derivation is unchanged from v3 and is not re-measured here; A3.7's table stands. Under
+v4 a dry run can only have `STEPS=0`, so CKPT is 0.
+
+### A3b.2 The tmux launch command (replaces A3.8's), and A3.8's claim corrected
+
+**A3.8's sentence was false.** It said: "If any leaks in from the client environment … the
+launcher refuses with rc 3 and nothing starts". That was false for a leaked `DRY_RUN=1`. With
+launcher v4 the leaked-`DRY_RUN` case now refuses (A3b.1). In addition, the command below strips
+all five variables in two places:
+
+- **on the client**, before tmux starts;
+- **inside the pane**, before the launcher.
+
+```zsh
+W=/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run1-run
+env -u RSR_ORCH_ROOT -u OUT -u JOB_SUFFIX -u DRY_RUN -u CKPT \
+  /opt/homebrew/bin/tmux -L rsr-run1 new-session -d -s rsr-run1 \
+  "cd $W && env -u RSR_ORCH_ROOT -u OUT -u JOB_SUFFIX -u DRY_RUN -u CKPT \
+     GAMMA=<O1> WD=<O4> STEPS=<R-1> O5=<O5> C1_FLAGS='<T9>' C2_FLAGS='<T10>' \
+     /bin/zsh experiments/rsr-run1/launch_run1.zsh > runs/rsr-run1-launch.log 2>&1; \
+   echo \$? > runs/rsr-run1-launch.rc"
+rc_tmux=$?
+```
+
+**Why both places, measured.** An earlier session on the same tmux socket leaves its environment
+in the **server**, which copies it into later sessions even when the client is clean. So the
+client-side `env -u` alone is not enough.
+
+The probe was `exitprobe/v4leak/`. The leaked client values were `DRY_RUN=1`, a foreign
+`RSR_ORCH_ROOT`, `OUT`, `JOB_SUFFIX=-leak` and `CKPT=999`. The pane printed its own environment:
+
+```
+LEAK old form (A3.8): tmux rc=0 :: RSR_ORCH_ROOT=<foreign> OUT=<scratch> JOB_SUFFIX=-leak DRY_RUN=1 CKPT=999
+LEAK new form (A3b.2): tmux rc=0 :: RSR_ORCH_ROOT=<unset> OUT=<unset> JOB_SUFFIX=<unset> DRY_RUN=<unset> CKPT=<unset>
+LEAK new form, polluted server: tmux rc=0 :: RSR_ORCH_ROOT=<unset> OUT=<unset> JOB_SUFFIX=<unset> DRY_RUN=<unset> CKPT=<unset>
+LEAK no env -u, clean client, polluted server: :: RSR_ORCH_ROOT=<foreign> OUT=<scratch> JOB_SUFFIX=-leak DRY_RUN=1 CKPT=999
+```
+
+(Paths are shortened to `<foreign>` and `<scratch>`. They are literal in `exitprobe/v4leak/*.out`.)
+
+**The real launcher v4, through tmux, with a leaked client environment, in a dirty scratch repo,
+at `STEPS=3000`:**
+
+| form | leaked | launcher rc | message |
+|---|---|---|---|
+| old A3.8 form | `DRY_RUN`, root, `OUT`, `JOB_SUFFIX` (the review's case) | **3** | `DRY_RUN=1 needs STEPS=0 (a dry run never trains), got STEPS=3000` |
+| old A3.8 form | the same plus `CKPT=999` | **3** | `CKPT is derived from STEPS (A1.8 m-9); do not set it` |
+| **new A3b.2 form** | the same five | **3**, at the clean-head check | the leaked variables were stripped; only the dirty scratch repo stopped it |
+
+No output directory was created in any case.
+
+**The corrected claim.**
+
+- A leaked `RSR_ORCH_ROOT`, `OUT`, `JOB_SUFFIX`, `DRY_RUN` or `CKPT` cannot reach the launcher
+  through the A3b.2 command.
+- If the command is not used, launcher v4 still refuses a leaked `DRY_RUN` that would train, and
+  the leaked root, `OUT`, `JOB_SUFFIX` and `CKPT` when `DRY_RUN` is unset. In each case it exits 3
+  and nothing starts.
+- C10 rejects any recorded `dry_run`, foreign root, `OUT` or `JOB_SUFFIX` afterwards (A3.7a, T16).
+
+Review MINOR-A2-5 (`~/.zshenv`) remains not addressed, as A3.8 said.
+
+### A3b.3 Ledger status and exit (replaces A3.11's table; review MINOR-A3-1 and MINOR-A3-2)
+
+**First, A3.11's B2 citation was wrong.** `experiments/b2-psi-probe/run.py:2220` (at
+`night/2026-09-30`) is in **`run_size`**, the sizing step (`def` at `:2108`), not phase A. B2 is
+mixed:
+
+- phase A (`run_fit`, `:3547`) and phase B (`run_eval`, `:3637` and `:3658`) write **`"failed"`**
+  on a non-OK exit;
+- only sizing writes `"partial"`.
+
+So B2 is not a precedent for `partial` beyond sizing. I checked each line at that commit.
+
+**What the rules actually say:**
+
+- `scripts/ledger.py:101-105`. The statuses are `ok`, `partial`, `crashed`, `did_not_run` and
+  `failed`. Only `failed` is defined: a completed run whose own pre-registered check failed,
+  **exit 1**.
+- `R-2026-09-22-inert-exit-5`, mapping table:
+  - liveness **inconclusive → `1 FAIL`**, "liveness not demonstrated; the ledger records the band
+    label";
+  - **"a control fails / … / measurement raised → `3 DID_NOT_RUN` — the measurement is not
+    valid"**;
+  - inert → `5`.
+- `src/rsr/exit_codes.py`: exit 3 is named `DID_NOT_RUN`.
+
+**The mapping, now aligned with the ruling and with the exit codes' own names.** This proposes a
+better mapping than A3.11's within `ledger.py`'s existing vocabulary, as the PM allowed.
+
+| situation | exit | ledger status | required ledger note |
+|---|---|---|---|
+| everything passes | 0 | `ok` | — |
+| refusal before any measurement (environment, C0, missing `launch-git.json`) | 3 | `did_not_run` | the refusal |
+| an arm's rc 1 with **no heartbeat** (an exception before training) | 3 | `did_not_run` | `ARM_DID_NOT_RUN: <arm>` |
+| an arm's rc 3 (slot refusal or usage error) | 3 | `did_not_run` | `ARM_DID_NOT_RUN: <arm>` |
+| an arm's rc 1 with a **`crash`** line, or 128 + N; C6 fails | 3 | `crashed` | `ARM_CRASHED: <arm>` |
+| **an arm's liveness band is `inconclusive`** (rc 1, `completed` footer; or C5 reads `inconclusive`) | **1** | **`failed`** | `LIVENESS_INCONCLUSIVE: <arm>` |
+| a C5 band of `inert` (rc 5) | **5** | `partial` | `INERT: <arm>` (quarantine per ruling) |
+| **a control fails after training** (C1–C4, C7, C8, C10) | **3** | **`did_not_run`** | `CONTROL_FAILED: <list>` plus `steps_done` as recorded |
+| C9/C9b fails | unchanged | unchanged | A3b.4's tags only |
+
+**Why these choices:**
+
+- **A failed control → `did_not_run`, exit 3.**
+  - The ruling names this case `3 DID_NOT_RUN`, "the measurement is not valid".
+  - `did_not_run` is the one status whose name is the exit code's own (`Exit.DID_NOT_RUN`).
+  - The review's objection is that it hides that training ran. It is answered by **two required
+    fields**: the `CONTROL_FAILED` note, and `steps_done` / `seeds_actually_run` as actually
+    recorded. Neither may be cleared.
+  - `partial` (A3.11) is withdrawn for this case. The ledger has no exit-3 status meaning "ran, but
+    not valid". `did_not_run` is the ruling's word, and `partial` was only the nearest word.
+  - Nothing gates on the difference. `scripts/orchestrator/lanes.py:291` treats every non-`ok`
+    status alike.
+- **Liveness inconclusive → `failed`, exit 1. This departs from the two options the PM offered**
+  (`did_not_run` or `partial`), because an owner ruling already fixes it. R-2026-09-22-inert-exit-5
+  maps the inconclusive band to `1 FAIL`, "liveness not demonstrated". `ledger.py` defines
+  `failed` as exactly exit 1, a completed run whose pre-registered check failed. Liveness (C5) is
+  such a check. Mapping it to 3 would contradict the ruling's code. The PM may object; the ruling
+  is the owner's, and only the owner can change it.
+- **Inert → `partial`, exit 5** (unchanged from A3.11).
+  - No status names inert. The ruling says inert is *not* "the check caught a failure", so not
+    `failed`. It is not invalid either, so not `did_not_run`. The run ran, and its results exist
+    but are not readable.
+  - The routing is carried by the exit code, 5, which the ruling defines.
+- **An arm that crashed → `crashed`.** This is the ledger's own word for it.
+
+`measure-seed` takes the worst arm by this table, using the A3b.5 order. The harness changes are
+TO-CONFIRM T15.
+
+### A3b.4 Review MINOR-A3-3: C9/C9b tagging covers the oracle accuracy column and the ledger
+
+When C9 or C9b fails, these all carry the tag **NOT READ (C9/C9b failed)**:
+
+- **in RESULTS:**
+  - the oracle's column in every held-out accuracy table, every bucket;
+  - every `oracle_regret.*` line;
+  - every `headroom_share.*` line;
+- **in the ledger:** every row that is the oracle's accuracy level (`acc.<bucket>.oracle`), every
+  `oracle_regret.*` row and every `headroom_share.*` row. Each carries the fields
+  `"not_read": true` and `"not_read_reason": "C9/C9b failed"`. The values stay recorded; they are
+  not deleted.
+
+Everything else in A3.6 stands: no exit or status change, and no other number touched.
+TO-CONFIRM T15, which covers the ledger as well as RESULTS.
+
+### A3b.5 Review MINOR-A3-4: `finalize` takes its status and its exit from the same worst seed
+
+- **The worst seed** is the seed whose exit ranks highest in the order **5 > 3 > 1 > 0**.
+  - 5 (inert) dominates, because the ruling quarantines it.
+  - 3 (a measurement not valid) ranks above 1 (a valid measurement whose check failed).
+  - Ties go to the **lowest seed number**.
+- **`finalize`'s exit and status are both that seed's.**
+- **Example:** seed 0 `crashed` (3) and seed 1 inert (5) give exit 5 with status `partial`, both
+  from seed 1.
+
+This replaces A3.13's "its exit is the worst seed's … its status is that seed's". At `58d25cc` the
+harness takes the *first* non-OK seed's status (`run.py:2317-2319`). TO-CONFIRM T15.
+
+### A3b.6 Review MINOR-A3-5: T7's bound, stated exactly (replaces A3.15's "k ≤ 46")
+
+The oracle's argmin uses `discounted_demand[t+1][i] = γ^(q−t−1)` for an assert `i` still pending
+at a decision step `t`, with query at `q`. The exponent `q − t − 1` is bounded twice by
+construction:
+
+- **≤ 38 by the gap:** `max_gap = 40` (`SyntheticConfig.max_gap`), and a decision on a slot comes
+  at `t ≥ a + 1`, so `q − t − 1 ≤ (a + 40) − (a + 1) − 1 = 38`;
+- **≤ 30 by the stream:** decisions happen only once memory is full, at `t ≥ M = 16`, and
+  `q ≤ S − 1 = 47`, so `q − t − 1 ≤ 30`.
+
+Measured on the pool (`t7_exponent.py`, model-free, rc 0):
+
+```
+seed 0: pool max gap 40 (cfg.max_gap 40); max exponent q-t-1 at a full-memory decision 30; bound max_gap-2 = 38
+seed 1: pool max gap 40 (cfg.max_gap 40); max exponent q-t-1 at a full-memory decision 30; bound max_gap-2 = 38
+seed 2: pool max gap 40 (cfg.max_gap 40); max exponent q-t-1 at a full-memory decision 30; bound max_gap-2 = 38
+```
+
+**T7, restated.**
+
+- **A sufficient condition** for γ-invariance in float64: `γ^30` is a normal float64. Then every
+  pending demand is a distinct, correctly ordered nonzero number, which holds for
+  **γ ≥ 5.56e-11** (`(2.2250738585072014e-308)^(1/30)`).
+- **Observed:** decisions are identical down to γ = 1e-11. The review measured 1e-10 and 1e-11,
+  and A3.15 covers 1e-8 and above.
+- **The failure point:** they differ at 1e-12 (24 decisions, 1 document on the seed-0 pool) and at
+  1e-300. Underflow changes a decision only when an underflowed pending demand ties at 0 with a
+  lower-index zero-demand slot.
+
+γ_o = 0.9 and C9's 0.5 are far inside the condition.
+
+### A3b.7 TO-CONFIRM, updated
+
+- **T14:** the harness's byte-identity check reads **A3b.1's** heading. The committed launcher's
+  sha256 is `5cd6e5fd712ffab036d87ea6481b3220a3669f071ba955255511fc840b3f7946`.
+- **T15:**
+  - the A3b.3 statuses, exits and required notes;
+  - the A3b.4 tags in RESULTS **and** the ledger;
+  - the A3b.5 worst-seed rule;
+  - the C9 result string re-pointed from "(A2.2)" to A3.6 (review nit).
+- **T16:** C10 reads `launch-git.json`'s `dry_run`, `rsr_orch_root`, `out`, `job_suffix`, `ckpt`
+  and `ckpt_rule`, and **rejects any `dry_run`**.
+- **Standing:** T9, T10, and the four owner slots, in Amendment 4.
+
+### A3b.8 What this author has additionally seen (declared)
+
+- launcher v4 refusal probes;
+- tmux environment dumps;
+- a JSON probe in which no job could start;
+- the `--iters 0` nine-job dry run (rcs and records only);
+- the pool's assert/query structure, with no model.
+
+No EVAL document has gone through any model, and no φ has been trained.
