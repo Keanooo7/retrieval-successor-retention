@@ -96,13 +96,15 @@ from torch import Tensor
 
 from rsr import constants as C
 from rsr.baselines.fifo import FIFOPolicy
+from rsr.metrics.vacuity import partial_correlation_with_age, spearman
 from rsr.retention.instrumentation import EvictionRecord, RankShiftLog, rank_shift
 from rsr.retention.mc import mc_returns
 from rsr.retention.policy import AttentionTrace, MemoryState
 from rsr.retention.reward import retrieval_demand
-from rsr.retention.value_head import BilinearValueHead
+from rsr.retention.value_head import AgeOnlyValueHead, BilinearValueHead
 
 __all__ = [
+    "AGE_ONLY",
     "CAPACITY",
     "REDUCTION_SWITCHES",
     "ContextSource",
@@ -171,6 +173,11 @@ class _Obs:
     r: Tensor  # [n_live] realized r_i(t), eval-mode, gated, share-of-M
 
 
+AGE_ONLY = "age_only"
+"""`psi_override` value of the section 7.1 item 2 **age-only baseline arm**
+(`AgeOnlyValueHead`). Not a section 3.7 switch value: the reduction pins
+`"neg_age"`, so this arm can never be E0b's path."""
+
 CAPACITY = object()
 """Sentinel in `REDUCTION_SWITCHES` for "whatever `M` is in this configuration"."""
 
@@ -214,7 +221,9 @@ class RSRConfig:
     t_warm: float
     a_max: int
     psi_override: str | None = None
-    """None = use the learned head. "neg_age" = section 3.7's `psi_hat == -a_i`."""
+    """None = use the learned head. "neg_age" = section 3.7's `psi_hat == -a_i`.
+    "age_only" = the section 7.1 item 2 age-only baseline ARM (`AgeOnlyValueHead`,
+    learned on age alone); a separate labelled arm, never an input to `psi_hat`."""
 
     b_enabled: bool = True
     shadow_enabled: bool = True
@@ -306,6 +315,7 @@ class RSRPolicy:
         value_head: BilinearValueHead | None = None,
         bias: object | None = None,
         generator: torch.Generator | None = None,
+        diagnostics: bool = False,
     ) -> None:
         if config.context_source is not ContextSource.CURRENT_SENTENCE_GESTALT:
             raise NotImplementedError(
@@ -354,13 +364,23 @@ class RSRPolicy:
         self.config = config
         self.d_model = d_model
         self.bias = bias
-        self.head: BilinearValueHead | None = None
+        self.head: BilinearValueHead | AgeOnlyValueHead | None = None
         if config.psi_override is None:
             self.head = value_head or BilinearValueHead(d_model, generator=generator)
+        elif config.psi_override == AGE_ONLY:
+            # Section 7.1 item 2: the age-only ARM. Zero-initialised, so it draws
+            # no RNG; it reads age only, and the content head never does.
+            if value_head is not None:
+                raise ValueError(
+                    "psi_override='age_only' builds its own AgeOnlyValueHead; a "
+                    "content value_head passed with it would be silently unused"
+                )
+            self.head = AgeOnlyValueHead(config.a_max)
         elif config.psi_override != "neg_age":
             raise ValueError(
                 f"psi_override={config.psi_override!r} is not a known override. "
-                f"Section 3.7 defines exactly one: 'neg_age'."
+                f"Section 3.7 defines exactly one: 'neg_age'; section 7.1 item 2 "
+                f"adds the learned age-only baseline arm, {AGE_ONLY!r}."
             )
         self._fifo = FIFOPolicy()
         self.records: list[EvictionRecord] = []
@@ -372,6 +392,13 @@ class RSRPolicy:
         # Detached data only -- no graph is held across the loop. Cleared in reset().
         self._mc: dict[int, list[_Obs]] = {}
         self.last_mc_stats: dict[str, Any] = {}
+        # Spec section 7.1 / ADR-0009 L6: run-time diagnostics. Off by default, so
+        # a policy built directly (E0b's path, `tests/test_reduction.py`) collects
+        # nothing; `train()` turns them on for every RSR arm. They read the score
+        # under `no_grad` and never change a decision.
+        self.diagnostics = bool(diagnostics)
+        self._diag: list[tuple[Tensor, Tensor, Tensor]] = []
+        self._diag_from = 0
 
     # -- what the training loop asks of the policy ---------------------------- #
 
@@ -424,6 +451,10 @@ class RSRPolicy:
         if self.config.psi_override == "neg_age":
             # Section 3.7: psi_hat == -a_i. argmin(-a) = the oldest slot = FIFO.
             psi = -slots.ages().to(torch.float32)
+        elif self.config.psi_override == AGE_ONLY:
+            # Section 7.1 item 2: the age-only ARM reads age and nothing else.
+            assert self.head is not None
+            psi = self.head(slots.ages())
         else:
             assert self.head is not None
             # Section 3.3: only phi receives gradient. The policy is the caller, so
@@ -443,7 +474,8 @@ class RSRPolicy:
         sd = finite.std(unbiased=False)
         if sd > 0:
             psi = torch.where(live, (psi - finite.mean()) / sd, psi)
-        terms = "neg_age" if self.config.psi_override else "psi"
+        # "psi" (the content head), "neg_age" (section 3.7), "age_only" (7.1 arm).
+        terms = self.config.psi_override or "psi"
 
         score = psi
         if self.config.b_enabled:
@@ -487,9 +519,16 @@ class RSRPolicy:
                 "(correction 31; gauntlet 0.1)."
             )
         warm = self.config.t_warm > 0 and self._train_step < self.config.t_warm
+        score = None
         if warm:
             victim = self._fifo.select_eviction(slots, context, step)
             attribution, margin = "fifo_warmup", None
+            if self.diagnostics and not self.config.b_enabled:
+                # Section 7.1 diagnostics in warmup too: the score the arm WOULD
+                # evict by, read and discarded -- the decision stays FIFO. Not with
+                # `b` on: a bias control loop may be stateful in `b()`.
+                with torch.no_grad():
+                    score, _ = self._score(slots, context)
         else:
             # Section 3.5: `b` never enters psi_hat "or any differentiable path --
             # eviction argmin only". The whole selection is therefore under
@@ -501,6 +540,15 @@ class RSRPolicy:
                 ordered = score[slots.live].sort().values
                 margin = float(ordered[1] - ordered[0]) if ordered.numel() > 1 else None
 
+        if self.diagnostics and score is not None:
+            live = slots.live
+            self._diag.append(
+                (
+                    score[live].detach(),
+                    slots.ages()[live],
+                    slots.gestalts[live].detach(),
+                )
+            )
         victim_rank, shifted = rank_shift(slots, victim)
         record = EvictionRecord(
             step=step,
@@ -513,6 +561,7 @@ class RSRPolicy:
             attribution=attribution,
             score_margin=margin,
             train_step=self._train_step,
+            victim_age=int(slots.ages()[victim].item()),
         )
         self.records.append(record)
         self.rank_shifts.add(record)
@@ -656,8 +705,12 @@ class RSRPolicy:
         head_dev = next(self.head.parameters()).device
         s, c = rows["s"].to(head_dev), rows["c"].to(head_dev)
         target = target.to(head_dev)
-        # Section 3.3 / ADR-0009 §2: the stop-gradient lives here.
-        psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)
+        if self.config.psi_override == AGE_ONLY:
+            # Section 7.1 item 2: the age-only ARM regresses on age alone.
+            psi = self.head(age_of.to(head_dev))
+        else:
+            # Section 3.3 / ADR-0009 §2: the stop-gradient lives here.
+            psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)
         loss = (psi - target.detach()).pow(2).sum() / n_groups
         with torch.no_grad():
             # CPU before float64: MPS has no float64 (found by the MPS T10 test).
@@ -696,8 +749,49 @@ class RSRPolicy:
         the MC buffer: one `run_policy_loop` call is one stream (ADR-0009 §1)."""
         self._fifo.reset()
         self._mc = {}
+        self._diag = []
+        self._diag_from = len(self.records)
 
     # -- reporting ----------------------------------------------------------- #
+
+    def step_diagnostics(self) -> dict[str, Any]:
+        """Spec section 7.1 / ADR-0009 L6, over the stream since the last
+        `reset()` (one `train()` step). **Computed and logged; never a gate.**
+
+        * ADR-0006's displacement distribution (`shift_distribution`, with
+          `fraction_shifting` and `mean_shift`) -- 0 everywhere under FIFO;
+        * the victim **rank** and victim **age** histograms;
+        * `partial_rho_score_age_given_content` -- `rsr.metrics.vacuity`'s
+          `rho(score, age | content)`, the FULL eviction score of every live slot
+          at every decision, content = the slot gestalts `s_i` -- and the raw
+          Spearman `rho(score, age)` beside it. None when undefined (too few
+          samples for `d` covariates, or diagnostics off).
+
+        `warm` lists the warm flags of this stream's evictions: k is constant over
+        one step, so it is `[True]` or `[False]`, and the statistic splits at
+        section 3.4's on/off-policy boundary by itself.
+        """
+        recs = self.records[self._diag_from :]
+        log = RankShiftLog()
+        for r in recs:
+            log.add(r)
+        out: dict[str, Any] = dict(log.summary())
+        out["warm"] = sorted({r.warm for r in recs})
+        out["diagnostics"] = self.diagnostics
+        partial = raw = None
+        n = 0
+        if self._diag:
+            sc = torch.cat([d[0] for d in self._diag]).to("cpu", torch.float64)
+            ag = torch.cat([d[1] for d in self._diag]).to("cpu", torch.float64)
+            ct = torch.cat([d[2] for d in self._diag]).to("cpu", torch.float64)
+            n = int(sc.numel())
+            partial = partial_correlation_with_age(sc, ag, ct)
+            raw = spearman(sc, ag)
+        out["n_score_samples"] = n
+        out["score_covariates"] = "slot gestalts s_i (d columns) + intercept"
+        out["partial_rho_score_age_given_content"] = partial
+        out["spearman_rho_score_age"] = raw
+        return out
 
     def attribution_counts(self) -> dict[str, int]:
         """How many evictions each term selected. **A run that is all
