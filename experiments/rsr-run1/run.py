@@ -871,40 +871,76 @@ OWNER_VALUE_FORMAT = {
     "R-1": (re.compile(r"[1-9][0-9]*"), int),
     "O5": (re.compile(r"eval|train"), str),
 }
+#: Review fe0e01f MINOR-A3d-1(b): every character `str.splitlines` breaks a line on
+#: besides "\n" (and the "\r" of "\r\n"). The parser splits on "\n" only; a heading
+#: line or a table line holding one of these is `malformed`, never re-split.
+OTHER_LINE_BREAKS = "\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029"
+#: Review fe0e01f MINOR-A3d-1(a): a fence line (CommonMark: up to 3 spaces, then ``` or
+#: ~~~). Lines inside a fence, and the fence lines, are never the heading or a table row.
+_FENCE = re.compile(r" {0,3}(```|~~~)")
 
 
 def parse_owner_table(text: str, heading: str = OWNER_TABLE_HEADING) -> dict:
-    """The owner's registered values, from the PREREG's slot table -- the exact format
+    r"""The owner's registered values, from the PREREG's slot table -- the exact format
     and nothing looser (MAJOR-2). Accepted, and only this:
 
     * exactly one line equal to ``heading``; blank lines; then the header
       ``| slot | value |`` and ``|---|---|``;
     * exactly four rows, in the order O1, O4, R-1, O5, each ``| **<slot>** <any text
-      without a pipe> | `<value>` |`` -- the value cell is one backtick-quoted token
-      and nothing else;
+      not containing " | "> | `<value>` |`` (a bare ``|`` in the text is accepted) --
+      the value cell is one backtick-quoted token and nothing else;
     * values: O1 and O4 a plain decimal (``0.9``, ``0.01``; no sign, exponent or
       unit), R-1 a positive integer without separators (``3000``), O5 ``eval`` or
       ``train``; a run of underscores (``______``) is a blank;
-    * the table ends at the first line not starting with ``|``.
+    * the table ends at the first line not starting with ``|``;
+    * lines are split on ``\n`` only (a ``\r\n`` ending is accepted); a line that holds
+      the heading text, a table line, or a would-be blank line between them, containing
+      any other line break (``OTHER_LINE_BREAKS``: U+2028, U+2029, ``\x85``, ...) makes
+      the table ``malformed``;
+    * lines inside a fenced code block (and the fence lines) never count as the heading
+      or as table rows: a heading quoted only in a fence is ``absent``.
 
     Returns ``status`` ``filled`` (every value present and well formed), ``blank`` (a
     slot still ``______``), or ``malformed`` / ``absent``, with the problems. Only
     ``filled`` lets C10 pass."""
     out: dict[str, Any] = {"heading": heading, "values": {}, "raw": {}, "problems": []}
-    lines = text.splitlines()
-    at = [i for i, x in enumerate(lines) if x == heading]
+    lines = [x[:-1] if x.endswith("\r") else x for x in text.split("\n")]
+
+    def odd(x: str) -> bool:
+        return any(c in x for c in OTHER_LINE_BREAKS)
+
+    fenced, inside = [], False
+    for x in lines:
+        if _FENCE.match(x):
+            fenced.append(True)
+            inside = not inside
+        else:
+            fenced.append(inside)
+    split = [i + 1 for i, x in enumerate(lines) if heading in x and odd(x)]
+    if split:
+        out.update(status="malformed")
+        out["problems"].append(
+            f"line(s) {split} hold the heading and a non-\\n line break (MINOR-A3d-1)"
+        )
+        return out
+    at = [i for i, x in enumerate(lines) if x == heading and not fenced[i]]
     if len(at) != 1:
         out.update(status="absent" if not at else "malformed")
-        out["problems"].append(f"heading {heading!r} occurs {len(at)} times, not once")
+        out["problems"].append(
+            f"heading {heading!r} occurs {len(at)} times outside code fences, not once"
+        )
         return out
     i = at[0] + 1
-    while i < len(lines) and not lines[i].strip():
+    while i < len(lines) and not fenced[i] and not lines[i].strip() and not odd(lines[i]):
         i += 1
     table = []
-    while i < len(lines) and lines[i].startswith("|"):
+    while i < len(lines) and not fenced[i] and lines[i].startswith("|"):
         table.append(lines[i])
         i += 1
     probs = out["problems"]
+    if i < len(lines) and odd(lines[i]) and not lines[i].strip():
+        probs.append(f"line {i + 1} is a non-\\n line break, not a blank line")
+    probs += [f"table line {r!r} holds a non-\\n line break" for r in table if odd(r)]
     if tuple(table[:2]) != OWNER_TABLE_HEADER:
         probs.append(f"the table header is {table[:2]!r}, not {OWNER_TABLE_HEADER!r}")
     rows = table[2:]
@@ -2644,9 +2680,18 @@ def measure_seed(
             if arm_status[a][0] != int(Exit.OK):
                 doc["notes"].append(f"{arm_status[a][2]}: {a}")
         # A3b.3 + A3b.5 + A3c.2: the worst arm by 5 > 3 > 1 > 0; a tie goes to the
-        # first such arm in (psiC, fifo, age).
-        code, status, _note = worst
-        return done(Exit(code), status)
+        # first such arm in (psiC, fifo, age). A3d.2: the order spans arms AND
+        # controls, so an arm's exit 1 (rc 1, completed footer) does not end the seed
+        # while every arm printed a result: C1 / C5 / C6 / C10 are still read, and a
+        # control's 3 outranks it.
+        if worst[0] != int(Exit.FAIL) or any(v["result"] is None for v in arms.values()):
+            code, status, _note = worst
+            return done(Exit(code), status)
+    arm_cands = [
+        (arm_status[a][0], arm_status[a][1], None)
+        for a in ARMS
+        if arm_status[a][0] != int(Exit.OK)
+    ]  # their notes are written above
     results = {a: v["result"] for a, v in arms.items()}
     hbs = {a: v["hb"] for a, v in arms.items()}
     doc["frozen_model_mode"] = {
@@ -2665,16 +2710,17 @@ def measure_seed(
         out_root,
         rcs={a: v["rc"] for a, v in arms.items()},
     )
-    # Review de8f813 MINOR-A3c-1: the seed takes the WORST of everything read so far,
-    # not whichever check comes first. Candidates, in this order (the first wins a tie
-    # of exits -- an order this harness chose; A3c.2 registers one only for arms):
-    # C5 inert (5), C6 (3, crashed), C1 / C10 (3, CONTROL_FAILED), C5 inconclusive (1;
-    # A3c.4). Any C5 / C6 finding stops the seed here; a C1 / C10 failure alone lets
-    # the numbers be written, marked not read (A3b.3), and is applied at the end.
+    # A3d.2 (review de8f813 MINOR-A3c-1): the seed takes the WORST of everything read
+    # so far, 5 > 3 > 1 > 0, not whichever check comes first. Candidates, in A3d.2's
+    # tie order (the first wins a tie of exits): the arms' own outcomes (psiC, fifo,
+    # age), C5 inert (5), C6 (3, crashed), C1 / C10 (3, CONTROL_FAILED), C5
+    # inconclusive (1; A3c.4). Any arm, C5 or C6 finding stops the seed here; a C1 /
+    # C10 failure alone lets the numbers be written, marked not read (A3b.3), and is
+    # applied at the end together with C2-C4, C7 and C8.
     c5 = doc["controls"]["C5"]
     unsure = [a for a, v in c5["per_arm"].items() if v["band"] == "inconclusive"]
     early_failed = [k for k in ("C1", "C10") if doc["controls"][k].get("ok") is not True]
-    cands: list[tuple[int, str, str]] = []
+    cands: list[tuple[int, str, str | None]] = list(arm_cands)
     if c5["inert"]:
         cands.append((int(Exit.INERT), "partial", f"INERT: {c5['inert']}"))
     if not doc["controls"]["C6"]["ok"]:
@@ -2691,14 +2737,14 @@ def measure_seed(
         )
     if unsure:
         cands.append((int(Exit.FAIL), "failed", f"LIVENESS_INCONCLUSIVE: {unsure}"))
-    stop = bool(c5["inert"] or unsure or not doc["controls"]["C6"]["ok"])
+    stop = bool(arm_cands or c5["inert"] or unsure or not doc["controls"]["C6"]["ok"])
     if cfg.iters == 0:  # a dry run (A3c.1: STEPS = 0): nothing trained, nothing to read
         stop = True
         doc["notes"].append("DRY_RUN: STEPS 0, no step trained; no held-out pass")
         if not cands:
             cands.append((int(Exit.DID_NOT_RUN), "did_not_run", "DRY_RUN"))
     if stop:
-        doc["notes"] += [c[2] for c in cands if c[2] != "DRY_RUN"]
+        doc["notes"] += [c[2] for c in cands if c[2] not in (None, "DRY_RUN")]
         code, status, _note = worst_outcome(cands)
         return done(Exit(code), status)
     beats = {a: hbs[a]["beats"] for a in ARMS}

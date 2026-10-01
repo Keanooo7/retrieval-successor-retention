@@ -1889,3 +1889,79 @@ def test_run_batch_matches_an_independent_recomputation(r1, substrate):
             if boost:
                 flags += [a[2] for r in recs for a in r["answers"]]
     assert any(flags) and not all(flags)  # correctness is exercised both ways
+
+
+def test_a3d2_c6_crashed_outranks_a_control_failure_at_exit_3(r1, e2e, tmp_path):
+    """A3d.2: at exit 3 within a seed, C6 (`crashed`) sets the status over a C1 / C10
+    failure (`did_not_run`); both are in the notes."""
+    out = _copy_run(e2e, tmp_path / "c6c10")
+    log = out / "logs" / "psiC-s0.log"
+    res = r1.read_cli_result(log)
+    res["steps_done"] = ARM_ITERS - 1  # the arm is OK by rc; C6 reads the short count
+    log.write_text(json.dumps(res, indent=2) + "\n")
+    lg = json.loads((out / "launch-git.json").read_text())
+    (out / "launch-git.json").write_text(json.dumps({**lg, "wd": "0.0"}))
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert (doc["status"], doc["exit"]) == ("crashed", int(Exit.DID_NOT_RUN))
+    assert any(n.startswith("ARM_CRASHED: C6") for n in doc["notes"])
+    assert "CONTROL_FAILED: ['C10']" in doc["notes"]
+
+
+def test_a3d2_an_arms_exit_1_does_not_hide_a_control_failure(r1, e2e, tmp_path):
+    """A3d.2: the order spans arms and controls. An arm's own exit 1 (rc 1 after a
+    completed footer) with a C10 failure gives 3, and both are in the notes."""
+    out = _copy_run(e2e, tmp_path / "arm1c10")
+    (out / "logs" / "fifo-s0.rc").write_text("1\n")
+    lg = json.loads((out / "launch-git.json").read_text())
+    (out / "launch-git.json").write_text(json.dumps({**lg, "wd": "0.0"}))
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert "LIVENESS_INCONCLUSIVE: fifo" in doc["notes"]
+    assert "CONTROL_FAILED: ['C10']" in doc["notes"]
+
+
+def _a4(r1, gamma="0.9") -> str:
+    return _owner_table_text(r1, gamma, "0.01", "3000", "eval")
+
+
+def test_an_a4_table_quoted_only_in_a_code_fence_is_absent(r1):
+    """Review fe0e01f MINOR-A3d-1(a): lines inside a fence never count. A fenced copy
+    alone is `absent`; beside the real table it is ignored, and the real values read."""
+    for fence in ("```", "~~~", "```markdown", "   ```"):
+        fenced = f"# prose\n\n{fence}\n" + _a4(r1, "0.5") + f"{fence[:6].strip()}\n"
+        got = r1.parse_owner_table(fenced)
+        assert got["status"] == "absent" and got["values"] == {}, (fence, got)
+    both = "```\n" + _a4(r1, "0.5") + "```\n\n" + _a4(r1)
+    got = r1.parse_owner_table(both)
+    assert got["status"] == "filled" and got["values"]["gamma"] == 0.9
+    unclosed = _a4(r1).replace("| slot | value |", "```\n| slot | value |")
+    assert r1.parse_owner_table(unclosed)["status"] == "malformed"
+
+
+def test_a_non_newline_line_break_makes_the_a4_table_malformed(r1):
+    """Review fe0e01f MINOR-A3d-1(b): the parser splits on "\\n" only; a line break of
+    any other kind on the heading's line, a table line, or a would-be blank line is
+    `malformed`, never a fresh line. CRLF endings still parse."""
+    good = _a4(r1)
+    h = r1.OWNER_TABLE_HEADING
+    for ch in (
+        chr(0x2028),
+        chr(0x2029),
+        "\x85",
+        "\x0b",
+        "\x0c",
+        "\x1c",
+        "\x1d",
+        "\x1e",
+        "\r",
+    ):
+        before = good.replace(h + "\n", "prose" + ch + h + "\n")
+        assert r1.parse_owner_table(before)["status"] == "malformed", repr(ch)
+        row = good.replace("| **O4** phi", "| **O4** phi" + ch)
+        assert r1.parse_owner_table(row)["status"] == "malformed", repr(ch)
+        if ch != "\r":  # "\r\n" alone is a CRLF blank line, which is blank
+            gap = good.replace(h + "\n\n", h + "\n" + ch + "\n")
+            assert r1.parse_owner_table(gap)["status"] == "malformed", repr(ch)
+    crlf = good.replace("\n", "\r\n")
+    got = r1.parse_owner_table(crlf)
+    assert got["status"] == "filled" and got["values"]["iters"] == 3000
