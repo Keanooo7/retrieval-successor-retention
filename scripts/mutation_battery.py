@@ -815,6 +815,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 _DISPLACEMENT_COUPLING + " Added 2026-09-18: the on-the-real-model "
                 "variant post-dates docs/mutation-battery.md's table.",
             ),
+            (
+                "tests/test_b2_psi_probe.py::"
+                "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+                "b2-psi-probe: ProbeArgminPolicy logs rank_shift imported from "
+                "rsr.retention.instrumentation (run.py imports it), and the test pins "
+                "the ADR-0006 displacement on a hand-built state ([2, 1]); the "
+                "window-counting shift logs [2, 2]: one metric, seen from B2's eviction "
+                "log. Found by the night/2026-09-30 pre-readout screen.",
+            ),
         ),
     ),
     Mutation(
