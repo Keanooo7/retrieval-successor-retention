@@ -2044,6 +2044,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    # "preregistration/*",\n',
         "an unattended branch that edits a signed threshold merges into the night "
         "branch -- 'a threshold registered after seeing the data is not a threshold'.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_the_frozen_guard_trips_even_without_a_review",
+                "T5(b): the review-gate file re-asserts that the frozen-path guard HALTs "
+                "a preregistration/ edit with no review on record, through the same "
+                "FROZEN_GLOBS entry this mutation comments out: one glob, seen from the "
+                "review gate's side (the review gate must not weaken the guard). Found "
+                "by the night/2026-09-30 review.",
+            ),
+        ),
     ),
     Mutation(
         "merge: a changed FROZEN definition is not compared",
@@ -2062,6 +2073,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if rec is None and False:\n        return Exit.DID_NOT_RUN,",
         "the verification gate stops being a gate: with no record the merge crashes "
         "(1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_run_prefix_still_needs_verification_even_with_a_review",
+                "T5(b): the review-gate file re-asserts that a run/ branch WITH a review "
+                "but no verification record is refused 3 'no verification record', "
+                "through the same `rec is None` branch of _verification_gate: one "
+                "refusal, seen from the review side (a review never replaces "
+                "verification for run/). Found by the night/2026-09-30 review.",
+            ),
+        ),
     ),
     Mutation(
         "tick: HALT ignored",
