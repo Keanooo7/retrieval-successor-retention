@@ -228,9 +228,13 @@ def buckets_for(m: int) -> dict:
     }
 
 
+#: Launcher v3's recorded rule (A3.7), verbatim.
+CKPT_RULE = "STEPS/3 if STEPS>0 and STEPS%3==0 else STEPS (A1.8 m-9)"
+
+
 def derive_ckpt(steps: int) -> int:
     """A1.8 m-9: CKPT = STEPS / 3 when divisible by 3, else STEPS. Never typed."""
-    return steps // 3 if steps % 3 == 0 else steps
+    return steps // 3 if steps > 0 and steps % 3 == 0 else steps
 
 
 class ControlFailure(RuntimeError):
@@ -374,7 +378,9 @@ RESUME_PERMITTED = False
 
 #: ADAPTER (C-1, T9): what `frozen["frozen_model_mode"]` records for each O5 value
 #: (`FROZEN_MODEL_MODE_RECORD` at c02b16d; "train (dropout live)" at 211d6da).
-FROZEN_MODE_RECORDED = {"train": "train (dropout live)", "eval": "eval (dropout off)"}
+#: Read from the code (`loop.FROZEN_MODEL_MODE_RECORD`, c02b16d); a test pins the two
+#: strings, so a change in the code's wording reddens rather than passes silently.
+FROZEN_MODE_RECORDED = dict(loop.FROZEN_MODEL_MODE_RECORD)
 #: ADAPTER (C-1, T9): the flag launcher v2's C1_FLAGS carries for each O5 value.
 C1_FLAGS = {"train": (), "eval": ("--frozen-model-mode", "eval")}
 #: ADAPTER (C-2, T10): flags for the permutation pass (none at c02b16d: automatic in
@@ -386,12 +392,11 @@ CLI_MAX_TOKENS = 64
 
 
 def frozen_mode_supported(o5: str) -> bool:
-    """ADAPTER (C-1): "train" is as built; "eval" needs `train(frozen_model_mode)`."""
-    if o5 == "train":
-        return True
-    if o5 != "eval":
-        return False
-    return "frozen_model_mode" in inspect.signature(loop.train).parameters
+    """ADAPTER (C-1): the modes `train(frozen_model_mode=...)` accepts (c02b16d:
+    `loop.FROZEN_MODEL_MODES`); "train" only on a tree without C-1."""
+    if "frozen_model_mode" not in inspect.signature(loop.train).parameters:
+        return o5 == "train"
+    return o5 in loop.FROZEN_MODEL_MODES
 
 
 def code_phi_weight_decay() -> float:
@@ -769,10 +774,16 @@ def env_problems(env: dict[str, str | None], *, dry_run: bool) -> list[str]:
     return out
 
 
+#: T14: the PREREG heading the committed launcher is extracted from. Switching launcher
+#: versions is this one line (and the expected sha in the test).
+LAUNCHER_HEADING = "### A3.7 Launcher, version 3"
+
+
 def launcher_text_from_prereg() -> str:
-    """A2.7's launcher, read from the PREREG (the committed file must equal it)."""
+    """The launcher under ``LAUNCHER_HEADING``, from the PREREG: the committed file must
+    equal it byte for byte (T14)."""
     t = (ROOT / PREREG).read_text()
-    i = t.index("### A2.7 Launcher, version 2")
+    i = t.index(LAUNCHER_HEADING)
     j = t.index("```zsh\n", i) + len("```zsh\n")
     return t[j : t.index("\n```\n", j)] + "\n"
 
@@ -950,6 +961,11 @@ def launch_direct(
                 "c1_flags": " ".join(C1_FLAGS[owner.o5]),
                 "c2_flags": " ".join(C2_FLAGS),
                 "c3_flags": "",
+                "ckpt_rule": CKPT_RULE,
+                "rsr_orch_root": launch_env()["RSR_ORCH_ROOT"] or "",
+                "out": launch_env()["OUT"] or "",
+                "job_suffix": launch_env()["JOB_SUFFIX"] or "",
+                "dry_run": os.environ.get("DRY_RUN", ""),
                 "launched_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "launcher": "run.py launch_direct (tests / dry runs; no slot)",
                 "env": launch_env(),
@@ -1355,7 +1371,8 @@ def c9_oracle(model, cfg: Run1Config, vmap, *, policy_fn=oracle_policy) -> dict:
         "C9": {"gammas": list(C9_GAMMAS), "differing_docs": c9_bad, "ok": not c9_bad},
         "C9b": {"gamma": ORACLE_GAMMA, "differing_docs": c9b_bad, "ok": not c9b_bad},
         "ok": bool(docs) and not c9_bad and not c9b_bad,
-        "scope": "a failure invalidates oracle regret and headroom share only (A2.2)",
+        "scope": "a failure marks oracle regret, headroom share and the oracle's own "
+        "accuracy NOT READ; exit and status unchanged (A3.6)",
     }
 
 
@@ -1471,7 +1488,7 @@ def c2_pairing(
                 b_replay.append(k)
     # (c)
     lm = [k for k in steps if k < tw and len({by[a][k]["loss_lm"] for a in arms}) != 1]
-    required_a = cfg.prereg_strict
+    required_a = True  # C-2 is in the code (c02b16d): (a) is always required
     return {
         "steps_compared": len(steps),
         "warm_steps_compared": sum(1 for k in steps if k < tw),
@@ -1493,7 +1510,7 @@ def c2_pairing(
         and not b_cross
         and not b_replay
         and not lm
-        and (a_ok or (not required_a and not have_ids)),
+        and a_ok,
     }
 
 
@@ -1634,6 +1651,24 @@ def c10_launch_values(
     )
     want(launch.get("o5") == owner.o5, f"launch o5 {launch.get('o5')!r}")
     want(
+        launch.get("ckpt_rule") == CKPT_RULE,
+        f"launch ckpt_rule {launch.get('ckpt_rule')!r}",
+    )
+    steps_rec = str(launch.get("steps"))
+    want(
+        steps_rec.isdigit()
+        and str(launch.get("ckpt")) == str(derive_ckpt(int(steps_rec))),
+        f"launch ckpt {launch.get('ckpt')!r} is not the A3.7 rule applied to steps",
+    )
+    orch = launch.get("rsr_orch_root")
+    want(
+        orch is not None
+        and (orch == "" or Path(orch).resolve() == Path(SHARED_ORCH_ROOT).resolve()),
+        f"launch rsr_orch_root {orch!r} is not empty or the shared root",
+    )
+    for key in ("out", "job_suffix", "dry_run"):
+        want(launch.get(key) == "", f"launch {key} {launch.get(key)!r}: a dry-run launch")
+    want(
         launch.get("c1_flags", "") == " ".join(C1_FLAGS[owner.o5]),
         f"launch c1_flags {launch.get('c1_flags')!r}",
     )
@@ -1658,6 +1693,9 @@ def c10_launch_values(
             "checkpoint_steps": files,
             "heartbeat_git_sha": hb_sha,
             "job_pinned_sha": None if job is None else job.get("pinned_sha"),
+            # Recorded, not checked: launcher v2 passes no --srep-norm-reg-weight, so
+            # the arms run TGConfig's 0.01 where arm B trained at 0.0 (flagged).
+            "srep_norm_reg_weight": conf.get("srep_norm_reg_weight"),
             "job_cmd_ckpt_every": None
             if job is None
             else _cmd_flag(job.get("cmd"), "--ckpt-every"),
@@ -2044,6 +2082,21 @@ def analyse_training(
             },
             "fill_fraction_regression_rows": sum(fills) / len(fills) if fills else None,
         }
+    for a in RSR_ARMS:
+        if a in hbs and a in out["rsr"]:
+            for phase, bs in (
+                ("warm", [b for b in hbs[a]["beats"] if b["step"] < tw]),
+                ("post_warm", [b for b in hbs[a]["beats"] if b["step"] >= tw]),
+            ):
+                tot: Counter = Counter()
+                n = 0
+                for b in bs:
+                    if b.get("attribution"):
+                        tot.update(b["attribution"])
+                        n += 1
+                out["rsr"][a][f"attribution_{phase}"] = (
+                    {k: v / n for k, v in sorted(tot.items())} if n else None
+                )
     out["step_s"] = {}
     for a, hb in hbs.items():
         el = [b["elapsed_s"] for b in hb["beats"]]
@@ -2106,6 +2159,7 @@ def measure_seed(
     limit: int | None = None,
     c4_fn=None,
     environ=None,
+    dry_run: bool = False,
 ) -> dict:
     """Every control and number for one seed -> ``measure-seed{s}.json``. A failed
     control is recorded and the status says so; nothing is dropped."""
@@ -2131,12 +2185,14 @@ def measure_seed(
     def done(code: Exit, status: str) -> dict:
         failed = [k for k, v in doc["controls"].items() if v.get("ok") is not True]
         doc.update(status=status, exit=int(code), controls_failed=failed)
+        out_root.mkdir(parents=True, exist_ok=True)
         f = out_root / f"measure-seed{cfg.seed}.json"
         f.write_text(json.dumps(doc, indent=2, default=str) + "\n")
         return doc
 
-    if cfg.prereg_strict and env_problems(env, dry_run=False):
-        doc["notes"].append(f"environment: {env_problems(env, dry_run=False)}")
+    doc["dry_run"] = dry_run
+    if cfg.prereg_strict and env_problems(env, dry_run=dry_run):
+        doc["notes"].append(f"environment: {env_problems(env, dry_run=dry_run)}")
         return done(Exit.DID_NOT_RUN, "did_not_run")
     try:
         doc["controls"]["C0"] = check_c0(cfg)
@@ -2181,8 +2237,21 @@ def measure_seed(
     }
     if any(v["rc"] != 0 or v["result"] is None for v in arms.values()):
         if any(v["rc"] == 5 for v in arms.values()):
-            doc["notes"].append("an arm measured INERT: quarantined; no retention number")
-            return done(Exit.INERT, "failed")
+            doc["notes"].append(
+                "INERT: an arm exited 5; quarantined; no retention number"
+            )
+            return done(Exit.INERT, "partial")
+        inconclusive = [
+            a
+            for a, v in arms.items()
+            if v["rc"] == 1 and (v["hb"].get("footer") or {}).get("status") == "completed"
+        ]
+        if inconclusive and all(
+            v["rc"] == 0 or a in inconclusive for a, v in arms.items()
+        ):
+            # Amendment 3b (announced): inconclusive liveness is not a crash.
+            doc["notes"].append(f"liveness inconclusive in {inconclusive}: not read")
+            return done(Exit.DID_NOT_RUN, "partial")
         doc["notes"].append("an arm's rc is not 0: that arm's reading stops (A1.2)")
         return done(Exit.DID_NOT_RUN, "crashed")
     results = {a: v["result"] for a, v in arms.items()}
@@ -2197,7 +2266,8 @@ def measure_seed(
         cfg, owner, launch, results, hbs, {a: v["job"] for a, v in arms.items()}, out_root
     )
     if doc["controls"]["C5"]["inert"]:
-        return done(Exit.INERT, "failed")
+        doc["notes"].append("INERT (C5): quarantined; no retention number (A3.11)")
+        return done(Exit.INERT, "partial")
     if not doc["controls"]["C6"]["ok"]:
         return done(Exit.DID_NOT_RUN, "crashed")
     beats = {a: hbs[a]["beats"] for a in ARMS}
@@ -2256,14 +2326,34 @@ def measure_seed(
     doc["oracle_numbers_read"] = doc["scoped_controls"]["C9_C9b"]["ok"]
     diags = {a: step_diagnostics(steprecs[a]) for a in RSR_ARMS}
     doc["training"] = analyse_training(hbs, diags, cfg)
+    doc["training"]["run_level_histograms_agree"] = {
+        a: run_level_agrees(
+            results[a].get("diagnostics"), doc["training"]["diagnostics"][a]
+        )
+        for a in RSR_ARMS
+    }
     doc["epoch"] = {a: results[a]["config"].get("epoch") for a in RSR_ARMS}
     failed = [k for k, v in doc["controls"].items() if v.get("ok") is not True]
     if failed:
         doc["notes"].append(
             f"controls failed: {failed} -- inconclusive; numbers NOT read"
         )
-        return done(Exit.DID_NOT_RUN, "failed")
+        return done(Exit.DID_NOT_RUN, "partial")  # A3.11: never "failed"
     return done(Exit.OK, "ok")
+
+
+def run_level_agrees(phase_summary: dict | None, per_step: dict) -> bool | None:
+    """ADAPTER (c02b16d's `phase_summary`): train()'s run-level displacement histograms,
+    split warm / scored, equal the sums of the per-step ones (DIAGNOSTIC)."""
+    if not phase_summary or "scored" not in phase_summary:
+        return None
+    for key, phase in (("fifo_warmup", "warm"), ("scored", "scored")):
+        dist = phase_summary[key].get("shift_distribution") or {}
+        if {int(k): int(v) for k, v in dist.items()} != per_step[phase][
+            "displacement_distribution"
+        ]:
+            return False
+    return True
 
 
 def headline(docs: list[dict]) -> dict:
@@ -2308,16 +2398,9 @@ def finalize(
 ) -> Exit:
     """Across seeds: the headline, RESULTS.md, the ledger. The exit is the worst seed's
     (INERT 5 over 3 over 0)."""
-    codes = [Exit(d["exit"]) for d in docs]
-    if Exit.INERT in codes:
-        code = Exit.INERT
-    elif any(c != Exit.OK for c in codes):
-        code = Exit.DID_NOT_RUN
-    else:
-        code = Exit.OK
-    status = (
-        "ok" if code == Exit.OK else next(d["status"] for d in docs if d["exit"] != 0)
-    )
+    rank = {int(Exit.OK): 0, int(Exit.DID_NOT_RUN): 1, int(Exit.INERT): 2}
+    worst = max(docs, key=lambda d: rank.get(int(d["exit"]), 1))
+    code, status = Exit(worst["exit"]), worst["status"]  # one seed: both from it
     run = {
         "run_id": RUN_ID,
         "seeds": [d["seed"] for d in docs],
@@ -2376,12 +2459,21 @@ def write_run_ledger(run: dict, docs: list[dict], out_root: Path) -> Path:
         "epoch",
         "arms",
         "launch",
+        "oracle_numbers_read",
     )
     for d in docs:
         for key, val in _flatten(f"seed{d['seed']}", {k: d.get(k) for k in keys}):
-            led.note(key, val, how=f"{EXPERIMENT} measure-seed{d['seed']}.json")
+            how = f"{EXPERIMENT} measure-seed{d['seed']}.json"
+            if not d.get("oracle_numbers_read", True) and _oracle_derived(key):
+                how = f"NOT READ (C9/C9b failed, A3.6). {how}"
+            led.note(key, val, how=how)
     led.status(run["status"])
     return led.write()
+
+
+def _oracle_derived(key: str) -> bool:
+    """A3.6: the ledger keys a C9/C9b failure marks NOT READ."""
+    return "oracle_regret." in key or "headroom_share" in key or key.endswith(".oracle")
 
 
 def _flatten(prefix: str, x: Any, depth: int = 0):
@@ -2437,10 +2529,11 @@ LRU_CAVEAT = (
     "toward FIFO by design; its distance from FIFO is `acc.*.lru_minus_fifo` (A1.1)."
 )
 ATTRIBUTION_NOTE = (
-    "The heartbeat's `attribution` is None in every arm: neither RSRPolicy nor "
-    "FIFOPolicy "
-    "defines `attribution()`. With b off and nu = 0, §3.4's decomposition has one term, "
-    "so it is vacuous in run 1, not covered (A1.8 m-6)."
+    "The heartbeat's `attribution` is recorded for the RSR arms (RSRPolicy.attribution, "
+    "feat/rsr-run1-ready c02b16d) and is None for FIFO, which has no terms. With b off "
+    "and nu = 0 the scored decomposition has a single term, so the attribution only "
+    "separates FIFO-warmup evictions from scored ones (A1.8 m-6's text predates "
+    "c02b16d). Per-arm fractions are in the training section (DIAGNOSTIC)."
 )
 TIMING_CAVEAT = (
     "The §10 step_s projections were measured with one run-1 process beside the battery; "
@@ -2485,8 +2578,8 @@ def render_results(run: dict, docs: list[dict]) -> str:
     """RESULTS.md (§14b as amended). Every number is read from `run.json` and the
     `measure-seed*.json` documents; nothing is typed."""
     L: list[str] = []
-    w = L.append
     ow = run["owner_values"]
+    w = _confound_tagger(L.append, _psic_confound(ow))  # A2.1: every psiC line
     w("# RESULTS: RSR run 1 -- psi_hat trained online on frozen arm B ckpt3000\n")
     w(
         "**Descriptive. No gate, no pass/fail threshold.** Every contrast is read only "
@@ -2793,7 +2886,15 @@ def _render_heldout(ho: dict, w, ow: dict, oracle_read: bool) -> None:
         w("|---|---|" + "---|" * len(cols))
         for b in BUCKET_NAMES:
             row = acc.get(b) or {}
-            cells = " | ".join(_ci_str(row.get(n), reading=False) for n in cols)
+            cells = " | ".join(
+                _ci_str(row.get(n), reading=False)
+                + (
+                    " **NOT READ (C9/C9b failed)**"
+                    if n == "oracle" and not oracle_read
+                    else ""
+                )
+                for n in cols
+            )
             w(f"| {b} | {(row.get('fifo') or {}).get('n')} | {cells} |")
         w(f"\n{LRU_CAVEAT}")
     con = ho.get("contrasts") or {}
@@ -2840,6 +2941,23 @@ def _render_heldout(ho: dict, w, ow: dict, oracle_read: bool) -> None:
         )
 
 
+def _confound_tagger(w, conf: str):
+    """A2.1 item 2 (O5 = train): the named confound beside every psiC entry -- each
+    line whose first backticked name is a psiC arm, pass or contrast."""
+    if not conf:
+        return w
+
+    def tagged(line: str) -> None:
+        parts = line.split("`")
+        name = parts[1] if line.startswith("- ") and len(parts) > 2 else ""
+        psic = "psiC" in name and all(ch.isalnum() or ch in "._@-" for ch in name)
+        if psic and conf not in line:
+            line = line + conf
+        w(line)
+
+    return tagged
+
+
 def _render_training(tr: dict, w) -> None:
     if not tr:
         return
@@ -2879,6 +2997,16 @@ def _render_training(tr: dict, w) -> None:
                 "; fill fraction (regression rows) ",
                 _f(r["fill_fraction_regression_rows"]),
             )
+        )
+    for a, r in (tr.get("rsr") or {}).items():
+        w(
+            f"- DIAGNOSTIC `{a}` attribution (mean per-step fraction): warm "
+            f"`{r.get('attribution_warm')}`, post-warm `{r.get('attribution_post_warm')}`"
+        )
+    if tr.get("run_level_histograms_agree") is not None:
+        w(
+            "- run-level split histograms (train()'s phase_summary) equal the per-step "
+            f"sums: `{tr['run_level_histograms_agree']}`"
         )
     w("\n### §7.1 diagnostics (§7.4: DIAGNOSTIC; never a gate; warm / scored split)\n")
     for a, ph in (tr.get("diagnostics") or {}).items():
@@ -3044,6 +3172,11 @@ def main(argv: list[str] | None = None) -> Exit:
     _owner_args(ps)
     ps.add_argument("--seed", type=int, required=True)
     ps.add_argument("--threads", type=int, required=True)
+    ps.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="tests / dry runs only (A3.12): never the run",
+    )
     ps.add_argument("--out-root", default=str(ROOT / "runs" / RUN_ID))
     pf = sub.add_parser("finalize", help="the three measure-seed jsons -> RESULTS")
     _owner_args(pf)
@@ -3068,7 +3201,11 @@ def main(argv: list[str] | None = None) -> Exit:
             if a.seed not in SEEDS:
                 raise Refused(f"seed {a.seed} is not one of {SEEDS}")
             doc = measure_seed(
-                prereg_config(a.seed, ow.iters), ow, Path(a.out_root), threads=a.threads
+                prereg_config(a.seed, ow.iters),
+                ow,
+                Path(a.out_root),
+                threads=a.threads,
+                dry_run=a.dry_run,
             )
             return Exit(doc["exit"])
         if a.cmd == "finalize":
