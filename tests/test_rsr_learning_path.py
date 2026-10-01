@@ -692,7 +692,7 @@ def test_overrides_are_stamped_into_frozen_hash_and_label(tmp_path):
     )
 
 
-def test_the_adamw_eps_is_torchs_default_and_recorded():
+def test_the_adamw_eps_pin_equals_torchs_recorded_default():
     """L7/L8 after B1, then P-2 of this branch's review: eps is PINNED at 1e-8,
     B1's measured regime (`tests/test_run1_ready.py` gates the pin). torch's own
     default is read from its signature and recorded beside it, never used; at

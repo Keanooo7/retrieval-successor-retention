@@ -6302,7 +6302,7 @@ MUTATIONS: tuple[Mutation, ...] = (
             "the slice-1 eps test asserts torch's default == the recorded default "
             "== ADAMW_EPS at torch 2.14.0; moving the pin off 1e-8 breaks that "
             "equality, which is the point of keeping it.",
-            "test_the_adamw_eps_is_torchs_default_and_recorded",
+            "test_the_adamw_eps_pin_equals_torchs_recorded_default",
         ),
     ),
     Mutation(
