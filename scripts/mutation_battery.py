@@ -488,6 +488,11 @@ def _s1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
     return tuple((f"tests/test_rsr_learning_path.py::{n}", reason) for n in nodes)
 
 
+def _r1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
+    """Declared couplings on tests/test_run1_ready.py nodes, one reason."""
+    return tuple((f"tests/test_run1_ready.py::{n}", reason) for n in nodes)
+
+
 # ADR-0009 slice 1. Each reason below was written after the mutation was applied
 # by hand and every off-gate red inspected (feat/rsr-slice1, 2026-09-30).
 _S1_RSR_THROUGH_TRAIN = (
@@ -5693,8 +5698,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "slice1: L_MC's regression drops the policy's own detach",
         "test_the_policys_own_detach_holds_for_attached_inputs",
         "src/rsr/retention/rsr.py",
-        "        psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)",
-        "        psi = self.head(s.unsqueeze(1), c).squeeze(1)",
+        # Anchor refreshed (feat/rsr-run1-ready): the line moved into the content
+        # head's branch of retention_loss when the age-only arm was added.
+        "            psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)",
+        "            psi = self.head(s.unsqueeze(1), c).squeeze(1)",
         "ADR-0009 §2 / T3. §3.3 and CLAUDE.md: the retention loss must not reach "
         "the transformer or W_sent. In the loop the inputs arrive detached "
         "upstream, which masks this site; the gate feeds attached inputs so the "
@@ -5923,7 +5930,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        model.requires_grad_(False)  # D2(b): no L_NTP update to transformer, "
         "W_sent\n",
         "        pass  # MUTATED\n",
-        "R-2026-09-30-rsr-run-1-scope D2(b) (owner draft): the transformer and "
+        "docs/owner/rulings/R-2026-09-30-rsr-run-1-scope.md D2(b): the transformer "
+        "and "
         "W_sent get no update in run 1. Left trainable, the transformer sits in "
         "the optimizer (and its decoupled decay) while the run is labelled frozen.",
         off_gate_allowed=_s1_declare(
@@ -5932,6 +5940,231 @@ MUTATIONS: tuple[Mutation, ...] = (
             "checkpoint carries optimizer state).",
             "test_a_frozen_fifo_arm_runs_without_an_optimizer",
         ),
+    ),
+    # ---- run-1 readiness (feat/rsr-run1-ready): review record
+    # docs/reviews/feat-rsr-slice1/7be03038a905.md m-1 .. m-8, P-2. Each was
+    # applied by hand, its gate seen red, the tree restored.
+    Mutation(
+        "run1: a warm start counts k from the source checkpoint's step",
+        "test_the_warm_start_runs_t_warm_at_relative_steps",
+        "src/rsr/train/loop.py",
+        "                policy.set_train_step(it)\n",
+        '                policy.set_train_step(it + (ws_record or {}).get("source_step", '
+        "0))  # MUTATED\n",
+        "m-1 / §3.4, correction 31: k counted from the source's step 3000 starts "
+        "past T_warm (16 steps at pool 256 / batch 16) and skips the warmup "
+        "silently -- the review's exact finding.",
+    ),
+    Mutation(
+        "run1: the warm-start sha256 is not compared",
+        "test_a_wrong_sha_is_refused",
+        "src/rsr/train/loop.py",
+        "    if got != want:\n",
+        "    if False:  # MUTATED\n",
+        "m-1: a checkpoint the T0 manifest did not freeze would seed run 1 under "
+        "the manifest's name.",
+    ),
+    Mutation(
+        "run1: the warm start restores the source's RNG",
+        "test_the_warm_start_restores_weights_only",
+        "src/rsr/train/loop.py",
+        'rec["checkpoint"], model=None, optimizer=None, policy=None, restore_rng=False',
+        'rec["checkpoint"], model=None, optimizer=None, policy=None, restore_rng=True',
+        "m-1: weights only. Restoring the source run's RNG makes the dropout masks "
+        "and every later global draw the source's continuation, not this seed's.",
+    ),
+    Mutation(
+        "run1: the warm start is not stamped into the frozen config",
+        "test_the_warm_start_is_stamped_into_frozen_hash_and_label",
+        "src/rsr/train/loop.py",
+        '        frozen["warm_start"] = ws_record\n',
+        "        pass  # MUTATED\n",
+        "m-1: the source's path and sha256 must be in the hash: a frozen config "
+        "that does not say which substrate it started from proves nothing.",
+    ),
+    Mutation(
+        "run1: a non-FIFO warm-start source accepted",
+        "test_a_non_fifo_source_is_refused",
+        "src/rsr/train/loop.py",
+        '    if source_policy != "fifo":\n',
+        "    if False:  # MUTATED\n",
+        "m-1 / D2(a): the substrate is a FIFO checkpoint; an RSR source's phi "
+        "would be dropped silently by a weights-only load.",
+    ),
+    Mutation(
+        "run1: a warm-start source with another vocabulary accepted",
+        "test_a_source_with_another_vocabulary_is_refused",
+        "src/rsr/train/loop.py",
+        "    if src_vocab is not None and int(src_vocab) != vocab_documents:\n",
+        "    if False:  # MUTATED\n",
+        "m-1: token ids from a different vocabulary mean different words.",
+    ),
+    Mutation(
+        "run1: the warm start loads before the liveness decoy is copied",
+        "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+        "src/rsr/train/loop.py",
+        "        ws_record = _load_warm_start(model, warm_start, "
+        "vocab_documents=len(probe))\n",
+        "        ws_record = _load_warm_start(model, warm_start, "
+        "vocab_documents=len(probe))\n        init_state = {k: v.detach().clone() "
+        "for k, v in model.state_dict().items()}  # MUTATED\n",
+        "m-1, the review's liveness note: the decoy is the untrained model at the "
+        "same seed (R-2026-09-22-inert-exit-5's decisive PREREG Decoy); copied "
+        "after the load it is the substrate, and a frozen run reads ratio 1.0.",
+    ),
+    Mutation(
+        "run1: the pool is not stamped into the frozen config",
+        "test_two_pools_give_two_hashes_and_two_batches",
+        "src/rsr/train/loop.py",
+        '        frozen["pool"] = {**asdict(pool), "ids": [pool.offset, pool.offset + '
+        "pool.length]}\n",
+        "        pass  # MUTATED\n",
+        "m-2: two pools would share a config hash and a run_id.",
+    ),
+    Mutation(
+        "run1: the pool's offset is ignored",
+        "test_two_pools_give_two_hashes_and_two_batches",
+        "src/rsr/train/loop.py",
+        "        docs = pool_documents(\n            pool, SyntheticConfig(",
+        "        docs = pool_documents(\n            DocumentPool(0, pool.length, "
+        "pool.vocab_documents), SyntheticConfig(",
+        "m-2: 'a pool arm B never saw' would silently be documents [0, N), which "
+        "arm B's source DID see -- with the pool's identity still in the hash.",
+    ),
+    Mutation(
+        "run1: the epoch's with-replacement sampling not recorded",
+        "test_the_epoch_records_sampling_with_replacement",
+        "src/rsr/train/loop.py",
+        '            "sampling": "with replacement (torch.randint over the pool)",\n',
+        "            # MUTATED\n",
+        "m-3: 'one pass over the pool' overstates a with-replacement epoch "
+        "(about 1 - 1/e of the documents); the record must say so.",
+    ),
+    Mutation(
+        "run1: the frozen model mode not recorded",
+        "test_frozen_mode_records_that_dropout_stays_on",
+        "src/rsr/train/loop.py",
+        '        frozen["frozen_model_mode"] = "train (dropout live)"\n',
+        "        pass  # MUTATED\n",
+        "m-4: freezing removes the update only; dropout stays live, and nothing "
+        "else in the config says so.",
+    ),
+    Mutation(
+        "run1: no_warmup_ablation accepted on the FIFO arm",
+        "test_no_warmup_ablation_on_the_fifo_arm_is_refused",
+        "src/rsr/train/loop.py",
+        "        if no_warmup_ablation:\n            # m-5",
+        "        if False:  # MUTATED\n            # m-5",
+        "m-5: a switch that is set and does nothing (the branch's own rule).",
+    ),
+    Mutation(
+        "run1: AdamW eps in B1's inert regime",
+        "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+        "src/rsr/train/loop.py",
+        "ADAMW_EPS: float = 1e-8\n",
+        "ADAMW_EPS: float = 1e-12\n",
+        "P-2: B1 measured beta live at eps 1e-8 and inert at 1e-12; the pin is "
+        "what makes beta mean what B1 measured.",
+    ),
+    Mutation(
+        "run1: the §7.1 diagnostics are not logged on the beat",
+        "test_the_section_7_1_diagnostics_are_logged_every_step",
+        "src/rsr/train/loop.py",
+        '                    "diag": policy.step_diagnostics(),\n',
+        '                    "diag": None,  # MUTATED\n',
+        "m-8 / ADR-0009 L6: the §7.1 diagnostics are mandatory in every RESULTS, "
+        "so every RSR beat carries them.",
+    ),
+    Mutation(
+        "run1: step diagnostics accumulate over the whole run",
+        "test_step_diagnostics_cover_one_stream_only",
+        "src/rsr/retention/rsr.py",
+        "        self._diag_from = len(self.records)\n",
+        "        self._diag_from = 0  # MUTATED\n",
+        "m-8: a per-step histogram that silently grows into a cumulative one "
+        "mixes warmup and scored evictions in one beat.",
+    ),
+    Mutation(
+        "run1: the victim age is recorded as its rank",
+        "test_victim_age_and_rank_histograms_by_hand",
+        "src/rsr/retention/rsr.py",
+        "            victim_age=int(slots.ages()[victim].item()),\n",
+        "            victim_age=victim_rank,  # MUTATED\n",
+        "m-8 / §7.1: age and rank coincide only under FIFO; RSR breaks the map "
+        "(ADR-0006), which is why both histograms exist.",
+    ),
+    Mutation(
+        "run1: victim ages not counted by the rank-shift log",
+        "test_victim_age_and_rank_histograms_by_hand",
+        "src/rsr/retention/instrumentation.py",
+        "        if record.victim_age is not None:\n"
+        "            self.victim_ages[record.victim_age] += 1\n",
+        "        pass  # MUTATED\n",
+        "m-8: the victim-age histogram is the log's to aggregate; an empty one "
+        "reads as 'no evictions'.",
+    ),
+    Mutation(
+        "run1: rankdata gives tied values distinct ranks",
+        "test_rankdata_averages_ties",
+        "src/rsr/metrics/vacuity.py",
+        "    avg = first.to(torch.float64) + (counts.to(torch.float64) + 1.0) / 2.0\n",
+        "    avg = first.to(torch.float64) + 1.0  # MUTATED\n",
+        "m-8: ages tie heavily (every FIFO victim is age M); Spearman needs "
+        "average ranks.",
+    ),
+    Mutation(
+        "run1: partial rho is not residualised on content",
+        "test_partial_spearman_matches_the_first_order_formula",
+        "src/rsr/metrics/vacuity.py",
+        "        Z = torch.cat([ones, z], dim=1)\n",
+        "        Z = ones  # MUTATED\n",
+        "m-8 / §7.1 item 1: 'partial correlation, not raw rho' -- without the "
+        "covariates it is v0.1's raw Spearman under the partial's name.",
+    ),
+    Mutation(
+        "run1: age enters the content head's score",
+        "test_the_content_head_never_reads_age",
+        "src/rsr/retention/rsr.py",
+        "            psi = self.head(slots.gestalts.detach(), context.detach())\n",
+        "            psi = self.head(slots.gestalts.detach(), context.detach()) + "
+        "slots.ages()  # MUTATED\n",
+        "CLAUDE.md: age is excluded from psi_hat -- supplying it invites collapse "
+        "onto recency and hides the vacuity failure (§3.2.2, §7.1).",
+    ),
+    Mutation(
+        "run1: the age-only head ignores age",
+        "test_the_age_only_arm_regresses_and_evicts_on_age_alone",
+        "src/rsr/retention/value_head.py",
+        "        return self.table[idx.clamp(0, self.max_age)]\n",
+        "        return self.table[torch.zeros_like(idx)]  # MUTATED\n",
+        "m-8 / §7.1 item 2: an 'age-only' arm that is a constant is not recency "
+        "at its strongest; content+age ~= age-only would then mean nothing.",
+    ),
+    Mutation(
+        "run1: diagnostics on for a directly built policy",
+        "test_a_directly_built_policy_collects_no_diagnostics",
+        "src/rsr/retention/rsr.py",
+        "        diagnostics: bool = False,\n",
+        "        diagnostics: bool = True,  # MUTATED\n",
+        "m-8: E0b's direct path (tests/test_reduction.py) collects nothing; the "
+        "diagnostics are turned on by train()'s build_policy only.",
+    ),
+    Mutation(
+        "run1: eval_forward synchronises on MPS only again",
+        "test_synchronize_waits_on_cuda_and_mps",
+        "src/rsr/model/tg/policy_loop.py",
+        '    elif device.type == "cuda":\n',
+        "    elif False:  # MUTATED\n",
+        "m-7: on CUDA eval_forward_s would time the launch, not the work "
+        "(ADR-0009 L1(a)'s measured cost).",
+    ),
+    Mutation(
+        "run1: eval_forward bypasses the synchronize dispatch",
+        "test_eval_forward_synchronises_through_the_dispatch",
+        "src/rsr/model/tg/policy_loop.py",
+        "    synchronize(out.srep.device)  # m-7: MPS and CUDA alike\n",
+        "    pass  # MUTATED\n",
+        "m-7: the dispatch is only worth having if eval_forward goes through it.",
     ),
 )
 
