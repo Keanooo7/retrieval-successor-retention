@@ -675,13 +675,23 @@ def test_the_epoch_records_sampling_with_replacement(tmp_path):
 
 
 def test_frozen_mode_records_that_dropout_stays_on(tmp_path):
-    """m-4: freezing removes the update only; the record names the mode."""
+    """m-4, updated for C-1 (A1.3 test (f)): the record names the mode a frozen
+    arm ran in -- "train (dropout live)" by default, "eval (dropout off)" with
+    frozen_model_mode="eval" -- and an unfrozen arm records none."""
     kw = {**TINY, "iters": 0}
     f = loop.train(
         policy_name="fifo", freeze_transformer=True, out_dir=tmp_path / "f", **kw
     )
+    e = loop.train(
+        policy_name="fifo",
+        freeze_transformer=True,
+        frozen_model_mode="eval",
+        out_dir=tmp_path / "e",
+        **kw,
+    )
     n = loop.train(policy_name="rsr", policy_overrides=OV, out_dir=tmp_path / "n", **kw)
     assert f["config"]["frozen_model_mode"] == "train (dropout live)"
+    assert e["config"]["frozen_model_mode"] == "eval (dropout off)"
     assert "frozen_model_mode" not in n["config"]
 
 
@@ -1285,26 +1295,57 @@ def _pool_indices(pool: loop.DocumentPool, ids: torch.Tensor, seed: int = 0) -> 
     return out
 
 
-@pytest.mark.parametrize("length", [4, 5])
-def test_every_pool_epoch_covers_the_pool_exactly_once(tmp_path, monkeypatch, length):
-    """R-2 / 31(b): an epoch is one pass over the pool. With the old
-    with-replacement draw an epoch saw ~1 - 1/e of it. Batch 2: at length 4 the
-    epochs are steps (0, 1) and (2, 3); at length 5 the draws are consecutive
-    slices of permutations, so every run of 5 consecutive draws is the pool."""
+def _step_records(out_dir: Path) -> list[dict]:
+    return [
+        json.loads(x) for x in (out_dir / loop.DIAGNOSTICS_FILE).read_text().splitlines()
+    ]
+
+
+def test_every_pool_epoch_covers_the_pool_exactly_once(tmp_path, monkeypatch):
+    """R-2 / C-2 (A1.7): an epoch is one pass over the pool. Pool 4, batch 2:
+    epochs are steps (0, 1) and (2, 3), each reading the 4 documents exactly
+    once. The documents read are logged every step (A1.7 item 3) and match the
+    batches the loop actually received."""
     calls = _spy_loop_entries(monkeypatch)
-    pool = loop.DocumentPool(offset=300, length=length)
+    pool = loop.DocumentPool(offset=300, length=4)
     r = loop.train(
         policy_name="rsr",
         policy_overrides=OV,
         pool=pool,
         out_dir=tmp_path,
-        **{**TINY, "iters": length},
+        **{**TINY, "iters": 4},
     )
-    assert r["config"]["epoch"]["sampling"] == loop.SAMPLING_PERMUTATION
-    draws = [j for c in calls for j in _pool_indices(pool, c["ids"])]
-    assert len(draws) == 2 * length
+    assert r["config"]["epoch"]["sampling"] == (
+        "per-epoch permutation (each document once per epoch)"
+    )
+    logged = [rec["pool_doc_ids"] for rec in _step_records(tmp_path)]
+    seen = [[300 + j for j in _pool_indices(pool, c["ids"])] for c in calls]
+    assert logged == seen
     for e in range(2):
-        assert sorted(draws[e * length : (e + 1) * length]) == list(range(length)), draws
+        epoch = logged[2 * e] + logged[2 * e + 1]
+        assert sorted(epoch) == [300, 301, 302, 303], logged
+
+
+def test_a_pool_not_divisible_by_the_batch_is_refused(tmp_path):
+    """A1.7 item 1: one epoch must be a whole number of optimizer steps."""
+    with pytest.raises(ValueError, match=r"pool.length % batch == 0"):
+        loop.train(pool=loop.DocumentPool(offset=300, length=5), out_dir=tmp_path, **TINY)
+
+
+def test_with_replacement_is_reachable_only_outside_pool_mode(tmp_path):
+    """A1.7 test 4: the default path keeps its with-replacement sampler (and its
+    pinned hash); a pool run never reports or uses it."""
+    kw = {**TINY, "iters": 0}
+    d = loop.train(policy_name="rsr", policy_overrides=OV, out_dir=tmp_path / "d", **kw)
+    q = loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        pool=SMALL_POOL,
+        out_dir=tmp_path / "q",
+        **kw,
+    )
+    assert d["config"]["epoch"]["sampling"] == loop.SAMPLING_WITH_REPLACEMENT
+    assert q["config"]["epoch"]["sampling"] == loop.SAMPLING_PERMUTATION
 
 
 def test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed(
@@ -1326,6 +1367,10 @@ def test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed(
     fifo, rsr, s1 = calls[:4], calls[4:8], calls[8:]
     for a, b in zip(fifo, rsr, strict=True):
         assert torch.equal(a["ids"], b["ids"])
+    # A1.8 m-4 (a): the LOGGED per-step pool ids are identical across the arms.
+    ids_f = [x["pool_doc_ids"] for x in _step_records(tmp_path / "f")]
+    ids_r = [x["pool_doc_ids"] for x in _step_records(tmp_path / "r")]
+    assert ids_f == ids_r and len(ids_f) == 4
     order0 = [j for c in fifo for j in _pool_indices(pool, c["ids"])]
     order1 = [j for c in s1 for j in _pool_indices(pool, c["ids"], seed=1)]
     assert sorted(order0) == sorted(order1) == list(range(8))
@@ -1362,53 +1407,137 @@ def test_a_pool_resume_continues_its_epoch(tmp_path, monkeypatch):
         )
 
 
-def test_frozen_eval_mode_runs_the_frozen_transformer_without_dropout(
-    tmp_path, monkeypatch
-):
-    """Run-1 PREREG review item 7: with --freeze-transformer, --frozen-eval-mode
-    puts the model in eval mode for the whole run (dropout off in the training
-    forward and the memory writes). Recorded in frozen, hash and label; refused
-    without the freeze."""
+def _srep_spy(monkeypatch) -> list:
+    """Every forward's srep, in call order, from the FIRST TGModel train()
+    builds -- the trained one; the liveness measurement's later models are not
+    watched."""
+    sreps, real, built = [], loop.TGModel, []
+
+    def build(cfg):
+        m = real(cfg)
+        built.append(m)
+        if len(built) > 1:
+            return m
+        fwd = m.forward
+
+        def forward(*a, **k):
+            out = fwd(*a, **k)
+            sreps.append(out.srep.detach().clone())
+            return out
+
+        m.forward = forward
+        return m
+
+    monkeypatch.setattr(loop, "TGModel", build)
+    return sreps
+
+
+C1 = dict(policy_overrides=OV, freeze_transformer=True, frozen_model_mode="eval")
+
+
+def test_c1_the_training_forward_equals_the_eval_forward(tmp_path, monkeypatch):
+    """C-1 test (a): in frozen eval mode the training forward's srep equals the
+    eval forward's (L1(a)) bitwise at every sentence step -- one dropout-free
+    model. In the default train mode they differ (dropout live)."""
+    sreps = _srep_spy(monkeypatch)
+    loop.train(policy_name="rsr", out_dir=tmp_path / "e", **C1, **TINY)
+    n = len(sreps)
+    assert n == 2 * TINY["steps_per_stream"]  # training + eval forward per step
+    for t in range(0, n, 2):
+        assert torch.equal(sreps[t], sreps[t + 1]), t
+    sreps = _srep_spy(monkeypatch)  # a fresh spy: watch the next run's model
+    loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        freeze_transformer=True,
+        out_dir=tmp_path / "t",
+        **TINY,
+    )
+    assert len(sreps) == n  # non-vacuous: the contrast run was watched
+    assert any(not torch.equal(sreps[t], sreps[t + 1]) for t in range(0, n, 2))
+
+
+def test_c1_a_training_step_draws_no_global_rng(tmp_path, monkeypatch):
+    """C-1 test (b): no dropout mask is drawn, so the global RNG state is the
+    same after a full training step as before it. In train mode it moves."""
+    states: list = []
+    real = loop.run_policy_loop
+
+    def spy(*a, **k):
+        states.append(torch.get_rng_state().clone())
+        out = real(*a, **k)
+        states.append(torch.get_rng_state().clone())
+        return out
+
+    monkeypatch.setattr(loop, "run_policy_loop", spy)
+    loop.train(policy_name="rsr", out_dir=tmp_path / "e", **C1, **TINY)
+    assert torch.equal(states[0], states[1])
+    states.clear()
+    loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        freeze_transformer=True,
+        out_dir=tmp_path / "t",
+        **TINY,
+    )
+    assert not torch.equal(states[0], states[1])
+
+
+def test_c1_the_model_is_in_eval_mode_at_loop_end(tmp_path, monkeypatch):
+    """C-1 test (c): eval_forward restores the PRIOR mode, and nothing else
+    calls .train(, so the model is still in eval mode after every step."""
     modes: list = []
     real = loop.run_policy_loop
 
     def spy(model, *a, **k):
-        modes.append(model.training)
         out = real(model, *a, **k)
         modes.append(model.training)
         return out
 
     monkeypatch.setattr(loop, "run_policy_loop", spy)
-    kw = {**TINY, "iters": 2}
-    ev = loop.train(
-        policy_name="rsr",
-        policy_overrides=OV,
-        freeze_transformer=True,
-        frozen_eval_mode=True,
-        out_dir=tmp_path / "ev",
-        **kw,
-    )
-    assert modes == [False] * 4  # eval at every entry and exit of both steps
-    modes.clear()
-    tr = loop.train(
-        policy_name="rsr",
-        policy_overrides=OV,
-        freeze_transformer=True,
-        out_dir=tmp_path / "tr",
-        **kw,
-    )
-    assert modes == [True] * 4
-    assert ev["config"]["frozen_model_mode"] == "eval (dropout off)"
-    assert tr["config"]["frozen_model_mode"] == "train (dropout live)"
-    assert ev["arm_label"].endswith("+frozen+eval")
-    assert ev["config_hash"] != tr["config_hash"]
+    loop.train(policy_name="rsr", out_dir=tmp_path, **C1, **{**TINY, "iters": 2})
+    assert modes == [False, False]
+
+
+def test_c1_eval_without_the_freeze_is_refused(tmp_path):
+    """C-1 test (d): eval mode would silently remove dropout from an optimised
+    L_NTP; an unknown mode is refused too."""
     with pytest.raises(ValueError, match="needs freeze_transformer=True"):
-        loop.train(frozen_eval_mode=True, out_dir=tmp_path / "x", **kw)
+        loop.train(frozen_model_mode="eval", out_dir=tmp_path, **TINY)
+    with pytest.raises(ValueError, match="frozen_model_mode='dropout'"):
+        loop.train(
+            freeze_transformer=True,
+            frozen_model_mode="dropout",
+            out_dir=tmp_path,
+            **TINY,
+        )
+
+
+def test_c1_the_mode_is_in_frozen_the_hash_and_the_label(tmp_path, monkeypatch):
+    """C-1 test (e): "eval (dropout off)" in frozen, a different hash from the
+    train-mode arm, "+frozen[eval]" in the label; the CLI flag reaches train()."""
+    kw = {**TINY, "iters": 0}
+    e = loop.train(policy_name="rsr", out_dir=tmp_path / "e", **C1, **kw)
+    t = loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        freeze_transformer=True,
+        out_dir=tmp_path / "t",
+        **kw,
+    )
+    assert e["config"]["frozen_model_mode"] == "eval (dropout off)"
+    assert e["config_hash"] != t["config_hash"]
+    assert e["arm_label"].endswith("+frozen[eval]")
+    assert t["arm_label"].endswith("+frozen")
     seen: dict = {}
     monkeypatch.setattr(
         "rsr.train.loop.train",
         lambda **k: seen.update(k) or {"run_id": "x", "liveness": {"band": "live"}},
     )
-    argv = ["--out-dir", str(tmp_path), "--freeze-transformer", "--frozen-eval-mode"]
-    assert loop.main(argv) == 0
-    assert seen["frozen_eval_mode"] is True and seen["freeze_transformer"] is True
+    argv = ["--out-dir", str(tmp_path), "--freeze-transformer"]
+    assert loop.main([*argv, "--frozen-model-mode", "eval"]) == 0
+    assert seen["frozen_model_mode"] == "eval" and seen["freeze_transformer"] is True
+    assert loop.main(argv) == 0 and seen["frozen_model_mode"] == "train"
+    with pytest.raises(SystemExit) as ex:
+        loop.main([*argv, "--frozen-model-mode", "off"])
+    assert ex.value.code == 3
