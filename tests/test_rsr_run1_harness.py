@@ -232,6 +232,13 @@ def test_e2e_fifo_evicts_age_m_and_shifts_nothing_held_out(e2e):
     assert ev["displacement_distribution"] == {0: ev["n_evictions"]}
 
 
+def test_e2e_lru_held_out_observes_and_departs_from_fifo(e2e):
+    """T11: the held-out LRU pass runs with observe on, so it is not FIFO."""
+    ev = e2e["doc"]["heldout"]["heldout_evictions"]
+    assert ev["fifo"]["fraction_oldest"] == 1.0
+    assert ev["lru"]["fraction_oldest"] < 1.0
+
+
 def test_e2e_snapshots_are_measured_as_diagnostics(e2e):
     snaps = e2e["doc"]["heldout"]["snapshots"]
     assert set(snaps) == {"psiC@2", "psiC@4", "age@2", "age@4"}
