@@ -3052,3 +3052,361 @@ that may be an owner question. This changes nothing in run 1.
   - C10 fails on anything but `filled`;
   - `measure_seed` applies A3d.2: the exit order across arms and controls, and the exit-3 tie
     order.
+
+
+---
+
+## AMENDMENT 4 (2026-10-01): the owner's values; the step-160 DIAGNOSTIC reading; launcher v6
+
+**Written 2026-10-01 by a model** (Claude Opus 5.5, the PREREG author, on the PM's instruction).
+**Not written by Brendan.** It records Brendan's values; it does not choose them. It is committed
+alone, before any run-1 step, and is append-only. Everything above this heading is unedited.
+
+**The ruling.**
+
+- Id: **R-2026-10-01-rsr-run-1-owner-values**. It was drafted by the PM for Brendan to commit to
+  `docs/owner/rulings/`. The draft is at
+  `~/Documents/RSR-2026-09-30-day/owner-drafts/R-2026-10-01-rsr-run-1-owner-values.md`.
+- Its `stated_in`: "Interactive PM session, 2026-10-01 ~11:10 PDT. The PM presented four owner
+  slots (O1, O4, R-1, O5 of experiments/rsr-run1/PREREG.md) with evidence and a recommendation for
+  each; Brendan replied, verbatim: "take the recomendations"."
+- The ruling's own summary:
+  - **O1 = 0.9** for both RSR arms;
+  - **O4 = 0.01, decoupled**, for run 1 only;
+  - **R-1 = 3000 steps, plus one additional DIAGNOSTIC held-out evaluation of φ at step 160
+    (10 epochs)**. That reading is "diagnostic, never the headline";
+  - **O5 = eval**, for frozen-transformer runs.
+
+### A4.1 Owner values (fills A2.8's slots)
+
+| slot | value |
+|---|---|
+| **O1** γ for both RSR arms (not the oracle, which stays at γ_o 0.9 by A2.2) | `0.9` |
+| **O4** φ weight decay, decoupled, run 1 only | `0.01` |
+| **R-1** total optimizer steps per arm | `3000` |
+| **O5** substrate mode under freeze: dropout off in every arm, training and evaluation | `eval` |
+
+**Source:** R-2026-10-01-rsr-run-1-owner-values. Stated in an interactive PM session, 2026-10-01
+~11:10 PDT, in Brendan's words: "take the recomendations". The format is exactly A3d.1's. This
+table supersedes A2.8's and A1.9's blanks, which are never parsed.
+
+**What follows from these values:**
+
+- **O5 = eval.**
+  - `C1_FLAGS='--frozen-model-mode eval'`. That is C-1's flag at `c02b16d`/`dc3642b`; T9 was
+    confirmed by the harness.
+  - Every arm records `frozen_model_mode` `"eval (dropout off)"`, with the label `+frozen[eval]`.
+  - **The A2.1 named confound is not printed.** It applies only under O5 = train.
+- **O4 = 0.01.** This is the built value, so `C3_FLAGS` is empty and C-3 is not needed.
+- **`C2_FLAGS` is empty.** C-2 needs no flag at `c02b16d`; T10 was confirmed by the harness.
+- **R-1 = 3000.**
+  - CKPT = 3000 / 3 = **1000** (A1.8 m-9), so the snapshots are at 1000 and 2000.
+  - The save cadence is **40** (A4.2), so there are 75 checkpoints per job.
+  - `T_warm` is 16 steps, 1 epoch of 187.5 (§6).
+- **The launch command,** A3b.2's shape filled in. `W` is the dedicated run worktree at the final
+  reviewed commit (A1.5):
+
+```zsh
+W=/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run1-run
+env -u RSR_ORCH_ROOT -u OUT -u JOB_SUFFIX -u DRY_RUN -u CKPT \
+  /opt/homebrew/bin/tmux -L rsr-run1 new-session -d -s rsr-run1 \
+  "cd $W && env -u RSR_ORCH_ROOT -u OUT -u JOB_SUFFIX -u DRY_RUN -u CKPT \
+     GAMMA=0.9 WD=0.01 STEPS=3000 O5=eval C1_FLAGS='--frozen-model-mode eval' C2_FLAGS='' \
+     /bin/zsh experiments/rsr-run1/launch_run1.zsh > runs/rsr-run1-launch.log 2>&1; \
+   echo \$? > runs/rsr-run1-launch.rc"
+rc_tmux=$?
+```
+
+**Verified before commit.** I ran the harness's own `parse_owner_table` from
+`feat/rsr-run1-harness` `549a606`, unchanged, on the full PREREG with this amendment appended:
+
+```
+status: filled
+values: {'gamma': 0.9, 'phi_weight_decay': 0.01, 'iters': 3000, 'o5': 'eval'}
+raw: {'O1': '0.9', 'O4': '0.01', 'R-1': '3000', 'O5': 'eval'}
+problems: []
+```
+
+### A4.2 The step-160 DIAGNOSTIC reading of φ
+
+**What the ruling asks for.** One additional held-out evaluation of φ at step 160, which is 10
+epochs of the 256-document pool. It is DIAGNOSTIC: it gives a few-epoch reading (spec §3.4's
+presumption; correction 31(b)) beside the full-length one.
+
+**How φ at step 160 is obtained: option (b), a finer save cadence.**
+
+- **(a) A `train()` flag that saves at extra steps does not exist** at `dc3642b`. `src/` there is
+  identical to the harness head `549a606` (`git diff --quiet`, rc 0). `train()` has only
+  `--ckpt-every`, saving when `(it + 1) % ckpt_every == 0` (`loop.py:1572`). `ckpt_every` is not in
+  the frozen config, so it changes neither the config hash nor the run_id.
+- **(b) The launcher saves every `EVERY = gcd(160, CKPT)` steps.**
+  - That is `gcd(160, CKPT)` when `STEPS ≥ 160` and `CKPT > 0`, and `CKPT` otherwise.
+  - At STEPS = 3000: CKPT = 1000 and EVERY = 40. Saves land at 40, 80, …, 3000, which is **75
+    checkpoints per job**. They include 160, 1000, 2000 and 3000.
+  - The snapshot rule (CKPT, 2·CKPT; A1.8 m-9) is unchanged. EVERY is only how often checkpoints
+    are written.
+- **(c) Anything else** would need a new `train()` flag on code that is final and reviewed, or a
+  second run. I rejected both: (b) changes only an argument the launcher already passes.
+
+**(b) does not change training. Measured:**
+
+- **Setup.** Two real-config psiC runs, 1 thread, from my detached worktree at `549a606`, on the
+  real substrate.
+  - seed 0, O5 eval, `--srep-norm-reg-weight 0.0`, γ 0.9, the pool, the real warm start;
+  - **18 steps**, so steps 16 and 17 are scored, past `T_warm`.
+  - The only difference: `--ckpt-every 1` against `--ckpt-every 18`.
+  - Both exited with rc 0, in 36 s each.
+- **Result.**
+
+| compared | result |
+|---|---|
+| `heartbeat.jsonl` (20 lines), `diagnostics.jsonl` (18), `evictions.jsonl` (9217), timing fields removed | identical |
+| per-step `loss_lm`, `loss_mc`, `phi_grad_norm`, `loss_real_tokens`, `pad_target_fraction`, `n_answer_targets` (all 18 steps) | bitwise equal (`repr`) |
+| `ckpt-000018`: model (206 tensors), optimizer (6), policy/φ (2), stream/data generator (2), RNG (2) | all `torch.equal` |
+| run_id / config_hash | equal (`rsr-d128-s48-b16-be2526932fd27a72`) |
+| end-of-run liveness ratio, which reads the global RNG after training | `50.306607642343124` in both |
+
+So writing a checkpoint perturbs neither the RNG nor the data order nor φ's trajectory.
+
+**Disk.**
+
+- An RSR checkpoint here is about **10.07 MB** (10,065,547 to 10,066,187 bytes). A FIFO checkpoint
+  holds no φ optimizer state, so it is no larger.
+- 9 jobs × 75 × ~10.07 MB ≈ **6.8 GB**, plus `evictions.jsonl` at about 96 MB per RSR job
+  (harness T6). That is about 0.6 GB.
+- **Free:** 594 GiB on `/System/Volumes/Data` (`df -h`).
+
+**What is read at step 160 (DIAGNOSTIC).** It uses the same EVAL documents `[995000, 997048)` and
+the same procedure as the final reading:
+
+- batch 16 (A3.3), `eval_forward` (A3.2), eval mode and `no_grad`;
+- φ (or θ) loaded from each RSR arm's `ckpt-000160.pt` (`__head__`), with `set_train_step(160)`;
+  160 ≥ T_warm, so the scored rule runs;
+- the same 2000-replicate paired bootstrap (generator `20260927 + seed`);
+- the same buckets, NLL definition (A3.4) and scope sentence (A3.5).
+
+The passes:
+
+- **re-run with φ at 160:** `psiC@160`, `age@160`, `sz_psiC@160` and `sz_age@160`;
+- **reused from the final reading:** `fifo`, `oracle`, `lru`, `random0–4` and `sz_fifo`. These
+  read no φ, and the transformer is frozen, so the computation is bitwise the same. Re-running them
+  would repeat it identically.
+
+The contrasts are §7.1's set, at step 160, per seed:
+
+- `psiC@160 − fifo`, `age@160 − fifo` and `psiC@160 − age@160`, for accuracy (every bucket) and
+  both NLLs;
+- `R` for psiC@160 and age@160;
+- the step-160 §7.4 recency statistics, read from `diagnostics.jsonl` up to step 159.
+
+**Every step-160 number is labelled DIAGNOSTIC.** It is never the headline, never gated, never read
+against a threshold, and never used to revisit R-1 (A3.10).
+
+The snapshots at 1000 and 2000 keep A3.10's DIAGNOSTIC readings: the level, and minus final fifo.
+
+**Declared: the two 18-step check runs.** They are the only runs that have trained φ on the real
+substrate since §14a's single-step timing runs.
+
+- Seed 0's pool documents only.
+- Output in `scratchpad/run1-prereg/bitwise/`.
+- Only the equality results above were read. No accuracy was computed, and no EVAL document was
+  touched.
+
+**Cost, extrapolated from the T5 table** (one batch per pass, A3c.3). The four extra passes add
+about **1,090 s per seed**: psiC 219 + age 220 + sz_psiC 325 + sz_age 325.
+
+### A4.3 Launcher, version 6
+
+**The change from v5.**
+
+- `--ckpt-every` now passes **EVERY = gcd(160, CKPT)** when `STEPS ≥ 160` and `CKPT > 0`, otherwise
+  CKPT (A4.2).
+- `launch-git.json` additionally records `ckpt_every`, `ckpt_every_rule` and `diag_step` ("160").
+- Two header comment lines are updated.
+- Nothing else changed: the slots, guards, `DRY_RUN` rule, JSON encoder, srep 0.0, pinning, `--wait`
+  and rc capture are all v5's.
+
+**Coordination.** `experiments/rsr-run1/launch_run1.zsh` must be byte-identical to the text below.
+The harness's `LAUNCHER_HEADING` becomes "### A4.3 Launcher, version 6" (T19).
+
+**sha256 by the harness extraction rule** (`t.index(heading)`, then
+`t.index("```zsh\n", i) + len("```zsh\n")` up to `"\n```\n"`, plus `"\n"`): **`cb0bef7f7d9efdd8e3b0a0286d385116aec19a19e8353f5e84d1b6ed4f823f0f`**.
+
+```zsh
+#!/bin/zsh
+# RSR run 1 launch, version 6 (PREREG Amendment 4, A4.3; supersedes A3c.1's text).
+# Run with /bin/zsh INSIDE tmux (A2.4), from the dedicated run worktree at the final
+# reviewed commit. Owner slots: GAMMA (O1), WD (O4), STEPS (R-1), O5 (eval|train).
+# CKPT is DERIVED here from STEPS (A1.8 m-9), never read from input. Code-change flags:
+# C1_FLAGS (C-1), C2_FLAGS (C-2), C3_FLAGS (C-3, only if O4 != 0.01). Every arm passes
+# --srep-norm-reg-weight 0.0, arm B's training value (A3c.1). Checkpoints are saved every
+# EVERY = gcd(160, CKPT) steps (A4.2), so the step-160 DIAGNOSTIC reading exists.
+# RSR_ORCH_ROOT must be unset or the shared root, and OUT / JOB_SUFFIX unset, unless
+# DRY_RUN=1, and DRY_RUN=1 requires STEPS=0 (a dry run never trains). All four are
+# recorded in launch-git.json, written by a JSON encoder. OUT defaults to runs/rsr-run1.
+# Any unfilled or inconsistent slot exits 3 ("did not run"). One rc per arm x seed.
+R=/Users/keanooo7/retrieval-successor-retention
+GIT=/opt/homebrew/bin/git
+refuse() { print -u2 "DID NOT RUN: $1"; exit 3 }
+[[ -z ${DRY_RUN:-} || $DRY_RUN == 1 ]] || refuse "DRY_RUN must be unset or 1, got '$DRY_RUN'"
+if [[ -z ${DRY_RUN:-} ]]; then
+  [[ -z ${RSR_ORCH_ROOT:-} || ${RSR_ORCH_ROOT:A} == ${R:A} ]] \
+    || refuse "RSR_ORCH_ROOT=$RSR_ORCH_ROOT is not the shared root $R"
+  [[ -z ${OUT:-} ]] || refuse "OUT=$OUT is set (a dry-run hook)"
+  [[ -z ${JOB_SUFFIX:-} ]] || refuse "JOB_SUFFIX=$JOB_SUFFIX is set (a dry-run hook)"
+fi
+[[ -z ${CKPT:-} ]] || refuse "CKPT is derived from STEPS (A1.8 m-9); do not set it"
+for v in GAMMA WD STEPS O5; do [[ -n ${(P)v} ]] || refuse "slot $v unfilled"; done
+[[ $STEPS == <-> ]] || refuse "STEPS must be a non-negative integer, got '$STEPS'"
+[[ -n ${DRY_RUN:-} ]] && (( STEPS != 0 )) && refuse "DRY_RUN=1 needs STEPS=0 (a dry run never trains), got STEPS=$STEPS"
+(( STEPS >= 1 )) || [[ -n ${DRY_RUN:-} ]] || refuse "STEPS must be >= 1"
+[[ $O5 == eval || $O5 == train ]] || refuse "O5 must be eval or train, got '$O5'"
+[[ $O5 == eval && -z ${C1_FLAGS:-} ]] && refuse "O5=eval needs C1_FLAGS (C-1's flag)"
+[[ $O5 == train && -n ${C1_FLAGS:-} ]] && refuse "O5=train: C1_FLAGS must be empty"
+[[ $WD != 0.01 && -z ${C3_FLAGS:-} ]] && refuse "O4=$WD needs C3_FLAGS (code change C-3)"
+[[ $WD == 0.01 && -n ${C3_FLAGS:-} ]] && refuse "O4=0.01 is the built value: C3_FLAGS must be empty"
+if (( STEPS > 0 && STEPS % 3 == 0 )); then CKPT=$(( STEPS / 3 )); else CKPT=$STEPS; fi
+DIAG_STEP=160
+if (( STEPS >= DIAG_STEP && CKPT > 0 )); then
+  a=$DIAG_STEP; b=$CKPT; while (( b != 0 )); do t=$(( a % b )); a=$b; b=$t; done; EVERY=$a
+else
+  EVERY=$CKPT
+fi
+ORCH_REC=${RSR_ORCH_ROOT:-} ; OUT_REC=${OUT:-} ; SUFFIX_REC=${JOB_SUFFIX:-}
+: ${OUT:=runs/rsr-run1}
+C1=(${=C1_FLAGS:-}) ; C2=(${=C2_FLAGS:-}) ; C3=(${=C3_FLAGS:-})
+
+RUN_SHA=$($GIT rev-parse HEAD); rc_sha=$?
+PORCELAIN=$($GIT status --porcelain); rc_status=$?
+if (( rc_sha != 0 || rc_status != 0 )) || [[ -n $PORCELAIN ]]; then
+  refuse "not a clean committed head (rc_sha=$rc_sha rc_status=$rc_status)"
+fi
+mkdir -p $OUT/logs; rc_mkdir=$?
+(( rc_mkdir == 0 )) || refuse "mkdir $OUT/logs rc=$rc_mkdir"
+LAUNCHED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+.venv/bin/python -c 'import json, sys
+a = sys.argv[2:]
+d = dict(zip(a[0::2], a[1::2]))
+d["dirty"] = False
+d["porcelain_lines"] = 0
+with open(sys.argv[1], "w") as f:
+    json.dump(d, f)
+    f.write("\n")' $OUT/launch-git.json \
+  run_sha "$RUN_SHA" gamma "$GAMMA" wd "$WD" steps "$STEPS" ckpt "$CKPT" \
+  ckpt_rule "STEPS/3 if STEPS>0 and STEPS%3==0 else STEPS (A1.8 m-9)" o5 "$O5" \
+  ckpt_every "$EVERY" ckpt_every_rule "gcd(160, CKPT) if STEPS>=160 and CKPT>0 else CKPT (A4.2)" \
+  diag_step "$DIAG_STEP" \
+  c1_flags "${C1_FLAGS:-}" c2_flags "${C2_FLAGS:-}" c3_flags "${C3_FLAGS:-}" \
+  rsr_orch_root "$ORCH_REC" out "$OUT_REC" job_suffix "$SUFFIX_REC" \
+  dry_run "${DRY_RUN:-}" launched_utc "$LAUNCHED_UTC"; rc_json=$?
+(( rc_json == 0 )) || refuse "writing $OUT/launch-git.json rc=$rc_json"
+
+typeset -A SHA
+SHA[0]=0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60
+SHA[1]=dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8
+SHA[2]=b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8
+SLOT=(env PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run
+      --lane cpu-det --slots 1 --wait 3600 --pinned-sha $RUN_SHA)
+RSR=(--policy rsr --policy-override b_enabled=false --policy-override shadow_enabled=false
+     --policy-override nu=0 --policy-override beta=1 --policy-override gamma=$GAMMA)
+
+typeset -A pid rcs
+for s in 0 1 2; do
+  B=$R/.worktrees/fresh-stream/runs/fresh-stream/B/seed$s
+  for a in psiC fifo age; do
+    case $a in
+      psiC) P=("${RSR[@]}") ;;
+      fifo) P=(--policy fifo) ;;
+      age)  P=("${RSR[@]}" --policy-override psi_override=age_only) ;;
+    esac
+    k=$a-s$s
+    "${SLOT[@]}" --job-id rsr-run1-$k${JOB_SUFFIX:-} -- \
+      .venv/bin/python -m rsr.train.loop \
+        --d 128 --batch 16 --iters $STEPS --steps-per-stream 48 --memory-slots 16 \
+        --lr 0.001 --seed $s --beat-every 1 --ckpt-every $EVERY --device cpu \
+        --freeze-transformer "${C1[@]}" "${C3[@]}" \
+        --srep-norm-reg-weight 0.0 \
+        --pool-offset 993000 --pool-length 256 --pool-vocab-documents 64 "${C2[@]}" \
+        --warm-start $B/ckpt-003000.pt --warm-start-sha256 ${SHA[$s]} \
+        --warm-start-manifest /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256 \
+        --warm-start-root $R --warm-start-source-config $B/result.json \
+        "${P[@]}" --out-dir $OUT/$a/seed$s \
+      > $OUT/logs/$k.log 2>&1 &
+    p=$!; pid[$k]=$p      # measured: pid[$k]=$! stores the literal string "$!" in zsh 5.9
+  done
+done
+for k in ${(ok)pid}; do
+  wait ${pid[$k]}; rcs[$k]=$?
+  print -r -- ${rcs[$k]} > $OUT/logs/$k.rc
+  print -r -- "rc[$k]=${rcs[$k]}"
+done
+```
+
+**Measured: the refusal matrix against v6** (`exitprobe/v6/`).
+
+- All **19 cases gave rc 3, with v5's messages**:
+  - `DRY_RUN=1` with `STEPS=3000`, with all leaks, and with `STEPS=1`;
+  - leftover `OUT`, leftover `JOB_SUFFIX`, a foreign root, `CKPT` given;
+  - `STEPS=abc`, `STEPS=0` without `DRY_RUN`, `DRY_RUN=2`, nothing set;
+  - `O5=maybe`, `O5=eval` without `C1_FLAGS`, `O5=train` with a C-1 flag;
+  - `WD=0.0` without `C3_FLAGS`, `WD=0.01` with `C3_FLAGS`;
+  - a dirty tree.
+- Two of the 19 passed the guards and were stopped only at the clean-head check: the shared root,
+  and `DRY_RUN=1 STEPS=0`.
+- No output directory was created, and `runs/rsr-run1` stayed absent.
+
+**Measured: the cadence derivation.**
+
+- Each probe used a fresh clean scratch git repo, ignoring `.venv` and `runs/`, with `.venv`
+  symlinked.
+- That repo has no orchestrator module, so every slot call failed with rc 1 and **no job could
+  start**. Launcher rc 0 each time. Settings: `O5=eval` with C-1's flag.
+
+| `STEPS` | 3000 | 200 | 192 | 160 | 159 | 1 |
+|---|---|---|---|---|---|---|
+| recorded `ckpt` | 1000 | 200 | 64 | 160 | 53 | 1 |
+| recorded `ckpt_every` | **40** | 40 | 32 | 160 | 53 | 1 |
+
+**Measured: the nine-job dry run inside tmux,** with the A3b.2 shape, at `549a606`.
+
+- Settings: `DRY_RUN=1` (with an isolated root, `OUT` and `JOB_SUFFIX` set after the strip),
+  `STEPS=0`, **`O5=eval`**, `C1_FLAGS='--frozen-model-mode eval'`.
+- `rc_tmux` 0, launcher rc 0, 10 s wall. 9 of 9 `rc[…]=0`.
+- Nine job records: `done 0`, `threads 1`, `pinned 549a6066015c`.
+- In every job: `--ckpt-every 0` (STEPS 0); `--srep-norm-reg-weight 0.0`, with config `0.0`;
+  `frozen_model_mode` `'eval (dropout off)'`.
+- `launch-git.json`: `ckpt 0`, `ckpt_every 0`, `diag_step 160`, `o5 eval`,
+  `c1_flags --frozen-model-mode eval`, `dry_run 1`, `dirty False`.
+- The worktree was clean before and after.
+
+### A4.4 Harness changes the builder must make (TO-CONFIRM T19)
+
+1. `LAUNCHER_HEADING` = "### A4.3 Launcher, version 6". The committed launcher's sha256 is
+   `cb0bef7f7d9efdd8e3b0a0286d385116aec19a19e8353f5e84d1b6ed4f823f0f`.
+2. **The cadence.** `Run1Config.ckpt_every` becomes `EVERY = gcd(160, derive_ckpt(STEPS))` when
+   `STEPS ≥ 160` and CKPT > 0, otherwise CKPT. `cli_argv` passes `--ckpt-every EVERY`, token for
+   token with v6.
+3. **C10's checkpoint check.** The files on disk must equal `range(EVERY, STEPS + 1, EVERY)`, which
+   is 75 files at STEPS = 3000. C10 also reads and checks `launch-git.json`'s `ckpt_every`,
+   `ckpt_every_rule` and `diag_step` against the rule.
+4. **The held-out snapshot set.** It is `{160, CKPT, 2·CKPT}` = {160, 1000, 2000}, plus the final
+   reading at 3000. It is no longer "every checkpoint". The 72 other checkpoints are written and
+   **not read**, except by C3, which checks the frozen model on at least the read ones.
+5. **The step-160 passes** `psiC@160`, `age@160`, `sz_psiC@160` and `sz_age@160`, with A4.2's
+   contrasts, `R` and recency statistics. The φ-independent passes are reused from the final
+   reading. The 1000 and 2000 snapshots keep A3.10's readings.
+6. **Labels.** Every step-160 number is labelled DIAGNOSTIC, in RESULTS and in the ledger. It is
+   never the headline and never gated.
+7. **The owner table.** C10 reads A4.1 through the unchanged `parse_owner_table`. It must report
+   `filled` with gamma 0.9, phi_weight_decay 0.01, iters 3000 and o5 'eval', and must find the same
+   values in every job and in `launch-git.json`.
+8. **T5's projection** adds about 1,090 s per seed for the step-160 passes.
+
+### A4.5 Checks before commit (declared)
+
+- `parse_owner_table` (`549a606`) returns **filled** with exactly the four values.
+- The A4.1 heading is a line of its own **exactly once**, outside any fence.
+- The launcher v6 extraction sha equals the scratch file's.
+- The **seven** original owner blanks (A1.9 ×3, A2.8 ×4) are untouched. They are superseded by
+  A4.1 and never parsed.
+- No EVAL document has gone through any model.
