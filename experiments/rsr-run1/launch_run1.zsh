@@ -1,9 +1,10 @@
 #!/bin/zsh
-# RSR run 1 launch, version 4 (PREREG Amendment 3b, A3b.1; supersedes A3.7's text).
+# RSR run 1 launch, version 5 (PREREG Amendment 3c, A3c.1; supersedes A3b.1's text).
 # Run with /bin/zsh INSIDE tmux (A2.4), from the dedicated run worktree at the final
 # reviewed commit. Owner slots: GAMMA (O1), WD (O4), STEPS (R-1), O5 (eval|train).
 # CKPT is DERIVED here from STEPS (A1.8 m-9), never read from input. Code-change flags:
-# C1_FLAGS (C-1), C2_FLAGS (C-2), C3_FLAGS (C-3, only if O4 != 0.01).
+# C1_FLAGS (C-1), C2_FLAGS (C-2), C3_FLAGS (C-3, only if O4 != 0.01). Every arm passes
+# --srep-norm-reg-weight 0.0, arm B's training value (A3c.1).
 # RSR_ORCH_ROOT must be unset or the shared root, and OUT / JOB_SUFFIX unset, unless
 # DRY_RUN=1, and DRY_RUN=1 requires STEPS=0 (a dry run never trains). All four are
 # recorded in launch-git.json, written by a JSON encoder. OUT defaults to runs/rsr-run1.
@@ -80,6 +81,7 @@ for s in 0 1 2; do
         --d 128 --batch 16 --iters $STEPS --steps-per-stream 48 --memory-slots 16 \
         --lr 0.001 --seed $s --beat-every 1 --ckpt-every $CKPT --device cpu \
         --freeze-transformer "${C1[@]}" "${C3[@]}" \
+        --srep-norm-reg-weight 0.0 \
         --pool-offset 993000 --pool-length 256 --pool-vocab-documents 64 "${C2[@]}" \
         --warm-start $B/ckpt-003000.pt --warm-start-sha256 ${SHA[$s]} \
         --warm-start-manifest /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256 \

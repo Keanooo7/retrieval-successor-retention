@@ -1,18 +1,22 @@
 """RSR run 1 -- the measurement harness (PREREG `experiments/rsr-run1/PREREG.md`, T3).
 
-Pre-registration: the PREREG at `7c58777`, Amendment 1 (`6a4c5a8`) and Amendment 2
-(`7fcd3f9`), reviewed at `787875b`, `c02cae7` and `7f7e2ad`. **Descriptive. No gate, no
-pass/fail threshold.** The controls decide only whether the run is readable; every
-contrast is read only as "CI above 0", "CI below 0" or "CI includes 0".
+Pre-registration: every layer of the PREREG -- base (`7c58777`), Amendment 1 (`6a4c5a8`),
+2 (`7fcd3f9`), 3 (`58a9216`), 3b (`7196a52`) and 3c (`34f495f`), reviewed at `787875b`,
+`c02cae7`, `7f7e2ad`, `3ef97c8`, `33ce631` and `de8f813` (``PREREG_COMMITS`` /
+``REVIEW_COMMITS``; Amendment 4, the owner values, is added there when it lands).
+**Descriptive. No gate, no pass/fail threshold.** The controls decide only whether the
+run is readable; every contrast is read only as "CI above 0", "CI below 0" or "CI
+includes 0".
 
 The launch is NOT here: it is `experiments/rsr-run1/launch_run1.zsh`, committed
-byte-identical to Amendment 2 A2.7 (a test pins it), run inside tmux (A2.4). This file:
+byte-identical to the launcher under ``LAUNCHER_HEADING`` (A3c.1, version 5; a test pins
+it), run inside tmux (A3.8). This file:
 
 * ``--preflight`` (A1.2 step 2, A1.8 m-3): C0 for seeds 0-2 before any model loads; the
-  launcher is byte-identical to A2.7; the substrate checkpoints hash to their T0 values;
-  ``RSR_ORCH_ROOT`` / ``OUT`` / ``JOB_SUFFIX`` recorded, and a real launch refused unless
-  the orchestrator root is the shared one and the dry-run variables are unset (review
-  7fcd3f91ca8f MINOR-A2-3).
+  launcher is byte-identical to the PREREG's; the substrate checkpoints hash to their T0
+  values; ``RSR_ORCH_ROOT`` / ``OUT`` / ``JOB_SUFFIX`` recorded, and a real launch refused
+  unless the orchestrator root is the shared one and the dry-run variables are unset
+  (review 7fcd3f91ca8f MINOR-A2-3).
 * ``measure-seed --seed s`` (A1.6: one process per seed): C0-C10, the held-out harness on
   EVAL (eval mode, ``no_grad``, phi from ``__head__``, ``set_train_step``, observe off)
   for
@@ -50,7 +54,9 @@ import json
 import math
 import os
 import platform
+import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -85,8 +91,17 @@ EXPERIMENT = "experiments/rsr-run1/run.py"
 LAUNCHER = "experiments/rsr-run1/launch_run1.zsh"
 RUN_ID = "rsr-run1"
 PREREG = "experiments/rsr-run1/PREREG.md"
-PREREG_COMMITS = {"base": "7c58777", "A1": "6a4c5a8", "A2": "7fcd3f9"}
-REVIEW_COMMITS = ("787875b", "c02cae7", "7f7e2ad")
+#: Every PREREG layer that governs the run (review 6267fd645698 MINOR-6). Amendment 4 (the
+#: owner values) is added here when it lands.
+PREREG_COMMITS = {
+    "base": "7c58777",
+    "A1": "6a4c5a8",
+    "A2": "7fcd3f9",
+    "A3": "58a9216",
+    "A3b": "7196a52",
+    "A3c": "34f495f",
+}
+REVIEW_COMMITS = ("787875b", "c02cae7", "7f7e2ad", "3ef97c8", "33ce631", "de8f813")
 
 
 def _load(name: str, rel: str):
@@ -154,7 +169,7 @@ DEVICE = "cpu"  # §6
 EXPECTED_VOCAB_SHA256 = "afbaf994e9d1f617fdc2e68579bf5f55622ee17aee056d33d8667d218d245031"
 _R = "/Users/keanooo7/retrieval-successor-retention"
 _B = f"{_R}/.worktrees/fresh-stream/runs/fresh-stream/B"
-#: A1.4's substrate table (and launcher v2's SHA[...] lines).
+#: A1.4's substrate table (and the launcher's SHA[...] lines).
 SUBSTRATE: dict[int, dict[str, str]] = {
     s: {
         "checkpoint": f"{_B}/seed{s}/ckpt-003000.pt",
@@ -190,7 +205,7 @@ O5_VALUES = ("eval", "train")  # A2.1
 #: The shared orchestrator root (lanes.orch_root() with RSR_ORCH_ROOT unset: the main
 #: checkout). A real launch's job records live under it.
 SHARED_ORCH_ROOT = _R
-LAUNCH_ENV_VARS = ("RSR_ORCH_ROOT", "OUT", "JOB_SUFFIX")  # A2.7; MINOR-A2-3
+LAUNCH_ENV_VARS = ("RSR_ORCH_ROOT", "OUT", "JOB_SUFFIX")  # A3c.1; MINOR-A2-3
 #: A3 (not fixed by the PREREG): the held-out batch. Every arm shares it.
 EVAL_BATCH = 16
 HEADLINE = "acc.all.psiC_minus_fifo"  # A1.4
@@ -301,6 +316,12 @@ class Run1Config:
     c4_prereg_value: float | None = None
     n_boot: int = N_BOOT
     orch_root: str = SHARED_ORCH_ROOT
+    #: The dry run's job-id suffix (A3c.1 `JOB_SUFFIX`); "" for the run. Set only by
+    #: `measure-seed --dry-run`; C10 fails any launch that recorded one.
+    job_suffix: str = ""
+    #: The file C10 reads the owner's registered values from (A3.7a; `OWNER_TABLE_*`).
+    #: Tests point it at a synthetic PREREG; C10 under `prereg_strict` requires PREREG.
+    owner_prereg: str = PREREG
     prereg_strict: bool = True
 
     @property
@@ -309,7 +330,10 @@ class Run1Config:
 
     @property
     def snapshots(self) -> list[int]:
-        """Every checkpoint step the arms write: CKPT, 2 CKPT, ..., iters."""
+        """Every checkpoint step the arms write: CKPT, 2 CKPT, ..., iters. None at
+        STEPS = 0 (CKPT = 0: the only dry run launcher v5 allows, A3c.1)."""
+        if self.ckpt_every <= 0:
+            return []
         return list(range(self.ckpt_every, self.iters + 1, self.ckpt_every))
 
     @property
@@ -343,8 +367,10 @@ def prereg_config(seed: int, iters: int) -> Run1Config:
     )
 
 
-def validate_owner_values(ov: OwnerValues) -> None:
-    """Refuse anything not ruled, or that the code would not actually run (A2.5)."""
+def validate_owner_values(ov: OwnerValues, *, dry_run: bool = False) -> None:
+    """Refuse anything not ruled, or that the code would not actually run (A2.5).
+    ``dry_run`` admits STEPS = 0, which is the only dry run launcher v5 allows (A3c.1;
+    review 6267fd645698 MINOR-4); a real run needs STEPS >= 1."""
     for name in ("gamma", "phi_weight_decay", "iters", "o5", "seeds"):
         if getattr(ov, name, None) is None:
             raise Refused(f"owner value {name} is not given (PREREG A2.8): refused")
@@ -353,8 +379,13 @@ def validate_owner_values(ov: OwnerValues) -> None:
         raise Refused(f"gamma={ov.gamma!r} is outside [0, 1) (spec §4.5)")
     if not ov.seeds or len(set(ov.seeds)) != len(ov.seeds):
         raise Refused(f"seeds={ov.seeds!r}: a non-empty list of distinct seeds")
-    if int(ov.iters) != ov.iters or ov.iters < 1:
-        raise Refused(f"iters={ov.iters!r}: a positive integer run length (R-1)")
+    if int(ov.iters) != ov.iters or ov.iters < (0 if dry_run else 1):
+        raise Refused(
+            f"iters={ov.iters!r}: a positive integer run length (R-1)"
+            + (", or 0 for a dry run" if dry_run else "")
+        )
+    if dry_run and ov.iters != 0:
+        raise Refused(f"iters={ov.iters!r}: a dry run never trains (A3c.1: STEPS=0)")
     if ov.o5 not in O5_VALUES:
         raise Refused(f"O5 must be one of {O5_VALUES}, got {ov.o5!r} (A2.1)")
     if not frozen_mode_supported(ov.o5):
@@ -381,7 +412,7 @@ RESUME_PERMITTED = False
 #: Read from the code (`loop.FROZEN_MODEL_MODE_RECORD`, c02b16d); a test pins the two
 #: strings, so a change in the code's wording reddens rather than passes silently.
 FROZEN_MODE_RECORDED = dict(loop.FROZEN_MODEL_MODE_RECORD)
-#: ADAPTER (C-1, T9): the flag launcher v2's C1_FLAGS carries for each O5 value.
+#: ADAPTER (C-1, T9): the flag the launcher's C1_FLAGS carries for each O5 value.
 C1_FLAGS = {"train": (), "eval": ("--frozen-model-mode", "eval")}
 #: ADAPTER (C-2, T10): flags for the permutation pass (none at c02b16d: automatic in
 #: pool mode) and the per-step field holding the step's pool ids.
@@ -389,6 +420,11 @@ C2_FLAGS: tuple[str, ...] = ()
 POOL_IDS_FIELD = "pool_doc_ids"
 #: ADAPTER: `max_tokens` -- `train()`'s default; the CLI has no flag (§6: 64).
 CLI_MAX_TOKENS = 64
+#: A3c.1 / A3c.5: every arm passes `--srep-norm-reg-weight 0.0` (arm B's training value).
+#: A PREREG constant, not an owner slot: C10 requires it in each job's command (the token,
+#: exactly as the launcher spells it) and in each job's recorded config (numerically).
+SREP_NORM_REG_WEIGHT = 0.0
+SREP_NORM_REG_WEIGHT_ARG = "0.0"
 
 
 def frozen_mode_supported(o5: str) -> bool:
@@ -405,8 +441,9 @@ def code_phi_weight_decay() -> float:
 
 
 def cli_argv(cfg: Run1Config, arm: str, owner: OwnerValues, out_dir: Path) -> list[str]:
-    """ADAPTER (flags, T1): one arm's command, exactly as launcher v2 builds it (a test
-    compares the two token by token)."""
+    """ADAPTER (flags, T1, T17): one arm's command, exactly as launcher v5 builds it (a
+    test compares the two token by token), including A3c.1's `--srep-norm-reg-weight
+    0.0` after the C-1 / C-3 flags."""
     s = cfg.substrate
     rsr = [
         "--policy",
@@ -455,6 +492,8 @@ def cli_argv(cfg: Run1Config, arm: str, owner: OwnerValues, out_dir: Path) -> li
         cfg.device,
         "--freeze-transformer",
         *C1_FLAGS[owner.o5],
+        "--srep-norm-reg-weight",
+        SREP_NORM_REG_WEIGHT_ARG,
         "--pool-offset",
         str(cfg.pool[0]),
         "--pool-length",
@@ -620,6 +659,19 @@ def replay_batches(cfg: Run1Config, steps: int, sampling: str | None) -> list[li
     ]
 
 
+def arm_sampling(result: dict) -> str | None:
+    """ADAPTER (sampler record; 262b5c5, review c02b16d MINOR-1): `frozen["sampling"]`,
+    which `train()` now stamps for EVERY pool arm, FIFO included (at c02b16d only the RSR
+    arms' `epoch` block carried it). Where an RSR arm carries both, they must agree;
+    a disagreement is returned as a string that matches no sampler, so C2 fails."""
+    conf = result["config"]
+    top = conf.get("sampling")
+    ep = (conf.get("epoch") or {}).get("sampling")
+    if ep is not None and top != ep:
+        return f"DISAGREE: frozen {top!r} vs epoch {ep!r}"
+    return top
+
+
 def checkpoint_path(out_dir: Path, step: int) -> Path:
     """ADAPTER: the loop's filename (`ckpt-{step:06d}.pt`)."""
     return Path(out_dir) / f"ckpt-{step:06d}.pt"
@@ -651,13 +703,13 @@ def head_state(payload: dict) -> dict | None:
 
 
 def job_record(cfg: Run1Config, arm: str) -> dict | None:
-    """ADAPTER (orchestrator): the slot's job record for launcher v2's job id
+    """ADAPTER (orchestrator): the slot's job record for the launcher's job id
     `rsr-run1-<arm>-s<seed>` in the shared root (`slot.py:150-152`)."""
     p = (
         Path(cfg.orch_root)
         / ".orchestrator"
         / "jobs"
-        / f"{RUN_ID}-{arm}-s{cfg.seed}.json"
+        / f"{RUN_ID}-{job_key(arm, cfg.seed)}{cfg.job_suffix}.json"
     )
     return json.loads(p.read_text()) if p.exists() else None
 
@@ -706,9 +758,29 @@ def ledger_mod():
     return _ledger
 
 
+#: Homebrew's git, never Apple's shim (CLAUDE.md); Apple silicon first, then Intel.
+HOMEBREW_GIT = ("/opt/homebrew/bin/git", "/usr/local/bin/git")
+
+
+def git_exe() -> str:
+    """The git the harness runs (review 6267fd645698 MINOR-8): Homebrew's if present,
+    else the PATH's, as an absolute path (Linux CI), else a clear refusal -- never a bare
+    ``git`` that a failure would turn into an empty answer."""
+    for p in HOMEBREW_GIT:
+        if Path(p).is_file() and os.access(p, os.X_OK):
+            return p
+    found = shutil.which("git")
+    if found:
+        return os.path.abspath(found)  # not resolve(): keep the name argv[0] carries
+    raise Refused(f"no git: none of {HOMEBREW_GIT} exists and none is on PATH")
+
+
 def tree_state() -> dict[str, Any]:
-    """HEAD and the full porcelain, as launcher v2 reads them (A1.5)."""
-    exe = "/opt/homebrew/bin/git"
+    """HEAD and the full porcelain, as the launcher reads them (A1.5)."""
+    try:
+        exe = git_exe()
+    except Refused as e:
+        return {"sha": None, "dirty": None, "porcelain": None, "error": str(e)}
     try:
         head = subprocess.run(
             [exe, "-C", str(ROOT), "rev-parse", "HEAD"],
@@ -760,23 +832,126 @@ def launch_env(environ=None) -> dict[str, str | None]:
 
 def env_problems(env: dict[str, str | None], *, dry_run: bool) -> list[str]:
     """Review 7fcd3f91ca8f MINOR-A2-3: a leftover RSR_ORCH_ROOT puts the real jobs in an
-    isolated lane root; OUT / JOB_SUFFIX are dry-run hooks that must be unset."""
+    isolated lane root; OUT / JOB_SUFFIX are dry-run hooks that must be unset. A dry run
+    (A3c.1: `DRY_RUN=1`, STEPS=0) may set all three -- they are recorded, and C10 fails
+    any launch that recorded them (review 6267fd645698 MINOR-4)."""
+    if dry_run:
+        return []
     out = []
     root = env.get("RSR_ORCH_ROOT")
     if root and Path(root).resolve() != Path(SHARED_ORCH_ROOT).resolve():
         out.append(f"RSR_ORCH_ROOT={root!r} is not the shared root {SHARED_ORCH_ROOT}")
-    if not dry_run:
-        out += [
-            f"{k}={env[k]!r} is set (a dry-run hook)"
-            for k in ("OUT", "JOB_SUFFIX")
-            if env.get(k)
-        ]
+    out += [
+        f"{k}={env[k]!r} is set (a dry-run hook)"
+        for k in ("OUT", "JOB_SUFFIX")
+        if env.get(k)
+    ]
     return out
 
 
 #: T14: the PREREG heading the committed launcher is extracted from. Switching launcher
 #: versions is this one line (and the expected sha in the test).
-LAUNCHER_HEADING = "### A3b.1 Launcher, version 4"
+LAUNCHER_HEADING = "### A3c.1 Launcher, version 5"
+
+
+#: A3.7a: "Each owner value is compared both with `launch-git.json` and with the value
+#: the owner registered in Amendment 4" (review 6267fd645698 MAJOR-2). C10 reads the slot
+#: table under this heading -- A2.8's, whose four `______` blanks Amendment 4 fills.
+#: Switching to a table Amendment 4 prints under its own heading is this one line (and
+#: the test's expected heading). Until a value is there, C10 fails: exit 3.
+OWNER_TABLE_HEADING = "### A2.8 Owner slots: one value each (supersedes A1.9's table)"
+#: The four rows, in this order, each first cell opening with the bolded slot name.
+OWNER_TABLE_SLOTS = (("O1", "gamma"), ("O4", "phi_weight_decay"), ("R-1", "iters"),
+                     ("O5", "o5"))  # fmt: skip
+OWNER_TABLE_HEADER = ("| slot | value |", "|---|---|")
+_DECIMAL = re.compile(r"[0-9]+(\.[0-9]+)?")
+OWNER_VALUE_FORMAT = {
+    "O1": (_DECIMAL, float),
+    "O4": (_DECIMAL, float),
+    "R-1": (re.compile(r"[1-9][0-9]*"), int),
+    "O5": (re.compile(r"eval|train"), str),
+}
+
+
+def parse_owner_table(text: str, heading: str = OWNER_TABLE_HEADING) -> dict:
+    """The owner's registered values, from the PREREG's slot table -- the exact format
+    and nothing looser (MAJOR-2). Accepted, and only this:
+
+    * exactly one line equal to ``heading``; blank lines; then the header
+      ``| slot | value |`` and ``|---|---|``;
+    * exactly four rows, in the order O1, O4, R-1, O5, each ``| **<slot>** <any text
+      without a pipe> | `<value>` |`` -- the value cell is one backtick-quoted token
+      and nothing else;
+    * values: O1 and O4 a plain decimal (``0.9``, ``0.01``; no sign, exponent or
+      unit), R-1 a positive integer without separators (``3000``), O5 ``eval`` or
+      ``train``; a run of underscores (``______``) is a blank;
+    * the table ends at the first line not starting with ``|``.
+
+    Returns ``status`` ``filled`` (every value present and well formed), ``blank`` (a
+    slot still ``______``), or ``malformed`` / ``absent``, with the problems. Only
+    ``filled`` lets C10 pass."""
+    out: dict[str, Any] = {"heading": heading, "values": {}, "raw": {}, "problems": []}
+    lines = text.splitlines()
+    at = [i for i, x in enumerate(lines) if x == heading]
+    if len(at) != 1:
+        out.update(status="absent" if not at else "malformed")
+        out["problems"].append(f"heading {heading!r} occurs {len(at)} times, not once")
+        return out
+    i = at[0] + 1
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    table = []
+    while i < len(lines) and lines[i].startswith("|"):
+        table.append(lines[i])
+        i += 1
+    probs = out["problems"]
+    if tuple(table[:2]) != OWNER_TABLE_HEADER:
+        probs.append(f"the table header is {table[:2]!r}, not {OWNER_TABLE_HEADER!r}")
+    rows = table[2:]
+    if len(rows) != len(OWNER_TABLE_SLOTS):
+        probs.append(f"{len(rows)} slot rows, not {len(OWNER_TABLE_SLOTS)}")
+    blank = []
+    for row, (slot, name) in zip(rows, OWNER_TABLE_SLOTS, strict=False):
+        cells = row.split(" | ")
+        if (len(cells) != 2 or not row.startswith(f"| **{slot}** ")
+                or not row.endswith(" |")):  # fmt: skip
+            probs.append(f"row {row!r} is not `| **{slot}** <text> | `<value>` |`")
+            continue
+        cell = cells[1][: -len(" |")]
+        m = re.fullmatch(r"`([^`]*)`", cell)
+        if m is None:
+            probs.append(f"{slot}: the value cell {cell!r} is not one `quoted` token")
+            continue
+        raw = m.group(1)
+        out["raw"][slot] = raw
+        if re.fullmatch(r"_+", raw):
+            blank.append(slot)
+            continue
+        pattern, cast = OWNER_VALUE_FORMAT[slot]
+        if pattern.fullmatch(raw) is None:
+            probs.append(f"{slot}: {raw!r} is not in the registered format")
+            continue
+        out["values"][name] = cast(raw)
+    if probs:
+        out["status"] = "malformed"
+    elif blank:
+        out["status"] = "blank"
+        probs.append(
+            f"owner slot(s) {blank} still blank (______): Amendment 4 fills them"
+        )
+    else:
+        out["status"] = "filled"
+    return out
+
+
+def owner_table(cfg: Run1Config) -> dict:
+    """`parse_owner_table` on the file ``cfg.owner_prereg`` names (PREREG for the run)."""
+    path = Path(cfg.owner_prereg)
+    path = path if path.is_absolute() else ROOT / path
+    if not path.exists():
+        return {"heading": OWNER_TABLE_HEADING, "status": "absent", "values": {},
+                "raw": {}, "problems": [f"{path} does not exist"]}  # fmt: skip
+    return {"file": str(path), **parse_owner_table(path.read_text())}
 
 
 def launcher_text_from_prereg() -> str:
@@ -874,7 +1049,8 @@ def preflight(*, dry_run: bool = False, environ=None) -> dict:
     out: dict[str, Any] = {"env": launch_env(environ), "dry_run": dry_run, "seeds": {}}
     out["env_problems"] = env_problems(out["env"], dry_run=dry_run)
     committed = (ROOT / LAUNCHER).read_text() if (ROOT / LAUNCHER).exists() else None
-    out["launcher_byte_identical_to_A2_7"] = committed == launcher_text_from_prereg()
+    out["launcher_heading"] = LAUNCHER_HEADING
+    out["launcher_byte_identical_to_prereg"] = committed == launcher_text_from_prereg()
     man = Path(SUBSTRATE[0]["manifest"])
     out["manifest_sha256_ok"] = man.exists() and sha256_file(man) == MANIFEST_SHA256
     for s in SEEDS:
@@ -891,7 +1067,7 @@ def preflight(*, dry_run: bool = False, environ=None) -> dict:
         out["seeds"][s] = row
     out["ok"] = (
         not out["env_problems"]
-        and out["launcher_byte_identical_to_A2_7"]
+        and out["launcher_byte_identical_to_prereg"]
         and out["manifest_sha256_ok"]
         and all(r["C0"]["ok"] and r["substrate_sha256_ok"] for r in out["seeds"].values())
     )
@@ -899,7 +1075,7 @@ def preflight(*, dry_run: bool = False, environ=None) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# The direct launch (tests and dry runs ONLY -- the real launch is launcher v2)
+# The direct launch (tests ONLY -- the real launch and its dry run are launcher v5)
 # --------------------------------------------------------------------------- #
 
 
@@ -908,7 +1084,7 @@ def arm_dir(out_root: Path, arm: str, seed: int) -> Path:
 
 
 def job_key(arm: str, seed: int) -> str:
-    return f"{arm}-s{seed}"  # launcher v2's `k=$a-s$s`
+    return f"{arm}-s{seed}"  # the launcher's `k=$a-s$s`
 
 
 def refuse_resume(out_dir: Path) -> None:
@@ -931,7 +1107,7 @@ def launch_direct(
     threads: int,
     allow_dirty: bool = False,
 ) -> dict[str, int]:
-    """The arms through the same command line, WITHOUT the slot, into launcher v2's
+    """The arms through the same command line, WITHOUT the slot, into the launcher's
     layout (`launch-git.json`, `logs/<arm>-s<seed>.{log,rc}`, `<arm>/seed<s>/`). For the
     test fixture and dry runs; a real launch is `launch_run1.zsh` inside tmux."""
     validate_owner_values(owner)
@@ -1001,7 +1177,10 @@ EXIT_RANK = {
 
 
 def arm_outcome(rc: int | None, hb: dict, result: dict | None) -> tuple[int, str, str]:
-    """A3b.3's table for one arm: (exit, ledger status, required note)."""
+    """A3b.3's table for one arm: (exit, ledger status, required note). rc 3 is
+    `did_not_run` whatever the heartbeat holds: with a completed footer it is train()'s
+    liveness band `invalid` ("3, not a valid measurement", R-2026-09-22-inert-exit-5),
+    which is not a crash (review 6267fd645698 MINOR-2)."""
     foot = (hb.get("footer") or {}).get("status")
     if rc == 0 and foot == "completed" and result is not None:
         return int(Exit.OK), "ok", "ARM_OK"
@@ -1009,11 +1188,45 @@ def arm_outcome(rc: int | None, hb: dict, result: dict | None) -> tuple[int, str
         return int(Exit.INERT), "partial", "INERT"
     if rc == 1 and foot == "completed":
         return int(Exit.FAIL), "failed", "LIVENESS_INCONCLUSIVE"
-    if rc in (1, 3) and not hb.get("exists"):
+    if rc == 1 and not hb.get("exists"):
         return int(Exit.DID_NOT_RUN), "did_not_run", "ARM_DID_NOT_RUN"
+    if rc == 3:
+        if foot == "completed":
+            note = "ARM_DID_NOT_RUN (liveness invalid)"
+        elif hb.get("exists"):
+            note = "ARM_DID_NOT_RUN (rc 3)"
+        else:
+            note = "ARM_DID_NOT_RUN"
+        return int(Exit.DID_NOT_RUN), "did_not_run", note
     if rc is None:
         return int(Exit.DID_NOT_RUN), "did_not_run", "ARM_DID_NOT_RUN (no rc file)"
     return int(Exit.DID_NOT_RUN), "crashed", "ARM_CRASHED"
+
+
+def worst_outcome(cands: list[tuple[int, str, str]]) -> tuple[int, str, str] | None:
+    """A3b.3 + A3b.5 + A3c.2: the worst of ``cands`` by exit, 5 > 3 > 1 > 0; among equal
+    exits, the FIRST in the order given. Callers give arms in (psiC, fifo, age) order,
+    which is A3c.2's tie rule. None if every candidate is OK."""
+    bad = [c for c in cands if c[0] != int(Exit.OK)]
+    if not bad:
+        return None
+    top = max(EXIT_RANK[c[0]] for c in bad)
+    return next(c for c in bad if EXIT_RANK[c[0]] == top)
+
+
+def arm_steps_done(rc: int | None, hb: dict, result: dict | None) -> int | None:
+    """The steps one arm actually recorded (A3b.3: "as actually recorded. Neither may be
+    cleared"; review 6267fd645698 MAJOR-1): the printed result's ``steps_done`` if the
+    process printed one, else the last heartbeat beat's step + 1 (BEAT_EVERY = 1, so
+    every step beats), else 0 for a process that ran -- it has an rc or a heartbeat --
+    and recorded no step. None (absent) only for an arm with neither: never collected."""
+    if result is not None and result.get("steps_done") is not None:
+        return int(result["steps_done"])
+    if hb.get("beats"):
+        return int(hb["beats"][-1]["step"]) + 1
+    if hb.get("exists") or rc is not None:
+        return 0
+    return None
 
 
 def classify_rc(rc: int | None, job: dict | None, hb: dict, result: dict | None) -> str:
@@ -1034,6 +1247,8 @@ def classify_rc(rc: int | None, job: dict | None, hb: dict, result: dict | None)
         return "crashed mid-loop (heartbeat crash line)"
     if rc == 3 and not hb.get("exists"):
         return "slot refused (no job record)" if job is None else "CLI usage error"
+    if rc == 3 and foot == "completed":
+        return "liveness invalid: not a valid measurement (rc 3)"
     if rc > 128:
         return f"killed by signal {rc - 128}"
     return f"rc {rc}: reported as itself"
@@ -1468,8 +1683,13 @@ def c2_pairing(
     ids: dict[str, dict[int, list[int]]],
     cfg: Run1Config,
     sampling: str | None,
+    *,
+    samplings: dict[str, str | None] | None = None,
 ) -> dict:
     """C2 (A1.8 m-4).
+
+    ``samplings`` (262b5c5): the sampler each arm's config records; when given, every
+    arm must record the same one, and ``sampling`` (what the replay uses) is it.
 
     (a) PRIMARY: the logged per-step pool ids are identical across the arms at every
         step, and every full epoch's ids are the pool exactly once (C-2).
@@ -1514,6 +1734,9 @@ def c2_pairing(
     # (c)
     lm = [k for k in steps if k < tw and len({by[a][k]["loss_lm"] for a in arms}) != 1]
     required_a = True  # C-2 is in the code (c02b16d): (a) is always required
+    s_ok = samplings is None or (
+        None not in samplings.values() and set(samplings.values()) == {sampling}
+    )
     return {
         "steps_compared": len(steps),
         "warm_steps_compared": sum(1 for k in steps if k < tw),
@@ -1527,6 +1750,8 @@ def c2_pairing(
             "cross_arm_mismatch_steps": b_cross[:20],
             "replay_mismatch_steps": sorted(set(b_replay))[:20],
             "sampling": sampling,
+            "sampling_per_arm": samplings,
+            "sampling_agrees": s_ok,
         },
         "c_loss_lm_warm_mismatch_steps": lm[:20],
         "same_step_sets": same_steps,
@@ -1535,7 +1760,8 @@ def c2_pairing(
         and not b_cross
         and not b_replay
         and not lm
-        and a_ok,
+        and a_ok
+        and s_ok,
     }
 
 
@@ -1632,6 +1858,16 @@ def _cmd_flag(cmd: list[str] | None, flag: str) -> str | None:
     return cmd[i + 1] if i + 1 < len(cmd) else None
 
 
+def _cmd_overrides(cmd: list[str] | None, key: str) -> list[str]:
+    """Every ``--policy-override <key>=<v>`` value in a command, in order."""
+    cmd = list(cmd or [])
+    return [
+        cmd[i + 1].split("=", 1)[1]
+        for i, x in enumerate(cmd[:-1])
+        if x == "--policy-override" and cmd[i + 1].startswith(f"{key}=")
+    ]
+
+
 def c10_launch_values(
     cfg: Run1Config,
     owner: OwnerValues,
@@ -1640,28 +1876,81 @@ def c10_launch_values(
     hbs: dict[str, dict],
     jobs: dict[str, dict | None],
     out_root: Path,
+    *,
+    rcs: dict[str, int | None] | None = None,
+    registered: dict | None = None,
 ) -> dict:
-    """C10 (review 7fcd3f91ca8f MINOR-A2-1 / A2-4; A1.5): each job ran the values the
-    launcher recorded and the owner ruled -- not just flag presence -- and the
-    provenance agrees. Per job: `frozen_model_mode` is O5's; the optimizer's
-    `weight_decay` is WD; the label's and the overrides' gamma are GAMMA; the checkpoint
-    cadence is the derived CKPT (the job's own command and the files on disk); iters is
-    STEPS. Launch: launch-git.json's slots equal the owner values; run_sha = each job
-    record's pinned_sha = each heartbeat's git_sha; dirty false; the jobs are in the
-    shared orchestrator root under their exact ids (no JOB_SUFFIX). Exit 3 on any."""
+    """C10 (A3.7a, extended by A3c.5; review 7fcd3f91ca8f MINOR-A2-1 / A2-4, review
+    6267fd645698 MAJOR-2 / MINOR-5): each job ran the values the launcher recorded, the
+    operator gave and the OWNER REGISTERED -- values, not flag presence -- and the
+    provenance agrees. Exit 3 on any problem.
+
+    * Registered: the PREREG's owner table (``parse_owner_table``) is ``filled``, and
+      O1 / O4 / R-1 / O5 there equal the operator's values and launch-git.json's (a
+      blank ``______`` fails: the run is not read before Amendment 4).
+    * Launch: launch-git.json's slots equal the owner values; ckpt is the A1.8 m-9 rule
+      on steps; c1_flags are O5's, c3_flags empty (O4 = 0.01 is the built value);
+      rsr_orch_root empty or shared, out / job_suffix / dry_run empty; dirty false.
+    * Per job, from the recorded config: `frozen_model_mode` is O5's; the optimizer's
+      `weight_decay` is O4; iters is R-1; the RSR arms' label and override gamma are
+      O1; `srep_norm_reg_weight` is 0.0 (A3c.5); the checkpoint files are the derived
+      cadence; the heartbeat's git_sha is run_sha.
+    * Per job, from the command (the job record's ``cmd``; in a non-strict fixture, the
+      command `launch_direct` ran): ``--iters`` R-1, ``--seed`` the seed,
+      ``--ckpt-every`` CKPT, ``--frozen-model-mode`` O5's flag, one ``gamma=`` override
+      equal to O1 in the RSR arms and none in fifo, ``--srep-norm-reg-weight`` 0.0.
+    * Strict (the run): each job record exists in the shared root under its exact id,
+      with ``pinned_sha`` = run_sha, ``threads`` = 1 (§6, A1.6) and ``rc`` = the
+      launcher's ``logs/<k>.rc``; ``cfg.owner_prereg`` is the PREREG itself."""
     ckpt = derive_ckpt(owner.iters)
     problems: list[str] = []
+    rcs = rcs or {}
 
     def want(cond: bool, msg: str) -> None:
         if not cond:
             problems.append(msg)
 
     def num(x):
+        if isinstance(x, bool):
+            return None
         try:
             return float(x)
         except (TypeError, ValueError):
             return None
 
+    reg = owner_table(cfg) if registered is None else registered
+    if reg.get("status") != "filled":
+        problems.append(
+            f"owner table under {reg.get('heading')!r}: {reg.get('status')} "
+            f"{reg.get('problems')} (A3.7a: the owner values are read from Amendment 4)"
+        )
+    else:
+        rv = reg["values"]
+        for name, mine, rec in (
+            ("O1 gamma", owner.gamma, launch.get("gamma")),
+            ("O4 wd", owner.phi_weight_decay, launch.get("wd")),
+        ):
+            key = "gamma" if name.startswith("O1") else "phi_weight_decay"
+            want(rv[key] == mine, f"registered {name} {rv[key]!r} != given {mine!r}")
+            want(rv[key] == num(rec), f"registered {name} {rv[key]!r} != launch {rec!r}")
+        want(
+            rv["iters"] == owner.iters,
+            f"registered R-1 {rv['iters']!r} != given {owner.iters}",
+        )
+        want(
+            str(rv["iters"]) == str(launch.get("steps")),
+            f"registered R-1 {rv['iters']!r} != launch steps {launch.get('steps')!r}",
+        )
+        want(rv["o5"] == owner.o5, f"registered O5 {rv['o5']!r} != given {owner.o5!r}")
+        want(
+            rv["o5"] == launch.get("o5"),
+            f"registered O5 {rv['o5']!r} != launch {launch.get('o5')!r}",
+        )
+    if cfg.prereg_strict:
+        want(
+            cfg.owner_prereg == PREREG,
+            f"owner values read from {cfg.owner_prereg!r}, not the PREREG {PREREG}",
+        )
     want(num(launch.get("gamma")) == owner.gamma, f"launch gamma {launch.get('gamma')!r}")
     want(
         num(launch.get("wd")) == owner.phi_weight_decay, f"launch wd {launch.get('wd')!r}"
@@ -1697,6 +1986,13 @@ def c10_launch_values(
         launch.get("c1_flags", "") == " ".join(C1_FLAGS[owner.o5]),
         f"launch c1_flags {launch.get('c1_flags')!r}",
     )
+    want(launch.get("c3_flags", "") == "", f"launch c3_flags {launch.get('c3_flags')!r}")
+    want(
+        Path(cfg.orch_root).resolve() == Path(SHARED_ORCH_ROOT).resolve()
+        and cfg.job_suffix == "",
+        f"job records read from {cfg.orch_root!r} with suffix {cfg.job_suffix!r}, not "
+        f"the shared root under the exact ids",
+    )
     sha = launch.get("run_sha")
     if cfg.prereg_strict:
         want(launch.get("dirty") is False, f"launch dirty {launch.get('dirty')!r}")
@@ -1705,6 +2001,12 @@ def c10_launch_values(
         conf = r["config"]
         hb_sha = ((hbs[a].get("header") or {}).get("provenance") or {}).get("git_sha")
         job = jobs.get(a)
+        if job is not None:
+            cmd = job.get("cmd")
+        elif not cfg.prereg_strict:
+            cmd = cli_argv(cfg, a, owner, arm_dir(out_root, a, cfg.seed))
+        else:
+            cmd = None
         files = sorted(
             int(p.stem.split("-")[1])
             for p in arm_dir(out_root, a, cfg.seed).glob("ckpt-*.pt")
@@ -1715,15 +2017,23 @@ def c10_launch_values(
             "iters": conf.get("iters"),
             "label": conf.get("arm_label"),
             "gamma_override": (conf.get("policy_overrides") or {}).get("gamma"),
+            "srep_norm_reg_weight": conf.get("srep_norm_reg_weight"),
             "checkpoint_steps": files,
             "heartbeat_git_sha": hb_sha,
             "job_pinned_sha": None if job is None else job.get("pinned_sha"),
-            # Recorded, not checked: launcher v2 passes no --srep-norm-reg-weight, so
-            # the arms run TGConfig's 0.01 where arm B trained at 0.0 (flagged).
-            "srep_norm_reg_weight": conf.get("srep_norm_reg_weight"),
-            "job_cmd_ckpt_every": None
-            if job is None
-            else _cmd_flag(job.get("cmd"), "--ckpt-every"),
+            "job_threads": None if job is None else job.get("threads"),
+            "job_rc": None if job is None else job.get("rc"),
+            "logs_rc": rcs.get(a),
+            "cmd_source": "job record"
+            if job is not None
+            else ("launch_direct (fixture)" if cmd else None),
+            "cmd": cmd,
+            "cmd_iters": _cmd_flag(cmd, "--iters"),
+            "cmd_seed": _cmd_flag(cmd, "--seed"),
+            "cmd_ckpt_every": _cmd_flag(cmd, "--ckpt-every"),
+            "cmd_frozen_model_mode": _cmd_flag(cmd, "--frozen-model-mode"),
+            "cmd_gamma": _cmd_overrides(cmd, "gamma"),
+            "cmd_srep_norm_reg_weight": _cmd_flag(cmd, "--srep-norm-reg-weight"),
         }
         rp: list[str] = []
         if row["frozen_model_mode"] != FROZEN_MODE_RECORDED[owner.o5]:
@@ -1743,26 +2053,64 @@ def c10_launch_values(
                 rp.append(
                     f"gamma: label {row['label']!r}, override {row['gamma_override']!r}"
                 )
+        srep = row["srep_norm_reg_weight"]
+        if not (_finite(srep) and srep == SREP_NORM_REG_WEIGHT):  # A3c.5: a number
+            rp.append(f"config srep_norm_reg_weight {srep!r} != 0.0 (A3c.5)")
         if files != cfg.snapshots:
             rp.append(f"checkpoints {files} != the derived cadence {cfg.snapshots}")
         if hb_sha != sha:
             rp.append(f"heartbeat git_sha {hb_sha!r} != launch run_sha {sha!r}")
+        if cmd is None:
+            rp.append("no command to check (no job record)")
+        else:
+            if num(row["cmd_srep_norm_reg_weight"]) != SREP_NORM_REG_WEIGHT:
+                rp.append(
+                    f"command --srep-norm-reg-weight {row['cmd_srep_norm_reg_weight']!r}"
+                    " != 0.0 (A3c.5)"
+                )
+            if row["cmd_iters"] != str(owner.iters):
+                rp.append(f"command --iters {row['cmd_iters']!r} != {owner.iters}")
+            if row["cmd_seed"] != str(cfg.seed):
+                rp.append(f"command --seed {row['cmd_seed']!r} != {cfg.seed}")
+            if row["cmd_ckpt_every"] != str(ckpt):
+                rp.append(f"command --ckpt-every {row['cmd_ckpt_every']!r} != {ckpt}")
+            fl = C1_FLAGS[owner.o5]
+            want_fm = dict(zip(fl[0::2], fl[1::2], strict=True))
+            if row["cmd_frozen_model_mode"] != want_fm.get("--frozen-model-mode"):
+                rp.append(
+                    f"command --frozen-model-mode {row['cmd_frozen_model_mode']!r} is "
+                    f"not O5={owner.o5}'s"
+                )
+            want_g = [owner.gamma] if a in RSR_ARMS else []
+            if [num(x) for x in row["cmd_gamma"]] != want_g:
+                rp.append(f"command gamma overrides {row['cmd_gamma']!r} != {want_g}")
         if cfg.prereg_strict:
             if job is None:
                 rp.append(
-                    f"no job record {RUN_ID}-{job_key(a, cfg.seed)} in {cfg.orch_root}"
+                    f"no job record {RUN_ID}-{job_key(a, cfg.seed)}{cfg.job_suffix} in "
+                    f"{cfg.orch_root}"
                 )
             else:
                 if job.get("pinned_sha") != sha:
                     rp.append(f"job pinned_sha {job.get('pinned_sha')!r} != run_sha")
-                if row["job_cmd_ckpt_every"] != str(ckpt):
-                    rp.append(f"job --ckpt-every {row['job_cmd_ckpt_every']!r} != {ckpt}")
+                if job.get("threads") != 1 or isinstance(job.get("threads"), bool):
+                    rp.append(f"job threads {job.get('threads')!r} != 1 (§6, A1.6)")
+                if (
+                    job.get("rc") is None
+                    or isinstance(job.get("rc"), bool)
+                    or job.get("rc") != rcs.get(a)
+                ):
+                    rp.append(
+                        f"job rc {job.get('rc')!r} != logs/{job_key(a, cfg.seed)}.rc "
+                        f"{rcs.get(a)!r}"
+                    )
         row["problems"] = rp
         row["ok"] = not rp
         per[a] = row
     env = launch.get("env")
     return {
         "derived_ckpt": ckpt,
+        "registered": reg,
         "launch": {
             k: launch.get(k)
             for k in (
@@ -1775,9 +2123,15 @@ def c10_launch_values(
                 "o5",
                 "c1_flags",
                 "c2_flags",
+                "c3_flags",
+                "rsr_orch_root",
+                "out",
+                "job_suffix",
+                "dry_run",
             )
         },
         "launch_env": env,
+        "jobs_read_from": {"orch_root": cfg.orch_root, "job_suffix": cfg.job_suffix},
         "launch_problems": problems,
         "per_arm": per,
         "ok": not problems and bool(per) and all(v["ok"] for v in per.values()),
@@ -2191,6 +2545,12 @@ def measure_seed(
     torch.set_num_threads(threads)
     out_root = Path(out_root)
     env = launch_env(environ)
+    if dry_run:  # A3c.1's dry run: its isolated root and job-id suffix are read (MINOR-4)
+        cfg = dataclasses.replace(
+            cfg,
+            orch_root=env.get("RSR_ORCH_ROOT") or cfg.orch_root,
+            job_suffix=env.get("JOB_SUFFIX") or "",
+        )
     doc: dict[str, Any] = {
         "run_id": RUN_ID,
         "seed": cfg.seed,
@@ -2210,10 +2570,10 @@ def measure_seed(
     def done(code: Exit, status: str) -> dict:
         failed = [k for k, v in doc["controls"].items() if v.get("ok") is not True]
         doc.update(status=status, exit=int(code), controls_failed=failed)
-        per = ((doc["controls"].get("C6") or {}).get("per_arm")) or {}
-        steps = [v.get("steps_done") for v in per.values()]
-        doc["steps_done"] = min(steps) if steps and None not in steps else None
-        doc["seeds_actually_run"] = [cfg.seed] if per else []
+        # A3b.3 / MAJOR-1: as recorded, per arm (set when the arms are read); a seed
+        # whose launcher never ran has none, and is not a seed that ran.
+        doc.setdefault("steps_done", {})
+        doc.setdefault("seeds_actually_run", [])
         out_root.mkdir(parents=True, exist_ok=True)
         f = out_root / f"measure-seed{cfg.seed}.json"
         f.write_text(json.dumps(doc, indent=2, default=str) + "\n")
@@ -2258,20 +2618,34 @@ def measure_seed(
             "run_id": (v["result"] or {}).get("run_id"),
             "config_hash": (v["result"] or {}).get("config_hash"),
             "arm_label": (v["result"] or {}).get("arm_label"),
-            "argv": cli_argv(cfg, a, owner, arm_dir(out_root, a, cfg.seed)),
+            # The command as the job record holds it, verbatim (review NIT); the
+            # reconstruction only where there is no record (the fixture).
+            "argv": (v["job"] or {}).get("cmd")
+            or cli_argv(cfg, a, owner, arm_dir(out_root, a, cfg.seed)),
+            "argv_source": "job record" if (v["job"] or {}).get("cmd") else "cli_argv",
+            "steps_done": arm_steps_done(v["rc"], v["hb"], v["result"]),
             "job_record": v["job"],
             "heartbeat_last": v["hb"]["last"],
         }
         for a, v in arms.items()
     }
-    arm_status = {a: arm_outcome(v["rc"], v["hb"], v["result"]) for a, v in arms.items()}
+    arm_status = {a: arm_outcome(arms[a]["rc"], arms[a]["hb"], arms[a]["result"])
+                  for a in ARMS}  # fmt: skip
     doc["arm_outcomes"] = arm_status
-    bad = [(a, o) for a, o in arm_status.items() if o[0] != int(Exit.OK)]
-    if bad:
-        for a, (_code, _status, note) in bad:
-            doc["notes"].append(f"{note}: {a}")
-        # A3b.3 + A3b.5: the worst arm by 5 > 3 > 1 > 0; a tie goes to the first arm.
-        a, (code, status, _note) = max(bad, key=lambda x: EXIT_RANK[x[1][0]])
+    doc["steps_done"] = {
+        a: v["steps_done"] for a, v in doc["arms"].items() if v["steps_done"] is not None
+    }
+    doc["seeds_actually_run"] = (
+        [cfg.seed] if any(n >= 1 for n in doc["steps_done"].values()) else []
+    )
+    worst = worst_outcome([arm_status[a] for a in ARMS])
+    if worst is not None:
+        for a in ARMS:  # A3c.2: the notes list EVERY non-OK arm
+            if arm_status[a][0] != int(Exit.OK):
+                doc["notes"].append(f"{arm_status[a][2]}: {a}")
+        # A3b.3 + A3b.5 + A3c.2: the worst arm by 5 > 3 > 1 > 0; a tie goes to the
+        # first such arm in (psiC, fifo, age).
+        code, status, _note = worst
         return done(Exit(code), status)
     results = {a: v["result"] for a, v in arms.items()}
     hbs = {a: v["hb"] for a, v in arms.items()}
@@ -2282,24 +2656,60 @@ def measure_seed(
     doc["controls"]["C5"] = c5_liveness(results)
     doc["controls"]["C6"] = c6_steps(results, hbs, cfg)
     doc["controls"]["C10"] = c10_launch_values(
-        cfg, owner, launch, results, hbs, {a: v["job"] for a, v in arms.items()}, out_root
+        cfg,
+        owner,
+        launch,
+        results,
+        hbs,
+        {a: v["job"] for a, v in arms.items()},
+        out_root,
+        rcs={a: v["rc"] for a, v in arms.items()},
     )
-    if doc["controls"]["C5"]["inert"]:
-        doc["notes"].append(f"INERT: {doc['controls']['C5']['inert']}")
-        return done(Exit.INERT, "partial")
-    unsure = [a for a, v in doc["controls"]["C5"]["per_arm"].items()
-              if v["band"] == "inconclusive"]  # fmt: skip
-    if unsure:
-        doc["notes"].append(f"LIVENESS_INCONCLUSIVE: {unsure}")
-        return done(Exit.FAIL, "failed")
+    # Review de8f813 MINOR-A3c-1: the seed takes the WORST of everything read so far,
+    # not whichever check comes first. Candidates, in this order (the first wins a tie
+    # of exits -- an order this harness chose; A3c.2 registers one only for arms):
+    # C5 inert (5), C6 (3, crashed), C1 / C10 (3, CONTROL_FAILED), C5 inconclusive (1;
+    # A3c.4). Any C5 / C6 finding stops the seed here; a C1 / C10 failure alone lets
+    # the numbers be written, marked not read (A3b.3), and is applied at the end.
+    c5 = doc["controls"]["C5"]
+    unsure = [a for a, v in c5["per_arm"].items() if v["band"] == "inconclusive"]
+    early_failed = [k for k in ("C1", "C10") if doc["controls"][k].get("ok") is not True]
+    cands: list[tuple[int, str, str]] = []
+    if c5["inert"]:
+        cands.append((int(Exit.INERT), "partial", f"INERT: {c5['inert']}"))
     if not doc["controls"]["C6"]["ok"]:
-        doc["notes"].append(f"ARM_CRASHED: C6 {doc['controls']['C6']['per_arm']}")
-        return done(Exit.DID_NOT_RUN, "crashed")
+        cands.append(
+            (
+                int(Exit.DID_NOT_RUN),
+                "crashed",
+                f"ARM_CRASHED: C6 {doc['controls']['C6']['per_arm']}",
+            )
+        )
+    if early_failed:
+        cands.append(
+            (int(Exit.DID_NOT_RUN), "did_not_run", f"CONTROL_FAILED: {early_failed}")
+        )
+    if unsure:
+        cands.append((int(Exit.FAIL), "failed", f"LIVENESS_INCONCLUSIVE: {unsure}"))
+    stop = bool(c5["inert"] or unsure or not doc["controls"]["C6"]["ok"])
+    if cfg.iters == 0:  # a dry run (A3c.1: STEPS = 0): nothing trained, nothing to read
+        stop = True
+        doc["notes"].append("DRY_RUN: STEPS 0, no step trained; no held-out pass")
+        if not cands:
+            cands.append((int(Exit.DID_NOT_RUN), "did_not_run", "DRY_RUN"))
+    if stop:
+        doc["notes"] += [c[2] for c in cands if c[2] != "DRY_RUN"]
+        code, status, _note = worst_outcome(cands)
+        return done(Exit(code), status)
     beats = {a: hbs[a]["beats"] for a in ARMS}
     steprecs = {a: read_step_records(arm_dir(out_root, a, cfg.seed)) for a in ARMS}
-    sampling = (results["psiC"]["config"].get("epoch") or {}).get("sampling")
+    samplings = {a: arm_sampling(results[a]) for a in ARMS}
     doc["controls"]["C2"] = c2_pairing(
-        beats, {a: step_pool_ids(steprecs[a]) for a in ARMS}, cfg, sampling
+        beats,
+        {a: step_pool_ids(steprecs[a]) for a in ARMS},
+        cfg,
+        samplings["psiC"],
+        samplings=samplings,
     )
     doc["controls"]["C8"] = c8_finite(beats)
     payloads = {
@@ -2447,7 +2857,7 @@ def finalize(
 
 def write_run_ledger(run: dict, docs: list[dict], out_root: Path) -> Path:
     """Every number into `runs/rsr-run1/ledger.json` (scripts/ledger.py). The manifest is
-    launcher v2's `launch-git.json`, frozen before any slot call (A1.5)."""
+    the launcher's `launch-git.json`, frozen before any slot call (A1.5)."""
     L = ledger_mod()
     led = L.Ledger(RUN_ID, question=QUESTION, runs_root=Path(out_root).parent)
     lg = Path(out_root) / "launch-git.json"
@@ -2463,15 +2873,37 @@ def write_run_ledger(run: dict, docs: list[dict], out_root: Path) -> Path:
         exit_code=run["exit"],
         note="this measurement",
     )
-    done = [
-        ((d.get("controls") or {}).get("C6") or {}).get("per_arm") or {} for d in docs
-    ]
-    steps = [v.get("steps_done") or 0 for p in done for v in p.values()]
+    # A3b.3 / review 6267fd645698 MAJOR-1: what was RECORDED, never cleared and never
+    # read off C6 alone. Per job, the steps it recorded (`arm_steps_done`); a seed ran
+    # only if one of its jobs recorded a step; `steps_done` is the least-trained job's
+    # count, and the per-job counts are a row of their own.
+    by_job = {
+        f"{a}-s{d['seed']}": n
+        for d in docs
+        for a, n in sorted((d.get("steps_done") or {}).items())
+    }
+    ran = sorted({s for d in docs for s in d.get("seeds_actually_run") or []})
     led.run_meta(
         device=DEVICE,
-        seeds_actually_run=run["seeds"],
+        seeds_actually_run=ran,
         steps_requested=run["owner_values"]["iters"],
-        steps_done=min(steps) if steps else 0,
+        steps_done=min(by_job.values()) if by_job else None,
+    )
+    led.note(
+        "steps_done_by_job",
+        by_job,
+        how=f"{EXPERIMENT} measure-seed<s>.json steps_done (arm_steps_done: the printed "
+        "result, else the last heartbeat beat + 1, else 0 for a process that ran)",
+    )
+    led.note(
+        "prereg_layers",
+        {
+            "prereg": PREREG,
+            "commits": PREREG_COMMITS,
+            "reviews": list(REVIEW_COMMITS),
+            "launcher": LAUNCHER_HEADING,
+        },
+        how=f"{EXPERIMENT} PREREG_COMMITS / REVIEW_COMMITS / LAUNCHER_HEADING",
     )
     led.note("headline", run["headline"], how=f"{EXPERIMENT} run.json")
     keys = (
@@ -2499,9 +2931,20 @@ def write_run_ledger(run: dict, docs: list[dict], out_root: Path) -> Path:
     return led.write()
 
 
+#: A3b.4's three families, exactly (review 6267fd645698 MINOR-3): the oracle's own
+#: accuracy level `acc.<bucket>.oracle`, `oracle_regret.*` and `headroom_share.*` -- in
+#: the held-out numbers only. Never a control row (A3.6: "not ... any control") and
+#: never the oracle's NLL.
+_NOT_READ_KEYS = (
+    re.compile(r"seed\d+\.heldout\.accuracy\.[^.]+\.oracle"),
+    re.compile(r"seed\d+\.heldout\.contrasts\.oracle_regret\..+"),
+    re.compile(r"seed\d+\.heldout\.headroom_share(\..+)?"),
+)
+
+
 def _oracle_derived(key: str) -> bool:
-    """A3.6: the ledger keys a C9/C9b failure marks NOT READ."""
-    return "oracle_regret." in key or "headroom_share" in key or key.endswith(".oracle")
+    """A3.6 / A3b.4: the ledger keys a C9/C9b failure marks NOT READ."""
+    return any(r.fullmatch(key) for r in _NOT_READ_KEYS)
 
 
 def _flatten(prefix: str, x: Any, depth: int = 0):
@@ -2633,7 +3076,7 @@ def render_results(run: dict, docs: list[dict]) -> str:
     )
     w(scope_sentence() + "\n")
     for s, c in h["per_seed"].items():
-        w(f"- seed {s}: {_ci_str(c)} (within-seed)")
+        w(f"- seed {s}: {_ci_str(c)} (within-seed){_psic_confound(ow)}")
     a = h["across_seeds"]
     pts = [round(x, 6) for x in a["points"]]
     w(
@@ -2649,7 +3092,9 @@ def render_results(run: dict, docs: list[dict]) -> str:
             BROKEN if a["sd_exactly_zero"] else "",
             ", sign count ",
             a["sign_count"],
-            " (no CI across seeds, no test)\n",
+            " (no CI across seeds, no test)",
+            _psic_confound(ow),
+            "\n",
         )
     )
     if ow.get("o5") == "train":
@@ -2675,6 +3120,25 @@ def render_results(run: dict, docs: list[dict]) -> str:
         )
     )
     w(f"- owner values: `{ow}`; oracle_gamma `{ORACLE_GAMMA}` (A2.2)")
+    for d in docs:
+        reg = ((d.get("controls") or {}).get("C10") or {}).get("registered") or {}
+        w(
+            _join(
+                "- seed ",
+                d["seed"],
+                ": owner values registered in the PREREG (`",
+                reg.get("heading"),
+                "`): status `",
+                reg.get("status"),
+                "`, values `",
+                reg.get("values"),
+                "` (C10 compares them, A3.7a); steps recorded per arm `",
+                d.get("steps_done"),
+                "`, seeds_actually_run `",
+                d.get("seeds_actually_run"),
+                "`",
+            )
+        )
     for d in docs:
         lg = d.get("launch") or {}
         w(
@@ -2719,10 +3183,12 @@ def render_results(run: dict, docs: list[dict]) -> str:
                     r.get("arm_label"),
                     "`, job pinned_sha `",
                     job.get("pinned_sha"),
+                    "`, steps recorded `",
+                    r.get("steps_done"),
                     "`",
                 )
             )
-            w(f"    - `{shlex.join(r.get('argv') or [])}`")
+            w(f"    - `{shlex.join(r.get('argv') or [])}` ({r.get('argv_source')})")
     hw = (docs[0].get("hardware") if docs else None) or {}
     w(
         _join(
@@ -3182,9 +3648,9 @@ def _owner_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--o5", required=True, help="O5: eval or train (A2.1)")
 
 
-def _owner(a) -> OwnerValues:
+def _owner(a, *, dry_run: bool = False) -> OwnerValues:
     ov = OwnerValues(a.gamma, a.phi_weight_decay, a.iters, a.o5, SEEDS)
-    validate_owner_values(ov)
+    validate_owner_values(ov, dry_run=dry_run)
     return ov
 
 
@@ -3203,7 +3669,8 @@ def main(argv: list[str] | None = None) -> Exit:
     ps.add_argument(
         "--dry-run",
         action="store_true",
-        help="tests / dry runs only (A3.12): never the run",
+        help="a launcher-v5 dry run only (A3.12, A3c.1): STEPS 0, its isolated "
+        "RSR_ORCH_ROOT / JOB_SUFFIX read and recorded; C10 fails it by design",
     )
     ps.add_argument("--out-root", default=str(ROOT / "runs" / RUN_ID))
     pf = sub.add_parser("finalize", help="the three measure-seed jsons -> RESULTS")
@@ -3225,7 +3692,7 @@ def main(argv: list[str] | None = None) -> Exit:
             print(json.dumps(r, indent=2, default=str))
             return Exit.OK if r["ok"] else Exit.DID_NOT_RUN
         if a.cmd == "measure-seed":
-            ow = _owner(a)
+            ow = _owner(a, dry_run=a.dry_run)
             if a.seed not in SEEDS:
                 raise Refused(f"seed {a.seed} is not one of {SEEDS}")
             doc = measure_seed(

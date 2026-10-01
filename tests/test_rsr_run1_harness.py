@@ -1,19 +1,24 @@
-"""RSR run 1's measurement harness (`experiments/rsr-run1/run.py`; PREREG T3, A1, A2).
+"""RSR run 1's measurement harness (`experiments/rsr-run1/run.py`; PREREG T3, A1-A3c).
 
 🔴 **Nothing here reads the real substrate or `~/rsr-substrate`.** The substrate is a
 tiny FIFO checkpoint this file trains itself (the real architecture -- d = 128, M = 16,
 S = 48 -- so fresh-stream's C4 instrument, which builds S0-03's model, accepts it),
 rewritten as a legacy checkpoint the way arm B's is (its config only in a hash-bound
 `result.json`), and listed in a T0-style manifest of its own. The three arms run
-through the real `rsr.train.loop` CLI (launcher v2's command line, without the slot,
-O5 = eval, C-2 permutation epochs) into launcher v2's layout, then through the held-out
+through the real `rsr.train.loop` CLI (launcher v5's command line, without the slot,
+O5 = eval, C-2 permutation epochs) into the launcher's layout, then through the held-out
 harness, the analysis, `RESULTS.md` and the ledger. ``prereg_strict=False`` waives only
-the slot job records and the clean-tree launch (there are none in a test).
+the slot job records and the clean-tree launch (there are none in a test), and points
+C10's owner-table read at a synthetic PREREG holding the fixture's values.
+
+🔴 **No EVAL document goes through any model here** (review 6267fd645698 MINOR-7): the
+fixture's held-out range is 998000-998001, outside the run's EVAL (995000-997047) and
+every registered range (C0 checks it).
 
 **Cost** (the battery runs this file once per mutation). Everything heavy is built once
 per session and shared; every size is the smallest that still exercises each control:
 a 3-step substrate, 3-step arms on a 2-document pool at batch 2 (T_warm = 1, CKPT = 1,
-snapshots at 1 and 2), 2 EVAL documents. Two costs are floors, both inside the code
+snapshots at 1 and 2), 2 held-out documents. Two costs are floors, both inside the code
 under test: each `train()` measures its own liveness (~6.8 s, R-2026-09-22), and
 fresh-stream's C4 instrument (`measure_checkpoint`, ~23 s) is run once -- see
 `_c4_memo`.
@@ -22,6 +27,7 @@ fresh-stream's C4 instrument (`measure_checkpoint`, ~23 s) is run once -- see
 from __future__ import annotations
 
 import copy
+import dataclasses
 import hashlib
 import importlib.util
 import json
@@ -44,7 +50,7 @@ SUB_ITERS = 3  # the fixture substrate, at SUB_LR: its frozen arms measure `live
 SUB_LR = 1e-2
 ARM_ITERS = 3  # pool 2 at batch 2 -> T_warm = 1 step; CKPT = 1 -> snapshots 1, 2, 3
 POOL = (993000, 993002)
-EVAL = (995000, 995002)
+EVAL = (998000, 998002)  # NOT the run's EVAL: the fixture's held-out range (MINOR-7)
 O5 = "eval"  # exercises C-1 end to end; the train branch is rendered separately
 
 
@@ -136,6 +142,8 @@ def substrate(tmp_path_factory, r1) -> dict:
     ledger = root / "ref-ledger.json"
     rows = [{"key": r1.C4_KEY, "samples": [ref]}]
     ledger.write_text(json.dumps({"seeds_actually_run": [0], "rows": rows}))
+    owner_prereg = root / "PREREG-owner.md"
+    owner_prereg.write_text(_owner_table_text(r1, "0.9", "0.01", str(ARM_ITERS), O5))
     yield {
         "root": root,
         "ckpt": ckpt,
@@ -145,8 +153,30 @@ def substrate(tmp_path_factory, r1) -> dict:
         "ledger": ledger,
         "ref": ref,
         "model": payload["model"],
+        "owner_prereg": owner_prereg,
     }
     mp.undo()
+
+
+def _owner_table_text(r1, o1: str, o4: str, r_1: str, o5: str, heading=None) -> str:
+    """A synthetic PREREG holding the owner table in the one format C10 accepts."""
+    return "\n".join(
+        [
+            "# a synthetic PREREG",
+            "",
+            heading or r1.OWNER_TABLE_HEADING,
+            "",
+            "| slot | value |",
+            "|---|---|",
+            f"| **O1** gamma, both RSR arms only | `{o1}` |",
+            f"| **O4** phi weight decay (decoupled) | `{o4}` |",
+            f"| **R-1** total optimizer steps per arm | `{r_1}` |",
+            f"| **O5** substrate mode under freeze | `{o5}` |",
+            "",
+            "- prose after the table",
+            "",
+        ]
+    )
 
 
 def tiny_cfg(r1, sub: dict, **kw):
@@ -167,6 +197,7 @@ def tiny_cfg(r1, sub: dict, **kw):
         eval_batch=2,
         c4_ledger=str(sub["ledger"]),
         n_boot=200,
+        owner_prereg=str(sub["owner_prereg"]),
         prereg_strict=False,
     )
     base.update(kw)
@@ -261,9 +292,11 @@ def test_e2e_launch_record_precedes_every_arm(e2e, r1):
     assert [body[k] for k in ("rsr_orch_root", "out", "job_suffix", "dry_run")] == [
         ""
     ] * 4
-    for a in ("psiC", "fifo", "age"):
+    for a in ("psiC", "fifo", "age"):  # MINOR-8: no st_birthtime (absent on Linux)
         hb = e2e["out_root"] / a / "seed0" / "heartbeat.jsonl"
-        assert lg.stat().st_mtime <= hb.stat().st_birthtime
+        last = json.loads(hb.read_text().splitlines()[-1])
+        header_written = hb.stat().st_mtime - float(last["elapsed_s"])
+        assert lg.stat().st_mtime <= header_written + 0.05
 
 
 def test_e2e_per_document_answer_vectors_are_written(e2e, r1):
@@ -467,7 +500,7 @@ def _fifo_model(r1, e2e):
 def test_c9_and_c9b_are_green_on_the_row_correct_oracle(r1, e2e):
     cfg = e2e["cfg"]
     c = r1.c9_oracle(_fifo_model(r1, e2e), cfg, r1.vocab_map(cfg))
-    assert c["ok"] and c["documents"] == [995000, 995002]
+    assert c["ok"] and c["documents"] == [998000, 998002]
 
 
 def test_c9b_sees_a_batched_oracle_with_another_rows_demand(r1, e2e):
@@ -542,6 +575,22 @@ def test_c2_is_green_on_the_real_arms(e2e, r1):
     assert c2["ok"] and c2["steps_compared"] == ARM_ITERS
     assert c2["a_pool_ids"]["present"] is True  # C-2 (c02b16d) logs pool_doc_ids
     assert _sampling(r1, e2e) == loop.SAMPLING_PERMUTATION
+
+
+def test_every_arm_records_its_sampler_and_c2_requires_them_to_agree(e2e, r1):
+    """262b5c5 (review c02b16d MINOR-1): `frozen["sampling"]` in EVERY pool arm, FIFO
+    included; C2 requires the three to agree, and an RSR arm's two records to agree."""
+    res = _results(r1, e2e)
+    got = {a: r1.arm_sampling(r) for a, r in res.items()}
+    assert got == dict.fromkeys(r1.ARMS, loop.SAMPLING_PERMUTATION)
+    assert e2e["doc"]["controls"]["C2"]["b_fingerprint"]["sampling_agrees"] is True
+    args = (_beats(e2e, r1), _ids(r1, e2e), e2e["cfg"], _sampling(r1, e2e))
+    assert r1.c2_pairing(*args, samplings=got)["ok"]
+    for bad in ({**got, "fifo": None}, {**got, "age": loop.SAMPLING_WITH_REPLACEMENT}):
+        assert not r1.c2_pairing(*args, samplings=bad)["ok"]
+    split = copy.deepcopy(res["psiC"])
+    split["config"]["epoch"]["sampling"] = loop.SAMPLING_WITH_REPLACEMENT
+    assert r1.arm_sampling(split).startswith("DISAGREE")
 
 
 def test_c2_requires_the_logged_pool_ids(e2e, r1):
@@ -721,7 +770,17 @@ def test_c5_c6_c8_go_red(r1, e2e):
 
 
 def _c10(
-    r1, e2e, *, cfg=None, owner_=None, launch=None, results=None, hbs=None, jobs=None
+    r1,
+    e2e,
+    *,
+    cfg=None,
+    owner_=None,
+    launch=None,
+    results=None,
+    hbs=None,
+    jobs=None,
+    rcs=None,
+    registered=None,
 ):
     lg = json.loads((e2e["out_root"] / "launch-git.json").read_text())
     return r1.c10_launch_values(
@@ -732,7 +791,15 @@ def _c10(
         hbs or _hbs(r1, e2e),
         jobs if jobs is not None else dict.fromkeys(r1.ARMS),
         e2e["out_root"],
+        rcs=rcs if rcs is not None else dict.fromkeys(r1.ARMS, 0),
+        registered=registered,
     )
+
+
+def _problems(c: dict) -> list[str]:
+    return c["launch_problems"] + [
+        p for v in c["per_arm"].values() for p in v["problems"]
+    ]
 
 
 def test_c10_is_green_on_the_fixture(r1, e2e):
@@ -786,28 +853,117 @@ def test_c10_sees_disagreeing_provenance(r1, e2e):
     assert not _c10(r1, e2e, hbs=hbs)["ok"]
 
 
-def test_c10_strict_wants_each_job_record_pinned_to_the_run_sha(r1, e2e):
-    cfg = r1.dataclasses.replace(e2e["cfg"], prereg_strict=True)
+def _strict(r1, e2e):
+    """The fixture read as the run reads it: strict, owner values from the PREREG (its
+    table handed in filled, as Amendment 4 will fill it), slot job records whose `cmd`
+    is the command that ran, one thread, the launcher's rc."""
+    cfg = r1.dataclasses.replace(e2e["cfg"], prereg_strict=True, owner_prereg=r1.PREREG)
     lg = json.loads((e2e["out_root"] / "launch-git.json").read_text())
     clean = {**lg, "dirty": False}
-    job = {"pinned_sha": lg["run_sha"], "cmd": ["x", "--ckpt-every", "1"]}
-    assert not _c10(r1, e2e, cfg=cfg, launch=clean)["ok"]  # no job records
-    assert _c10(r1, e2e, cfg=cfg, launch=clean, jobs=dict.fromkeys(r1.ARMS, job))["ok"]
-    wrong = {**job, "pinned_sha": "f" * 40}
-    assert not _c10(
-        r1, e2e, cfg=cfg, launch=clean, jobs={**dict.fromkeys(r1.ARMS, job), "age": wrong}
-    )["ok"]
-    every3 = {**job, "cmd": ["x", "--ckpt-every", "3"]}
-    assert not _c10(r1, e2e, cfg=cfg, launch=clean, jobs=dict.fromkeys(r1.ARMS, every3))[
-        "ok"
+    jobs = {
+        a: {
+            "pinned_sha": lg["run_sha"],
+            "threads": 1,
+            "rc": 0,
+            "status": "done",
+            "cmd": r1.cli_argv(
+                e2e["cfg"], a, e2e["owner"], r1.arm_dir(e2e["out_root"], a, 0)
+            ),
+        }
+        for a in r1.ARMS
+    }
+    reg = r1.parse_owner_table(_owner_table_text(r1, "0.9", "0.01", str(ARM_ITERS), O5))
+    return cfg, clean, jobs, reg
+
+
+def test_c10_strict_wants_each_job_record_pinned_to_the_run_sha(r1, e2e):
+    cfg, clean, jobs, reg = _strict(r1, e2e)
+
+    def c10(**kw):
+        return _c10(r1, e2e, **{"cfg": cfg, "launch": clean, "registered": reg, **kw})
+
+    assert not c10()["ok"]  # no job records
+    assert c10(jobs=jobs)["ok"], _problems(c10(jobs=jobs))
+    for arm, key, val, why in (
+        ("age", "pinned_sha", "f" * 40, "pinned_sha"),
+        ("fifo", "threads", 8, "threads"),  # MINOR-5
+        ("psiC", "threads", None, "threads"),
+        ("psiC", "rc", 1, "job rc"),  # MINOR-5: the record's rc is the launcher's
+        ("age", "rc", None, "job rc"),
+    ):
+        bad = {**jobs, arm: {**jobs[arm], key: val}}
+        c = c10(jobs=bad)
+        assert not c["ok"] and any(why in p for p in c["per_arm"][arm]["problems"]), key
+    c = c10(jobs=jobs, rcs={**dict.fromkeys(r1.ARMS, 0), "fifo": 143})
+    assert not c["ok"] and any("job rc" in p for p in c["per_arm"]["fifo"]["problems"])
+    assert not c10(jobs=jobs, launch={**clean, "dirty": True})["ok"]
+    wrong = r1.dataclasses.replace(cfg, owner_prereg=e2e["cfg"].owner_prereg)
+    assert not _c10(r1, e2e, cfg=wrong, launch=clean, registered=reg, jobs=jobs)["ok"]
+
+
+def _cmd_set(cmd: list[str], flag: str, val: str | None) -> list[str]:
+    cmd = list(cmd)
+    i = cmd.index(flag)
+    return (
+        [*cmd[:i], *cmd[i + 2 :]] if val is None else [*cmd[: i + 1], val, *cmd[i + 2 :]]
+    )
+
+
+def test_c10_reads_every_value_from_the_jobs_command(r1, e2e):
+    """MAJOR-2 / MINOR-5 / A3c.5: the command the job ran carries the owner values, the
+    seed and srep 0.0; a tampered token reddens C10 even where the config agrees."""
+    cfg, clean, jobs, reg = _strict(r1, e2e)
+    cases = [
+        ("psiC", "--seed", "1", "--seed"),
+        ("fifo", "--iters", "9", "--iters"),
+        ("age", "--ckpt-every", "3", "--ckpt-every"),
+        ("psiC", "--srep-norm-reg-weight", "0.01", "srep"),
+        ("fifo", "--srep-norm-reg-weight", None, "srep"),  # the token is missing
+        ("age", "--frozen-model-mode", "train", "frozen-model-mode"),
     ]
-    assert not _c10(
+    for arm, flag, val, why in cases:
+        bad = {**jobs, arm: {**jobs[arm], "cmd": _cmd_set(jobs[arm]["cmd"], flag, val)}}
+        c = _c10(r1, e2e, cfg=cfg, launch=clean, registered=reg, jobs=bad)
+        assert not c["ok"] and any(why in p for p in c["per_arm"][arm]["problems"]), (
+            flag,
+            val,
+        )
+    g = [x.replace("gamma=0.9", "gamma=0.5") for x in jobs["psiC"]["cmd"]]
+    c = _c10(
         r1,
         e2e,
         cfg=cfg,
-        launch={**clean, "dirty": True},
-        jobs=dict.fromkeys(r1.ARMS, job),
-    )["ok"]
+        launch=clean,
+        registered=reg,
+        jobs={**jobs, "psiC": {**jobs["psiC"], "cmd": g}},
+    )
+    assert not c["ok"] and any("gamma" in p for p in c["per_arm"]["psiC"]["problems"])
+    extra = jobs["fifo"]["cmd"] + ["--policy-override", "gamma=0.9"]
+    c = _c10(
+        r1,
+        e2e,
+        cfg=cfg,
+        launch=clean,
+        registered=reg,
+        jobs={**jobs, "fifo": {**jobs["fifo"], "cmd": extra}},
+    )
+    assert not c["ok"]  # fifo carries no gamma
+
+
+def test_c10_requires_srep_0_in_every_recorded_config(r1, e2e):
+    """A3c.5: the recorded `srep_norm_reg_weight` is 0.0 in every arm (the e2e ran
+    launcher v5's command, so it records 0.0, not TGConfig's 0.01)."""
+    res = _results(r1, e2e)
+    assert {
+        a: r["config"]["srep_norm_reg_weight"] for a, r in res.items()
+    } == dict.fromkeys(r1.ARMS, 0.0)
+    for val in (0.01, None, "0.0", True):
+        bad = copy.deepcopy(res)
+        bad["age"]["config"]["srep_norm_reg_weight"] = val
+        c = _c10(r1, e2e, results=bad)
+        assert not c["ok"] and any(
+            "srep" in p for p in c["per_arm"]["age"]["problems"]
+        ), val
 
 
 def test_the_training_analysis_reads_loss_lm_never_loss(e2e, r1):
@@ -864,17 +1020,19 @@ def test_the_diagnostics_split_warm_from_scored_and_report_the_first_block(e2e, 
 
 
 def test_the_committed_launcher_is_byte_identical_to_the_prereg(r1):
-    """T14: launcher v4, extracted from "### A3b.1 Launcher, version 4"."""
+    """T14: launcher v5, extracted from "### A3c.1 Launcher, version 5"."""
+    assert r1.LAUNCHER_HEADING == "### A3c.1 Launcher, version 5"
     text = (ROOT / r1.LAUNCHER).read_text()
     assert text == r1.launcher_text_from_prereg()
-    want = "5cd6e5fd712ffab036d87ea6481b3220a3669f071ba955255511fc840b3f7946"
+    assert "        --srep-norm-reg-weight 0.0 \\\n" in text  # A3c.1
+    want = "5cbaa14c26c72fc69fb5a96cd95fb950fdd9285862afc76cb790d226d5c22152"
     assert hashlib.sha256(text.encode()).hexdigest() == want
 
 
 def _launcher_command(
     r1, arm: str, seed: int, o5: str, gamma: str, out: str
 ) -> list[str]:
-    """Launcher v3's command for (arm, seed), variables filled by text substitution."""
+    """Launcher v5's command for (arm, seed), variables filled by text substitution."""
     text = (ROOT / r1.LAUNCHER).read_text()
     i = text.index(".venv/bin/python -m rsr.train.loop")
     j = text.index('"${P[@]}" --out-dir $OUT/$a/seed$s') + len(
@@ -937,7 +1095,8 @@ def test_env_problems_refuse_a_foreign_orch_root_and_dry_run_hooks(r1):
     )
     assert r1.env_problems({"RSR_ORCH_ROOT": r1.SHARED_ORCH_ROOT}, dry_run=False) == []
     assert r1.env_problems({"RSR_ORCH_ROOT": "/tmp/iso"}, dry_run=False)
-    assert r1.env_problems({"RSR_ORCH_ROOT": "/tmp/iso"}, dry_run=True)
+    # MINOR-4: a dry run (STEPS 0) may use its isolated root; C10 fails it afterwards
+    assert r1.env_problems({"RSR_ORCH_ROOT": "/tmp/iso"}, dry_run=True) == []
     assert r1.env_problems({"OUT": "x", "JOB_SUFFIX": "-d"}, dry_run=False)
     assert r1.env_problems({"OUT": "x", "JOB_SUFFIX": "-d"}, dry_run=True) == []
 
@@ -987,6 +1146,10 @@ def test_owner_values_the_code_would_not_run_are_refused(r1):
     ):
         with pytest.raises(r1.Refused):
             r1.validate_owner_values(owner(r1, **bad))
+    # MINOR-4: STEPS 0 is admitted for a dry run, and only STEPS 0 (A3c.1)
+    r1.validate_owner_values(owner(r1, iters=0), dry_run=True)
+    with pytest.raises(r1.Refused, match="never trains"):
+        r1.validate_owner_values(owner(r1), dry_run=True)
     with pytest.raises(r1.Refused, match="O5 must be one of"):
         r1.validate_owner_values(owner(r1, o5="maybe"))  # whatever C-1 says
     assert not r1.frozen_mode_supported("maybe")
@@ -1124,9 +1287,20 @@ def test_ledger_statuses_follow_a3b_3(r1, e2e, tmp_path):
     doc = run("late", late)
     assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
     assert doc["controls_failed"] == ["C10"] and "CONTROL_FAILED: ['C10']" in doc["notes"]
-    assert doc["steps_done"] == ARM_ITERS and doc["seeds_actually_run"] == [0]
+    assert doc["steps_done"] == dict.fromkeys(r1.ARMS, ARM_ITERS)
+    assert doc["seeds_actually_run"] == [0]
     none = r1.measure_seed(e2e["cfg"], e2e["owner"], tmp_path / "none", threads=1)
     assert (none["status"], none["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert none["steps_done"] == {} and none["seeds_actually_run"] == []
+
+    def invalid(o):  # MINOR-2: rc 3 after a completed footer is liveness `invalid`
+        (o / "logs" / "age-s0.rc").write_text("3\n")
+
+    doc = run("invalid", invalid)
+    assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert doc["notes"] == ["ARM_DID_NOT_RUN (liveness invalid): age"]
+    assert doc["arms"]["age"]["rc_meaning"].startswith("liveness invalid")
+    assert doc["steps_done"]["age"] == ARM_ITERS  # it trained; nothing is cleared
 
 
 def test_finalize_takes_status_and_exit_from_one_worst_seed(r1, e2e, tmp_path):
@@ -1177,6 +1351,21 @@ def test_a_c9_failure_tags_the_oracle_ledger_rows(r1, e2e, tmp_path):
     assert any("headroom_share" in k for k in tagged)
     assert "seed0.heldout.accuracy.all.oracle" in tagged
     assert not any("psiC_minus_fifo" in k for k in tagged)
+    # MINOR-3: exactly A3b.4's three families -- never a control row, never an NLL row
+    assert not any(k.startswith("seed0.controls.") for k in tagged)
+    assert not any(".nll." in k for k in tagged)
+    assert "seed0.controls.C7.per_pass.oracle" in rows
+    assert "seed0.heldout.nll.real.oracle" in rows
+    for k in tagged:
+        assert k.startswith(
+            (
+                "seed0.heldout.accuracy.",
+                "seed0.heldout.contrasts.oracle_regret.",
+                "seed0.heldout.headroom_share",
+            )
+        ), k
+    assert {k for k in rows if k.startswith("seed0.heldout.accuracy.") and k.endswith(
+        ".oracle")} <= tagged  # fmt: skip
     by_key = {r["key"]: r for r in led["rows"]}
     for k in tagged:  # A3b.4: the fields, and the value kept
         assert by_key[k]["not_read"] is True
@@ -1309,3 +1498,362 @@ def test_t7_probe_sees_a_rule_that_changes_with_gamma(r1, substrate, monkeypatch
 
     monkeypatch.setattr(r1, "discounted_demand", warped)
     assert not r1.probe_oracle_invariance(docs, 16)["ok"]
+
+
+# --------------------------------------------------------------------------- #
+# Review 6267fd645698: MAJOR-1..3, MINOR-1/4/8, A3c
+# --------------------------------------------------------------------------- #
+
+
+def test_the_owner_table_today_is_blank_so_c10_cannot_pass(r1):
+    """MAJOR-2: C10 reads the owner's registered values from the PREREG (A3.7a). Before
+    Amendment 4 the four slots are `______`: blank, and the run is not read."""
+    reg = r1.owner_table(r1.dataclasses.replace(r1.prereg_config(0, 3000)))
+    assert reg["heading"] == r1.OWNER_TABLE_HEADING
+    assert reg["status"] == "blank" and reg["values"] == {}
+    assert reg["raw"] == dict.fromkeys(("O1", "O4", "R-1", "O5"), "______")
+
+
+def test_the_owner_table_parser_takes_the_one_format_and_nothing_looser(r1):
+    ok = r1.parse_owner_table(_owner_table_text(r1, "0.9", "0.01", "3000", "train"))
+    assert ok["status"] == "filled", ok["problems"]
+    assert ok["values"] == {
+        "gamma": 0.9,
+        "phi_weight_decay": 0.01,
+        "iters": 3000,
+        "o5": "train",
+    }
+    part = r1.parse_owner_table(_owner_table_text(r1, "0.9", "______", "3000", "eval"))
+    assert part["status"] == "blank" and "O4" in part["problems"][0]
+    for args in (
+        ("0.9 (ruled)", "0.01", "3000", "eval"),  # text beside the value
+        ("9e-1", "0.01", "3000", "eval"),  # an exponent
+        ("-0.9", "0.01", "3000", "eval"),
+        ("0.9", "0.01", "3,000", "eval"),  # a separator
+        ("0.9", "0.01", "0", "eval"),
+        ("0.9", "0.01", "3000", "Eval"),
+        ("", "0.01", "3000", "eval"),
+    ):
+        got = r1.parse_owner_table(_owner_table_text(r1, *args))
+        assert got["status"] == "malformed", (args, got)
+    good = _owner_table_text(r1, "0.9", "0.01", "3000", "eval")
+    for bad in (
+        good.replace("`0.9`", "0.9"),  # no backticks
+        good.replace("| **O4**", "| O4"),  # the slot not bolded
+        good.replace("|---|---|", "|--|--|"),
+        good.replace("| **O1** gamma, both RSR arms only | `0.9` |\n", ""),  # three rows
+        good.replace("`eval` |\n", "`eval` |\n| **O9** extra | `1` |\n"),  # five rows
+        good + "\n" + r1.OWNER_TABLE_HEADING + "\n",  # the heading twice
+    ):
+        assert r1.parse_owner_table(bad)["status"] == "malformed"
+    swapped = good.replace("| **O1** gamma", "| **OX**").replace("| **O4**", "| **O1**")
+    assert r1.parse_owner_table(swapped)["status"] == "malformed"  # order is fixed
+    assert r1.parse_owner_table("no table here")["status"] == "absent"
+
+
+def test_c10_compares_the_owner_values_with_the_registered_ones(r1, e2e):
+    """MAJOR-2: a value mistyped identically at launch and at measure-seed still
+    reddens, because it is not the owner's registered value."""
+    assert _c10(r1, e2e)["ok"]  # the fixture's synthetic PREREG holds its values
+    blank = r1.parse_owner_table(_owner_table_text(r1, "______", "0.01", "3", O5))
+    c = _c10(r1, e2e, registered=blank)
+    assert not c["ok"] and any("blank" in p for p in c["launch_problems"])
+    for args in (
+        ("0.5", "0.01", str(ARM_ITERS), O5),
+        ("0.9", "0.001", str(ARM_ITERS), O5),
+        ("0.9", "0.01", "9", O5),
+        ("0.9", "0.01", str(ARM_ITERS), "train"),
+    ):
+        reg = r1.parse_owner_table(_owner_table_text(r1, *args))
+        c = _c10(r1, e2e, registered=reg)
+        assert not c["ok"] and any("registered" in p for p in c["launch_problems"]), args
+
+
+def _rewrite_beats(out, arm, n_beats, *, tail=None):
+    """An arm's heartbeat as a failed process leaves it: the header, `n_beats` beats
+    (steps 0 .. n-1, copied from the real ones), no footer, then `tail` rows."""
+    hb = out / arm / "seed0" / "heartbeat.jsonl"
+    rows = [json.loads(x) for x in hb.read_text().splitlines() if x.strip()]
+    header = next(r for r in rows if r["kind"] == "header")
+    beats = [r for r in rows if r["kind"] == "beat"]
+    made = [{**beats[min(k, len(beats) - 1)], "step": k} for k in range(n_beats)]
+    hb.write_text("\n".join(json.dumps(r) for r in [header, *made, *(tail or [])]) + "\n")
+    log = out / "logs" / f"{arm}-s0.log"
+    log.write_text("Traceback (most recent call last):\n  ...\nRuntimeError: probe\n")
+
+
+def test_the_ledger_records_what_ran_not_what_was_asked(r1, e2e, tmp_path):
+    """MAJOR-1, the reviewer's three probes as record shapes: (1) seed 1's launcher
+    never ran; (2) seed 0's psiC crashed after 2 steps (crash line, rc 1); (3) an age
+    arm killed by SIGTERM through zsh's `wait` after 35 beats (rc 143, no footer).
+    `seeds_actually_run` and `steps_done` come from the records, per arm and seed."""
+    ow = r1.dataclasses.replace(e2e["owner"], seeds=(0, 1))
+    seed1 = r1.measure_seed(
+        r1.dataclasses.replace(e2e["cfg"], seed=1), ow, tmp_path / "nothing", threads=1
+    )
+    assert seed1["status"] == "did_not_run" and seed1["steps_done"] == {}
+    assert seed1["seeds_actually_run"] == []
+
+    def ledger(name, docs):
+        out = tmp_path / name / "runs" / r1.RUN_ID
+        out.mkdir(parents=True)
+        shutil.copy(e2e["out_root"] / "launch-git.json", out / "launch-git.json")
+        with pytest.MonkeyPatch.context() as mp:
+            _ledger_seams(mp, r1)
+            r1.finalize(docs, ow, out, results_path=out / "R.md")
+        return json.loads((out / "ledger.json").read_text())
+
+    led = ledger("p1", [e2e["doc"], seed1])
+    assert led["status"] == "did_not_run" and led["seeds_actually_run"] == [0]
+    assert led["steps_done"] == ARM_ITERS
+    rows = {r["key"]: r["value"] for r in led["rows"]}
+    assert rows["steps_done_by_job"] == {f"{a}-s0": ARM_ITERS for a in r1.ARMS}
+
+    out = _copy_run(e2e, tmp_path / "p2")
+    _rewrite_beats(out, "psiC", 2, tail=[{"kind": "crash", "exc_type": "RuntimeError"}])
+    (out / "logs" / "psiC-s0.rc").write_text("1\n")
+    crashed = r1.measure_seed(e2e["cfg"], ow, out, threads=1)
+    assert (crashed["status"], crashed["exit"]) == ("crashed", int(Exit.DID_NOT_RUN))
+    assert crashed["steps_done"] == {"psiC": 2, "fifo": ARM_ITERS, "age": ARM_ITERS}
+    assert crashed["seeds_actually_run"] == [0]
+    ok1 = {**copy.deepcopy(e2e["doc"]), "seed": 1, "seeds_actually_run": [1]}
+    led = ledger("p2led", [crashed, ok1])
+    assert led["status"] == "crashed" and led["seeds_actually_run"] == [0, 1]
+    assert led["steps_done"] == 2  # the least-trained job, as recorded
+    rows = {r["key"]: r["value"] for r in led["rows"]}
+    assert rows["steps_done_by_job"]["psiC-s0"] == 2
+
+    out = _copy_run(e2e, tmp_path / "p3")
+    _rewrite_beats(out, "age", 35)
+    (out / "logs" / "age-s0.rc").write_text("143\n")
+    killed = r1.measure_seed(e2e["cfg"], ow, out, threads=1)
+    assert (killed["status"], killed["exit"]) == ("crashed", int(Exit.DID_NOT_RUN))
+    assert killed["notes"] == ["ARM_CRASHED: age"]
+    assert killed["arms"]["age"]["rc_meaning"] == "killed by signal 15"
+    assert killed["steps_done"]["age"] == 35 and killed["seeds_actually_run"] == [0]
+
+
+def test_two_exit_3_arms_tie_to_the_first_in_psic_fifo_age(r1, e2e, tmp_path):
+    """A3c.2 (review 6267fd645698 MINOR-1): psiC crashed + fifo did-not-run -> the seed
+    is `crashed`; swapped -> `did_not_run`. The notes list every non-OK arm."""
+
+    def refused(out, arm):
+        shutil.rmtree(out / arm / "seed0")  # a copy: nothing of the e2e run is touched
+        (out / "logs" / f"{arm}-s0.log").write_text("WarmStartRefused: probe\n")
+        (out / "logs" / f"{arm}-s0.rc").write_text("1\n")
+
+    def crashed(out, arm):
+        _rewrite_beats(out, arm, 1, tail=[{"kind": "crash"}])
+        (out / "logs" / f"{arm}-s0.rc").write_text("1\n")
+
+    out = _copy_run(e2e, tmp_path / "a")
+    crashed(out, "psiC")
+    refused(out, "fifo")
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert doc["status"] == "crashed" and doc["exit"] == int(Exit.DID_NOT_RUN)
+    assert doc["notes"] == ["ARM_CRASHED: psiC", "ARM_DID_NOT_RUN: fifo"]
+    assert doc["steps_done"] == {"psiC": 1, "fifo": 0, "age": ARM_ITERS}
+    out = _copy_run(e2e, tmp_path / "b")
+    refused(out, "psiC")
+    crashed(out, "fifo")
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert doc["status"] == "did_not_run" and doc["exit"] == int(Exit.DID_NOT_RUN)
+    assert doc["notes"] == ["ARM_DID_NOT_RUN: psiC", "ARM_CRASHED: fifo"]
+    assert r1.worst_outcome([(0, "ok", "ARM_OK")] * 3) is None
+
+
+def test_a_failed_control_outranks_inconclusive_liveness_within_a_seed(r1, e2e, tmp_path):
+    """Review de8f813 MINOR-A3c-1: C5 inconclusive (1) and a C10 failure (3) in one
+    seed -> 3, whichever check runs first; every finding is a note."""
+    out = _copy_run(e2e, tmp_path / "both")
+    log = out / "logs" / "fifo-s0.log"
+    log.write_text(log.read_text().replace('"band": "live"', '"band": "inconclusive"'))
+    lg = json.loads((out / "launch-git.json").read_text())
+    (out / "launch-git.json").write_text(json.dumps({**lg, "wd": "0.0"}))
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert "CONTROL_FAILED: ['C10']" in doc["notes"]
+    assert "LIVENESS_INCONCLUSIVE: ['fifo']" in doc["notes"]
+    out = _copy_run(e2e, tmp_path / "unsure")  # alone, inconclusive is 1 (A3c.4)
+    log = out / "logs" / "fifo-s0.log"
+    log.write_text(log.read_text().replace('"band": "live"', '"band": "inconclusive"'))
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert (doc["status"], doc["exit"]) == ("failed", int(Exit.FAIL))
+
+
+def test_measure_seed_dry_run_reads_a_steps_0_launch_and_c10_still_fails_it(
+    r1, e2e, tmp_path
+):
+    """MINOR-4: launcher v5's only dry run (STEPS 0, CKPT 0, no checkpoint, an isolated
+    RSR_ORCH_ROOT, a JOB_SUFFIX) is read by `measure-seed --dry-run`: the job records
+    are found under the isolated root and suffix, nothing is measured held out, and C10
+    fails on the dry-run fields by design."""
+    out = _copy_run(e2e, tmp_path / "dry")
+    iso, suffix = tmp_path / "iso", "-dry"
+    for a in r1.ARMS:
+        d = out / a / "seed0"
+        for f in d.glob("ckpt-*.pt"):
+            f.unlink()  # a copy's files; a STEPS-0 run writes no checkpoint
+        rows = [json.loads(x) for x in (d / "heartbeat.jsonl").read_text().splitlines()]
+        keep = [r for r in rows if r["kind"] in ("header", "footer")]
+        (d / "heartbeat.jsonl").write_text("\n".join(json.dumps(r) for r in keep) + "\n")
+        log = out / "logs" / f"{a}-s0.log"
+        res = r1.read_cli_result(log)
+        res.update(steps_done=0, steps_requested=0)
+        res["config"]["iters"] = 0
+        log.write_text(json.dumps(res, indent=2) + "\n")
+    ow0 = r1.dataclasses.replace(e2e["owner"], iters=0)
+    cfg0 = r1.dataclasses.replace(e2e["cfg"], iters=0, prereg_strict=True)
+    assert cfg0.snapshots == [] and cfg0.ckpt_every == 0
+    (iso / ".orchestrator" / "jobs").mkdir(parents=True)
+    for a in r1.ARMS:
+        job = {"pinned_sha": "x", "threads": 1, "rc": 0, "cmd": r1.cli_argv(
+            cfg0, a, ow0, r1.arm_dir(out, a, 0))}  # fmt: skip
+        f = iso / ".orchestrator" / "jobs" / f"rsr-run1-{a}-s0{suffix}.json"
+        f.write_text(json.dumps(job))
+    lg = json.loads((out / "launch-git.json").read_text())
+    lg.update(steps="0", ckpt="0", dry_run="1", rsr_orch_root=str(iso), out=str(out),
+              job_suffix=suffix)  # fmt: skip
+    (out / "launch-git.json").write_text(json.dumps(lg))
+    shutil.rmtree(out / "heldout")
+    env = {"RSR_ORCH_ROOT": str(iso), "OUT": str(out), "JOB_SUFFIX": suffix}
+    doc = r1.measure_seed(cfg0, ow0, out, threads=1, environ=env, dry_run=True)
+    assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert doc["config"]["orch_root"] == str(iso)
+    assert doc["config"]["job_suffix"] == suffix
+    assert all(doc["arms"][a]["job_record"] is not None for a in r1.ARMS)
+    assert "DRY_RUN: STEPS 0, no step trained; no held-out pass" in doc["notes"]
+    c10 = doc["controls"]["C10"]
+    assert not c10["ok"]
+    for what in ("dry_run", "rsr_orch_root", "job_suffix", "job records read from"):
+        assert any(what in p for p in c10["launch_problems"]), what
+    assert not any("no job record" in p for v in c10["per_arm"].values()
+                   for p in v["problems"])  # fmt: skip
+    assert not (out / "heldout").exists() and "heldout" not in doc
+    assert doc["steps_done"] == dict.fromkeys(r1.ARMS, 0)
+    assert doc["seeds_actually_run"] == []  # nothing trained
+    # The same records without --dry-run are refused before anything is read
+    real = r1.measure_seed(cfg0, ow0, out, threads=1, environ=env)
+    assert real["status"] == "did_not_run" and "arms" not in real
+
+
+def test_the_git_resolver_is_portable(r1, monkeypatch, tmp_path):
+    """MINOR-8: Homebrew's git if present, else the PATH's as an absolute path, else a
+    clear refusal (tree_state then reports the error, and a launch refuses)."""
+    exe = r1.git_exe()
+    assert Path(exe).is_absolute()
+    monkeypatch.setattr(r1, "HOMEBREW_GIT", (str(tmp_path / "none"),))
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "git").write_text("#!/bin/sh\nexit 0\n")
+    (fake / "git").chmod(0o755)
+    monkeypatch.setenv("PATH", str(fake))
+    assert r1.git_exe() == str(fake / "git")
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+    with pytest.raises(r1.Refused, match="no git"):
+        r1.git_exe()
+    st = r1.tree_state()
+    assert st["sha"] is None and "no git" in st["error"]
+
+
+class _Net(torch.nn.Module):
+    """A test-side wrapper, written independently of the harness's `ZeroSlots`.
+    ``zero``: the memory every forward reads is zeros. ``boost``: the true next token is
+    made the argmax wherever its id is even, so answer correctness is a mix of right
+    and wrong -- a target read one position off cannot pass unseen."""
+
+    def __init__(self, model, *, zero=False, boost=False):
+        super().__init__()
+        self.inner, self.cfg, self.zero, self.boost = model, model.cfg, zero, boost
+
+    @property
+    def embed(self):
+        return self.inner.embed
+
+    @property
+    def blocks(self):
+        return self.inner.blocks
+
+    def forward(self, ids_t, mask_t, kv, valid, bos_ctx, bos_valid, **kw):
+        kv = kv * 0 if self.zero else kv
+        out = self.inner(ids_t, mask_t, kv, valid, bos_ctx, bos_valid, **kw)
+        if not self.boost:
+            return out
+        nxt = ids_t[:, 1:]
+        boost = torch.zeros_like(out.logits)
+        hit = (nxt % 2 == 0).to(out.logits.dtype) * 1e3
+        boost[:, :-1].scatter_(-1, nxt.unsqueeze(-1), hit.unsqueeze(-1))
+        return dataclasses.replace(out, logits=out.logits + boost)
+
+
+def _independent(r1, net, docs, vmap, cfg):
+    """`run_batch`'s per-document numbers, recomputed from scratch (MAJOR-3; the
+    reviewer's hand_cases.py A2): float64 `log_softmax`, explicit (j-1 -> j) indices, the
+    real-token mask read at the TARGET position, through the same policy loop."""
+    from rsr.model.tg.policy_loop import run_policy_loop
+
+    S, L = cfg.steps_per_stream, int(net.cfg.max_sentence_tokens)
+    ids, mask = loop.encode(docs, vmap, max_tokens=L, steps=S)
+    tm, gap = loop.answer_targets(docs, vmap, max_tokens=L, steps=S)
+    B = len(docs)
+    mine = [{"real_sum": 0.0, "real_n": 0, "answers": []} for _ in range(B)]
+
+    def step_fn(t, out, ids_t, mask_t, row_valid):
+        lp = torch.log_softmax(out.logits.double(), -1)
+        for b in range(B):
+            for j in range(1, L):
+                if mask_t[b, j]:
+                    nll = -float(lp[b, j - 1, ids_t[b, j]])
+                    mine[b]["real_sum"] += nll
+                    mine[b]["real_n"] += 1
+                    if tm[b, t, j]:
+                        ok = int(lp[b, j - 1].argmax()) == int(ids_t[b, j])
+                        mine[b]["answers"].append((t, int(gap[b, t]), ok, nll))
+        return torch.zeros(())
+
+    net.eval()
+    with torch.no_grad():
+        lengths = torch.full((B,), S)
+        run_policy_loop(net, ids, mask, lengths, r1.FIFOPolicy(), step_fn=step_fn)
+    return mine
+
+
+def test_run_batch_matches_an_independent_recomputation(r1, substrate):
+    """MAJOR-3: answer correctness (the headline quantity), the real-token NLL mask
+    (A3.4) and the slots-zeroed floor (§7.2), each recomputed independently, with and
+    without memory and with correctness exercised both ways; FIFO's residency is a hit
+    iff gap <= M; the floor's answers differ from the live ones; and every held-out
+    forward is eval mode and no_grad, with the caller's mode restored."""
+    cfg = tiny_cfg(r1, substrate)
+    payload = r1.read_checkpoint(substrate["ckpt"])
+    payload["meta"]["config"] = json.loads(substrate["result"].read_text())["config"]
+    model = r1.model_from_payload(payload)
+    docs = r1.docs_by_id(cfg, range(*EVAL))
+    vmap = r1.vocab_map(cfg)
+    seen = []
+    hook = model.register_forward_pre_hook(
+        lambda m, a: seen.append((m.training, torch.is_grad_enabled()))
+    )
+    model.train()
+    live = r1.run_batch(model, r1.FIFOPolicy(), docs, vmap, cfg)
+    hook.remove()
+    assert seen and set(seen) == {(False, False)} and model.training is True
+    floor = r1.run_batch(model, r1.FIFOPolicy(), docs, vmap, cfg, zero_slots=True)
+    assert [r["answers"] for r in floor] != [r["answers"] for r in live]
+    assert all(hit == (g <= cfg.memory_slots) for r in live for g, hit in r["hits"])
+    flags = []
+    for zero in (False, True):
+        for boost in (False, True):
+            under = _Net(model, boost=boost)  # what run_batch is handed
+            recs = r1.run_batch(under, r1.FIFOPolicy(), docs, vmap, cfg, zero_slots=zero)
+            mine = _independent(r1, _Net(model, zero=zero, boost=boost), docs, vmap, cfg)
+            for m, r in zip(mine, recs, strict=True):
+                assert m["real_n"] == r["real_n"], (zero, boost)
+                assert abs(m["real_sum"] - r["real_sum"]) / m["real_n"] < 1e-6
+                got = [tuple(a[:3]) for a in r["answers"]]
+                assert [a[:3] for a in m["answers"]] == got, (zero, boost)
+                pairs = zip(m["answers"], r["answers"], strict=True)
+                assert all(abs(x[3] - y[3]) < 1e-4 for x, y in pairs)
+            if boost:
+                flags += [a[2] for r in recs for a in r["answers"]]
+    assert any(flags) and not all(flags)  # correctness is exercised both ways
