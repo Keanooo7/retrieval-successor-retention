@@ -890,6 +890,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_section_7_1_diagnostics_are_logged_every_step",
                 "test_victim_age_and_rank_histograms_by_hand",
             ),
+            *_r1_declare(
+                "the split-histogram test reads the warmup displacement histogram, "
+                "which is built from rank_shift: counting the window gives {3: "
+                "176}, not {0: 176}.",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
         ),
     ),
     Mutation(
@@ -1222,12 +1228,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        raise SystemExit(2)",
         "S0-05: argparse's 2 gave render_scoreboard's `2` two meanings, bad "
         "arguments and an empty board.",
-        off_gate_allowed=tuple(
-            (node, _USAGE_ERROR_COUPLING)
-            for node in (
-                "tests/test_canary_split.py::test_an_unknown_canary_device_did_not_run",
-                "tests/test_orch_outbox.py::test_the_cli_usage_error_exits_3",
-            )
+        off_gate_allowed=(
+            *tuple(
+                (node, _USAGE_ERROR_COUPLING)
+                for node in (
+                    "tests/test_canary_split.py::test_an_unknown_canary_device_did_not_run",
+                    "tests/test_orch_outbox.py::test_the_cli_usage_error_exits_3",
+                )
+            ),
+            *_r1_declare(
+                "the C-1 and CLI-routing tests assert the run-1 flags' usage errors "
+                "exit 3 (--frozen-model-mode off; partial pool or warm-start flag "
+                "sets); with usage errors back at 2 they see 2.",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_the_cli_routes_the_pool_and_the_warm_start",
+            ),
         ),
     ),
     Mutation(
@@ -1402,6 +1417,24 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_warm_start_runs_t_warm_at_relative_steps",
                 "test_two_pools_give_two_hashes_and_two_batches",
             ),
+            *_r1_declare(
+                "every run-1 test that drives an RSR arm through train() (C-1, pool "
+                "epochs, drained records, attribution, every-step diagnostics, "
+                "pairing, split histograms, the sampler record) needs build_policy: "
+                "a FIFOPolicy has no `.config` (AttributeError where T_warm is "
+                "stamped).",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
         ),
     ),
     # Correction 31: T_warm counts optimizer steps, not sentences.
@@ -1435,6 +1468,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_section_7_1_diagnostics_are_logged_every_step",
                 "test_the_warm_start_runs_t_warm_at_relative_steps",
             ),
+            *_r1_declare(
+                "the drained-records, attribution and split-histogram tests count "
+                "warmup evictions per optimizer step; compared against the sentence "
+                "index, evictions at t >= T_warm turn scored inside a warmup step.",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
         ),
     ),
     Mutation(
@@ -1463,6 +1504,20 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_warm_start_restores_weights_only",
                 "test_the_warm_start_runs_t_warm_at_relative_steps",
                 "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "every run-1 RSR arm with T_warm > 0 run through train() raises 'no "
+                "training step was set' at its first eviction (correction 31's "
+                "guard).",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
             ),
         ),
     ),
@@ -1526,6 +1581,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_warm_start_loads_the_source_weights_bitwise",
                 "test_the_warm_start_runs_t_warm_at_relative_steps",
                 "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "iters = 0 runs are refused by the registry (steps_per_epoch > 0); "
+                "with iters = 3 the split test's T_warm becomes 3 steps (264 warmup "
+                "evictions, not 176).",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
             ),
         ),
     ),
@@ -1591,22 +1654,41 @@ MUTATIONS: tuple[Mutation, ...] = (
         "two arms the docstring names as the whole reason `overrides` exists -- "
         "the `gamma = 0` control and A2's `A_max = M` -- are unbuildable until "
         "E1 logs constants neither of them uses.",
-        off_gate_allowed=_r1_declare(
-            "every run-1 RSR arm is built from labelled overrides (L12); read "
-            "eagerly, the registry raises UnmeasuredConstant on nu/beta/gamma for "
-            "each, including build_policy called directly.",
-            "test_a_directly_built_policy_collects_no_diagnostics",
-            "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
-            "test_frozen_mode_records_that_dropout_stays_on",
-            "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
-            "test_the_age_only_arm_through_train_is_labelled_and_learns",
-            "test_the_epoch_records_sampling_with_replacement",
-            "test_the_section_7_1_diagnostics_are_logged_every_step",
-            "test_the_warm_start_builds_phi_fresh",
-            "test_the_warm_start_loads_the_source_weights_bitwise",
-            "test_the_warm_start_restores_weights_only",
-            "test_the_warm_start_runs_t_warm_at_relative_steps",
-            "test_two_pools_give_two_hashes_and_two_batches",
+        off_gate_allowed=(
+            *_r1_declare(
+                "every run-1 RSR arm is built from labelled overrides (L12); read "
+                "eagerly, the registry raises UnmeasuredConstant on nu/beta/gamma for "
+                "each, including build_policy called directly.",
+                "test_a_directly_built_policy_collects_no_diagnostics",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_frozen_mode_records_that_dropout_stays_on",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_epoch_records_sampling_with_replacement",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "every run-1 RSR arm is built from labelled overrides (L12); read "
+                "eagerly, the registry raises UnmeasuredConstant on nu for each -- "
+                "the age-only nu refusal through build_policy included.",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_age_only_arm_refuses_nu",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
         ),
     ),
     Mutation(
@@ -2012,7 +2094,6 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
                 "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
                 "test_a_non_fifo_source_is_refused",
-                "test_a_source_with_another_vocabulary_is_refused",
                 "test_a_wrong_sha_is_refused",
                 "test_frozen_mode_records_that_dropout_stays_on",
                 "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
@@ -2025,6 +2106,35 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_warm_start_restores_weights_only",
                 "test_the_warm_start_runs_t_warm_at_relative_steps",
                 "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "answer_targets() raises in every train() call, the module-scoped "
+                "substrate fixture's FIFO run included, so every run-1 test that "
+                "trains (or uses the fixture) errors before its assertion.",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+                "test_a_pool_resume_continues_its_epoch",
+                "test_a_resumed_sampler_run_continues_the_data_order",
+                "test_a_seed_mismatch_is_refused_unless_labelled",
+                "test_a_source_with_a_different_vocabulary_map_is_refused",
+                "test_an_identical_map_from_another_document_count_is_accepted",
+                "test_an_unexpected_sha256_is_refused",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_checkpoints_record_their_config_and_vocabulary",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_load_bytes_refuses_a_quarantined_source",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_srep_norm_reg_weight_is_a_validated_cli_flag",
+                "test_the_bytes_loaded_are_the_bytes_hashed",
+                "test_the_cli_warm_start_reaches_the_real_verification",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
             ),
         ),
     ),
@@ -2841,6 +2951,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "liveness_batch reads -- changes the band or reason it asserts.",
                 "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
             ),
+            *_r1_declare(
+                "the legacy-source test rebuilds the source's vocabulary from its "
+                "frozen config; a None n_documents stamped into every default-path "
+                "config breaks the rebuild (int(None)).",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+            ),
         ),
     ),
     Mutation(
@@ -3092,6 +3208,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "controls, its hook, its decoy, or a None stamped into the config "
                 "liveness_batch reads -- changes the band or reason it asserts.",
                 "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
+            *_r1_declare(
+                "the legacy-source test rebuilds the source's vocabulary from its "
+                "frozen config; a None stream stamped into every default-path "
+                "config breaks the rebuild (None['vocab_documents']).",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
             ),
         ),
     ),
@@ -5942,6 +6064,19 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_warm_start_runs_t_warm_at_relative_steps",
                 "test_two_pools_give_two_hashes_and_two_batches",
             ),
+            *_r1_declare(
+                "every run-1 learning arm reads r_i from the eval capture; stamped "
+                "eval_mode=False, reward._require_eval raises TrainModeTrace in "
+                "each RSR arm run through train().",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
         ),
     ),
     Mutation(
@@ -6091,6 +6226,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "head; drawn from `gen` it is a different head.",
                 "test_the_warm_start_builds_phi_fresh",
             ),
+            *_r1_declare(
+                "phi drawn from the data-order generator consumes draws from gen, "
+                "so the RSR arm's pool permutation is no longer the FIFO arm's -- "
+                "the pairing the test asserts.",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+            ),
         ),
     ),
     Mutation(
@@ -6113,6 +6254,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "run-1 arms.",
                 "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
                 "test_the_age_only_arm_through_train_is_labelled_and_learns",
+            ),
+            *_r1_declare(
+                "C-1's tests freeze the transformer; with phi out of the optimizer "
+                "a frozen RSR arm has no trainable parameter (build_param_groups: "
+                "'no trainable parameters found').",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
             ),
         ),
     ),
@@ -6206,11 +6356,22 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass  # MUTATED\n",
         "m-1: the source's path and sha256 must be in the hash: a frozen config "
         "that does not say which substrate it started from proves nothing.",
-        off_gate_allowed=_r1_declare(
-            "the relative-step test also reads frozen['warm_start']['source_step'] "
-            "to prove the source sat past T_warm; unstamped, that key is missing "
-            "(KeyError) -- the same record, read from the warmup gate.",
-            "test_the_warm_start_runs_t_warm_at_relative_steps",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the relative-step test also reads frozen['warm_start']['source_step'] "
+                "to prove the source sat past T_warm; unstamped, that key is missing "
+                "(KeyError) -- the same record, read from the warmup gate.",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+            ),
+            *_r1_declare(
+                "the legacy-source, seed, identical-map and unrecorded-vocabulary "
+                "tests read frozen['warm_start'] (KeyError) -- the same record, "
+                "read from the MAJOR-1 and seed tests.",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+                "test_a_seed_mismatch_is_refused_unless_labelled",
+                "test_an_identical_map_from_another_document_count_is_accepted",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+            ),
         ),
     ),
     Mutation(
@@ -6266,6 +6427,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "pool.vocab_documents), SyntheticConfig(",
         "m-2: 'a pool arm B never saw' would silently be documents [0, N), which "
         "arm B's source DID see -- with the pool's identity still in the hash.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the C-2 tests map each logged or received batch row back to the "
+                "pool's own documents; with the offset ignored the rows are "
+                "documents [0, N), which the pool does not hold.",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+            ),
+        ),
     ),
     Mutation(
         "run1: the epoch's with-replacement sampling not recorded",
@@ -6277,6 +6447,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "                None  # MUTATED\n",
         "m-3: 'one pass over the pool' overstates a with-replacement epoch "
         "(about 1 - 1/e of the documents); the record must say so.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "both C-2 sampler tests assert the recorded sampling string (None).",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+        ),
     ),
     Mutation(
         "run1: the frozen model mode not recorded",
@@ -6288,6 +6465,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass  # MUTATED\n",
         "m-4 and C-1 test (f): freezing removes the update only, and the mode the "
         "frozen model ran in -- train or eval -- must be on the record.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the frozen warm-start test and C-1 test (e) assert the same "
+                "frozen_model_mode record (KeyError).",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+            ),
+        ),
     ),
     Mutation(
         "run1: no_warmup_ablation accepted on the FIFO arm",
@@ -6320,6 +6505,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         '                    "diag": None,  # MUTATED\n',
         "m-8 / ADR-0009 L6: the §7.1 diagnostics are mandatory in every RESULTS, "
         "so every RSR beat carries them.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the every-step test compares each beat's `diag` with the step's "
+                "diagnostics.jsonl row (None is not subscriptable).",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+            ),
+        ),
     ),
     Mutation(
         "run1: step diagnostics accumulate over the whole run",
@@ -6344,11 +6536,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            victim_age=victim_rank,  # MUTATED\n",
         "m-8 / §7.1: age and rank coincide only under FIFO; RSR breaks the map "
         "(ADR-0006), which is why both histograms exist.",
-        off_gate_allowed=_r1_declare(
-            "the train()-level diagnostics test asserts the same histogram through "
-            "the beat (88 evictions/step, all age 4 in warmup); the mutation "
-            "shows there as {'1': 88} == {'4': 88}.",
-            "test_the_section_7_1_diagnostics_are_logged_every_step",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the train()-level diagnostics test asserts the same histogram through "
+                "the beat (88 evictions/step, all age 4 in warmup); the mutation "
+                "shows there as {'1': 88} == {'4': 88}.",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+            ),
+            *_r1_declare(
+                "the split-histogram test reads the warmup victim-age histogram: "
+                "rank 1 for every FIFO victim, not age 4.",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
         ),
     ),
     Mutation(
@@ -6360,11 +6559,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass  # MUTATED\n",
         "m-8: the victim-age histogram is the log's to aggregate; an empty one "
         "reads as 'no evictions'.",
-        off_gate_allowed=_r1_declare(
-            "the train()-level diagnostics test asserts the same histogram through "
-            "the beat (88 evictions/step, all age 4 in warmup); the mutation "
-            "shows there as an empty age histogram.",
-            "test_the_section_7_1_diagnostics_are_logged_every_step",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the train()-level diagnostics test asserts the same histogram through "
+                "the beat (88 evictions/step, all age 4 in warmup); the mutation "
+                "shows there as an empty age histogram.",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+            ),
+            *_r1_declare(
+                "the split-histogram test reads the warmup victim-age histogram "
+                "from the same log ({}).",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
         ),
     ),
     Mutation(
@@ -6490,6 +6696,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if False:  # MUTATED\n",
         "Seed ruling: 'documents arm B never saw' is a statement about arm B's "
         "seed-0 documents; a different seed silently changes what it means.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the unrecorded-vocabulary test expects the SEED refusal when only "
+                "the vocabulary flag is set (an unrecorded source's seed is "
+                "unrecorded); with the seed check gone it is accepted.",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+            ),
+        ),
     ),
     Mutation(
         "run1: the source seed not in the warm-start label",
@@ -6498,6 +6712,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            f\"src_seed={'unrecorded' if seed is None else seed}\",\n",
         "            # MUTATED\n",
         "Seed ruling: the source's seed is in the label.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the seed and unrecorded-vocabulary tests assert the label's "
+                "src_seed token (0 / unrecorded).",
+                "test_a_seed_mismatch_is_refused_unless_labelled",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+            ),
+        ),
     ),
     Mutation(
         "run1: the warm start reloads the checkpoint from its path",
@@ -6525,6 +6747,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if False:  # MUTATED\n",
         "MINOR-7: the command names the checkpoint by sha256; a different file "
         "under the same name must be refused.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the CLI test passes a wrong --warm-start-sha256; unchecked, "
+                "train() goes on to load the d32/max_tokens-16 fixture into the "
+                "CLI's max_tokens-64 model (RuntimeError, pos_embed size) instead "
+                "of refusing.",
+                "test_the_cli_warm_start_reaches_the_real_verification",
+            ),
+        ),
     ),
     Mutation(
         "run1: checkpoints stop recording their config",
@@ -6535,6 +6766,27 @@ MUTATIONS: tuple[Mutation, ...] = (
         "                        # MUTATED\n",
         "MAJOR-1's foundation: without the config in the checkpoint, every later "
         "warm start from it is unrecorded.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "every fixture checkpoint then lacks meta['config'], so each warm "
+                "start from one is refused 'the source records no config', and the "
+                "legacy/unrecorded tests that strip that key find none (KeyError) "
+                "-- the record MAJOR-1's check reads.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+                "test_a_seed_mismatch_is_refused_unless_labelled",
+                "test_a_source_with_a_different_vocabulary_map_is_refused",
+                "test_an_identical_map_from_another_document_count_is_accepted",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+                "test_the_bytes_loaded_are_the_bytes_hashed",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_is_stamped_into_frozen_hash_and_label",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+            ),
+        ),
     ),
     Mutation(
         "run1: the age-only arm accepts nu",
@@ -6593,6 +6845,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "                pass  # MUTATED\n",
         "Defect 2: ~1.5M records per run-1 arm held in memory and pickled into "
         "every checkpoint.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the relative-step test reads evictions.jsonl, which is never written.",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+            ),
+        ),
     ),
     Mutation(
         "run1: drain_records keeps the records",
@@ -6602,6 +6860,20 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        out = list(self.records)  # MUTATED\n",
         "Defect 2: a drain that copies leaves memory and checkpoints unbounded "
         "and writes every record again each step.",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                "test_t_warm_dispatch's helper collects what train() drains plus "
+                "what the policy still holds; a copying drain hands over every "
+                "record again each step (440 / 1232 evictions, not 88 per step).",
+            ),
+            (
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                "test_t_warm_dispatch's helper collects what train() drains plus "
+                "what the policy still holds; a copying drain hands over every "
+                "record again each step (440 / 1232 evictions, not 88 per step).",
+            ),
+        ),
     ),
     Mutation(
         "run1: the data-order generator is not checkpointed",
@@ -6612,6 +6884,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "                            # MUTATED\n",
         "Defect 3: without the sampler's state a resumed arm cannot continue its "
         "data order.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the pool resume needs the generator state too: refused 'no "
+                "data-order generator state'.",
+                "test_a_pool_resume_continues_its_epoch",
+            ),
+        ),
     ),
     Mutation(
         "run1: the saved data-order state is not restored",
@@ -6621,6 +6900,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            pass  # MUTATED\n",
         "Defect 3: restarted from the seed, a resumed arm re-reads step 0's "
         "batches and stops pairing with an uninterrupted arm.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the pool resume draws its next permutation from the restored "
+                "generator; restarted from the seed, the resumed epoch-1 order "
+                "differs.",
+                "test_a_pool_resume_continues_its_epoch",
+            ),
+        ),
     ),
     Mutation(
         "run1: a resume without data-order state is not refused",
@@ -6668,6 +6955,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "generator=gen, device=device)  # MUTATED\n",
         "R-2 / 31(b): 'one pass over the document pool: 256 documents seen'; a "
         "with-replacement epoch sees ~162 of them.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the pairing test checks each run's order is a permutation of the "
+                "pool (sorted == range(8)); with replacement it repeats documents.",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+            ),
+        ),
     ),
     Mutation(
         "run1: the pool order is fixed, not drawn",
@@ -6705,6 +6999,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass  # MUTATED\n",
         "C-1 test (a): an arm recorded as eval (dropout off) must not train its "
         "memory through a dropout-live forward.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "C-1 tests (b) and (c) read the same missing model.eval(): the "
+                "global RNG moves and model.training is True at loop end.",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+            ),
+        ),
     ),
     Mutation(
         "run1: frozen eval mode leaves the blocks in train mode",
@@ -6714,6 +7016,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        model.eval()\n        model.blocks.train()  # MUTATED\n",
         "C-1 test (b): with any dropout left live a step draws masks from the "
         "global RNG; the top-level flag still reads eval, so (c) cannot see it.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "C-1 test (a): with the blocks in train mode the training forward's "
+                "srep differs from the eval forward's.",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+            ),
+        ),
     ),
     Mutation(
         "run1: eval_forward restores train mode, not the prior mode",
@@ -6724,6 +7033,23 @@ MUTATIONS: tuple[Mutation, ...] = (
         "C-1 test (c): the one mode switch on the training path must restore the "
         "PRIOR mode, or a frozen eval-mode model is back in train mode from the "
         "second sentence on.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "C-1 tests (a) and (b): after the first eval forward the model "
+                "trains in train mode (srep differs, dropout draws RNG); and the "
+                "slice-1 two-rows test runs its model in eval mode, so batch size "
+                "starts changing the dropout masks.",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+            ),
+            *_s1_declare(
+                "C-1 tests (a) and (b): after the first eval forward the model "
+                "trains in train mode (srep differs, dropout draws RNG); and the "
+                "slice-1 two-rows test runs its model in eval mode, so batch size "
+                "starts changing the dropout masks.",
+                "test_two_rows_keep_two_buffers",
+            ),
+        ),
     ),
     Mutation(
         "run1: an unknown frozen_model_mode is accepted",
@@ -6760,6 +7086,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "                pass  # MUTATED\n",
         "C-2 (A1.7 item 3; A1.8 m-4 (a)): the PREREG's primary pairing check reads "
         "the logged per-step pool ids.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the pairing test reads the logged pool_doc_ids (diagnostics.jsonl "
+                "is not written for the FIFO arm).",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+            ),
+        ),
     ),
     Mutation(
         "run1: frozen_model_mode eval accepted without the freeze",
