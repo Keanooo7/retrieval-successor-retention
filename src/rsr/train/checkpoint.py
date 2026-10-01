@@ -382,7 +382,7 @@ def load_bytes(
     *,
     source: Path | str,
     map_location: Any = "cpu",
-    allow_quarantined: bool = False,
+    allow_quarantined: bool = False,  # refuses by default, as load() does
 ) -> dict[str, Any]:
     """Read a checkpoint payload from bytes ALREADY in memory -- restore nothing.
 

@@ -558,6 +558,22 @@ def test_the_bytes_loaded_are_the_bytes_hashed(substrate, tmp_path, monkeypatch)
     assert all(torch.equal(got[k], v) for k, v in hashed.items())
 
 
+def test_load_bytes_refuses_a_quarantined_source(substrate, tmp_path):
+    """MINOR-5's loader keeps load()'s rule (R-2026-09-22-inert-checkpoint-
+    quarantine): bytes from a checkpoint under quarantine/ are refused unless
+    allow_quarantined=True, and a non-checkpoint buffer is a CheckpointError."""
+    from rsr.train import checkpoint as ck
+
+    data = substrate["fifo3"].read_bytes()
+    q = tmp_path / "quarantine" / "ckpt-000003.pt"
+    with pytest.raises(ck.QuarantinedCheckpoint):
+        ck.load_bytes(data, source=q)
+    assert ck.load_bytes(data, source=q, allow_quarantined=True)["step"] == 3
+    assert ck.load_bytes(data, source=substrate["fifo3"])["step"] == 3
+    with pytest.raises(ck.CheckpointError):
+        ck.load_bytes(b"not a checkpoint", source=substrate["fifo3"])
+
+
 def test_an_unexpected_sha256_is_refused(substrate):
     """MINOR-7's CLI requires the expected sha256; a mismatch is refused even
     when the manifest agrees with the file."""
