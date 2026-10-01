@@ -97,7 +97,9 @@ from torch import Tensor
 from rsr import constants as C
 from rsr.baselines.fifo import FIFOPolicy
 from rsr.retention.instrumentation import EvictionRecord, RankShiftLog, rank_shift
+from rsr.retention.mc import mc_returns
 from rsr.retention.policy import AttentionTrace, MemoryState
+from rsr.retention.reward import retrieval_demand
 from rsr.retention.value_head import BilinearValueHead
 
 __all__ = [
@@ -154,6 +156,19 @@ class SentPosIndex(StrEnum):
 
     RANK = "rank"
     ABSOLUTE_AGE = "absolute_age"
+
+
+@dataclass(frozen=True)
+class _Obs:
+    """One observed step of one row, for the MC regression (ADR-0009 §1). `r` is
+    target data; `gestalts` and `context` are stored as given and detached in
+    `RSRPolicy.retention_loss`, the one owning site (§2)."""
+
+    step: int
+    keys: Tensor  # [n_live] int64 written_at -- the slot identity
+    gestalts: Tensor  # [n_live, d] s_i
+    context: Tensor  # [d] c_t, the eval gestalt (L2)
+    r: Tensor  # [n_live] realized r_i(t), eval-mode, gated, share-of-M
 
 
 CAPACITY = object()
@@ -325,6 +340,17 @@ class RSRPolicy:
                 "b_enabled=False and say so -- b == 0 is also the section 3.7 "
                 "reduction condition, so a silently absent b is defect D-1's shape."
             )
+        if config.shadow_enabled:
+            # ADR-0009 L6(a), signed 2026-09-30: slice 1 ships WITHOUT the shadow
+            # buffer (`shadow.py` raises; L3-L5 are deferred to slice 2). The same
+            # rule as `sent_pos_index` above: a switch that is set and does nothing
+            # is worse than no switch -- an arm reporting shadow=on would regress
+            # on the censored target (rsr.retention.mc) while claiming otherwise.
+            raise NotImplementedError(
+                "shadow_enabled=True: the shadow buffer is not built (ADR-0009 L6(a); "
+                "L3/L4/L5 are slice 2). Pass shadow_enabled=False explicitly and "
+                "carry the FIFO-censored-target caveat in the RESULTS."
+            )
         self.config = config
         self.d_model = d_model
         self.bias = bias
@@ -342,6 +368,29 @@ class RSRPolicy:
         # training loop. None until told -- see `select_eviction`.
         self._train_step: int | None = None
         self.rank_shifts = RankShiftLog()
+        # ADR-0009 §1: the per-stream regression buffer, keyed by batch row (L10).
+        # Detached data only -- no graph is held across the loop. Cleared in reset().
+        self._mc: dict[int, list[_Obs]] = {}
+        self.last_mc_stats: dict[str, Any] = {}
+
+    # -- what the training loop asks of the policy ---------------------------- #
+
+    @property
+    def needs_eval_context(self) -> bool:
+        """ADR-0009 L2: a learned head reads the eval-mode `c_t`, for the decision
+        and the regression alike. `neg_age` reads no context at all (§3.7)."""
+        return self.head is not None
+
+    @property
+    def learns(self) -> bool:
+        """Whether this arm observes and forms `L_MC` (ADR-0009 L13(a)).
+
+        **`beta = 0` means `L_MC` is not computed** -- not computed-times-zero. Then
+        `phi`'s gradients stay None, AdamW skips `phi` (its decoupled decay too),
+        and `phi` stays at its init: a random-content eviction arm, and "beta = 0"
+        means "no retention learning". With no head there is nothing to learn.
+        """
+        return self.head is not None and self.config.beta != 0.0
 
     # -- the eviction rule --------------------------------------------------- #
 
@@ -472,25 +521,181 @@ class RSRPolicy:
     # -- bookkeeping --------------------------------------------------------- #
 
     def observe(self, slots: MemoryState, attn: AttentionTrace, step: int) -> None:
-        """Realized `r_i` lands here. Sprint 2 wires it to the MC return.
+        """Realized `r_i(t)` lands here, buffered for the MC return (ADR-0009 §1).
 
-        The trace must be an eval-mode capture (D-F); `rsr.retention.reward`
-        refuses a train-mode one rather than quietly averaging over dropout masks.
+        Called by `run_policy_loop` for every live row at every step, **before**
+        the eviction and the write -- the attention was paid over this memory --
+        and before `T_warm` as after it: §3.4's passive training, where the policy
+        is inert and `psi_hat` still learns. Nothing here branches on `warm`; the
+        stream's `k` and `warm` are recorded with the loss instead.
+
+        * `r_i` is the gated, share-of-M rescaled §3.2.1 target, from an
+          **eval-mode** trace (correction 20 / D-F): `reward._require_eval`
+          refuses a train-mode one.
+        * `c_t` is `attn.context` (L10(a)), the eval gestalt the decision reads
+          too (L2). A trace without it is refused: pairing `r_i(t)` with some
+          other forward's `c_t` is exactly the skew L2 exists to prevent.
+        * Each sample is keyed by **`(slots.row, written_at_i)`**, not slot index:
+          `write_at` compacts the prefix after a middle-slot eviction, so index
+          `i` names different gestalts at different steps. A row writes at most
+          once per step, so `written_at` is unique among a row's slots.
+
+        `s_i` and `c_t` are stored **as given**. In the loop they arrive detached
+        (`memory_state` detaches, the eval forward runs under `no_grad`), so no
+        graph is held across the stream; but the stop-gradient this policy is
+        answerable for lives in ONE place, `retention_loss` -- detaching here as
+        well would make that site an equivalent mutant (ADR-0009 §2, T3). The
+        regression is recomputed once, batched, at the stream end.
         """
-        raise NotImplementedError(
-            "Sprint 2: the MC return and the shadow buffer (sections 3.3-3.4). "
-            "r_i itself is implemented in rsr.retention.reward."
+        if self.head is None:
+            raise ValueError(
+                "observe() on an RSR arm with no learned head (psi_override="
+                f"{self.config.psi_override!r}): there is no phi to train, so a "
+                "target collected here would go nowhere. The section 3.7 reduction "
+                "runs with observe off (ADR-0009 T13)."
+            )
+        if attn.context is None:
+            raise ValueError(
+                "AttentionTrace.context is None: RSR regresses psi_hat(s_i, c_t) on "
+                "the c_t of the SAME eval forward that produced r_i (ADR-0009 L2, "
+                "L10(a)). Run the loop with eval_capture=True."
+            )
+        with torch.no_grad():
+            # The TARGET is data (sg[G] in §3.3): formed without a graph.
+            r = retrieval_demand(
+                attn, n_live=slots.n_live, capacity=slots.capacity, gated=True
+            )
+        live = slots.live.nonzero(as_tuple=True)[0]
+        if live.numel() == 0:
+            return  # step 0: nothing in memory, nothing to regress
+        self._mc.setdefault(int(slots.row), []).append(
+            _Obs(
+                step=int(step),
+                keys=slots.written_at[live].clone(),
+                gestalts=slots.gestalts[live],
+                context=attn.context,
+                r=r[live].clone(),
+            )
         )
 
+    def mc_targets(self) -> dict[str, Any] | None:
+        """The stream's regression rows, one per `(row, t, live slot)`, or None.
+
+        `s`, `c` (as stored, NOT yet detached -- `retention_loss` owns that),
+        `target` = `G_i(t)`, `r` = realized `r_i(t)`, `t`, `key` = `written_at`,
+        `row`, and `n_groups` = the number of `(row, t)` pairs. Per row, `G` is
+        `mc_returns` over a `[keys, T_b]` grid indexed by **`written_at`** -- a
+        slot that moved index under compaction keeps its row of the grid -- with
+        zeros where the slot was not live (the censoring, ADR-0009 §1) and the
+        horizon ending at the row's last observed step (`run_policy_loop` observes
+        only `t < lengths[b]`).
+        """
+        if not self._mc:
+            return None
+        S, Cx, G, R_, T, K, Rows, n_groups = [], [], [], [], [], [], [], 0
+        for row in sorted(self._mc):
+            obs = self._mc[row]
+            keys = torch.unique(torch.cat([o.keys for o in obs]))
+            horizon = max(o.step for o in obs) + 1
+            grid = torch.zeros(keys.numel(), horizon, device=obs[0].r.device)
+            idx_of = []
+            for o in obs:
+                i = torch.searchsorted(keys, o.keys)
+                grid[i, o.step] = o.r.to(grid.dtype)
+                idx_of.append(i)
+            g_row = mc_returns(grid, self.config.gamma)
+            for o, i in zip(obs, idx_of, strict=True):
+                S.append(o.gestalts)
+                Cx.append(o.context.unsqueeze(0).expand(o.gestalts.shape[0], -1))
+                G.append(g_row[i, o.step])
+                R_.append(o.r)
+                T.append(torch.full_like(o.keys, o.step))
+                K.append(o.keys)
+                Rows.append(torch.full_like(o.keys, row))
+                n_groups += 1
+        return {
+            "s": torch.cat(S),
+            "c": torch.cat(Cx),
+            "target": torch.cat(G),
+            "r": torch.cat(R_),
+            "t": torch.cat(T),
+            "key": torch.cat(K),
+            "row": torch.cat(Rows),
+            "n_groups": n_groups,
+        }
+
+    def retention_loss(self) -> Tensor | None:
+        """`L_MC` over the stream just run, or None if nothing was observed.
+
+            L_MC = mean_{(b, t)} sum_{i live at t} ( psi_hat(s_i, c_t) - sg[G_i(t)] )^2
+
+        **Unweighted, sum-then-mean** (ADR-0009 L9, signed): summed over the live
+        slots of one `(row, t)`, then averaged over the `(row, t)` pairs that hold
+        at least one live slot (a step with an empty memory has no regression row
+        and is not counted). No `|memory_t|/M` weight: CLAUDE.md forbids
+        down-weighting as the bias correction, and the target is already rescaled.
+
+        🔴 **The policy owns the stop-gradient** (ADR-0009 §2): `s` and `c` are
+        detached HERE, as `_psi` does for scoring, so `L_MC`'s gradient reaches
+        `phi = {W, u}` and nothing else, whatever the caller handed in. The head
+        itself never detaches, on purpose.
+
+        `G` is keyed per row by `written_at` and truncated at the row's last
+        observed step (`mc_returns`). Diagnostics land in `last_mc_stats`: mean
+        `G` by `t` (the truncation profile), corr(psi_hat, age) (§7.1), and the
+        stream's optimizer step and warm flag, so `L_MC` can be split at §3.4's
+        on/off-policy boundary.
+        """
+        rows = self.mc_targets()
+        if rows is None:
+            self.last_mc_stats = {}
+            return None
+        assert self.head is not None
+        n_groups = rows["n_groups"]
+        target, t_of, age_of = rows["target"], rows["t"], rows["t"] - rows["key"]
+        head_dev = next(self.head.parameters()).device
+        s, c = rows["s"].to(head_dev), rows["c"].to(head_dev)
+        target = target.to(head_dev)
+        # Section 3.3 / ADR-0009 §2: the stop-gradient lives here.
+        psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)
+        loss = (psi - target.detach()).pow(2).sum() / n_groups
+        with torch.no_grad():
+            # CPU before float64: MPS has no float64 (found by the MPS T10 test).
+            p, a = psi.detach().cpu().double(), age_of.cpu().double()
+            corr = None
+            if p.numel() > 1 and p.std() > 0 and a.std() > 0:
+                corr = float(torch.corrcoef(torch.stack([p, a]))[0, 1])
+            tt, gg = t_of.cpu(), target.detach().cpu().double()
+            g_by_t = {
+                int(t): float(gg[tt == t].mean()) for t in torch.unique(tt).tolist()
+            }
+        self.last_mc_stats = {
+            "l_mc": float(loss.detach()),
+            "n_samples": int(target.numel()),
+            "n_groups": n_groups,
+            "g_mean": float(target.mean()),
+            "g_mean_by_t": g_by_t,
+            "corr_psi_age": corr,
+            "train_step": self._train_step,
+            "warm": self.config.t_warm > 0
+            and self._train_step is not None
+            and self._train_step < self.config.t_warm,
+            "gamma": self.config.gamma,
+        }
+        return loss
+
     def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
-        """No per-slot accumulator yet; the MC return keyed by slot arrives with
-        `observe` in Sprint 2, and it resets here (gauntlet 0.4)."""
+        """No per-slot accumulator: the MC buffer is keyed by `(row, written_at)`
+        (ADR-0009 §1), so a slot's new occupant is a new key by construction and
+        nothing needs invalidating here (gauntlet 0.4)."""
         return None
 
     def reset(self) -> None:
         """Stream boundary. The eviction log persists -- it is the run's record, not
-        per-stream state -- but anything keyed by slot does not."""
+        per-stream state -- but anything keyed by slot does not, and neither does
+        the MC buffer: one `run_policy_loop` call is one stream (ADR-0009 §1)."""
         self._fifo.reset()
+        self._mc = {}
 
     # -- reporting ----------------------------------------------------------- #
 
