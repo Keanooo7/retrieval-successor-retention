@@ -826,6 +826,27 @@ def test_the_training_analysis_reads_loss_lm_never_loss(e2e, r1):
     assert r1.analyse_training(poisoned, diags, e2e["cfg"]) != a
 
 
+def test_run_level_histograms_are_cross_checked_against_the_per_step_sums(r1, e2e):
+    tr = e2e["doc"]["training"]
+    assert tr["run_level_histograms_agree"] == {"psiC": True, "age": True}
+    per = {
+        p: {"displacement_distribution": {int(k): v for k, v in d.items()}}
+        for p, d in (
+            ("warm", tr["diagnostics"]["psiC"]["warm"]["displacement_distribution"]),
+            ("scored", tr["diagnostics"]["psiC"]["scored"]["displacement_distribution"]),
+        )
+    }
+    good = {
+        "fifo_warmup": {"shift_distribution": per["warm"]["displacement_distribution"]},
+        "scored": {"shift_distribution": per["scored"]["displacement_distribution"]},
+    }
+    assert r1.run_level_agrees(good, per) is True
+    bad = copy.deepcopy(good)
+    bad["scored"]["shift_distribution"] = {0: 1}
+    assert r1.run_level_agrees(bad, per) is False
+    assert r1.run_level_agrees(None, per) is None
+
+
 def test_the_diagnostics_split_warm_from_scored_and_report_the_first_block(e2e, r1):
     dg = e2e["doc"]["training"]["diagnostics"]["psiC"]
     tw = int(e2e["cfg"].t_warm_steps)
