@@ -1435,6 +1435,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_run_level_histograms_split_warmup_from_scored",
                 "test_with_replacement_is_reachable_only_outside_pool_mode",
             ),
+            *_r1_declare(
+                "the fix-round tests drive RSR arms (content or age-only) through "
+                "train(): a FIFOPolicy has no `.config` (AttributeError where "
+                "T_warm is stamped).",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_every_pool_arm_records_its_sampler_in_the_hash",
+            ),
         ),
     ),
     # Correction 31: T_warm counts optimizer steps, not sentences.
@@ -1519,6 +1527,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
                 "test_the_run_level_histograms_split_warmup_from_scored",
             ),
+            *_r1_declare(
+                "the fix-round RSR arms (resume, age-only C-1) run with T_warm > 0 "
+                "and raise 'no training step was set' at their first eviction.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+            ),
         ),
     ),
     Mutation(
@@ -1589,6 +1603,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
                 "test_the_run_level_histograms_split_warmup_from_scored",
                 "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+            *_r1_declare(
+                "the sampler-in-hash test builds an RSR pool arm at iters = 0, "
+                "which the registry refuses (steps_per_epoch > 0).",
+                "test_every_pool_arm_records_its_sampler_in_the_hash",
             ),
         ),
     ),
@@ -1688,6 +1707,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
                 "test_the_run_level_histograms_split_warmup_from_scored",
                 "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+            *_r1_declare(
+                "the fix-round RSR arms are built from labelled overrides (L12); "
+                "read eagerly, the registry raises UnmeasuredConstant on nu.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_every_pool_arm_records_its_sampler_in_the_hash",
             ),
         ),
     ),
@@ -2135,6 +2161,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
                 "test_the_run_level_histograms_split_warmup_from_scored",
                 "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+            *_r1_declare(
+                "answer_targets() raises in every train() call, so every fix-round "
+                "test that trains errors before its assertion.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
+                "test_every_pool_arm_records_its_sampler_in_the_hash",
             ),
         ),
     ),
@@ -6077,6 +6111,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
                 "test_the_run_level_histograms_split_warmup_from_scored",
             ),
+            *_r1_declare(
+                "the same-dir resume test runs an RSR learning arm, whose r_i comes "
+                "from the eval capture: TrainModeTrace.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
         ),
     ),
     Mutation(
@@ -6263,6 +6302,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
                 "test_c1_the_model_is_in_eval_mode_at_loop_end",
                 "test_c1_the_training_forward_equals_the_eval_forward",
+            ),
+            *_r1_declare(
+                "the age-only C-1 arm is frozen; with its table out of the "
+                "optimizer it has no trainable parameter ('no trainable parameters "
+                "found').",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
             ),
         ),
     ),
@@ -6850,6 +6895,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the relative-step test reads evictions.jsonl, which is never written.",
                 "test_the_warm_start_runs_t_warm_at_relative_steps",
             ),
+            *_r1_declare(
+                "the same-dir resume test reads evictions.jsonl, which is never written.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
         ),
     ),
     Mutation(
@@ -6873,6 +6922,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "what the policy still holds; a copying drain hands over every "
                 "record again each step (440 / 1232 evictions, not 88 per step).",
             ),
+            *_r1_declare(
+                "a copying drain leaves the records in the policy, so the step-2 "
+                "checkpoint carries steps 0-1's records and the resumed run writes "
+                "them into the fresh dir's evictions.jsonl ([0, 1, 2, 3], not [2, "
+                "3]).",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
         ),
     ),
     Mutation(
@@ -6889,6 +6945,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the pool resume needs the generator state too: refused 'no "
                 "data-order generator state'.",
                 "test_a_pool_resume_continues_its_epoch",
+            ),
+            *_r1_declare(
+                "the same-dir resume test resumes a pool run; without the generator "
+                "state the resume is refused.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
             ),
         ),
     ),
@@ -7006,6 +7067,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_c1_a_training_step_draws_no_global_rng",
                 "test_c1_the_model_is_in_eval_mode_at_loop_end",
             ),
+            *_r1_declare(
+                "the FIFO and age-only C-1 cases read the same missing "
+                "model.eval(): train mode at loop exit, global RNG drawn.",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
+            ),
         ),
     ),
     Mutation(
@@ -7021,6 +7088,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "C-1 test (a): with the blocks in train mode the training forward's "
                 "srep differs from the eval forward's.",
                 "test_c1_the_training_forward_equals_the_eval_forward",
+            ),
+            *_r1_declare(
+                "the FIFO and age-only C-1 cases: the top-level flag reads eval but "
+                "the blocks draw dropout masks from the global RNG.",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
             ),
         ),
     ),
@@ -7048,6 +7121,11 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "slice-1 two-rows test runs its model in eval mode, so batch size "
                 "starts changing the dropout masks.",
                 "test_two_rows_keep_two_buffers",
+            ),
+            *_r1_declare(
+                "the age-only C-1 case: its eval forward hands the model back in "
+                "train mode (the FIFO case has no eval forward, so it stays green).",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
             ),
         ),
     ),
