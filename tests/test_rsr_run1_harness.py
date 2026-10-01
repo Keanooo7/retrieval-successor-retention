@@ -1924,18 +1924,44 @@ def _a4(r1, gamma="0.9") -> str:
     return _owner_table_text(r1, gamma, "0.01", "3000", "eval")
 
 
-def test_an_a4_table_quoted_only_in_a_code_fence_is_absent(r1):
-    """Review fe0e01f MINOR-A3d-1(a): lines inside a fence never count. A fenced copy
-    alone is `absent`; beside the real table it is ignored, and the real values read."""
-    for fence in ("```", "~~~", "```markdown", "   ```"):
-        fenced = f"# prose\n\n{fence}\n" + _a4(r1, "0.5") + f"{fence[:6].strip()}\n"
-        got = r1.parse_owner_table(fenced)
-        assert got["status"] == "absent" and got["values"] == {}, (fence, got)
+def test_the_a4_heading_counts_once_in_the_whole_file_outside_every_fence(r1):
+    """A3d.1 rule 1 (review d86af31 MINOR-N3): the heading line occurs exactly once in
+    the WHOLE file, fenced copies counted, and outside every fence -- else `malformed`
+    (`absent` at 0). Fences are CommonMark's (MINOR-N2). Inline-backtick mentions are
+    not heading lines."""
+    h = r1.OWNER_TABLE_HEADING
+
+    def status(text):
+        return r1.parse_owner_table(text)["status"]
+
+    for fence in ("```", "~~~", "```markdown", "   ```", "````"):
+        alone = (
+            f"# prose\n\n{fence}\n"
+            + _a4(r1, "0.5")
+            + f"{fence.strip().rstrip('markdown')}\n"
+        )
+        assert status(alone) == "malformed", fence  # one copy, but inside a fence
     both = "```\n" + _a4(r1, "0.5") + "```\n\n" + _a4(r1)
-    got = r1.parse_owner_table(both)
+    assert status(both) == "malformed"  # two copies (a811714's reading, restored)
+    # (a) a 4-backtick fence containing a ``` line: the inner ``` does not close it
+    inner = "````\n```\n" + _a4(r1, "0.5") + "```\n````\n"
+    assert status(inner) in ("absent", "malformed") and status(inner) == "malformed"
+    assert status("~~~\n```\n" + _a4(r1, "0.5") + "```\n~~~\n") == "malformed"
+    # a closer must be the same character, at least as long, with no info string
+    for opener, closer in (("````", "```"), ("```", "~~~"), ("```", "``` x")):
+        text = f"{opener}\nfenced\n{closer}\n\n" + _a4(r1)
+        assert status(text) == "malformed", (opener, closer)  # still inside the fence
+    closes = "```\nfenced\n````\n\n" + _a4(r1)
+    assert status(closes) == "filled"  # a longer closer of the same character closes
+    assert status("```a`b\n\n" + _a4(r1)) == "filled"  # a backtick info string: no fence
+    assert status("    ```\n\n" + _a4(r1)) == "filled"  # 4-space indent: not a fence
+    # (c) inline-backtick mentions of the heading do not count
+    inline = f"A3d quotes `{h}` inline.\n   `{h}`\n\n" + _a4(r1)
+    got = r1.parse_owner_table(inline)
     assert got["status"] == "filled" and got["values"]["gamma"] == 0.9
+    assert status(f"A3d quotes `{h}` inline.\n") == "absent"
     unclosed = _a4(r1).replace("| slot | value |", "```\n| slot | value |")
-    assert r1.parse_owner_table(unclosed)["status"] == "malformed"
+    assert status(unclosed) == "malformed"
 
 
 def test_a_non_newline_line_break_makes_the_a4_table_malformed(r1):
@@ -1965,3 +1991,100 @@ def test_a_non_newline_line_break_makes_the_a4_table_malformed(r1):
     crlf = good.replace("\n", "\r\n")
     got = r1.parse_owner_table(crlf)
     assert got["status"] == "filled" and got["values"]["iters"] == 3000
+
+
+def test_the_prereg_layers_cite_every_amendment_and_review(r1):
+    """Review d86af31 MINOR-N4: every `prereg(rsr-run1): Amendment <k>` commit in this
+    branch's history is in PREREG_COMMITS under `A<k>`, and every PREREG review commit
+    is in REVIEW_COMMITS -- so Amendment 4 cannot land uncited."""
+    import subprocess
+
+    def log(path):
+        r = subprocess.run(
+            [r1.git_exe(), "-C", str(ROOT), "log", "--format=%h%x09%s", "--abbrev=7",
+             "HEAD", "--", path],
+            capture_output=True, text=True, check=True,
+        )  # fmt: skip
+        return [x.split("\t", 1) for x in r.stdout.splitlines()]
+
+    prereg = log(r1.PREREG)
+    if r1.PREREG_COMMITS["base"] not in {sha for sha, _ in prereg}:
+        pytest.skip("shallow history: the PREREG's base commit is not in this clone")
+    amendments = {
+        "A" + s.split("Amendment ", 1)[1].split()[0]: sha
+        for sha, s in prereg
+        if s.startswith("prereg(rsr-run1): Amendment")
+    }
+    assert amendments, "no amendment commit found"
+    for key, sha in amendments.items():
+        assert r1.PREREG_COMMITS.get(key) == sha, (key, sha)
+    reviews = {
+        sha
+        for sha, s in log("docs/reviews/prereg-rsr-run1/")
+        if s.startswith("review(prereg-rsr-run1):")
+    }
+    assert reviews and reviews <= set(r1.REVIEW_COMMITS), reviews - set(r1.REVIEW_COMMITS)
+
+
+def _set_rc(out, arms, rc):
+    for a in arms:
+        (out / "logs" / f"{a}-s0.rc").write_text(f"{rc}\n")
+
+
+def _inconclusive(out, arms):
+    """rc 1 after a completed footer, and the printed band `inconclusive` (train()'s
+    own mapping), in each of ``arms``."""
+    _set_rc(out, arms, 1)
+    for a in arms:
+        log = out / "logs" / f"{a}-s0.log"
+        log.write_text(
+            log.read_text().replace('"band": "live"', '"band": "inconclusive"')
+        )
+
+
+def test_an_exit_1_stop_still_reads_c2_c3_c8_and_a_failure_gives_3(r1, e2e, tmp_path):
+    """Review d86af31 MINOR-N1 (A3d.2): every arm inconclusive, and fifo's steps drew
+    OTHER pool documents -> C2 fails -> 3, not 1. C4 and C7 are listed as not
+    evaluated. Without the pairing break the seed is `failed` / 1 with C2, C3 and C8
+    read and green. Liveness is noted once per arm (review NIT), never twice."""
+    out = _copy_run(e2e, tmp_path / "ok1")
+    _inconclusive(out, r1.ARMS)
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert (doc["status"], doc["exit"]) == ("failed", int(Exit.FAIL))
+    assert all(doc["controls"][k]["ok"] for k in ("C2", "C3", "C8"))
+    assert "NOT_EVALUATED: ['C4', 'C7'] (the seed stopped; A3d.2)" in doc["notes"]
+    liveness = [n for n in doc["notes"] if n.startswith("LIVENESS_INCONCLUSIVE")]
+    assert liveness == [f"LIVENESS_INCONCLUSIVE: {a}" for a in r1.ARMS]
+    assert "heldout" not in doc
+
+    out = _copy_run(e2e, tmp_path / "other")
+    _inconclusive(out, r1.ARMS)
+    f = out / "fifo" / "seed0" / "diagnostics.jsonl"
+    rows = [json.loads(x) for x in f.read_text().splitlines() if x.strip()]
+    for r in rows:
+        r["pool_doc_ids"] = [i + 2 for i in r["pool_doc_ids"]]  # outside the pool
+    f.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert doc["controls"]["C2"]["ok"] is False
+    assert "CONTROL_FAILED: ['C2']" in doc["notes"]
+    assert "NOT_EVALUATED: ['C4', 'C7'] (the seed stopped; A3d.2)" in doc["notes"]
+    assert [n for n in doc["notes"] if n.startswith("LIVENESS")] == liveness
+
+
+def test_measure_seed_passes_every_arms_sampler_into_c2(r1, e2e, tmp_path):
+    """Review d86af31 NIT (Y4): the wiring, not only the unit. The e2e's C2 carries the
+    three arms' samplers, and a sampler that differs in one arm's recorded config
+    reddens C2 through `measure_seed`."""
+    c2 = e2e["doc"]["controls"]["C2"]["b_fingerprint"]
+    assert c2["sampling_per_arm"] == dict.fromkeys(r1.ARMS, loop.SAMPLING_PERMUTATION)
+    assert c2["sampling_agrees"] is True
+    out = _copy_run(e2e, tmp_path / "sampler")
+    log = out / "logs" / "fifo-s0.log"
+    res = r1.read_cli_result(log)
+    res["config"]["sampling"] = loop.SAMPLING_WITH_REPLACEMENT
+    log.write_text(json.dumps(res, indent=2) + "\n")
+    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+    assert doc["controls"]["C2"]["b_fingerprint"]["sampling_agrees"] is False
+    assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert "C2" in doc["controls_failed"]

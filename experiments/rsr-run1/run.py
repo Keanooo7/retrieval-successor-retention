@@ -1,8 +1,9 @@
 """RSR run 1 -- the measurement harness (PREREG `experiments/rsr-run1/PREREG.md`, T3).
 
 Pre-registration: every layer of the PREREG -- base (`7c58777`), Amendment 1 (`6a4c5a8`),
-2 (`7fcd3f9`), 3 (`58a9216`), 3b (`7196a52`) and 3c (`34f495f`), reviewed at `787875b`,
-`c02cae7`, `7f7e2ad`, `3ef97c8`, `33ce631` and `de8f813` (``PREREG_COMMITS`` /
+2 (`7fcd3f9`), 3 (`58a9216`), 3b (`7196a52`), 3c (`34f495f`) and 3d (`fe0e01f`),
+reviewed at `787875b`, `c02cae7`, `7f7e2ad`, `3ef97c8`, `33ce631`, `de8f813` and `b543e96`
+(``PREREG_COMMITS`` /
 ``REVIEW_COMMITS``; Amendment 4, the owner values, is added there when it lands).
 **Descriptive. No gate, no pass/fail threshold.** The controls decide only whether the
 run is readable; every contrast is read only as "CI above 0", "CI below 0" or "CI
@@ -100,8 +101,17 @@ PREREG_COMMITS = {
     "A3": "58a9216",
     "A3b": "7196a52",
     "A3c": "34f495f",
+    "A3d": "fe0e01f",
 }
-REVIEW_COMMITS = ("787875b", "c02cae7", "7f7e2ad", "3ef97c8", "33ce631", "de8f813")
+REVIEW_COMMITS = (
+    "787875b",
+    "c02cae7",
+    "7f7e2ad",
+    "3ef97c8",
+    "33ce631",
+    "de8f813",
+    "b543e96",
+)
 
 
 def _load(name: str, rel: str):
@@ -875,9 +885,29 @@ OWNER_VALUE_FORMAT = {
 #: besides "\n" (and the "\r" of "\r\n"). The parser splits on "\n" only; a heading
 #: line or a table line holding one of these is `malformed`, never re-split.
 OTHER_LINE_BREAKS = "\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029"
-#: Review fe0e01f MINOR-A3d-1(a): a fence line (CommonMark: up to 3 spaces, then ``` or
-#: ~~~). Lines inside a fence, and the fence lines, are never the heading or a table row.
-_FENCE = re.compile(r" {0,3}(```|~~~)")
+#: Review fe0e01f MINOR-A3d-1(a) / review d86af31 MINOR-N2: CommonMark fences. An
+#: opener is up to 3 spaces, then 3+ backticks (an info string without a backtick) or
+#: 3+ tildes (any info string); it is closed only by the SAME character, at least as
+#: many of it, then only spaces or tabs. An unclosed fence runs to the end of the file.
+_FENCE_OPEN = re.compile(r" {0,3}(`{3,}(?=[^`]*$)|~{3,})")
+_FENCE_CLOSE = re.compile(r" {0,3}(`{3,}|~{3,})[ \t]*")
+
+
+def fenced_lines(lines: list[str]) -> list[bool]:
+    """Per line: inside a fenced code block, fence lines included (CommonMark)."""
+    out, opener = [], None
+    for x in lines:
+        if opener is None:
+            m = _FENCE_OPEN.match(x)
+            if m:
+                opener = m.group(1)
+            out.append(m is not None)
+        else:
+            m = _FENCE_CLOSE.fullmatch(x)
+            if m and m.group(1)[0] == opener[0] and len(m.group(1)) >= len(opener):
+                opener = None
+            out.append(True)
+    return out
 
 
 def parse_owner_table(text: str, heading: str = OWNER_TABLE_HEADING) -> dict:
@@ -897,8 +927,11 @@ def parse_owner_table(text: str, heading: str = OWNER_TABLE_HEADING) -> dict:
       the heading text, a table line, or a would-be blank line between them, containing
       any other line break (``OTHER_LINE_BREAKS``: U+2028, U+2029, ``\x85``, ...) makes
       the table ``malformed``;
-    * lines inside a fenced code block (and the fence lines) never count as the heading
-      or as table rows: a heading quoted only in a fence is ``absent``.
+    * A3d.1 rule 1: the heading line occurs exactly once in the WHOLE file, fenced
+      copies counted, and that one occurrence is outside every fenced code block
+      (CommonMark fences, ``fenced_lines``); 0 occurrences is ``absent``, anything else
+      ``malformed``. A mention inside inline backticks is not a heading line. Fenced
+      lines are never table rows.
 
     Returns ``status`` ``filled`` (every value present and well formed), ``blank`` (a
     slot still ``______``), or ``malformed`` / ``absent``, with the problems. Only
@@ -909,13 +942,7 @@ def parse_owner_table(text: str, heading: str = OWNER_TABLE_HEADING) -> dict:
     def odd(x: str) -> bool:
         return any(c in x for c in OTHER_LINE_BREAKS)
 
-    fenced, inside = [], False
-    for x in lines:
-        if _FENCE.match(x):
-            fenced.append(True)
-            inside = not inside
-        else:
-            fenced.append(inside)
+    fenced = fenced_lines(lines)
     split = [i + 1 for i, x in enumerate(lines) if heading in x and odd(x)]
     if split:
         out.update(status="malformed")
@@ -923,11 +950,13 @@ def parse_owner_table(text: str, heading: str = OWNER_TABLE_HEADING) -> dict:
             f"line(s) {split} hold the heading and a non-\\n line break (MINOR-A3d-1)"
         )
         return out
-    at = [i for i, x in enumerate(lines) if x == heading and not fenced[i]]
-    if len(at) != 1:
+    at = [i for i, x in enumerate(lines) if x == heading]  # fenced copies too (rule 1)
+    if len(at) != 1 or fenced[at[0]]:
         out.update(status="absent" if not at else "malformed")
+        where = [("in a fence" if fenced[i] else "outside fences") for i in at]
         out["problems"].append(
-            f"heading {heading!r} occurs {len(at)} times outside code fences, not once"
+            f"heading {heading!r} occurs {len(at)} times ({where}), not once outside "
+            "every fence (A3d.1 rule 1)"
         )
         return out
     i = at[0] + 1
@@ -2565,6 +2594,40 @@ def analyse_training(
 # --------------------------------------------------------------------------- #
 
 
+def _cheap_controls(
+    doc: dict, cfg: Run1Config, out_root: Path, results: dict, hbs: dict
+) -> dict:
+    """C2, C8 and C3 into ``doc["controls"]`` -- the training artefacts and the
+    checkpoints only, no EVAL document (A3d.2's cheap controls). Returns the payloads
+    (every arm at ``iters``, and each RSR arm at each earlier snapshot)."""
+    beats = {a: hbs[a]["beats"] for a in ARMS}
+    steprecs = {a: read_step_records(arm_dir(out_root, a, cfg.seed)) for a in ARMS}
+    samplings = {a: arm_sampling(results[a]) for a in ARMS}
+    doc["controls"]["C2"] = c2_pairing(
+        beats,
+        {a: step_pool_ids(steprecs[a]) for a in ARMS},
+        cfg,
+        samplings["psiC"],
+        samplings=samplings,
+    )
+    doc["controls"]["C8"] = c8_finite(beats)
+    payloads = {
+        a: read_checkpoint(checkpoint_path(arm_dir(out_root, a, cfg.seed), cfg.iters))
+        for a in ARMS
+    }
+    for k in [k for k in cfg.snapshots if k != cfg.iters]:
+        for a in RSR_ARMS:
+            payloads[f"{a}@{k}"] = read_checkpoint(
+                checkpoint_path(arm_dir(out_root, a, cfg.seed), k)
+            )
+    sub_model, sub_sha = load_substrate_model(cfg)
+    doc["controls"]["C3"] = {
+        **c3_frozen(payloads, sub_model),
+        "substrate_sha256": sub_sha,
+    }
+    return payloads
+
+
 def measure_seed(
     cfg: Run1Config,
     owner: OwnerValues,
@@ -2720,60 +2783,66 @@ def measure_seed(
     c5 = doc["controls"]["C5"]
     unsure = [a for a, v in c5["per_arm"].items() if v["band"] == "inconclusive"]
     early_failed = [k for k in ("C1", "C10") if doc["controls"][k].get("ok") is not True]
-    cands: list[tuple[int, str, str | None]] = list(arm_cands)
+    pre: list[tuple[int, str, str | None]] = list(arm_cands)
     if c5["inert"]:
-        cands.append((int(Exit.INERT), "partial", f"INERT: {c5['inert']}"))
+        pre.append((int(Exit.INERT), "partial", f"INERT: {c5['inert']}"))
     if not doc["controls"]["C6"]["ok"]:
-        cands.append(
+        pre.append(
             (
                 int(Exit.DID_NOT_RUN),
                 "crashed",
                 f"ARM_CRASHED: C6 {doc['controls']['C6']['per_arm']}",
             )
         )
-    if early_failed:
-        cands.append(
-            (int(Exit.DID_NOT_RUN), "did_not_run", f"CONTROL_FAILED: {early_failed}")
-        )
+    post: list[tuple[int, str, str | None]] = []
     if unsure:
-        cands.append((int(Exit.FAIL), "failed", f"LIVENESS_INCONCLUSIVE: {unsure}"))
+        # Review d86af31 NIT: an arm whose own outcome already noted it is not noted twice
+        noted = {a for a in ARMS if arm_status[a][2] == "LIVENESS_INCONCLUSIVE"}
+        extra = [a for a in unsure if a not in noted]
+        post.append(
+            (
+                int(Exit.FAIL),
+                "failed",
+                f"LIVENESS_INCONCLUSIVE: {extra}" if extra else None,
+            )
+        )
     stop = bool(arm_cands or c5["inert"] or unsure or not doc["controls"]["C6"]["ok"])
     if cfg.iters == 0:  # a dry run (A3c.1: STEPS = 0): nothing trained, nothing to read
         stop = True
         doc["notes"].append("DRY_RUN: STEPS 0, no step trained; no held-out pass")
-        if not cands:
-            cands.append((int(Exit.DID_NOT_RUN), "did_not_run", "DRY_RUN"))
     if stop:
-        doc["notes"] += [c[2] for c in cands if c[2] not in (None, "DRY_RUN")]
+        # A3d.2 (review d86af31 MINOR-N1): an exit-1 stop (inconclusive liveness, alone)
+        # still reads the cheap controls -- C2, C3, C8: artefacts and checkpoints only,
+        # no EVAL document -- so a broken pairing gives 3, not 1. C4 and C7 need the
+        # held-out pass and are listed as not evaluated.
+        exit1_stop = cfg.iters > 0 and not [c for c in pre if c[0] != int(Exit.FAIL)]
+        if exit1_stop:
+            try:
+                _cheap_controls(doc, cfg, out_root, results, hbs)
+            except Exception as e:  # did not run: recorded, never a pass
+                for k in ("C2", "C8", "C3"):
+                    doc["controls"].setdefault(
+                        k, {"ok": False, "error": f"{type(e).__name__}: {e}"}
+                    )
+        failed_ctrl = list(early_failed) + [
+            k for k in ("C2", "C3", "C8")
+            if k in doc["controls"] and doc["controls"][k].get("ok") is not True
+        ]  # fmt: skip
+        ctrl = (
+            [(int(Exit.DID_NOT_RUN), "did_not_run", f"CONTROL_FAILED: {failed_ctrl}")]
+            if failed_ctrl
+            else []
+        )
+        cands = pre + ctrl + post
+        if not cands:
+            cands.append((int(Exit.DID_NOT_RUN), "did_not_run", None))  # the dry run
+        doc["notes"] += [c[2] for c in cands if c[2] is not None]
+        skipped = [k for k in ("C2", "C3", "C4", "C7", "C8") if k not in doc["controls"]]
+        doc["notes"].append(f"NOT_EVALUATED: {skipped} (the seed stopped; A3d.2)")
         code, status, _note = worst_outcome(cands)
         return done(Exit(code), status)
-    beats = {a: hbs[a]["beats"] for a in ARMS}
-    steprecs = {a: read_step_records(arm_dir(out_root, a, cfg.seed)) for a in ARMS}
-    samplings = {a: arm_sampling(results[a]) for a in ARMS}
-    doc["controls"]["C2"] = c2_pairing(
-        beats,
-        {a: step_pool_ids(steprecs[a]) for a in ARMS},
-        cfg,
-        samplings["psiC"],
-        samplings=samplings,
-    )
-    doc["controls"]["C8"] = c8_finite(beats)
-    payloads = {
-        a: read_checkpoint(checkpoint_path(arm_dir(out_root, a, cfg.seed), cfg.iters))
-        for a in ARMS
-    }
+    payloads = _cheap_controls(doc, cfg, out_root, results, hbs)
     snaps = [k for k in cfg.snapshots if k != cfg.iters]
-    for k in snaps:
-        for a in RSR_ARMS:
-            payloads[f"{a}@{k}"] = read_checkpoint(
-                checkpoint_path(arm_dir(out_root, a, cfg.seed), k)
-            )
-    sub_model, sub_sha = load_substrate_model(cfg)
-    doc["controls"]["C3"] = {
-        **c3_frozen(payloads, sub_model),
-        "substrate_sha256": sub_sha,
-    }
-    del sub_model
     doc["checkpoint_bytes"] = {
         a: checkpoint_path(arm_dir(out_root, a, cfg.seed), cfg.iters).stat().st_size
         for a in ARMS
@@ -2805,7 +2874,10 @@ def measure_seed(
         doc["controls"]["C4"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
     doc["heldout"] = analyse_heldout(hd, cfg, passes)
     doc["oracle_numbers_read"] = doc["scoped_controls"]["C9_C9b"]["ok"]
-    diags = {a: step_diagnostics(steprecs[a]) for a in RSR_ARMS}
+    diags = {
+        a: step_diagnostics(read_step_records(arm_dir(out_root, a, cfg.seed)))
+        for a in RSR_ARMS
+    }
     doc["training"] = analyse_training(hbs, diags, cfg)
     doc["training"]["run_level_histograms_agree"] = {
         a: run_level_agrees(
