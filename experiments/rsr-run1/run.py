@@ -5,7 +5,7 @@ Pre-registration: every layer of the PREREG -- base (`7c58777`), Amendment 1 (`6
 (`43de9f5`),
 reviewed at `787875b`, `c02cae7`, `7f7e2ad`, `3ef97c8`, `33ce631`, `de8f813` and `b543e96`
 (``PREREG_COMMITS`` /
-``REVIEW_COMMITS``; A4's review is added when it lands).
+``REVIEW_COMMITS``; A4 was reviewed at `42609b2`).
 **Descriptive. No gate, no pass/fail threshold.** The controls decide only whether the
 run is readable; every contrast is read only as "CI above 0", "CI below 0" or "CI
 includes 0".
@@ -113,6 +113,7 @@ REVIEW_COMMITS = (
     "33ce631",
     "de8f813",
     "b543e96",
+    "42609b2",
 )
 
 
