@@ -292,6 +292,44 @@ def test_the_decision_context_choice_does_not_change_held_out_decisions(e2e, r1)
     assert [r["answers"] for r in runs[0]] == [r["answers"] for r in runs[1]]
 
 
+def test_the_held_out_policy_runs_the_scored_rule_with_the_trained_head(e2e, r1):
+    """PREREG §7.1: phi from ``__head__``, ``set_train_step(iters)`` -- so the scored
+    rule decides (attribution "psi"), never the FIFO warmup."""
+    cfg = e2e["cfg"]
+    for arm, attribution in (("psiC", "psi"), ("age", "age_only")):
+        payload = r1.read_checkpoint(
+            r1.final_checkpoint(r1.arm_dir(e2e["out_root"], arm, 0), cfg.iters)
+        )
+        pol = r1.eval_policy(arm, payload, cfg)
+        head = r1.head_state(payload)
+        assert all(torch.equal(v, head[k]) for k, v in pol.head.state_dict().items())
+        model = r1.model_from_payload(payload)
+        docs = r1.docs_by_id(cfg, range(*EVAL))[:2]
+        r1.run_batch(model, pol, docs, r1.vocab_map(cfg), cfg)
+        assert pol.records and {r.attribution for r in pol.records} == {attribution}
+        assert {r.warm for r in pol.records} == {False}
+
+
+def test_in_loop_residency_matches_the_replay_for_every_reference(r1, substrate):
+    """C7's two records are independent: in-loop residency is read off the memory the
+    loop holds, the replay off the victims. Every reference policy, held out."""
+    cfg = tiny_cfg(r1, substrate)
+    payload = r1.read_checkpoint(substrate["ckpt"])
+    payload["meta"]["config"] = json.loads(substrate["result"].read_text())["config"]
+    model = r1.model_from_payload(payload)
+    docs = r1.docs_by_id(cfg, range(*EVAL))[:4]
+    vmap = r1.vocab_map(cfg)
+    for name in ("oracle", "lru", "random0"):
+        pol = r1.reference_policy(name, docs, 0)
+        recs = r1.run_batch(model, pol, docs, vmap, cfg, observe=name == "lru")
+        assert all(
+            r1.residency_ok(d, r, cfg.memory_slots)
+            for d, r in zip(docs, recs, strict=True)
+        ), name
+    recs = r1.run_batch(model, r1.FIFOPolicy(), docs, vmap, cfg)
+    assert all(r1.residency_ok(d, r, 16) for d, r in zip(docs, recs, strict=True))
+
+
 # --------------------------------------------------------------------------- #
 # Controls go red when their invariant is broken
 # --------------------------------------------------------------------------- #
