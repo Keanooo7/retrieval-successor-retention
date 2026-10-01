@@ -1250,9 +1250,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "policy built unconditionally again",
         "test_train_does_not_stamp_a_policy_it_did_not_build",
         "src/rsr/train/loop.py",
-        "    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, "
-        "generator=gen)",
-        "    policy = FIFOPolicy()",
+        # Anchor refreshed for ADR-0009 slice 1 (the call now passes phi's own
+        # generator, the derived epoch and the L12 overrides); same defect.
+        "    policy = build_policy(\n        policy_name,\n        d_model=d,\n",
+        "    policy = FIFOPolicy() or build_policy(\n        policy_name,\n"
+        "        d_model=d,\n",
         "S0-01 defect (b), the original line. `policy_name` still flows into the "
         "frozen config and the `run_id`, so `train(policy_name='rsr')` completes "
         "and returns `run_id='rsr-d32-...'` for a stream FIFO evicted. Nothing "
@@ -1348,16 +1350,18 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "train() passes iters as steps_per_epoch again",
-        "test_train_does_not_stamp_a_policy_it_did_not_build",
+        "test_steps_per_epoch_is_derived_from_the_pool",
         "src/rsr/train/loop.py",
-        "    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, "
-        "generator=gen)",
-        "    policy = build_policy(policy_name, d_model=d, "
-        "steps_per_epoch=float(iters), generator=gen)",
+        # Re-pointed for the 31(b) ruling (R-2026-09-30-rsr-run-1-scope, owner
+        # draft): train() now derives the epoch from the pool, so the defect is
+        # `iters` replacing that derivation, and the gate is the derivation's test.
+        "    steps_per_epoch = epoch_steps(pool_docs, batch)\n",
+        "    steps_per_epoch = float(iters)\n",
         "Correction 31 (b), the original line. `iters` makes section 3.4's one "
-        "epoch the whole run, so the warmup never ends and a future 'rsr' run is "
-        "FIFO throughout. Today the registry would still refuse (E1 has not "
-        "logged nu/beta/gamma); the day it does not, this line is the defect.",
+        "epoch the whole run, so the warmup never ends and an 'rsr' run is FIFO "
+        "throughout. Since the 31(b) ruling an epoch is one pass over the pool, "
+        "pool / batch steps, and an RSR arm with labelled overrides reaches the "
+        "warmup -- so this line is now live, not latent.",
     ),
     Mutation(
         "--policy stops reaching train()",
@@ -5603,6 +5607,191 @@ MUTATIONS: tuple[Mutation, ...] = (
         "review MINOR-1: after a row's stream ends step_fn masks it, so no LM "
         "gradient opposes a span charge on its still-ageing memories; charging it "
         "pushes spans down for nothing.",
+    ),
+    # ----------------------------------------------------------------------- #
+    # ADR-0009 slice 1 -- the psi-hat learning path (feat/rsr-slice1). ADR §6's
+    # list, plus one per signed item and per run-1 build rule. Gates live in
+    # tests/test_rsr_learning_path.py unless named otherwise.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "slice1: L_MC's regression drops the policy's own detach",
+        "test_the_policys_own_detach_holds_for_attached_inputs",
+        "src/rsr/retention/rsr.py",
+        "        psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)",
+        "        psi = self.head(s.unsqueeze(1), c).squeeze(1)",
+        "ADR-0009 §2 / T3. §3.3 and CLAUDE.md: the retention loss must not reach "
+        "the transformer or W_sent. In the loop the inputs arrive detached "
+        "upstream, which masks this site; the gate feeds attached inputs so the "
+        "policy's own stop-gradient is what is tested (not an equivalent mutant).",
+    ),
+    Mutation(
+        "slice1: the eval-capture forward runs in train mode",
+        "test_every_trace_reaching_observe_in_train_is_eval_mode",
+        "src/rsr/model/tg/policy_loop.py",
+        "        model.eval()\n        try:\n",
+        "        pass  # MUTATED: model.eval() dropped\n        try:\n",
+        "ADR-0009 L1(a) / T6, correction 20 (D-F). The 'eval' forward with dropout "
+        "live yields a train-mode alpha; reward._require_eval refuses it "
+        "(TrainModeTrace), which is the guard working -- the mutation proves the "
+        "toggle is load-bearing, not decorative.",
+    ),
+    Mutation(
+        "slice1: the eval-capture forward leaves the model in eval mode",
+        "test_the_eval_forward_draws_no_rng_and_restores_the_mode",
+        "src/rsr/model/tg/policy_loop.py",
+        "            model.train(was_training)\n",
+        "            pass  # MUTATED: mode not restored\n",
+        "ADR-0009 L1(a): 'mode restored after'. Not restored, every later training "
+        "forward runs without dropout -- a different objective for the RSR arm "
+        "than for the FIFO arm, so the arms no longer differ only in the eviction "
+        "rule (§3.7).",
+    ),
+    Mutation(
+        "slice1: the decision reads the train-mode srep again",
+        "test_the_decision_and_the_regression_read_one_context",
+        "src/rsr/model/tg/policy_loop.py",
+        "        decision_ctx = ev.srep if ev is not None else out.srep.detach()",
+        "        decision_ctx = out.srep.detach()",
+        "ADR-0009 L2 (signed): one c_t for regression and decision. Fitted on the "
+        "eval gestalt and decided on the dropout-noised training gestalt is a "
+        "silent train/test skew in exactly the input psi-hat conditions on.",
+    ),
+    Mutation(
+        "slice1: the return is keyed by slot index",
+        "test_g_is_keyed_by_written_at_through_a_middle_slot_eviction",
+        "src/rsr/retention/rsr.py",
+        "                keys=slots.written_at[live].clone(),",
+        "                keys=live.clone(),",
+        "ADR-0009 §1 / T5. write_at compacts the prefix after a middle-slot "
+        "eviction, so an index names different gestalts at different steps; G "
+        "keyed by index sums one slot's early r with its successor's later r.",
+    ),
+    Mutation(
+        "slice1: the return's discount starts at k = 1",
+        "test_mc_return_matches_the_closed_form",
+        "src/rsr/retention/mc.py",
+        "        out[..., t] = r[..., t] + gamma * nxt",
+        "        out[..., t] = gamma * (r[..., t] + nxt)",
+        "ADR-0009 T5: G_i(t) = sum_{k=0} gamma^k r_i(t+k) (spec §3.3, correction "
+        "2). Every term one power of gamma short is a plausible-looking return "
+        "with the wrong scale and the wrong gamma=0 limit.",
+    ),
+    Mutation(
+        "slice1: the return runs past the row's length",
+        "test_the_return_is_truncated_at_each_rows_length",
+        "src/rsr/model/tg/policy_loop.py",
+        "                if bool(row_valid[row]):\n                    policy.observe(",
+        "                if True:\n                    policy.observe(",
+        "ADR-0009 §1 / T5: the return is truncated at T_b = lengths[b]. Observed "
+        "past it, a short row regresses on r read from padding sentences.",
+    ),
+    Mutation(
+        "slice1: every row's samples land in row 0's buffer",
+        "test_two_rows_keep_two_buffers",
+        "src/rsr/retention/rsr.py",
+        "        self._mc.setdefault(int(slots.row), []).append(",
+        "        self._mc.setdefault(0, []).append(",
+        "ADR-0009 L10 / T7, the row-0 bug class (OraclePolicy, LRU 2026-09-29). "
+        "written_at is unique per row, not per batch: merged, two rows' keys "
+        "collide and each row's G mixes in the other's r.",
+    ),
+    Mutation(
+        "slice1: L_MC is a per-slot mean, not sum-then-mean",
+        "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
+        "src/rsr/retention/rsr.py",
+        "        loss = (psi - target.detach()).pow(2).sum() / n_groups",
+        "        loss = (psi - target.detach()).pow(2).mean()",
+        "ADR-0009 L9 (signed): unweighted, sum over live slots, then mean over "
+        "(row, t). B1 measured beta LIVE at eps = 1e-8, so the loss scale is not "
+        "inert and the reduction is part of what beta means.",
+    ),
+    Mutation(
+        "slice1: beta = 0 computes L_MC times zero",
+        "test_beta_zero_leaves_phi_bitwise_at_init",
+        "src/rsr/retention/rsr.py",
+        "        return self.head is not None and self.config.beta != 0.0",
+        "        return self.head is not None",
+        "ADR-0009 L13(a) / T12: beta = 0 means L_MC is not computed. Computed x0, "
+        "phi's gradients are zeros rather than None, AdamW's decoupled decay "
+        "shrinks phi, and 'beta = 0' stops meaning 'no retention learning'.",
+    ),
+    Mutation(
+        "slice1: shadow_enabled=True accepted silently",
+        "test_shadow_enabled_true_is_refused_by_the_policy",
+        "src/rsr/retention/rsr.py",
+        "        if config.shadow_enabled:\n",
+        "        if False:  # MUTATED\n",
+        "ADR-0009 L6(a) / T11: the shadow buffer is slice 2. A switch that is set "
+        "and does nothing is worse than no switch (rsr.py's own rule).",
+    ),
+    Mutation(
+        "slice1: phi joins the transformer's gradient clip",
+        "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+        "src/rsr/train/loop.py",
+        "gnorm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)",
+        "gnorm = torch.nn.utils.clip_grad_norm_("
+        "[*model.parameters(), *phi_params], 1.0)",
+        "ADR-0009 L8 (signed part) / T4: a joint norm makes the transformer's clip "
+        "factor depend on L_MC -- a gradient-free but real channel from the "
+        "retention loss into transformer updates (§2).",
+    ),
+    Mutation(
+        "slice1: phi built from the data-order generator",
+        "test_fifo_and_rsr_arms_see_the_same_first_batch",
+        "src/rsr/train/loop.py",
+        "        generator=phi_gen,\n",
+        "        generator=gen,\n",
+        "ADR-0009 L11 / T10, both latent defects: phi's init draws from `gen`, so "
+        "an RSR arm trains on a different stream than the FIFO arm at the same "
+        "seed (§3.7), and on MPS the CPU-built head raises on an MPS generator.",
+    ),
+    Mutation(
+        "slice1: value_head=None into build_param_groups again",
+        "test_the_value_head_lands_in_its_own_mup_group",
+        "src/rsr/train/loop.py",
+        "build_param_groups(model, head, base_lr=lr, d_model=d, base_width=128)",
+        "build_param_groups(model, None, base_lr=lr, d_model=d, base_width=128)",
+        "ADR-0009 T9 / §4.3, S0-01's old strict xfail: psi-hat outside its own "
+        "muP group -- here, outside the optimizer altogether, so phi never moves.",
+    ),
+    Mutation(
+        "slice1: a t_warm override accepted without the ablation declaration",
+        "test_a_t_warm_override_needs_the_ablation_declaration",
+        "src/rsr/train/loop.py",
+        '    if "t_warm" in overrides and not no_warmup_ablation:\n',
+        "    if False:  # MUTATED\n",
+        "ADR-0009 L12: otherwise an override decides correction 31(b) by the back "
+        "door -- the owner ruled the epoch; T_warm follows from it (§3.4).",
+    ),
+    Mutation(
+        "slice1: b_enabled=False no longer required",
+        "test_b_enabled_false_is_required",
+        "src/rsr/train/loop.py",
+        '        if ov.get("b_enabled") is not False:\n',
+        "        if False:  # MUTATED\n",
+        "ADR-0009 L12: no ProtectionBias exists (§12 item 3), so every slice-1 arm "
+        "is b=off and says so; the requirement is the label's guarantee.",
+    ),
+    Mutation(
+        "slice1: the overrides are not stamped into the frozen config",
+        "test_overrides_are_stamped_into_frozen_hash_and_label",
+        "src/rsr/train/loop.py",
+        "            k: _jsonable(v) for k, v in sorted((policy_overrides or {}).items())",
+        "            k: _jsonable(v) for k, v in sorted({}.items())",
+        "ADR-0009 L12: the overrides are stamped into `frozen`, so into the hash "
+        "and the run_id. A frozen config that does not say what the arm departed "
+        "from proves nothing about what it ran.",
+    ),
+    Mutation(
+        "slice1: the frozen option leaves the transformer trainable",
+        "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+        "src/rsr/train/loop.py",
+        "        model.requires_grad_(False)  # D2(b): no L_NTP update to transformer, "
+        "W_sent\n",
+        "        pass  # MUTATED\n",
+        "R-2026-09-30-rsr-run-1-scope D2(b) (owner draft): the transformer and "
+        "W_sent get no update in run 1. Left trainable, the transformer sits in "
+        "the optimizer (and its decoupled decay) while the run is labelled frozen.",
     ),
 )
 
