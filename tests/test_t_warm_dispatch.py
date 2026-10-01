@@ -56,6 +56,17 @@ def _train_with(monkeypatch, tmp_path, policy: RSRPolicy, iters: int) -> list[li
     """Run the real `train()` with `policy` as its eviction rule; return the
     eviction records split per optimizer step."""
     monkeypatch.setattr(loop, "build_policy", lambda *a, **k: policy)
+    # train() drains the records to evictions.jsonl after every step (run-1
+    # readiness, PREREG-drafter defect 2); collect exactly what it drains.
+    drained: list = []
+    real_drain = policy.drain_records
+
+    def drain():
+        out = real_drain()
+        drained.extend(out)
+        return out
+
+    monkeypatch.setattr(policy, "drain_records", drain)
     loop.train(
         d=32,
         steps_per_stream=STEPS_PER_STREAM,
@@ -67,7 +78,7 @@ def _train_with(monkeypatch, tmp_path, policy: RSRPolicy, iters: int) -> list[li
         ckpt_every=10_000,
         beat_every=10_000,
     )
-    recs = policy.records
+    recs = drained + policy.records
     assert len(recs) == iters * EVICTIONS_PER_ITER, (
         f"{len(recs)} evictions over {iters} steps; expected {EVICTIONS_PER_ITER} "
         f"per step -- the memory must fill for this test to test anything"

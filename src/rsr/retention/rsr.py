@@ -397,6 +397,15 @@ class RSRPolicy:
         # training loop. None until told -- see `select_eviction`.
         self._train_step: int | None = None
         self.rank_shifts = RankShiftLog()
+        # PREREG-drafter defect 5: the run-level histograms split at §3.4's
+        # boundary, so a RESULTS never mixes FIFO-warmup and scored evictions.
+        self.phase_shifts: dict[str, RankShiftLog] = {
+            "fifo_warmup": RankShiftLog(),
+            "scored": RankShiftLog(),
+        }
+        # Run-level attribution totals, kept apart from `records` so the records
+        # can be drained to disk (defect 2) without losing the counts.
+        self._attribution_totals: dict[str, int] = {}
         # ADR-0009 §1: the per-stream regression buffer, keyed by batch row (L10).
         # Detached data only -- no graph is held across the loop. Cleared in reset().
         self._mc: dict[int, list[_Obs]] = {}
@@ -574,6 +583,10 @@ class RSRPolicy:
         )
         self.records.append(record)
         self.rank_shifts.add(record)
+        self.phase_shifts["fifo_warmup" if warm else "scored"].add(record)
+        self._attribution_totals[attribution] = (
+            self._attribution_totals.get(attribution, 0) + 1
+        )
         return victim
 
     # -- bookkeeping --------------------------------------------------------- #
@@ -803,9 +816,40 @@ class RSRPolicy:
         return out
 
     def attribution_counts(self) -> dict[str, int]:
-        """How many evictions each term selected. **A run that is all
-        `fifo_warmup` is stock TG reporting itself as RSR** (gauntlet 0.2)."""
-        out: dict[str, int] = {}
-        for r in self.records:
-            out[r.attribution] = out.get(r.attribution, 0) + 1
+        """How many evictions each term selected, over the whole run (records
+        drained to disk included). **A run that is all `fifo_warmup` is stock TG
+        reporting itself as RSR** (gauntlet 0.2)."""
+        return dict(self._attribution_totals)
+
+    def attribution(self) -> dict[str, float] | None:
+        """The heartbeat's `attribution` (§3.4: per-eviction attribution from the
+        first policy run; RESEARCH-CONTEXT §10.1 defect 4): the FRACTION of this
+        stream's evictions (since the last `reset()`, i.e. one `train()` step)
+        selected by each term -- `fifo_warmup`, `psi`, `psi-nu`, `neg_age`,
+        `age_only`, ... None when the stream evicted nothing: a missing
+        measurement looks like one. `train()` called `policy.attribution()` and
+        RSRPolicy had only `attribution_counts()`, so every RSR beat said null."""
+        recs = self.records[self._diag_from :]
+        if not recs:
+            return None
+        counts: dict[str, int] = {}
+        for r in recs:
+            counts[r.attribution] = counts.get(r.attribution, 0) + 1
+        return {k: v / len(recs) for k, v in sorted(counts.items())}
+
+    def drain_records(self) -> list[EvictionRecord]:
+        """Hand over and forget every record held (PREREG-drafter defect 2).
+
+        `records` grew without bound -- ~1.5M per arm over 3000 run-1 steps --
+        and was pickled into every checkpoint. `train()` drains it to an
+        append-only file after each step, so memory and the checkpoint stay
+        bounded; `attribution_counts()` and the rank-shift logs keep the run's
+        totals. A direct caller that never drains sees today's behaviour."""
+        out, self.records = self.records, []
+        self._diag_from = 0
         return out
+
+    def phase_summary(self) -> dict[str, dict[str, Any]]:
+        """Run-level ADR-0006 / §7.1 histograms, split into FIFO-warmup and scored
+        evictions (defect 5): the two are never summed in one histogram."""
+        return {k: log.summary() for k, log in self.phase_shifts.items()}

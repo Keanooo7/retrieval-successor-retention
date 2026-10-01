@@ -34,6 +34,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
+import math
 import subprocess
 import sys
 import time
@@ -639,8 +640,94 @@ def epoch_steps(pool_documents: int | None, batch: int) -> float | None:
     return pool_documents / batch
 
 
+#: C-1 (PREREG rsr-run1 Amendment 1 A1.3): the frozen model's mode during
+#: training. "train" stays the default -- the owner may read correction 20 as
+#: requiring it even under freeze; "eval" is an option, never implied.
+FROZEN_MODEL_MODES = ("train", "eval")
+FROZEN_MODEL_MODE_RECORD = {
+    "train": "train (dropout live)",
+    "eval": "eval (dropout off)",
+}
+
 #: Every RSR step's §7.1 diagnostics, one JSON line per optimizer step (MINOR-3).
 DIAGNOSTICS_FILE = "diagnostics.jsonl"
+#: Every eviction record, drained from the policy after each step (defect 2).
+EVICTIONS_FILE = "evictions.jsonl"
+#: The order of a row in EVICTIONS_FILE (after its header line).
+EVICTION_FIELDS = (
+    "train_step",
+    "step",
+    "victim",
+    "victim_rank",
+    "rank_shift",
+    "victim_age",
+    "n_live",
+    "warm",
+    "attribution",
+    "score_margin",
+)
+#: The checkpoint `stream` key holding the sampler's generator state (defect 3).
+DATA_GENERATOR_STATE = "data_generator_state"
+#: The checkpoint `stream` key holding a pool run's permutation-epoch position.
+POOL_ORDER_STATE = "pool_order_state"
+#: What `frozen["epoch"]["sampling"]` says, per sampler.
+SAMPLING_WITH_REPLACEMENT = "with replacement (torch.randint over the pool)"
+#: PREREG Amendment 1 A1.7 item 2 fixes this string (it enters the hash).
+SAMPLING_PERMUTATION = "per-epoch permutation (each document once per epoch)"
+
+
+class PermutationEpochs:
+    """Pool-mode sampler for 31(b) (R-2 of the run-1 PREREG review): one epoch
+    is ONE PASS over the pool -- every document exactly once -- where the
+    with-replacement sampler saw about 1 - 1/e of them (~162 of 256).
+
+    The batches are consecutive slices of a sequence of permutations of
+    ``range(n)``, each drawn from the data-order generator ``gen`` when the
+    previous one is used up. ``gen`` is the only thing it draws from and no arm
+    draws from it otherwise (phi has its own, L11), so two arms at one seed see
+    one order. ``state()`` / ``load_state()`` carry the unused rest of the
+    current permutation across a checkpoint; ``gen``'s own state is saved
+    beside it (defect 3).
+    """
+
+    def __init__(self, n: int, generator: torch.Generator, device) -> None:
+        if n < 1:
+            raise ValueError(f"a pool of {n} documents has no permutation")
+        self.n, self.gen, self.device = n, generator, device
+        self.queue = torch.empty(0, dtype=torch.long, device=device)
+        self.epochs_drawn = 0
+
+    def take(self, k: int) -> torch.Tensor:
+        while self.queue.numel() < k:
+            perm = torch.randperm(self.n, generator=self.gen, device=self.device)
+            self.queue = torch.cat([self.queue, perm])
+            self.epochs_drawn += 1
+        out, self.queue = self.queue[:k], self.queue[k:]
+        return out
+
+    def state(self) -> dict[str, Any]:
+        return {"queue": self.queue.cpu(), "epochs_drawn": self.epochs_drawn}
+
+    def load_state(self, st: Mapping[str, Any]) -> None:
+        self.queue = st["queue"].to(self.device)
+        self.epochs_drawn = int(st["epochs_drawn"])
+
+
+def _drain_evictions(policy, path: Path) -> int:
+    """Append the policy's records to ``path`` and drop them from memory (defect
+    2): one header line, then one compact JSON list per eviction. Returns the
+    number written."""
+    recs = policy.drain_records()
+    new = not path.exists()
+    with open(path, "a") as fh:
+        if new:
+            fh.write(json.dumps({"fields": list(EVICTION_FIELDS)}) + "\n")
+        for r in recs:
+            fh.write(json.dumps([getattr(r, f) for f in EVICTION_FIELDS]) + "\n")
+    return len(recs)
+
+
+_STEP_RECORD_KEYS = ("run_id", "arm_label", "step", "train_step")
 
 
 def _write_step_diagnostics(path: Path, record: dict) -> None:
@@ -682,6 +769,7 @@ def arm_label(
     *,
     freeze_transformer: bool = False,
     warm_start: Mapping[str, Any] | None = None,
+    frozen_model_mode: str = "train",
 ) -> str:
     """The arm's label, derived from its overrides (ADR-0009 L12).
 
@@ -700,6 +788,8 @@ def arm_label(
     ]
     label = f"{policy_name}[{','.join(toks)}]" if toks else policy_name
     label = f"{label}+frozen" if freeze_transformer else label
+    if frozen_model_mode == "eval":
+        label = f"{label}[eval]"  # C-1: "+frozen[eval]" (PREREG A1.3 item 3)
     if warm_start is not None:
         name = Path(warm_start["checkpoint"]).name
         seed = warm_start.get("source_seed")
@@ -868,6 +958,7 @@ def train(
     policy_overrides: Mapping[str, Any] | None = None,  # ADR-0009 L12
     no_warmup_ablation: bool = False,  # ADR-0009 L12: the only t_warm override
     freeze_transformer: bool = False,  # R-2026-09-30-rsr-run-1-scope D2(b)
+    frozen_model_mode: str = "train",  # C-1: "eval" = dropout off, frozen only
     pool: DocumentPool | None = None,  # m-2: None -> documents [0, n_documents)
     warm_start: WarmStart | None = None,  # m-1: weights-only, D2(a)
 ) -> dict:
@@ -968,6 +1059,10 @@ def train(
     w_srep = (
         cfg.srep_norm_reg_weight if srep_norm_reg_weight is None else srep_norm_reg_weight
     )
+    if not (math.isfinite(w_srep) and w_srep >= 0.0):
+        # PREREG-drafter defect 4: now reachable from the CLI, so validated here,
+        # once, for both paths. It is stamped into `frozen` (and the hash) below.
+        raise ValueError(f"srep_norm_reg_weight={w_srep}: must be finite and >= 0")
 
     # Correction 31 (b), ruled 2026-09-30
     # (docs/owner/rulings/R-2026-09-30-rsr-run-1-scope.md): one epoch = one pass
@@ -1009,6 +1104,23 @@ def train(
     eval_ctx = bool(getattr(policy, "needs_eval_context", False))  # L1(a), L2
     if freeze_transformer:
         model.requires_grad_(False)  # D2(b): no L_NTP update to transformer, W_sent
+    if frozen_model_mode not in FROZEN_MODEL_MODES:
+        raise ValueError(
+            f"frozen_model_mode={frozen_model_mode!r}: one of {FROZEN_MODEL_MODES}"
+        )
+    if frozen_model_mode == "eval":
+        if not freeze_transformer:
+            raise ValueError(
+                "frozen_model_mode='eval' needs freeze_transformer=True: it would "
+                "silently remove dropout from an optimised L_NTP (PREREG rsr-run1 "
+                "Amendment 1 A1.3 item 1; correction 20)"
+            )
+        # C-1 (A1.3 item 2): after requires_grad_(False), the warm-start load and
+        # the decoy copy. Nothing in train(), run_policy_loop or the model calls
+        # `.train(`; eval_forward restores the PRIOR mode (policy_loop
+        # eval_forward's finally), so the model stays in eval for every step --
+        # tests/test_run1_ready.py checks that rather than trusting this line.
+        model.eval()
 
     # muP groups, NOT a flat AdamW: the value head lands in its OWN `value_head`
     # group (§4.3; ADR-0009 T9). One AdamW, decoupled decay, eps pinned at 1e-8
@@ -1026,6 +1138,7 @@ def train(
         policy_overrides,
         freeze_transformer=freeze_transformer,
         warm_start=ws_record,
+        frozen_model_mode=frozen_model_mode,
     )
 
     frozen = {
@@ -1064,8 +1177,9 @@ def train(
         frozen["optimizer"] = optimizer_record()
     if freeze_transformer:
         # m-4: freezing removes the UPDATE only. The model stays in train mode, so
-        # dropout is live in the training forward and in the memory writes.
-        frozen["frozen_model_mode"] = "train (dropout live)"
+        # dropout is live in the training forward and in the memory writes --
+        # unless frozen_model_mode="eval" turns it off (C-1), which this then says.
+        frozen["frozen_model_mode"] = FROZEN_MODEL_MODE_RECORD[frozen_model_mode]
     if policy_name == "rsr":
         t_warm = float(policy.config.t_warm)
         frozen["policy_overrides"] = {
@@ -1083,7 +1197,9 @@ def train(
             # m-3: the count follows the ruling (pool / batch draws), but the
             # draws are torch.randint over the pool, WITH replacement: one epoch
             # covers about 1 - 1/e of the documents, not each exactly once.
-            "sampling": "with replacement (torch.randint over the pool)",
+            "sampling": (
+                SAMPLING_PERMUTATION if pool is not None else SAMPLING_WITH_REPLACEMENT
+            ),
             "steps_per_epoch": steps_per_epoch,
             "t_warm_steps": t_warm,
             "t_warm_epochs": t_warm / steps_per_epoch,
@@ -1093,11 +1209,34 @@ def train(
     run_id = f"{policy_name}-d{d}-s{steps_per_stream}-b{batch}-{_config_hash(frozen)}"
 
     start = 0
+    resume_pool_order = None
     if resume:
         state = ck.load(
             resume, model=model, optimizer=opt, policy=policy, restore_rng=True
         )
         start = int(state.get("step", 0))
+        if stream is None:
+            # PREREG-drafter defect 3: the with-replacement sampler draws from
+            # `gen`, which the global-RNG capture does not cover. Restarted from
+            # the seed, a resumed arm re-reads step 0's batches, so a resumed FIFO
+            # arm and an uninterrupted RSR arm stop seeing the same data. A
+            # checkpoint without the state cannot resume this path at all.
+            gen_state = (state.get("stream") or {}).get(DATA_GENERATOR_STATE)
+            if gen_state is None:
+                raise ck.CheckpointError(
+                    f"resume from {resume}: the checkpoint carries no data-order "
+                    "generator state, so this sampler-path run would restart its "
+                    "batches from the seed and silently break pairing between arms. "
+                    "Refused; resume only from a checkpoint written with it."
+                )
+            gen.set_state(gen_state)
+            resume_pool_order = (state.get("stream") or {}).get(POOL_ORDER_STATE)
+            if pool is not None and resume_pool_order is None:
+                raise ck.CheckpointError(
+                    f"resume from {resume}: a pool run's checkpoint must carry its "
+                    "permutation-epoch position; without it the resumed epoch "
+                    "would not be one pass over the pool. Refused."
+                )
 
     docs = generate(
         SyntheticConfig(sentences_per_document=steps_per_stream, seed=seed, **corpus_kw)
@@ -1118,6 +1257,21 @@ def train(
         docs, vocab_map, max_tokens=max_tokens, steps=steps_per_stream
     )
     all_ids, all_mask = all_ids.to(device), all_mask.to(device)
+    # R-2 / 31(b): a pool run samples permutation epochs; the default path keeps
+    # today's with-replacement draw byte for byte (its hash and its runs are pinned).
+    pool_order = None
+    if pool is not None:
+        if pool.length % batch:
+            # PREREG Amendment 1 A1.7 item 1: an epoch is a whole number of steps,
+            # so step k reads positions pi_e[batch*(k mod E) : ... + batch].
+            raise ValueError(
+                f"pool of {pool.length} documents at batch {batch}: the permutation "
+                "pass needs pool.length % batch == 0 (one epoch = a whole number "
+                "of optimizer steps, PREREG rsr-run1 Amendment 1 A1.7)"
+            )
+        pool_order = PermutationEpochs(all_ids.shape[0], gen, device)
+        if resume_pool_order is not None:
+            pool_order.load_state(resume_pool_order)
     # S0-03: the answer-token supervision mask, for the tally only. It does NOT
     # enter the objective -- `loss` is the same next-token loss as before; the
     # answer tokens are simply now among its targets.
@@ -1197,9 +1351,14 @@ def train(
             t0 = time.time()
             tally.clear()
             if stream is None:
-                sel = torch.randint(
-                    0, all_ids.shape[0], (batch,), generator=gen, device=device
-                )
+                if pool_order is not None:
+                    sel = pool_order.take(batch)  # R-2: permutation epochs
+                    # A1.7 item 3: the documents this step reads, logged per step.
+                    step_pool_ids = (sel + pool.offset).tolist()
+                else:
+                    sel = torch.randint(
+                        0, all_ids.shape[0], (batch,), generator=gen, device=device
+                    )
                 ids, mask = all_ids[sel], all_mask[sel]
                 cur["tmask"] = all_tmask[sel]
             else:
@@ -1283,6 +1442,12 @@ def train(
                 "step": it,
             }
             rsr_beat: dict[str, Any] = {}
+            step_record: dict[str, Any] = {
+                "run_id": run_id,
+                "arm_label": label,
+                "step": it,
+                "train_step": it,
+            }
             if policy_name == "rsr":
                 # ADR-0009 §4: L_MC tagged with k and warm, so it splits at §3.4's
                 # on/off-policy boundary; mean G by t (the truncation profile);
@@ -1307,19 +1472,14 @@ def train(
                     eval_forward_s=rsr_beat["eval_forward_s"],
                     step_s=dt,
                 )
-                # Review MINOR-3: the diagnostics are computed EVERY step, so they
-                # are written every step -- to their own file -- whatever
-                # beat_every is. The beat carries the same dict on beat steps.
-                _write_step_diagnostics(
-                    out / DIAGNOSTICS_FILE,
-                    {
-                        "run_id": run_id,
-                        "arm_label": label,
-                        "step": it,
-                        "train_step": it,
-                        "diag": rsr_beat["diag"],
-                    },
-                )
+                step_record["diag"] = rsr_beat["diag"]
+            if pool_order is not None:
+                step_record["pool_doc_ids"] = step_pool_ids  # A1.7 item 3 (C-2)
+            if len(step_record) > len(_STEP_RECORD_KEYS):
+                # Review MINOR-3: computed EVERY step, so written every step -- to
+                # its own file -- whatever beat_every is (the beat carries `diag`
+                # too on beat steps). Every arm in pool mode writes its ids.
+                _write_step_diagnostics(out / DIAGNOSTICS_FILE, step_record)
             if it % beat_every == 0:
                 attr = policy.attribution() if hasattr(policy, "attribution") else None
                 hb.beat(
@@ -1355,6 +1515,11 @@ def train(
                     lr=None if opt is None else opt.param_groups[0]["lr"],
                     **rsr_beat,
                 )
+            if hasattr(policy, "drain_records"):
+                # Defect 2: after the beat read this step's attribution and
+                # diagnostics, BEFORE the checkpoint -- which then never carries
+                # the eviction history.
+                _drain_evictions(policy, out / EVICTIONS_FILE)
             if ckpt_every and (it + 1) % ckpt_every == 0:
                 ck.save(
                     out / f"ckpt-{it + 1:06d}.pt",
@@ -1370,10 +1535,20 @@ def train(
                         "config": json.loads(json.dumps(frozen, default=str)),
                         "vocab_sha256": vocab_sha256(vocab_map),
                     },
-                    **(
-                        {}
+                    stream=(
+                        # defect 3: the sampler's generator, so a resume
+                        # continues the data order instead of restarting it.
+                        {
+                            DATA_GENERATOR_STATE: gen.get_state(),
+                            "next_step": it + 1,
+                            **(
+                                {}
+                                if pool_order is None
+                                else {POOL_ORDER_STATE: pool_order.state()}
+                            ),
+                        }
                         if stream is None
-                        else {"stream": {**asdict(stream), "next_step": it + 1}}
+                        else {**asdict(stream), "next_step": it + 1}
                     ),
                 )
     except BaseException as e:
@@ -1416,8 +1591,9 @@ def train(
         # §7.1 / ADR-0009 L6 (m-8), cumulative over the run: ADR-0006's
         # displacement distribution and the victim rank/age histograms. The
         # per-step partial rho is on every beat's `diag`.
+        # Split at §3.4's boundary (defect 5): never one mixed histogram.
         "diagnostics": (
-            policy.rank_shifts.summary() if hasattr(policy, "rank_shifts") else None
+            policy.phase_summary() if hasattr(policy, "phase_summary") else None
         ),
     }
 
@@ -1642,9 +1818,24 @@ def main(argv: list[str] | None = None) -> Exit:
         help="no update to the transformer or W_sent (R-2026-09-30-rsr-run-1-scope "
         "D2(b)); recorded in the frozen config and the label",
     )
+    p.add_argument(
+        "--frozen-model-mode",
+        choices=FROZEN_MODEL_MODES,
+        default="train",
+        help="C-1: the frozen transformer's mode during training (eval = dropout "
+        "off); 'eval' needs --freeze-transformer. Recorded in the frozen config, "
+        "the hash and the label (+frozen[eval])",
+    )
     p.add_argument("--device", default="mps")
     p.add_argument("--out-dir", default="runs/dev")
     p.add_argument("--resume", default=None)
+    p.add_argument(
+        "--srep-norm-reg-weight",
+        type=float,
+        default=None,
+        help="the srep-norm hinge weight; omit for TGConfig's 0.01 (arm B trained "
+        "at 0.0). Validated and stamped into the frozen config by train()",
+    )
     # Review MINOR-7: run 1's RESULTS.md quotes ONE command. The pool and the warm
     # start are reachable from the CLI and go through the same objects train()
     # validates (DocumentPool / WarmStart), never a second parser of their own.
@@ -1684,8 +1875,10 @@ def main(argv: list[str] | None = None) -> Exit:
         policy_overrides=parse_overrides(a.policy_override) or None,
         no_warmup_ablation=a.no_warmup_ablation,
         freeze_transformer=a.freeze_transformer,
+        frozen_model_mode=a.frozen_model_mode,
         pool=pool,
         warm_start=warm,
+        srep_norm_reg_weight=a.srep_norm_reg_weight,
     )
     print(json.dumps(r, indent=2, default=str))
     # liveness-wiring: 0 live, 5 INERT, 1 inconclusive, 3 not a valid measurement.

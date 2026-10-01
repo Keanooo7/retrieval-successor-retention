@@ -419,7 +419,16 @@ def load_bytes(
 # Policy state
 # --------------------------------------------------------------------------- #
 
-_POLICY_STATE_ATTRS = ("_last_used", "records", "rank_shifts", "total", "_accum")
+_POLICY_STATE_ATTRS = (
+    "_last_used",
+    "records",
+    "rank_shifts",
+    "total",
+    "_accum",
+    # RSRPolicy's run totals, kept apart from the drained `records` (run-1 ready).
+    "phase_shifts",
+    "_attribution_totals",
+)
 """Attributes a policy may own. Enumerated rather than pickling `__dict__`, so a
 policy that grows a tensor field does not silently start carrying device state."""
 

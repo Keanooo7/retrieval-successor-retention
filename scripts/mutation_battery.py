@@ -6271,8 +6271,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the epoch's with-replacement sampling not recorded",
         "test_the_epoch_records_sampling_with_replacement",
         "src/rsr/train/loop.py",
-        '            "sampling": "with replacement (torch.randint over the pool)",\n',
-        "            # MUTATED\n",
+        # Re-anchored at R-2 (the record now names the sampler that ran).
+        "                SAMPLING_PERMUTATION if pool is not None else "
+        "SAMPLING_WITH_REPLACEMENT\n",
+        "                None  # MUTATED\n",
         "m-3: 'one pass over the pool' overstates a with-replacement epoch "
         "(about 1 - 1/e of the documents); the record must say so.",
     ),
@@ -6280,15 +6282,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the frozen model mode not recorded",
         "test_frozen_mode_records_that_dropout_stays_on",
         "src/rsr/train/loop.py",
-        '        frozen["frozen_model_mode"] = "train (dropout live)"\n',
+        # Re-anchored at C-1: the record is looked up from the mode.
+        '        frozen["frozen_model_mode"] = '
+        "FROZEN_MODEL_MODE_RECORD[frozen_model_mode]\n",
         "        pass  # MUTATED\n",
-        "m-4: freezing removes the update only; dropout stays live, and nothing "
-        "else in the config says so.",
-        off_gate_allowed=_r1_declare(
-            "the frozen warm-start test asserts the same record on a frozen arm "
-            "(KeyError 'frozen_model_mode'); one stamp, read from two frozen arms.",
-            "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
-        ),
+        "m-4 and C-1 test (f): freezing removes the update only, and the mode the "
+        "frozen model ran in -- train or eval -- must be on the record.",
     ),
     Mutation(
         "run1: no_warmup_ablation accepted on the FIFO arm",
@@ -6550,9 +6549,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the §7.1 diagnostics written on beat steps only",
         "test_the_diagnostics_are_written_every_step_whatever_beat_every",
         "src/rsr/train/loop.py",
-        "                _write_step_diagnostics(\n",
+        # Re-anchored at C-2: one per-step record carries diag and the pool ids.
+        "                _write_step_diagnostics(out / DIAGNOSTICS_FILE, step_record)\n",
         "                (it % beat_every == 0) and _write_step_diagnostics(  "
-        "# MUTATED\n",
+        "# MUTATED\n                    out / DIAGNOSTICS_FILE, step_record)\n",
         "MINOR-3: computed every step, so written every step; at beat_every > 1 "
         "partial rho for the other steps was computed and discarded.",
     ),
@@ -6572,6 +6572,203 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if (a.pool_offset is None) != (a.pool_length is None):\n",
         "    if False:  # MUTATED\n",
         "MINOR-7: a partial flag set is a usage error (exit 3), never half a pool.",
+    ),
+    # ---- PREREG-drafter defects (prereg/rsr-run1 @ 7c58777): attribution,
+    # bounded records, data-order resume, the srep flag, split histograms.
+    Mutation(
+        "run1: RSR beats carry no attribution again",
+        "test_rsr_beats_carry_the_decision_attribution",
+        "src/rsr/retention/rsr.py",
+        "    def attribution(self) -> dict[str, float] | None:\n",
+        "    def _attribution_unreached(self) -> dict[str, float] | None:  # MUTATED\n",
+        "Defect 1 (RESEARCH-CONTEXT §10.1 defect 4): train() asks "
+        "policy.attribution(); without it every RSR beat records null, against "
+        "§3.4's per-eviction attribution from the first policy run.",
+    ),
+    Mutation(
+        "run1: train() stops draining the eviction records",
+        "test_records_are_drained_and_checkpoints_stay_bounded",
+        "src/rsr/train/loop.py",
+        "                _drain_evictions(policy, out / EVICTIONS_FILE)\n",
+        "                pass  # MUTATED\n",
+        "Defect 2: ~1.5M records per run-1 arm held in memory and pickled into "
+        "every checkpoint.",
+    ),
+    Mutation(
+        "run1: drain_records keeps the records",
+        "test_records_are_drained_and_checkpoints_stay_bounded",
+        "src/rsr/retention/rsr.py",
+        "        out, self.records = self.records, []\n",
+        "        out = list(self.records)  # MUTATED\n",
+        "Defect 2: a drain that copies leaves memory and checkpoints unbounded "
+        "and writes every record again each step.",
+    ),
+    Mutation(
+        "run1: the data-order generator is not checkpointed",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        # Re-anchored at R-2 (the stream dict also carries the pool position).
+        "                            DATA_GENERATOR_STATE: gen.get_state(),\n",
+        "                            # MUTATED\n",
+        "Defect 3: without the sampler's state a resumed arm cannot continue its "
+        "data order.",
+    ),
+    Mutation(
+        "run1: the saved data-order state is not restored",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        "            gen.set_state(gen_state)\n",
+        "            pass  # MUTATED\n",
+        "Defect 3: restarted from the seed, a resumed arm re-reads step 0's "
+        "batches and stops pairing with an uninterrupted arm.",
+    ),
+    Mutation(
+        "run1: a resume without data-order state is not refused",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        "            if gen_state is None:\n",
+        "            if False:  # MUTATED\n",
+        "Defect 3: a pre-fix checkpoint must be refused with a clear message, "
+        "not resumed into a different data order.",
+    ),
+    Mutation(
+        "run1: srep_norm_reg_weight is not validated",
+        "test_srep_norm_reg_weight_is_a_validated_cli_flag",
+        "src/rsr/train/loop.py",
+        "    if not (math.isfinite(w_srep) and w_srep >= 0.0):\n",
+        "    if False:  # MUTATED\n",
+        "Defect 4: reachable from the CLI now, so a negative or non-finite "
+        "hinge weight must be refused, not trained.",
+    ),
+    Mutation(
+        "run1: the CLI drops srep_norm_reg_weight",
+        "test_srep_norm_reg_weight_is_a_validated_cli_flag",
+        "src/rsr/train/loop.py",
+        "        srep_norm_reg_weight=a.srep_norm_reg_weight,\n",
+        "        srep_norm_reg_weight=None,  # MUTATED\n",
+        "Defect 4: arm B trained at 0.0; a flag that does not reach train() "
+        "runs run 1 at 0.01 under a command that says 0.0.",
+    ),
+    Mutation(
+        "run1: the run-level histograms merge warmup and scored evictions",
+        "test_the_run_level_histograms_split_warmup_from_scored",
+        "src/rsr/retention/rsr.py",
+        '        self.phase_shifts["fifo_warmup" if warm else "scored"].add(record)\n',
+        '        self.phase_shifts["fifo_warmup"].add(record)  # MUTATED\n',
+        "Defect 5: a RESULTS must never read one histogram that mixes FIFO-warmup "
+        "and scored evictions.",
+    ),
+    # ---- run-1 PREREG review R-2 (permutation epochs) and item 7 (eval mode)
+    Mutation(
+        "run1: pool mode samples with replacement again",
+        "test_every_pool_epoch_covers_the_pool_exactly_once",
+        "src/rsr/train/loop.py",
+        "                    sel = pool_order.take(batch)  # R-2: permutation epochs\n",
+        "                    sel = torch.randint(0, all_ids.shape[0], (batch,), "
+        "generator=gen, device=device)  # MUTATED\n",
+        "R-2 / 31(b): 'one pass over the document pool: 256 documents seen'; a "
+        "with-replacement epoch sees ~162 of them.",
+    ),
+    Mutation(
+        "run1: the pool order is fixed, not drawn",
+        "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+        "src/rsr/train/loop.py",
+        "            perm = torch.randperm(self.n, generator=self.gen, "
+        "device=self.device)\n",
+        "            perm = torch.arange(self.n, device=self.device)  # MUTATED\n",
+        "R-2: the order is drawn from the data-order generator; a fixed order is "
+        "one pass but the same document sequence every epoch and every seed.",
+    ),
+    Mutation(
+        "run1: a pool resume loses its epoch position",
+        "test_a_pool_resume_continues_its_epoch",
+        "src/rsr/train/loop.py",
+        "            pool_order.load_state(resume_pool_order)\n",
+        "            pass  # MUTATED\n",
+        "R-2 with defect 3: resumed mid-epoch without its position, a run draws a "
+        "new permutation and that epoch is no longer one pass.",
+    ),
+    Mutation(
+        "run1: a pool resume without its epoch position is not refused",
+        "test_a_pool_resume_continues_its_epoch",
+        "src/rsr/train/loop.py",
+        "            if pool is not None and resume_pool_order is None:\n",
+        "            if False:  # MUTATED\n",
+        "R-2 with defect 3: a pool checkpoint without its position is refused, "
+        "not resumed into a different epoch.",
+    ),
+    Mutation(
+        "run1: frozen_model_mode eval not applied",
+        "test_c1_the_training_forward_equals_the_eval_forward",
+        "src/rsr/train/loop.py",
+        "        model.eval()\n",
+        "        pass  # MUTATED\n",
+        "C-1 test (a): an arm recorded as eval (dropout off) must not train its "
+        "memory through a dropout-live forward.",
+    ),
+    Mutation(
+        "run1: frozen eval mode leaves the blocks in train mode",
+        "test_c1_a_training_step_draws_no_global_rng",
+        "src/rsr/train/loop.py",
+        "        model.eval()\n",
+        "        model.eval()\n        model.blocks.train()  # MUTATED\n",
+        "C-1 test (b): with any dropout left live a step draws masks from the "
+        "global RNG; the top-level flag still reads eval, so (c) cannot see it.",
+    ),
+    Mutation(
+        "run1: eval_forward restores train mode, not the prior mode",
+        "test_c1_the_model_is_in_eval_mode_at_loop_end",
+        "src/rsr/model/tg/policy_loop.py",
+        "            model.train(was_training)\n",
+        "            model.train()  # MUTATED\n",
+        "C-1 test (c): the one mode switch on the training path must restore the "
+        "PRIOR mode, or a frozen eval-mode model is back in train mode from the "
+        "second sentence on.",
+    ),
+    Mutation(
+        "run1: an unknown frozen_model_mode is accepted",
+        "test_c1_eval_without_the_freeze_is_refused",
+        "src/rsr/train/loop.py",
+        "    if frozen_model_mode not in FROZEN_MODEL_MODES:\n",
+        "    if False:  # MUTATED\n",
+        "C-1 test (d): a mode that is neither train nor eval would be recorded "
+        "and labelled as if it meant something.",
+    ),
+    Mutation(
+        "run1: the eval mode is missing from the label",
+        "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+        "src/rsr/train/loop.py",
+        '        label = f"{label}[eval]"  # C-1: "+frozen[eval]" (PREREG A1.3 item 3)\n',
+        "        pass  # MUTATED\n",
+        "C-1 test (e): an eval-mode arm must not read like a train-mode one.",
+    ),
+    Mutation(
+        "run1: a pool not divisible by the batch is accepted",
+        "test_a_pool_not_divisible_by_the_batch_is_refused",
+        "src/rsr/train/loop.py",
+        "        if pool.length % batch:\n",
+        "        if False:  # MUTATED\n",
+        "C-2 (A1.7 item 1): one epoch must be a whole number of steps, or step k "
+        "no longer reads pi_e[batch*(k mod E) : ... + batch].",
+    ),
+    Mutation(
+        "run1: the per-step pool ids are not logged",
+        "test_every_pool_epoch_covers_the_pool_exactly_once",
+        "src/rsr/train/loop.py",
+        '                step_record["pool_doc_ids"] = step_pool_ids  # A1.7 item 3 '
+        "(C-2)\n",
+        "                pass  # MUTATED\n",
+        "C-2 (A1.7 item 3; A1.8 m-4 (a)): the PREREG's primary pairing check reads "
+        "the logged per-step pool ids.",
+    ),
+    Mutation(
+        "run1: frozen_model_mode eval accepted without the freeze",
+        "test_c1_eval_without_the_freeze_is_refused",
+        "src/rsr/train/loop.py",
+        '    if frozen_model_mode == "eval":\n        if not freeze_transformer:\n',
+        '    if frozen_model_mode == "eval":\n        if False:  # MUTATED\n',
+        "C-1 test (d): eval mode without the freeze would silently remove dropout "
+        "from an optimised L_NTP (A1.3 item 1; correction 20).",
     ),
 )
 

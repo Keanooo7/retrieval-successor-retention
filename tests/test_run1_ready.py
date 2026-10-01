@@ -86,6 +86,14 @@ def _spy_loop_entries(monkeypatch) -> list:
     return calls
 
 
+def _evictions(out_dir: Path) -> list[dict]:
+    """train()'s drained eviction records (EVICTIONS_FILE), as dicts."""
+    lines = (out_dir / loop.EVICTIONS_FILE).read_text().splitlines()
+    fields = json.loads(lines[0])["fields"]
+    assert fields == list(loop.EVICTION_FIELDS)
+    return [dict(zip(fields, json.loads(x), strict=True)) for x in lines[1:]]
+
+
 def _beats(out_dir: Path) -> list[dict]:
     lines = (out_dir / "heartbeat.jsonl").read_text().splitlines()
     return [r for r in map(json.loads, lines) if r.get("kind") == "beat"]
@@ -202,7 +210,6 @@ def test_the_warm_start_runs_t_warm_at_relative_steps(substrate, tmp_path, monke
     (pool 4 / batch 2). k counts from 0 AT THE WARM START: steps 0 and 1 are
     `fifo_warmup`, step 2 is scored. Counting from the source's step would start
     at k = 3 >= T_warm and skip the warmup silently (the review's m-1)."""
-    built = _spy_build_policy(monkeypatch)
     r = loop.train(
         policy_name="rsr",
         policy_overrides=OV,
@@ -214,8 +221,8 @@ def test_the_warm_start_runs_t_warm_at_relative_steps(substrate, tmp_path, monke
     assert r["config"]["warm_start"]["source_step"] == 3
     assert r["config"]["epoch"]["t_warm_steps"] == 2.0
     by_k: dict[int, set] = {}
-    for rec in built[0].records:
-        by_k.setdefault(rec.train_step, set()).add((rec.warm, rec.attribution))
+    for rec in _evictions(tmp_path):  # drained after every step (defect 2)
+        by_k.setdefault(rec["train_step"], set()).add((rec["warm"], rec["attribution"]))
     assert sorted(by_k) == [0, 1, 2]
     assert by_k[0] == {(True, "fifo_warmup")}
     assert by_k[1] == {(True, "fifo_warmup")}
@@ -668,13 +675,23 @@ def test_the_epoch_records_sampling_with_replacement(tmp_path):
 
 
 def test_frozen_mode_records_that_dropout_stays_on(tmp_path):
-    """m-4: freezing removes the update only; the record names the mode."""
+    """m-4, updated for C-1 (A1.3 test (f)): the record names the mode a frozen
+    arm ran in -- "train (dropout live)" by default, "eval (dropout off)" with
+    frozen_model_mode="eval" -- and an unfrozen arm records none."""
     kw = {**TINY, "iters": 0}
     f = loop.train(
         policy_name="fifo", freeze_transformer=True, out_dir=tmp_path / "f", **kw
     )
+    e = loop.train(
+        policy_name="fifo",
+        freeze_transformer=True,
+        frozen_model_mode="eval",
+        out_dir=tmp_path / "e",
+        **kw,
+    )
     n = loop.train(policy_name="rsr", policy_overrides=OV, out_dir=tmp_path / "n", **kw)
     assert f["config"]["frozen_model_mode"] == "train (dropout live)"
+    assert e["config"]["frozen_model_mode"] == "eval (dropout off)"
     assert "frozen_model_mode" not in n["config"]
 
 
@@ -889,8 +906,11 @@ def test_the_section_7_1_diagnostics_are_logged_every_step(tmp_path):
         assert d["n_score_samples"] == 352
         assert -1.0 <= d["partial_rho_score_age_given_content"] <= 1.0
         assert -1.0 <= d["spearman_rho_score_age"] <= 1.0
-    assert r["diagnostics"]["victim_age_distribution"] == {4: 176}
-    assert r["diagnostics"]["shift_distribution"] == {0: 176}
+    # Run level, split at §3.4's boundary (defect 5): all 176 are warmup.
+    warm, scored = r["diagnostics"]["fifo_warmup"], r["diagnostics"]["scored"]
+    assert warm["victim_age_distribution"] == {4: 176}
+    assert warm["shift_distribution"] == {0: 176}
+    assert scored["n_evictions"] == 0 and scored["victim_age_distribution"] == {}
 
 
 def test_a_directly_built_policy_collects_no_diagnostics():
@@ -1130,3 +1150,394 @@ def test_the_cli_warm_start_reaches_the_real_verification(substrate, tmp_path):
     ]  # fmt: skip
     with pytest.raises(loop.WarmStartRefused, match="caller expected"):
         loop.main(argv)
+
+
+# --------------------------------------------------------------------------- #
+# PREREG-drafter defects (prereg/rsr-run1 @ 7c58777): attribution, bounded
+# records, data-order resume, srep_norm_reg_weight flag, split histograms
+# --------------------------------------------------------------------------- #
+
+T0_ABLATION = dict(policy_overrides={**OV, "t_warm": 0.0}, no_warmup_ablation=True)
+
+
+def test_rsr_beats_carry_the_decision_attribution(tmp_path):
+    """Defect 1 (RESEARCH-CONTEXT §10.1 defect 4; §3.4 attribution from the first
+    policy run): train() called policy.attribution(), RSRPolicy had only
+    attribution_counts(), so every RSR beat said null. A scored step's beat now
+    carries the fraction per term; a warmup step's says fifo_warmup."""
+    loop.train(policy_name="rsr", out_dir=tmp_path / "s", **T0_ABLATION, **TINY)
+    loop.train(policy_name="rsr", policy_overrides=OV, out_dir=tmp_path / "w", **TINY)
+    (scored,) = _beats(tmp_path / "s")
+    (warm,) = _beats(tmp_path / "w")
+    assert scored["attribution"] == {"psi": 1.0}
+    assert warm["attribution"] == {"fifo_warmup": 1.0}
+
+
+def test_records_are_drained_and_checkpoints_stay_bounded(tmp_path, monkeypatch):
+    """Defect 2: records were kept for the whole run and pickled into every
+    checkpoint (~1.5M per run-1 arm). Drained after each step to
+    evictions.jsonl: the policy holds none, no checkpoint carries any, and a
+    checkpoint 2 steps later is the same size within a few hundred bytes
+    (176 more records would add tens of kB)."""
+    built = _spy_build_policy(monkeypatch)
+    loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        out_dir=tmp_path,
+        **{**TINY, "iters": 3, "ckpt_every": 1},
+    )
+    pol = built[0]
+    assert pol.records == []
+    assert pol.attribution_counts() == {"fifo_warmup": 3 * 88}
+    assert len(_evictions(tmp_path)) == 3 * 88
+    paths = [sorted(tmp_path.rglob(f"ckpt-00000{k}.pt"))[0] for k in (1, 3)]
+    for path in paths:
+        payload = torch.load(path, map_location="cpu", weights_only=False)
+        assert payload["policy"]["records"] == []
+    s1, s3 = (path.stat().st_size for path in paths)
+    assert abs(s3 - s1) < 1000, (s1, s3)
+
+
+def test_a_resumed_sampler_run_continues_the_data_order(tmp_path, monkeypatch):
+    """Defect 3: the sampler's generator was not checkpointed, so a resumed arm
+    re-read step 0's batches and silently stopped pairing with an uninterrupted
+    arm. Saved and restored, a resume from step 2 sees steps 2 and 3 of the
+    uninterrupted run; a checkpoint without it is refused."""
+    calls = _spy_loop_entries(monkeypatch)
+    kw = {**TINY, "iters": 4, "ckpt_every": 2}
+    loop.train(policy_name="fifo", out_dir=tmp_path / "full", **kw)
+    (found,) = sorted((tmp_path / "full").rglob("ckpt-000002.pt"))
+    ck2 = Path(shutil.copy2(found, tmp_path / "ck2.pt"))
+    loop.train(policy_name="fifo", out_dir=tmp_path / "res", resume=str(ck2), **kw)
+    full, res = calls[:4], calls[4:]
+    assert len(res) == 2
+    assert not torch.equal(full[0]["ids"], full[2]["ids"])  # non-vacuous
+    for a, b in zip(full[2:], res, strict=True):
+        assert torch.equal(a["ids"], b["ids"])
+    payload = torch.load(ck2, map_location="cpu", weights_only=False)
+    del payload["stream"][loop.DATA_GENERATOR_STATE]
+    torch.save(payload, tmp_path / "old.pt")
+    with pytest.raises(loop.ck.CheckpointError, match="data-order generator state"):
+        loop.train(
+            policy_name="fifo",
+            out_dir=tmp_path / "old",
+            resume=str(tmp_path / "old.pt"),
+            **kw,
+        )
+
+
+def test_srep_norm_reg_weight_is_a_validated_cli_flag(tmp_path, monkeypatch):
+    """Defect 4: arm B trained at srep_norm_reg_weight 0.0; run 1 must be able
+    to say so in its one command. The flag reaches train(), which validates it
+    and stamps it into the frozen config, hence the hash."""
+    a = loop.train(
+        out_dir=tmp_path / "a", srep_norm_reg_weight=0.0, **{**TINY, "iters": 0}
+    )
+    b = loop.train(out_dir=tmp_path / "b", **{**TINY, "iters": 0})
+    assert a["config"]["srep_norm_reg_weight"] == 0.0
+    assert b["config"]["srep_norm_reg_weight"] == 0.01
+    assert a["config_hash"] != b["config_hash"]
+    with pytest.raises(ValueError, match="srep_norm_reg_weight"):
+        loop.train(out_dir=tmp_path / "c", srep_norm_reg_weight=-1.0, **TINY)
+    seen: dict = {}
+    monkeypatch.setattr(
+        "rsr.train.loop.train",
+        lambda **kw: seen.update(kw) or {"run_id": "x", "liveness": {"band": "live"}},
+    )
+    assert loop.main(["--out-dir", str(tmp_path), "--srep-norm-reg-weight", "0"]) == 0
+    assert seen["srep_norm_reg_weight"] == 0.0
+    seen.clear()
+    assert loop.main(["--out-dir", str(tmp_path)]) == 0
+    assert seen["srep_norm_reg_weight"] is None
+
+
+def test_the_run_level_histograms_split_warmup_from_scored(tmp_path):
+    """Defect 5: pool 4 / batch 2 -> T_warm = 2 steps, so of 3 steps x 88
+    evictions, 176 are FIFO warmup (all age 4, rank 1, displacement 0) and 88
+    are scored. The two are reported apart and sum to the run's 264."""
+    r = loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        pool=SMALL_POOL,
+        out_dir=tmp_path,
+        **{**TINY, "iters": 3},
+    )
+    warm, scored = r["diagnostics"]["fifo_warmup"], r["diagnostics"]["scored"]
+    assert warm["n_evictions"] == 176 and scored["n_evictions"] == 88
+    assert warm["victim_age_distribution"] == {4: 176}
+    assert warm["shift_distribution"] == {0: 176}
+    assert sum(scored["victim_rank_distribution"].values()) == 88
+
+
+# --------------------------------------------------------------------------- #
+# Run-1 PREREG review R-2 (31(b): one pass over the pool) and item 7 (eval mode)
+# --------------------------------------------------------------------------- #
+
+
+def _pool_indices(pool: loop.DocumentPool, ids: torch.Tensor, seed: int = 0) -> list[int]:
+    """Which pool documents a batch is: each row of ``ids`` matched against the
+    pool's own encoding (documents are generated by id, so rows are distinct)."""
+    vocab = loop.build_vocab(
+        loop.generate(loop.SyntheticConfig(sentences_per_document=48, seed=seed))
+    )
+    enc, _ = loop.encode(
+        loop.pool_documents(
+            pool, loop.SyntheticConfig(sentences_per_document=48, seed=seed)
+        ),
+        vocab,
+        max_tokens=TINY["max_tokens"],
+        steps=48,
+    )
+    out = []
+    for row in ids:
+        (hit,) = [j for j in range(enc.shape[0]) if torch.equal(enc[j], row.cpu())]
+        out.append(hit)
+    return out
+
+
+def _step_records(out_dir: Path) -> list[dict]:
+    return [
+        json.loads(x) for x in (out_dir / loop.DIAGNOSTICS_FILE).read_text().splitlines()
+    ]
+
+
+def test_every_pool_epoch_covers_the_pool_exactly_once(tmp_path, monkeypatch):
+    """R-2 / C-2 (A1.7): an epoch is one pass over the pool. Pool 4, batch 2:
+    epochs are steps (0, 1) and (2, 3), each reading the 4 documents exactly
+    once. The documents read are logged every step (A1.7 item 3) and match the
+    batches the loop actually received."""
+    calls = _spy_loop_entries(monkeypatch)
+    pool = loop.DocumentPool(offset=300, length=4)
+    r = loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        pool=pool,
+        out_dir=tmp_path,
+        **{**TINY, "iters": 4},
+    )
+    assert r["config"]["epoch"]["sampling"] == (
+        "per-epoch permutation (each document once per epoch)"
+    )
+    logged = [rec["pool_doc_ids"] for rec in _step_records(tmp_path)]
+    seen = [[300 + j for j in _pool_indices(pool, c["ids"])] for c in calls]
+    assert logged == seen
+    for e in range(2):
+        epoch = logged[2 * e] + logged[2 * e + 1]
+        assert sorted(epoch) == [300, 301, 302, 303], logged
+
+
+def test_a_pool_not_divisible_by_the_batch_is_refused(tmp_path):
+    """A1.7 item 1: one epoch must be a whole number of optimizer steps."""
+    with pytest.raises(ValueError, match=r"pool.length % batch == 0"):
+        loop.train(pool=loop.DocumentPool(offset=300, length=5), out_dir=tmp_path, **TINY)
+
+
+def test_with_replacement_is_reachable_only_outside_pool_mode(tmp_path):
+    """A1.7 test 4: the default path keeps its with-replacement sampler (and its
+    pinned hash); a pool run never reports or uses it."""
+    kw = {**TINY, "iters": 0}
+    d = loop.train(policy_name="rsr", policy_overrides=OV, out_dir=tmp_path / "d", **kw)
+    q = loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        pool=SMALL_POOL,
+        out_dir=tmp_path / "q",
+        **kw,
+    )
+    assert d["config"]["epoch"]["sampling"] == loop.SAMPLING_WITH_REPLACEMENT
+    assert q["config"]["epoch"]["sampling"] == loop.SAMPLING_PERMUTATION
+
+
+def test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed(
+    tmp_path, monkeypatch
+):
+    """R-2: the order comes from the data-order generator only, so a FIFO and an
+    RSR arm at one seed see one order (the pairing E3's arms rely on), and
+    another seed draws another order (it is drawn, not fixed)."""
+    calls = _spy_loop_entries(monkeypatch)
+    pool = loop.DocumentPool(offset=300, length=8)
+    kw = {**TINY, "iters": 4}
+    loop.train(policy_name="fifo", pool=pool, out_dir=tmp_path / "f", **kw)
+    loop.train(
+        policy_name="rsr", policy_overrides=OV, pool=pool, out_dir=tmp_path / "r", **kw
+    )
+    loop.train(
+        policy_name="fifo", pool=pool, out_dir=tmp_path / "s1", **{**kw, "seed": 1}
+    )
+    fifo, rsr, s1 = calls[:4], calls[4:8], calls[8:]
+    for a, b in zip(fifo, rsr, strict=True):
+        assert torch.equal(a["ids"], b["ids"])
+    # A1.8 m-4 (a): the LOGGED per-step pool ids are identical across the arms.
+    ids_f = [x["pool_doc_ids"] for x in _step_records(tmp_path / "f")]
+    ids_r = [x["pool_doc_ids"] for x in _step_records(tmp_path / "r")]
+    assert ids_f == ids_r and len(ids_f) == 4
+    order0 = [j for c in fifo for j in _pool_indices(pool, c["ids"])]
+    order1 = [j for c in s1 for j in _pool_indices(pool, c["ids"], seed=1)]
+    assert sorted(order0) == sorted(order1) == list(range(8))
+    assert order0 != order1
+
+
+def test_a_pool_resume_continues_its_epoch(tmp_path, monkeypatch):
+    """R-2 with defect 3: resumed mid-epoch, a pool run finishes the SAME
+    permutation (its unused rest is in the checkpoint); a pool checkpoint
+    without that position is refused."""
+    calls = _spy_loop_entries(monkeypatch)
+    pool = loop.DocumentPool(offset=300, length=4)
+    kw = {**TINY, "iters": 4, "ckpt_every": 1}
+    loop.train(policy_name="fifo", pool=pool, out_dir=tmp_path / "full", **kw)
+    (found,) = sorted((tmp_path / "full").rglob("ckpt-000001.pt"))
+    ck1 = Path(shutil.copy2(found, tmp_path / "ck1.pt"))
+    loop.train(
+        policy_name="fifo", pool=pool, out_dir=tmp_path / "res", resume=str(ck1), **kw
+    )
+    full, res = calls[:4], calls[4:]
+    assert len(res) == 3
+    for a, b in zip(full[1:], res, strict=True):
+        assert torch.equal(a["ids"], b["ids"])
+    payload = torch.load(ck1, map_location="cpu", weights_only=False)
+    del payload["stream"][loop.POOL_ORDER_STATE]
+    torch.save(payload, tmp_path / "old.pt")
+    with pytest.raises(loop.ck.CheckpointError, match="permutation-epoch position"):
+        loop.train(
+            policy_name="fifo",
+            pool=pool,
+            out_dir=tmp_path / "old",
+            resume=str(tmp_path / "old.pt"),
+            **kw,
+        )
+
+
+def _srep_spy(monkeypatch) -> list:
+    """Every forward's srep, in call order, from the FIRST TGModel train()
+    builds -- the trained one; the liveness measurement's later models are not
+    watched."""
+    sreps, real, built = [], loop.TGModel, []
+
+    def build(cfg):
+        m = real(cfg)
+        built.append(m)
+        if len(built) > 1:
+            return m
+        fwd = m.forward
+
+        def forward(*a, **k):
+            out = fwd(*a, **k)
+            sreps.append(out.srep.detach().clone())
+            return out
+
+        m.forward = forward
+        return m
+
+    monkeypatch.setattr(loop, "TGModel", build)
+    return sreps
+
+
+C1 = dict(policy_overrides=OV, freeze_transformer=True, frozen_model_mode="eval")
+
+
+def test_c1_the_training_forward_equals_the_eval_forward(tmp_path, monkeypatch):
+    """C-1 test (a): in frozen eval mode the training forward's srep equals the
+    eval forward's (L1(a)) bitwise at every sentence step -- one dropout-free
+    model. In the default train mode they differ (dropout live)."""
+    sreps = _srep_spy(monkeypatch)
+    loop.train(policy_name="rsr", out_dir=tmp_path / "e", **C1, **TINY)
+    n = len(sreps)
+    assert n == 2 * TINY["steps_per_stream"]  # training + eval forward per step
+    for t in range(0, n, 2):
+        assert torch.equal(sreps[t], sreps[t + 1]), t
+    sreps = _srep_spy(monkeypatch)  # a fresh spy: watch the next run's model
+    loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        freeze_transformer=True,
+        out_dir=tmp_path / "t",
+        **TINY,
+    )
+    assert len(sreps) == n  # non-vacuous: the contrast run was watched
+    assert any(not torch.equal(sreps[t], sreps[t + 1]) for t in range(0, n, 2))
+
+
+def test_c1_a_training_step_draws_no_global_rng(tmp_path, monkeypatch):
+    """C-1 test (b): no dropout mask is drawn, so the global RNG state is the
+    same after a full training step as before it. In train mode it moves."""
+    states: list = []
+    real = loop.run_policy_loop
+
+    def spy(*a, **k):
+        states.append(torch.get_rng_state().clone())
+        out = real(*a, **k)
+        states.append(torch.get_rng_state().clone())
+        return out
+
+    monkeypatch.setattr(loop, "run_policy_loop", spy)
+    loop.train(policy_name="rsr", out_dir=tmp_path / "e", **C1, **TINY)
+    assert torch.equal(states[0], states[1])
+    states.clear()
+    loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        freeze_transformer=True,
+        out_dir=tmp_path / "t",
+        **TINY,
+    )
+    assert not torch.equal(states[0], states[1])
+
+
+def test_c1_the_model_is_in_eval_mode_at_loop_end(tmp_path, monkeypatch):
+    """C-1 test (c): eval_forward restores the PRIOR mode, and nothing else
+    calls .train(, so the model is still in eval mode after every step."""
+    modes: list = []
+    real = loop.run_policy_loop
+
+    def spy(model, *a, **k):
+        out = real(model, *a, **k)
+        modes.append(model.training)
+        return out
+
+    monkeypatch.setattr(loop, "run_policy_loop", spy)
+    loop.train(policy_name="rsr", out_dir=tmp_path, **C1, **{**TINY, "iters": 2})
+    assert modes == [False, False]
+
+
+def test_c1_eval_without_the_freeze_is_refused(tmp_path):
+    """C-1 test (d): eval mode would silently remove dropout from an optimised
+    L_NTP; an unknown mode is refused too."""
+    with pytest.raises(ValueError, match="needs freeze_transformer=True"):
+        loop.train(frozen_model_mode="eval", out_dir=tmp_path, **TINY)
+    with pytest.raises(ValueError, match="frozen_model_mode='dropout'"):
+        loop.train(
+            freeze_transformer=True,
+            frozen_model_mode="dropout",
+            out_dir=tmp_path,
+            **TINY,
+        )
+
+
+def test_c1_the_mode_is_in_frozen_the_hash_and_the_label(tmp_path, monkeypatch):
+    """C-1 test (e): "eval (dropout off)" in frozen, a different hash from the
+    train-mode arm, "+frozen[eval]" in the label; the CLI flag reaches train()."""
+    kw = {**TINY, "iters": 0}
+    e = loop.train(policy_name="rsr", out_dir=tmp_path / "e", **C1, **kw)
+    t = loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        freeze_transformer=True,
+        out_dir=tmp_path / "t",
+        **kw,
+    )
+    assert e["config"]["frozen_model_mode"] == "eval (dropout off)"
+    assert e["config_hash"] != t["config_hash"]
+    assert e["arm_label"].endswith("+frozen[eval]")
+    assert t["arm_label"].endswith("+frozen")
+    seen: dict = {}
+    monkeypatch.setattr(
+        "rsr.train.loop.train",
+        lambda **k: seen.update(k) or {"run_id": "x", "liveness": {"band": "live"}},
+    )
+    argv = ["--out-dir", str(tmp_path), "--freeze-transformer"]
+    assert loop.main([*argv, "--frozen-model-mode", "eval"]) == 0
+    assert seen["frozen_model_mode"] == "eval" and seen["freeze_transformer"] is True
+    assert loop.main(argv) == 0 and seen["frozen_model_mode"] == "train"
+    with pytest.raises(SystemExit) as ex:
+        loop.main([*argv, "--frozen-model-mode", "off"])
+    assert ex.value.code == 3
