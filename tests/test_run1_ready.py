@@ -98,19 +98,18 @@ def _beats(out_dir: Path) -> list[dict]:
 
 @pytest.fixture(scope="module")
 def substrate(tmp_path_factory) -> dict:
-    """A miniature `~/rsr-substrate`: FIFO checkpoints at steps 2 and 3, an RSR
-    checkpoint, and `MANIFEST.sha256` whose paths are relative to `root`."""
+    """A miniature `~/rsr-substrate`: FIFO checkpoints at steps 2 and 3, a
+    non-FIFO checkpoint, and `MANIFEST.sha256` whose paths are relative to `root`.
+
+    Only a FIFO arm is trained. The non-FIFO source is the step-2 FIFO payload
+    with its policy name rewritten to "rsr" -- all the refusal reads -- so no
+    warm-start test depends on the RSR arm building (a mutation of the RSR path
+    would otherwise error every test that uses this fixture)."""
     root = tmp_path_factory.mktemp("substrate")
     loop.train(
         policy_name="fifo",
         out_dir=root / "runs" / "fifo",
         **{**TINY, "iters": 3, "ckpt_every": 1},
-    )
-    loop.train(
-        policy_name="rsr",
-        policy_overrides=OV,
-        out_dir=root / "runs" / "rsr",
-        **{**TINY, "iters": 1, "ckpt_every": 1},
     )
     # A tiny run may measure INERT and quarantine its checkpoints
     # (R-2026-09-22-inert-checkpoint-quarantine), which `ck.load` then refuses.
@@ -125,7 +124,10 @@ def substrate(tmp_path_factory) -> dict:
 
     fifo3 = pick("fifo", "ckpt-000003.pt")
     fifo2 = pick("fifo", "ckpt-000002.pt")
-    rsr1 = pick("rsr", "ckpt-000001.pt")
+    payload = torch.load(fifo2, map_location="cpu", weights_only=False)
+    payload["policy"] = {**payload["policy"], "__policy_name__": "rsr"}
+    rsr1 = src / "rsr-ckpt-000002.pt"
+    torch.save(payload, rsr1)
     manifest = root / "MANIFEST.sha256"
     manifest.write_text(
         "".join(
