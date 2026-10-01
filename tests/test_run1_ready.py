@@ -1593,7 +1593,10 @@ def test_a_resume_into_a_dir_with_later_rows_is_refused(tmp_path):
     part = tmp_path / "part"
     loop.train(out_dir=part, **arm, **{**kw, "iters": 2})
     (found,) = sorted(part.rglob("ckpt-000002.pt"))
-    loop.train(out_dir=part, resume=str(found), **arm, **kw)
+    # Copied out, so a tiny run that measures INERT (its checkpoints then sit
+    # under quarantine/) cannot turn this into a quarantine test.
+    part2 = Path(shutil.copy2(found, tmp_path / "part2.pt"))
+    loop.train(out_dir=part, resume=str(part2), **arm, **kw)
     assert [x["step"] for x in _step_records(part)] == [0, 1, 2, 3]
 
 
