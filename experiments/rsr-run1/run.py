@@ -1,16 +1,17 @@
 """RSR run 1 -- the measurement harness (PREREG `experiments/rsr-run1/PREREG.md`, T3).
 
 Pre-registration: every layer of the PREREG -- base (`7c58777`), Amendment 1 (`6a4c5a8`),
-2 (`7fcd3f9`), 3 (`58a9216`), 3b (`7196a52`), 3c (`34f495f`) and 3d (`fe0e01f`),
+2 (`7fcd3f9`), 3 (`58a9216`), 3b (`7196a52`), 3c (`34f495f`), 3d (`fe0e01f`) and 4
+(`43de9f5`),
 reviewed at `787875b`, `c02cae7`, `7f7e2ad`, `3ef97c8`, `33ce631`, `de8f813` and `b543e96`
 (``PREREG_COMMITS`` /
-``REVIEW_COMMITS``; Amendment 4, the owner values, is added there when it lands).
+``REVIEW_COMMITS``; A4's review is added when it lands).
 **Descriptive. No gate, no pass/fail threshold.** The controls decide only whether the
 run is readable; every contrast is read only as "CI above 0", "CI below 0" or "CI
 includes 0".
 
 The launch is NOT here: it is `experiments/rsr-run1/launch_run1.zsh`, committed
-byte-identical to the launcher under ``LAUNCHER_HEADING`` (A3c.1, version 5; a test pins
+byte-identical to the launcher under ``LAUNCHER_HEADING`` (A4.3, version 6; a test pins
 it), run inside tmux (A3.8). This file:
 
 * ``--preflight`` (A1.2 step 2, A1.8 m-3): C0 for seeds 0-2 before any model loads; the
@@ -92,8 +93,8 @@ EXPERIMENT = "experiments/rsr-run1/run.py"
 LAUNCHER = "experiments/rsr-run1/launch_run1.zsh"
 RUN_ID = "rsr-run1"
 PREREG = "experiments/rsr-run1/PREREG.md"
-#: Every PREREG layer that governs the run (review 6267fd645698 MINOR-6). Amendment 4 (the
-#: owner values) is added here when it lands.
+#: Every PREREG layer that governs the run (review 6267fd645698 MINOR-6), through
+#: Amendment 4 (the owner values, the step-160 reading, launcher v6).
 PREREG_COMMITS = {
     "base": "7c58777",
     "A1": "6a4c5a8",
@@ -102,6 +103,7 @@ PREREG_COMMITS = {
     "A3b": "7196a52",
     "A3c": "34f495f",
     "A3d": "fe0e01f",
+    "A4": "43de9f5",
 }
 REVIEW_COMMITS = (
     "787875b",
@@ -262,12 +264,12 @@ def derive_ckpt(steps: int) -> int:
     return steps // 3 if steps > 0 and steps % 3 == 0 else steps
 
 
-#: A4.2 (the owner's ruling, "take the recommendations"): a DIAGNOSTIC held-out phi
-#: reading at step 160 -- never the headline, never gated. TO-CONFIRM against A4.2's text.
+#: A4.2 (R-2026-10-01-rsr-run-1-owner-values, "take the recomendations"): a DIAGNOSTIC
+#: held-out phi reading at step 160 -- never the headline, never gated (launcher v6's
+#: DIAG_STEP=160).
 DIAG_STEP = 160
-#: Launcher v6's recorded rule for the file cadence (`ckpt_every_rule`), verbatim.
-#: TO-CONFIRM: filled from the v6 text when the drafter commits it.
-EVERY_RULE = "TO-CONFIRM (launcher v6)"
+#: Launcher v6's recorded rule for the file cadence (`ckpt_every_rule`), verbatim (A4.3).
+EVERY_RULE = "gcd(160, CKPT) if STEPS>=160 and CKPT>0 else CKPT (A4.2)"
 
 
 def derive_every(steps: int, ckpt: int, diag: int = DIAG_STEP) -> int:
@@ -355,25 +357,26 @@ class Run1Config:
     prereg_strict: bool = True
 
     @property
-    def ckpt_every(self) -> int:
-        """CKPT (A1.8 m-9): the snapshot cadence. Not the file cadence under v6."""
+    def ckpt(self) -> int:
+        """CKPT (A1.8 m-9): the snapshot cadence, CKPT and 2 CKPT."""
         return derive_ckpt(self.iters)
 
     @property
-    def file_every(self) -> int:
-        """ADAPTER (launcher v6, A4.2): the `--ckpt-every` the arms run -- EVERY under
-        v6, CKPT under v5 (`LAUNCHER_V6`)."""
+    def ckpt_every(self) -> int:
+        """A4.4 item 2: the `--ckpt-every` the arms run -- EVERY = gcd(160, CKPT) when
+        STEPS >= 160 and CKPT > 0, else CKPT (launcher v6, A4.3). Under a v5 heading
+        (`LAUNCHER_V6` False) it is CKPT."""
         if LAUNCHER_V6:
-            return derive_every(self.iters, self.ckpt_every, self.diag_step)
-        return self.ckpt_every
+            return derive_every(self.iters, self.ckpt, self.diag_step)
+        return self.ckpt
 
     @property
     def checkpoint_files(self) -> list[int]:
         """Every checkpoint step the arms write: EVERY, 2 EVERY, ..., iters. None at
         STEPS = 0 (CKPT = 0: the only dry run the launcher allows, A3c.1)."""
-        if self.file_every <= 0:
+        if self.ckpt_every <= 0:
             return []
-        return list(range(self.file_every, self.iters + 1, self.file_every))
+        return list(range(self.ckpt_every, self.iters + 1, self.ckpt_every))
 
     @property
     def diag(self) -> int | None:
@@ -387,9 +390,9 @@ class Run1Config:
     def snapshots(self) -> list[int]:
         """The held-out reading steps: CKPT, 2 CKPT, ..., iters (A1.8 m-9), plus the
         DIAGNOSTIC step (A4.2) when there is one. Sorted, distinct."""
-        if self.ckpt_every <= 0:
+        if self.ckpt <= 0:
             return []
-        out = set(range(self.ckpt_every, self.iters + 1, self.ckpt_every))
+        out = set(range(self.ckpt, self.iters + 1, self.ckpt))
         if self.diag is not None:
             out.add(self.diag)
         return sorted(out)
@@ -427,7 +430,7 @@ def prereg_config(seed: int, iters: int) -> Run1Config:
 
 def validate_owner_values(ov: OwnerValues, *, dry_run: bool = False) -> None:
     """Refuse anything not ruled, or that the code would not actually run (A2.5).
-    ``dry_run`` admits STEPS = 0, which is the only dry run launcher v5 allows (A3c.1;
+    ``dry_run`` admits STEPS = 0, which is the only dry run the launcher allows (A3c.1;
     review 6267fd645698 MINOR-4); a real run needs STEPS >= 1."""
     for name in ("gamma", "phi_weight_decay", "iters", "o5", "seeds"):
         if getattr(ov, name, None) is None:
@@ -499,9 +502,9 @@ def code_phi_weight_decay() -> float:
 
 
 def cli_argv(cfg: Run1Config, arm: str, owner: OwnerValues, out_dir: Path) -> list[str]:
-    """ADAPTER (flags, T1, T17): one arm's command, exactly as launcher v5 builds it (a
-    test compares the two token by token), including A3c.1's `--srep-norm-reg-weight
-    0.0` after the C-1 / C-3 flags."""
+    """ADAPTER (flags, T1, T17, T19): one arm's command, exactly as launcher v6 builds
+    it (a test compares the two token by token): `--ckpt-every EVERY` (A4.3) and A3c.1's
+    `--srep-norm-reg-weight 0.0` after the C-1 / C-3 flags."""
     s = cfg.substrate
     rsr = [
         "--policy",
@@ -545,7 +548,7 @@ def cli_argv(cfg: Run1Config, arm: str, owner: OwnerValues, out_dir: Path) -> li
         "--beat-every",
         str(cfg.beat_every),
         "--ckpt-every",
-        str(cfg.file_every),
+        str(cfg.ckpt_every),
         "--device",
         cfg.device,
         "--freeze-transformer",
@@ -909,7 +912,7 @@ def env_problems(env: dict[str, str | None], *, dry_run: bool) -> list[str]:
 
 #: T14: the PREREG heading the committed launcher is extracted from. Switching launcher
 #: versions is this one line (and the expected sha in the test).
-LAUNCHER_HEADING = "### A3c.1 Launcher, version 5"
+LAUNCHER_HEADING = "### A4.3 Launcher, version 6"
 #: Launcher v6 (A4.2) passes `--ckpt-every $EVERY` and records `ckpt_every`,
 #: `ckpt_every_rule` and `diag_step`; it follows from the heading, never set apart.
 LAUNCHER_V6 = "version 6" in LAUNCHER_HEADING
@@ -1191,7 +1194,7 @@ def preflight(*, dry_run: bool = False, environ=None) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# The direct launch (tests ONLY -- the real launch and its dry run are launcher v5)
+# The direct launch (tests ONLY -- the real launch and its dry run are launcher v6)
 # --------------------------------------------------------------------------- #
 
 
@@ -1249,7 +1252,7 @@ def launch_direct(
                 "wd": repr(owner.phi_weight_decay),
                 "steps": str(owner.iters),
                 "ckpt": str(derive_ckpt(owner.iters)),
-                "ckpt_every": str(cfgs[0].file_every),
+                "ckpt_every": str(cfgs[0].ckpt_every),
                 "ckpt_every_rule": EVERY_RULE,
                 "diag_step": str(cfgs[0].diag_step),
                 "o5": owner.o5,
@@ -2075,6 +2078,10 @@ def c10_launch_values(
         )
     if cfg.prereg_strict:
         want(
+            cfg.diag_step == DIAG_STEP,
+            f"diagnostic step {cfg.diag_step} is not A4.2's {DIAG_STEP}",
+        )
+        want(
             cfg.owner_prereg == PREREG,
             f"owner values read from {cfg.owner_prereg!r}, not the PREREG {PREREG}",
         )
@@ -2512,12 +2519,16 @@ def analyse_heldout(out_dir: Path, cfg: Run1Config, passes) -> dict:
 
 
 DIAG_LABEL = "DIAGNOSTIC (A4.2): never the headline, never gated"
+#: A4.2: the §7.1 contrasts read at step 160 -- accuracy (every bucket) and both NLLs.
+DIAG_CONTRASTS = {k: CONTRASTS[k] for k in ("psiC_minus_fifo", "age_minus_fifo",
+                                           "psiC_minus_age")}  # fmt: skip
 
 
 def diagnostic_contrasts(recs: dict, d: int, W: torch.Tensor, buckets: dict) -> dict:
-    """A4.2: the §7.1 contrast set at the DIAGNOSTIC step d -- psiC and age read from
-    their step-d phi (`psiC@d`, `age@d`, their floors `sz_psiC@d`, `sz_age@d`); fifo,
-    LRU and sz_fifo from the final reading, which phi does not touch. The same EVAL
+    """A4.2: the contrasts at the DIAGNOSTIC step d -- psiC@d - fifo, age@d - fifo and
+    psiC@d - age@d for accuracy (every bucket) and both NLLs; R for psiC@d and age@d
+    (against sz_fifo, and against each arm's own step-d floor `sz_<arm>@d`). fifo and
+    sz_fifo come from the final reading, which phi does not touch. The same EVAL
     documents and bootstrap draw as the final reading. No oracle-derived number."""
     at = {"psiC": f"psiC@{d}", "age": f"age@{d}"}
 
@@ -2530,7 +2541,7 @@ def diagnostic_contrasts(recs: dict, d: int, W: torch.Tensor, buckets: dict) -> 
     for bname in BUCKET_NAMES:
         per = {n: answer_counts(rs, buckets[bname]) for n, rs in recs.items()}
         out["accuracy"][bname] = {n: level(per[n], W) for n in lv_names}
-        for cname, (a, b) in CONTRASTS.items():
+        for cname, (a, b) in DIAG_CONTRASTS.items():
             con[f"acc.{bname}.{cname}"] = contrast(per, m(a), m(b), W)
         if bname == "gap_2_to_M":
             for arm in RSR_ARMS:
@@ -2541,7 +2552,7 @@ def diagnostic_contrasts(recs: dict, d: int, W: torch.Tensor, buckets: dict) -> 
     for kind in ("real", "answer"):
         per = {n: loss_counts(rs, kind) for n, rs in recs.items()}
         out["nll"][kind] = {n: level(per[n], W) for n in lv_names}
-        for cname, (a, b) in CONTRASTS.items():
+        for cname, (a, b) in DIAG_CONTRASTS.items():
             con[f"nll_{kind}.{cname}"] = contrast(per, m(a), m(b), W)
     out["contrasts"] = con
     return out
@@ -2675,7 +2686,15 @@ def analyse_training(
     for a, hb in hbs.items():
         el = [b["elapsed_s"] for b in hb["beats"]]
         out["step_s"][a] = _summary([y - x for x, y in itertools.pairwise(el)])
-    out["diagnostics"] = {}
+    out["diagnostics"] = recency_diagnostics(diags, cfg)
+    return out
+
+
+def recency_diagnostics(diags: dict[str, list[dict]], cfg: Run1Config) -> dict:
+    """§7.4's recency statistics (DIAGNOSTIC), per RSR arm, split warm / scored, plus
+    A1.8 m-2's first scored block beside uniform random, over the step rows given."""
+    tw = cfg.t_warm_steps
+    out: dict[str, Any] = {"diagnostics": {}}
     for a, rows in diags.items():
         out["diagnostics"][a] = {}
         lo = math.ceil(tw)
@@ -2716,7 +2735,7 @@ def analyse_training(
                 row["uniform_random_expected"] = {k: tot / m for k in range(m)}
                 row["steps"] = [lo, lo + FIRST_SCORED_STEPS]
             out["diagnostics"][a][phase] = row
-    return out
+    return out["diagnostics"]
 
 
 # --------------------------------------------------------------------------- #
@@ -3015,6 +3034,16 @@ def measure_seed(
         )
         for a in RSR_ARMS
     }
+    if cfg.diag is not None:  # A4.2: the step-160 recency statistics, steps < d
+        d = cfg.diag
+        doc["training"]["diagnostic_step"] = {
+            "step": d,
+            "label": DIAG_LABEL,
+            "steps_read": [0, d],
+            "diagnostics": recency_diagnostics(
+                {a: [r for r in rows if r["step"] < d] for a, rows in diags.items()}, cfg
+            ),
+        }
     doc["epoch"] = {a: results[a]["config"].get("epoch") for a in RSR_ARMS}
     failed = [k for k, v in doc["controls"].items() if v.get("ok") is not True]
     if failed:
@@ -3172,9 +3201,14 @@ def write_run_ledger(run: dict, docs: list[dict], out_root: Path) -> Path:
             unread = not d.get("oracle_numbers_read", True) and _oracle_derived(key)
             if unread:
                 how = f"NOT READ (C9/C9b failed, A3.6). {how}"
+            diag = _diagnostic_key(key, (d.get("config") or {}).get("diag_step"))
+            if diag:  # A4.4 item 6: every step-160 number is labelled DIAGNOSTIC
+                how = f"{DIAG_LABEL}. {how}"
             led.note(key, val, how=how)
             if unread:  # A3b.4: the value stays; the row says it is not read
                 led.doc["rows"][-1].update(not_read=True, not_read_reason="C9/C9b failed")
+            if diag:
+                led.doc["rows"][-1].update(diagnostic=True)
     led.status(run["status"])
     return led.write()
 
@@ -3193,6 +3227,16 @@ _NOT_READ_KEYS = (
 def _oracle_derived(key: str) -> bool:
     """A3.6 / A3b.4: the ledger keys a C9/C9b failure marks NOT READ."""
     return any(r.fullmatch(key) for r in _NOT_READ_KEYS)
+
+
+def _diagnostic_key(key: str, d: int | None) -> bool:
+    """A ledger key holding a step-d (A4.2) number: the step-d contrast set and
+    recency statistics, and any pass named `<...>@d`."""
+    if not d:
+        return False
+    return ".diagnostic_step" in key or any(
+        "@" in part and part.rsplit("@", 1)[1] == str(d) for part in key.split(".")
+    )
 
 
 def _flatten(prefix: str, x: Any, depth: int = 0):
@@ -3671,9 +3715,11 @@ def _render_heldout(ho: dict, w, ow: dict, oracle_read: bool) -> None:
             f"- headroom share `{a}` (all){unread}: {_ci_str(s, reading=False)}, "
             f"dropped {s.get('dropped')}"
         )
+    dstep = (ho.get("diagnostic_step") or {}).get("step")
     for s, v in (ho.get("snapshots") or {}).items():
+        why = "A4.2" if s.rsplit("@", 1)[-1] == str(dstep) else "A1.8 m-9"
         w(
-            f"- DIAGNOSTIC snapshot `{s}` (A1.8 m-9): accuracy "
+            f"- DIAGNOSTIC snapshot `{s}` ({why}): accuracy "
             f"{_ci_str(v['level'], reading=False)}; "
             f"minus final fifo {_ci_str(v['minus_final_fifo'])}"
         )
@@ -3837,6 +3883,30 @@ def _render_training(tr: dict, w) -> None:
         "computed (the spec defines a baseline, not a statistic; `leading_edge.py` is a "
         "stub). Attention-share Gini: not available."
     )
+    dg = tr.get("diagnostic_step")
+    if dg:
+        d = dg["step"]
+        w(f"\n### Step-{d} recency statistics (§7.4) -- {dg['label']}\n")
+        for a, ph in (dg.get("diagnostics") or {}).items():
+            for p, v in ph.items():
+                w(
+                    _join(
+                        f"- DIAGNOSTIC step {d} `",
+                        a,
+                        "` ",
+                        p,
+                        ": steps ",
+                        v["n_steps"],
+                        ", evictions ",
+                        v["n_evictions"],
+                        ", fraction oldest ",
+                        _f(v["fraction_oldest"]),
+                        ", mean_shift ",
+                        _f(v["mean_shift"]),
+                        "; raw Spearman rho(score, age) median ",
+                        _f(v["spearman_rho_score_age"]["median"]),
+                    )
+                )
 
 
 # --------------------------------------------------------------------------- #

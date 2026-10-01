@@ -1,10 +1,11 @@
 #!/bin/zsh
-# RSR run 1 launch, version 5 (PREREG Amendment 3c, A3c.1; supersedes A3b.1's text).
+# RSR run 1 launch, version 6 (PREREG Amendment 4, A4.3; supersedes A3c.1's text).
 # Run with /bin/zsh INSIDE tmux (A2.4), from the dedicated run worktree at the final
 # reviewed commit. Owner slots: GAMMA (O1), WD (O4), STEPS (R-1), O5 (eval|train).
 # CKPT is DERIVED here from STEPS (A1.8 m-9), never read from input. Code-change flags:
 # C1_FLAGS (C-1), C2_FLAGS (C-2), C3_FLAGS (C-3, only if O4 != 0.01). Every arm passes
-# --srep-norm-reg-weight 0.0, arm B's training value (A3c.1).
+# --srep-norm-reg-weight 0.0, arm B's training value (A3c.1). Checkpoints are saved every
+# EVERY = gcd(160, CKPT) steps (A4.2), so the step-160 DIAGNOSTIC reading exists.
 # RSR_ORCH_ROOT must be unset or the shared root, and OUT / JOB_SUFFIX unset, unless
 # DRY_RUN=1, and DRY_RUN=1 requires STEPS=0 (a dry run never trains). All four are
 # recorded in launch-git.json, written by a JSON encoder. OUT defaults to runs/rsr-run1.
@@ -30,6 +31,12 @@ for v in GAMMA WD STEPS O5; do [[ -n ${(P)v} ]] || refuse "slot $v unfilled"; do
 [[ $WD != 0.01 && -z ${C3_FLAGS:-} ]] && refuse "O4=$WD needs C3_FLAGS (code change C-3)"
 [[ $WD == 0.01 && -n ${C3_FLAGS:-} ]] && refuse "O4=0.01 is the built value: C3_FLAGS must be empty"
 if (( STEPS > 0 && STEPS % 3 == 0 )); then CKPT=$(( STEPS / 3 )); else CKPT=$STEPS; fi
+DIAG_STEP=160
+if (( STEPS >= DIAG_STEP && CKPT > 0 )); then
+  a=$DIAG_STEP; b=$CKPT; while (( b != 0 )); do t=$(( a % b )); a=$b; b=$t; done; EVERY=$a
+else
+  EVERY=$CKPT
+fi
 ORCH_REC=${RSR_ORCH_ROOT:-} ; OUT_REC=${OUT:-} ; SUFFIX_REC=${JOB_SUFFIX:-}
 : ${OUT:=runs/rsr-run1}
 C1=(${=C1_FLAGS:-}) ; C2=(${=C2_FLAGS:-}) ; C3=(${=C3_FLAGS:-})
@@ -52,6 +59,8 @@ with open(sys.argv[1], "w") as f:
     f.write("\n")' $OUT/launch-git.json \
   run_sha "$RUN_SHA" gamma "$GAMMA" wd "$WD" steps "$STEPS" ckpt "$CKPT" \
   ckpt_rule "STEPS/3 if STEPS>0 and STEPS%3==0 else STEPS (A1.8 m-9)" o5 "$O5" \
+  ckpt_every "$EVERY" ckpt_every_rule "gcd(160, CKPT) if STEPS>=160 and CKPT>0 else CKPT (A4.2)" \
+  diag_step "$DIAG_STEP" \
   c1_flags "${C1_FLAGS:-}" c2_flags "${C2_FLAGS:-}" c3_flags "${C3_FLAGS:-}" \
   rsr_orch_root "$ORCH_REC" out "$OUT_REC" job_suffix "$SUFFIX_REC" \
   dry_run "${DRY_RUN:-}" launched_utc "$LAUNCHED_UTC"; rc_json=$?
@@ -79,7 +88,7 @@ for s in 0 1 2; do
     "${SLOT[@]}" --job-id rsr-run1-$k${JOB_SUFFIX:-} -- \
       .venv/bin/python -m rsr.train.loop \
         --d 128 --batch 16 --iters $STEPS --steps-per-stream 48 --memory-slots 16 \
-        --lr 0.001 --seed $s --beat-every 1 --ckpt-every $CKPT --device cpu \
+        --lr 0.001 --seed $s --beat-every 1 --ckpt-every $EVERY --device cpu \
         --freeze-transformer "${C1[@]}" "${C3[@]}" \
         --srep-norm-reg-weight 0.0 \
         --pool-offset 993000 --pool-length 256 --pool-vocab-documents 64 "${C2[@]}" \

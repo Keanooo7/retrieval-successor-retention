@@ -859,9 +859,11 @@ def _strict(r1, e2e):
     """The fixture read as the run reads it: strict, owner values from the PREREG (its
     table handed in filled, as Amendment 4 will fill it), slot job records whose `cmd`
     is the command that ran, one thread, the launcher's rc."""
-    cfg = r1.dataclasses.replace(e2e["cfg"], prereg_strict=True, owner_prereg=r1.PREREG)
+    cfg = r1.dataclasses.replace(
+        e2e["cfg"], prereg_strict=True, owner_prereg=r1.PREREG, diag_step=r1.DIAG_STEP
+    )
     lg = json.loads((e2e["out_root"] / "launch-git.json").read_text())
-    clean = {**lg, "dirty": False}
+    clean = {**lg, "dirty": False, "diag_step": str(r1.DIAG_STEP)}  # as v6 records
     jobs = {
         a: {
             "pinned_sha": lg["run_sha"],
@@ -899,6 +901,9 @@ def test_c10_strict_wants_each_job_record_pinned_to_the_run_sha(r1, e2e):
     c = c10(jobs=jobs, rcs={**dict.fromkeys(r1.ARMS, 0), "fifo": 143})
     assert not c["ok"] and any("job rc" in p for p in c["per_arm"]["fifo"]["problems"])
     assert not c10(jobs=jobs, launch={**clean, "dirty": True})["ok"]
+    small = r1.dataclasses.replace(cfg, diag_step=DIAG)  # the run reads A4.2's 160 only
+    c = c10(jobs=jobs, cfg=small, launch={**clean, "diag_step": str(DIAG)})
+    assert not c["ok"] and any("A4.2's 160" in p for p in c["launch_problems"])
     wrong = r1.dataclasses.replace(cfg, owner_prereg=e2e["cfg"].owner_prereg)
     assert not _c10(r1, e2e, cfg=wrong, launch=clean, registered=reg, jobs=jobs)["ok"]
 
@@ -1022,12 +1027,14 @@ def test_the_diagnostics_split_warm_from_scored_and_report_the_first_block(e2e, 
 
 
 def test_the_committed_launcher_is_byte_identical_to_the_prereg(r1):
-    """T14: launcher v5, extracted from "### A3c.1 Launcher, version 5"."""
-    assert r1.LAUNCHER_HEADING == "### A3c.1 Launcher, version 5"
+    """T14 / T19: launcher v6, extracted from "### A4.3 Launcher, version 6"."""
+    assert r1.LAUNCHER_HEADING == "### A4.3 Launcher, version 6" and r1.LAUNCHER_V6
     text = (ROOT / r1.LAUNCHER).read_text()
     assert text == r1.launcher_text_from_prereg()
     assert "        --srep-norm-reg-weight 0.0 \\\n" in text  # A3c.1
-    want = "5cbaa14c26c72fc69fb5a96cd95fb950fdd9285862afc76cb790d226d5c22152"
+    assert "--ckpt-every $EVERY --device cpu" in text and "DIAG_STEP=160\n" in text
+    assert f'ckpt_every_rule "{r1.EVERY_RULE}"' in text  # recorded verbatim (A4.3)
+    want = "cb0bef7f7d9efdd8e3b0a0286d385116aec19a19e8353f5e84d1b6ed4f823f0f"
     assert hashlib.sha256(text.encode()).hexdigest() == want
 
 
@@ -1514,21 +1521,25 @@ def test_the_owner_table_heading_is_amendment_4s(r1):
     assert r1.OWNER_TABLE_HEADING == "### A4.1 Owner values (fills A2.8's slots)"
 
 
-def test_today_the_a4_table_is_absent_so_c10_fails_and_the_seed_exits_3(
-    r1, e2e, tmp_path
-):
-    """MAJOR-2: C10 reads the owner's registered values from the PREREG (A3.7a). Before
-    Amendment 4 its heading is not in the PREREG: `absent`, C10 fails, exit 3."""
+def test_the_real_a4_table_is_filled_with_the_owners_values(r1, e2e, tmp_path):
+    """A4.4 item 7: C10 reads A4.1 through the unchanged parser -- `filled` with 0.9 /
+    0.01 / 3000 / eval. A fixture run (3 steps) read against the real PREREG is a
+    mismatch with the registered R-1, so C10 fails and the seed exits 3."""
     reg = r1.owner_table(r1.prereg_config(0, 3000))
-    assert reg["heading"] == r1.OWNER_TABLE_HEADING
-    assert reg["status"] == "absent" and reg["values"] == {}
-    out = _copy_run(e2e, tmp_path / "absent")
+    assert reg["heading"] == r1.OWNER_TABLE_HEADING and reg["problems"] == []
+    assert reg["status"] == "filled"
+    assert reg["values"] == {
+        "gamma": 0.9,
+        "phi_weight_decay": 0.01,
+        "iters": 3000,
+        "o5": "eval",
+    }
+    out = _copy_run(e2e, tmp_path / "real")
     cfg = r1.dataclasses.replace(e2e["cfg"], owner_prereg=r1.PREREG)
     doc = r1.measure_seed(cfg, e2e["owner"], out, threads=1)
     c10 = doc["controls"]["C10"]
-    assert c10["ok"] is False and c10["registered"]["status"] == "absent"
-    assert any("absent" in p for p in c10["launch_problems"])
-    assert c10["launch_problems"] == [p for p in c10["launch_problems"] if "absent" in p]
+    assert c10["ok"] is False and c10["registered"]["status"] == "filled"
+    assert any("registered R-1 3000" in p for p in c10["launch_problems"])
     assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
     assert doc["controls_failed"] == ["C10"]
 
@@ -2112,10 +2123,11 @@ def test_every_is_gcd_of_the_diagnostic_step_and_ckpt(r1, monkeypatch):
     assert r1.derive_every(3001, 3001, 160) == math.gcd(160, 3001)
     cfg = r1.prereg_config(0, 3000)
     monkeypatch.setattr(r1, "LAUNCHER_V6", False)
-    assert cfg.file_every == 1000 and cfg.diag is None
+    assert cfg.ckpt_every == 1000 and cfg.diag is None
     assert cfg.snapshots == [1000, 2000, 3000]
     monkeypatch.setattr(r1, "LAUNCHER_V6", True)
-    assert cfg.file_every == 40 and len(cfg.checkpoint_files) == 75
+    assert cfg.ckpt_every == 40 and len(cfg.checkpoint_files) == 75
+    assert cfg.checkpoint_files == list(range(40, 3001, 40)) and cfg.ckpt == 1000
     assert cfg.diag == 160 and cfg.snapshots == [160, 1000, 2000, 3000]
     ow = owner(r1, iters=3000)
     argv = r1.cli_argv(cfg, "psiC", ow, Path("x"))
@@ -2143,9 +2155,32 @@ def test_the_step_diag_reading_is_diagnostic_and_never_the_headline(r1, e2e):
     acc, con = ho["accuracy"]["all"], dg["contrasts"]
     want = acc[f"psiC@{DIAG}"]["point"] - acc["fifo"]["point"]
     assert con["acc.all.psiC_minus_fifo"]["point"] == pytest.approx(want)
-    want = acc[f"psiC@{DIAG}"]["point"] - acc["lru"]["point"]
-    assert con["acc.all.psiC_minus_lru"]["point"] == pytest.approx(want)
-    assert con["acc.all.lru_minus_fifo"] == ho["contrasts"]["acc.all.lru_minus_fifo"]
+    want = acc[f"psiC@{DIAG}"]["point"] - acc[f"age@{DIAG}"]["point"]
+    assert con["acc.all.psiC_minus_age"]["point"] == pytest.approx(want)
+    names = ("psiC_minus_fifo", "age_minus_fifo", "psiC_minus_age")  # A4.2's set
+    want_keys = {f"acc.{b}.{c}" for b in r1.BUCKET_NAMES for c in names}
+    want_keys |= {f"nll_{k}.{c}" for k in ("real", "answer") for c in names}
+    want_keys |= {f"{r}.{a}" for r in ("R", "R_own_floor") for a in r1.RSR_ARMS}
+    want_keys |= {f"floor_difference.sz_{a}_minus_sz_fifo" for a in r1.RSR_ARMS}
+    assert set(con) == want_keys
+    rd = doc["training"]["diagnostic_step"]  # §7.4 recency over steps < d
+    assert rd["step"] == DIAG and rd["label"] == r1.DIAG_LABEL
+    for a in r1.RSR_ARMS:
+        ph = rd["diagnostics"][a]
+        assert ph["warm"]["n_steps"] + ph["scored"]["n_steps"] == DIAG
+    assert f"### Step-{DIAG} recency statistics (§7.4) -- {r1.DIAG_LABEL}" in (
+        e2e["results"].read_text()
+    )
+    led = json.loads((e2e["out_root"] / "ledger.json").read_text())
+    rows = {r["key"]: r for r in led["rows"]}
+    tagged = {k for k, r in rows.items() if r.get("diagnostic")}
+    assert "seed0.heldout.diagnostic_step.contrasts.acc.all.psiC_minus_fifo" in tagged
+    assert f"seed0.heldout.accuracy.all.psiC@{DIAG}" in tagged
+    assert f"seed0.heldout.accuracy.all.sz_age@{DIAG}" in tagged
+    assert any(k.startswith("seed0.training.diagnostic_step") for k in tagged)
+    assert all(rows[k]["how"].startswith(r1.DIAG_LABEL) for k in tagged)
+    assert "seed0.heldout.contrasts.acc.all.psiC_minus_fifo" not in tagged
+    assert "seed0.heldout.accuracy.all.psiC@1" not in tagged and "headline" not in tagged
     g = ho["accuracy"]["gap_2_to_M"]
     want = g[f"age@{DIAG}"]["point"] - g[f"sz_age@{DIAG}"]["point"]
     assert con["R_own_floor.age"]["point"] == pytest.approx(want)
