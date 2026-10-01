@@ -7103,6 +7103,43 @@ MUTATIONS: tuple[Mutation, ...] = (
         "C-1 test (d): eval mode without the freeze would silently remove dropout "
         "from an optimised L_NTP (A1.3 item 1; correction 20).",
     ),
+    # ---- second review (c02b16d): MINOR-1, MINOR-3, MINOR-4 (HM-C, HM-F)
+    Mutation(
+        "run1: a FIFO pool run's hash does not record the sampler",
+        "test_every_pool_arm_records_its_sampler_in_the_hash",
+        "src/rsr/train/loop.py",
+        '        frozen["sampling"] = SAMPLING_PERMUTATION\n',
+        "        pass  # MUTATED\n",
+        "Review MINOR-1: a FIFO pool arm under a different sampler would share its "
+        "config hash and run_id (PREREG A1.7 C-2 item 2: 'so the hash changes').",
+    ),
+    Mutation(
+        "run1: a resume into a dir with later rows is not refused",
+        "test_a_resume_into_a_dir_with_later_rows_is_refused",
+        "src/rsr/train/loop.py",
+        "        _refuse_rows_past(out, start)  # review MINOR-3: append-only files\n",
+        "        pass  # MUTATED\n",
+        "Review MINOR-3: the per-step files are append-only; a same-dir resume "
+        "writes the steps after the checkpoint twice.",
+    ),
+    Mutation(
+        "run1: frozen eval applied to RSR arms only",
+        "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms",
+        "src/rsr/train/loop.py",
+        "        model.eval()\n",
+        '        if policy_name == "rsr":  # MUTATED\n            model.eval()\n',
+        "Review MINOR-4(a), HM-C: A1.3 puts the frozen transformer in eval mode in "
+        "EVERY arm, the FIFO comparator included.",
+    ),
+    Mutation(
+        "run1: the age-only guard accepts a negative nu",
+        "test_the_age_only_arm_refuses_nu",
+        "src/rsr/retention/rsr.py",
+        "            if config.nu != 0.0:\n",
+        "            if config.nu > 0.0:  # MUTATED\n",
+        "Review MINOR-4(b), HM-F: a negative nu reads the gestalts as much as a "
+        "positive one.",
+    ),
 )
 
 
