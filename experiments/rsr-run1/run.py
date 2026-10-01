@@ -855,11 +855,11 @@ LAUNCHER_HEADING = "### A3c.1 Launcher, version 5"
 
 
 #: A3.7a: "Each owner value is compared both with `launch-git.json` and with the value
-#: the owner registered in Amendment 4" (review 6267fd645698 MAJOR-2). C10 reads the slot
-#: table under this heading -- A2.8's, whose four `______` blanks Amendment 4 fills.
-#: Switching to a table Amendment 4 prints under its own heading is this one line (and
-#: the test's expected heading). Until a value is there, C10 fails: exit 3.
-OWNER_TABLE_HEADING = "### A2.8 Owner slots: one value each (supersedes A1.9's table)"
+#: the owner registered in Amendment 4" (review 6267fd645698 MAJOR-2). The amendments are
+#: append-only, so A2.8's blanks are never filled in place: Amendment 4 prints the table
+#: under this heading (pre-declared by Amendment 3d, in `parse_owner_table`'s format).
+#: Until that heading exists, C10 reads `absent` and fails: exit 3.
+OWNER_TABLE_HEADING = "### A4.1 Owner values (fills A2.8's slots)"
 #: The four rows, in this order, each first cell opening with the bolded slot name.
 OWNER_TABLE_SLOTS = (("O1", "gamma"), ("O4", "phi_weight_decay"), ("R-1", "iters"),
                      ("O5", "o5"))  # fmt: skip

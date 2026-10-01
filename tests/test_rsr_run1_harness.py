@@ -1505,13 +1505,45 @@ def test_t7_probe_sees_a_rule_that_changes_with_gamma(r1, substrate, monkeypatch
 # --------------------------------------------------------------------------- #
 
 
-def test_the_owner_table_today_is_blank_so_c10_cannot_pass(r1):
+def test_the_owner_table_heading_is_amendment_4s(r1):
+    """Amendment 3d pre-declares A4's table under this heading (append-only: A2.8's
+    blanks are never filled in place)."""
+    assert r1.OWNER_TABLE_HEADING == "### A4.1 Owner values (fills A2.8's slots)"
+
+
+def test_today_the_a4_table_is_absent_so_c10_fails_and_the_seed_exits_3(
+    r1, e2e, tmp_path
+):
     """MAJOR-2: C10 reads the owner's registered values from the PREREG (A3.7a). Before
-    Amendment 4 the four slots are `______`: blank, and the run is not read."""
-    reg = r1.owner_table(r1.dataclasses.replace(r1.prereg_config(0, 3000)))
+    Amendment 4 its heading is not in the PREREG: `absent`, C10 fails, exit 3."""
+    reg = r1.owner_table(r1.prereg_config(0, 3000))
     assert reg["heading"] == r1.OWNER_TABLE_HEADING
-    assert reg["status"] == "blank" and reg["values"] == {}
-    assert reg["raw"] == dict.fromkeys(("O1", "O4", "R-1", "O5"), "______")
+    assert reg["status"] == "absent" and reg["values"] == {}
+    out = _copy_run(e2e, tmp_path / "absent")
+    cfg = r1.dataclasses.replace(e2e["cfg"], owner_prereg=r1.PREREG)
+    doc = r1.measure_seed(cfg, e2e["owner"], out, threads=1)
+    c10 = doc["controls"]["C10"]
+    assert c10["ok"] is False and c10["registered"]["status"] == "absent"
+    assert any("absent" in p for p in c10["launch_problems"])
+    assert c10["launch_problems"] == [p for p in c10["launch_problems"] if "absent" in p]
+    assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert doc["controls_failed"] == ["C10"]
+
+
+def test_a_filled_a4_table_under_the_heading_passes_c10(r1, e2e, substrate):
+    """The fixture's synthetic PREREG carries the table under A4.1's heading, filled
+    with the fixture's values: C10 reads it `filled`, and the e2e seed exits 0."""
+    text = substrate["owner_prereg"].read_text()
+    assert r1.OWNER_TABLE_HEADING in text.splitlines()
+    reg = e2e["doc"]["controls"]["C10"]["registered"]
+    assert reg["status"] == "filled" and reg["heading"] == r1.OWNER_TABLE_HEADING
+    assert reg["values"] == {
+        "gamma": 0.9,
+        "phi_weight_decay": 0.01,
+        "iters": ARM_ITERS,
+        "o5": O5,
+    }
+    assert e2e["doc"]["controls"]["C10"]["ok"] and e2e["doc"]["exit"] == 0
 
 
 def test_the_owner_table_parser_takes_the_one_format_and_nothing_looser(r1):
