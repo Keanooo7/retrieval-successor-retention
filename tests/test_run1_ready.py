@@ -86,6 +86,14 @@ def _spy_loop_entries(monkeypatch) -> list:
     return calls
 
 
+def _evictions(out_dir: Path) -> list[dict]:
+    """train()'s drained eviction records (EVICTIONS_FILE), as dicts."""
+    lines = (out_dir / loop.EVICTIONS_FILE).read_text().splitlines()
+    fields = json.loads(lines[0])["fields"]
+    assert fields == list(loop.EVICTION_FIELDS)
+    return [dict(zip(fields, json.loads(x), strict=True)) for x in lines[1:]]
+
+
 def _beats(out_dir: Path) -> list[dict]:
     lines = (out_dir / "heartbeat.jsonl").read_text().splitlines()
     return [r for r in map(json.loads, lines) if r.get("kind") == "beat"]
@@ -202,7 +210,6 @@ def test_the_warm_start_runs_t_warm_at_relative_steps(substrate, tmp_path, monke
     (pool 4 / batch 2). k counts from 0 AT THE WARM START: steps 0 and 1 are
     `fifo_warmup`, step 2 is scored. Counting from the source's step would start
     at k = 3 >= T_warm and skip the warmup silently (the review's m-1)."""
-    built = _spy_build_policy(monkeypatch)
     r = loop.train(
         policy_name="rsr",
         policy_overrides=OV,
@@ -214,8 +221,8 @@ def test_the_warm_start_runs_t_warm_at_relative_steps(substrate, tmp_path, monke
     assert r["config"]["warm_start"]["source_step"] == 3
     assert r["config"]["epoch"]["t_warm_steps"] == 2.0
     by_k: dict[int, set] = {}
-    for rec in built[0].records:
-        by_k.setdefault(rec.train_step, set()).add((rec.warm, rec.attribution))
+    for rec in _evictions(tmp_path):  # drained after every step (defect 2)
+        by_k.setdefault(rec["train_step"], set()).add((rec["warm"], rec["attribution"]))
     assert sorted(by_k) == [0, 1, 2]
     assert by_k[0] == {(True, "fifo_warmup")}
     assert by_k[1] == {(True, "fifo_warmup")}
@@ -889,8 +896,11 @@ def test_the_section_7_1_diagnostics_are_logged_every_step(tmp_path):
         assert d["n_score_samples"] == 352
         assert -1.0 <= d["partial_rho_score_age_given_content"] <= 1.0
         assert -1.0 <= d["spearman_rho_score_age"] <= 1.0
-    assert r["diagnostics"]["victim_age_distribution"] == {4: 176}
-    assert r["diagnostics"]["shift_distribution"] == {0: 176}
+    # Run level, split at §3.4's boundary (defect 5): all 176 are warmup.
+    warm, scored = r["diagnostics"]["fifo_warmup"], r["diagnostics"]["scored"]
+    assert warm["victim_age_distribution"] == {4: 176}
+    assert warm["shift_distribution"] == {0: 176}
+    assert scored["n_evictions"] == 0 and scored["victim_age_distribution"] == {}
 
 
 def test_a_directly_built_policy_collects_no_diagnostics():
@@ -1130,3 +1140,120 @@ def test_the_cli_warm_start_reaches_the_real_verification(substrate, tmp_path):
     ]  # fmt: skip
     with pytest.raises(loop.WarmStartRefused, match="caller expected"):
         loop.main(argv)
+
+
+# --------------------------------------------------------------------------- #
+# PREREG-drafter defects (prereg/rsr-run1 @ 7c58777): attribution, bounded
+# records, data-order resume, srep_norm_reg_weight flag, split histograms
+# --------------------------------------------------------------------------- #
+
+T0_ABLATION = dict(policy_overrides={**OV, "t_warm": 0.0}, no_warmup_ablation=True)
+
+
+def test_rsr_beats_carry_the_decision_attribution(tmp_path):
+    """Defect 1 (RESEARCH-CONTEXT §10.1 defect 4; §3.4 attribution from the first
+    policy run): train() called policy.attribution(), RSRPolicy had only
+    attribution_counts(), so every RSR beat said null. A scored step's beat now
+    carries the fraction per term; a warmup step's says fifo_warmup."""
+    loop.train(policy_name="rsr", out_dir=tmp_path / "s", **T0_ABLATION, **TINY)
+    loop.train(policy_name="rsr", policy_overrides=OV, out_dir=tmp_path / "w", **TINY)
+    (scored,) = _beats(tmp_path / "s")
+    (warm,) = _beats(tmp_path / "w")
+    assert scored["attribution"] == {"psi": 1.0}
+    assert warm["attribution"] == {"fifo_warmup": 1.0}
+
+
+def test_records_are_drained_and_checkpoints_stay_bounded(tmp_path, monkeypatch):
+    """Defect 2: records were kept for the whole run and pickled into every
+    checkpoint (~1.5M per run-1 arm). Drained after each step to
+    evictions.jsonl: the policy holds none, no checkpoint carries any, and a
+    checkpoint 2 steps later is the same size within a few hundred bytes
+    (176 more records would add tens of kB)."""
+    built = _spy_build_policy(monkeypatch)
+    loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        out_dir=tmp_path,
+        **{**TINY, "iters": 3, "ckpt_every": 1},
+    )
+    pol = built[0]
+    assert pol.records == []
+    assert pol.attribution_counts() == {"fifo_warmup": 3 * 88}
+    assert len(_evictions(tmp_path)) == 3 * 88
+    paths = [sorted(tmp_path.rglob(f"ckpt-00000{k}.pt"))[0] for k in (1, 3)]
+    for path in paths:
+        payload = torch.load(path, map_location="cpu", weights_only=False)
+        assert payload["policy"]["records"] == []
+    s1, s3 = (path.stat().st_size for path in paths)
+    assert abs(s3 - s1) < 1000, (s1, s3)
+
+
+def test_a_resumed_sampler_run_continues_the_data_order(tmp_path, monkeypatch):
+    """Defect 3: the sampler's generator was not checkpointed, so a resumed arm
+    re-read step 0's batches and silently stopped pairing with an uninterrupted
+    arm. Saved and restored, a resume from step 2 sees steps 2 and 3 of the
+    uninterrupted run; a checkpoint without it is refused."""
+    calls = _spy_loop_entries(monkeypatch)
+    kw = {**TINY, "iters": 4, "ckpt_every": 2}
+    loop.train(policy_name="fifo", out_dir=tmp_path / "full", **kw)
+    (found,) = sorted((tmp_path / "full").rglob("ckpt-000002.pt"))
+    ck2 = Path(shutil.copy2(found, tmp_path / "ck2.pt"))
+    loop.train(policy_name="fifo", out_dir=tmp_path / "res", resume=str(ck2), **kw)
+    full, res = calls[:4], calls[4:]
+    assert len(res) == 2
+    assert not torch.equal(full[0]["ids"], full[2]["ids"])  # non-vacuous
+    for a, b in zip(full[2:], res, strict=True):
+        assert torch.equal(a["ids"], b["ids"])
+    payload = torch.load(ck2, map_location="cpu", weights_only=False)
+    del payload["stream"][loop.DATA_GENERATOR_STATE]
+    torch.save(payload, tmp_path / "old.pt")
+    with pytest.raises(loop.ck.CheckpointError, match="data-order generator state"):
+        loop.train(
+            policy_name="fifo",
+            out_dir=tmp_path / "old",
+            resume=str(tmp_path / "old.pt"),
+            **kw,
+        )
+
+
+def test_srep_norm_reg_weight_is_a_validated_cli_flag(tmp_path, monkeypatch):
+    """Defect 4: arm B trained at srep_norm_reg_weight 0.0; run 1 must be able
+    to say so in its one command. The flag reaches train(), which validates it
+    and stamps it into the frozen config, hence the hash."""
+    a = loop.train(
+        out_dir=tmp_path / "a", srep_norm_reg_weight=0.0, **{**TINY, "iters": 0}
+    )
+    b = loop.train(out_dir=tmp_path / "b", **{**TINY, "iters": 0})
+    assert a["config"]["srep_norm_reg_weight"] == 0.0
+    assert b["config"]["srep_norm_reg_weight"] == 0.01
+    assert a["config_hash"] != b["config_hash"]
+    with pytest.raises(ValueError, match="srep_norm_reg_weight"):
+        loop.train(out_dir=tmp_path / "c", srep_norm_reg_weight=-1.0, **TINY)
+    seen: dict = {}
+    monkeypatch.setattr(
+        "rsr.train.loop.train",
+        lambda **kw: seen.update(kw) or {"run_id": "x", "liveness": {"band": "live"}},
+    )
+    assert loop.main(["--out-dir", str(tmp_path), "--srep-norm-reg-weight", "0"]) == 0
+    assert seen["srep_norm_reg_weight"] == 0.0
+    seen.clear()
+    assert loop.main(["--out-dir", str(tmp_path)]) == 0
+    assert seen["srep_norm_reg_weight"] is None
+
+
+def test_the_run_level_histograms_split_warmup_from_scored(tmp_path):
+    """Defect 5: pool 4 / batch 2 -> T_warm = 2 steps, so of 3 steps x 88
+    evictions, 176 are FIFO warmup (all age 4, rank 1, displacement 0) and 88
+    are scored. The two are reported apart and sum to the run's 264."""
+    r = loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        pool=SMALL_POOL,
+        out_dir=tmp_path,
+        **{**TINY, "iters": 3},
+    )
+    warm, scored = r["diagnostics"]["fifo_warmup"], r["diagnostics"]["scored"]
+    assert warm["n_evictions"] == 176 and scored["n_evictions"] == 88
+    assert warm["victim_age_distribution"] == {4: 176}
+    assert warm["shift_distribution"] == {0: 176}
+    assert sum(scored["victim_rank_distribution"].values()) == 88
