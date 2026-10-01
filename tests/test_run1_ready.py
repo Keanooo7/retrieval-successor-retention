@@ -1054,6 +1054,10 @@ def test_the_age_only_arm_refuses_nu():
     )
     with pytest.raises(ValueError, match=r"requires nu=0\.0"):
         RSRPolicy(cfg, d_model=D)
+    # Review MINOR-4(b): a NEGATIVE nu reads the gestalts too (the redundancy
+    # term is a reward instead of a penalty) -- refused, not only nu > 0.
+    with pytest.raises(ValueError, match=r"requires nu=0\.0"):
+        RSRPolicy(dataclasses.replace(cfg, nu=-0.5), d_model=D)
     with pytest.raises(ValueError, match=r"requires nu=0\.0"):
         loop.build_policy(
             "rsr",
@@ -1541,3 +1545,85 @@ def test_c1_the_mode_is_in_frozen_the_hash_and_the_label(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as ex:
         loop.main([*argv, "--frozen-model-mode", "off"])
     assert ex.value.code == 3
+
+
+# --------------------------------------------------------------------------- #
+# Second review (c02b16d): MINOR-1 (FIFO hash records the sampler), MINOR-3
+# (resume into a dir with later rows), MINOR-4(a) (C-1 on every arm)
+# --------------------------------------------------------------------------- #
+
+
+def test_every_pool_arm_records_its_sampler_in_the_hash(tmp_path):
+    """MINOR-1: the sampler was stamped only in the RSR arm's epoch block, so a
+    FIFO pool run's run_id did not change when its data order did. Every pool
+    arm now records it; the default path still records none (its hash is
+    pinned)."""
+    kw = {**TINY, "iters": 0}
+    f = loop.train(policy_name="fifo", pool=SMALL_POOL, out_dir=tmp_path / "f", **kw)
+    r = loop.train(
+        policy_name="rsr",
+        policy_overrides=OV,
+        pool=SMALL_POOL,
+        out_dir=tmp_path / "r",
+        **kw,
+    )
+    d = loop.train(policy_name="fifo", out_dir=tmp_path / "d", **kw)
+    assert f["config"]["sampling"] == loop.SAMPLING_PERMUTATION
+    assert r["config"]["sampling"] == loop.SAMPLING_PERMUTATION
+    assert "sampling" not in d["config"]
+
+
+def test_a_resume_into_a_dir_with_later_rows_is_refused(tmp_path):
+    """MINOR-3: evictions.jsonl and diagnostics.jsonl are append-only. Resuming
+    at step 2 into the directory that already holds steps 2-3 would write them
+    twice: refused. Into a fresh directory it writes steps 2-3 once; into a
+    directory whose rows stop before the checkpoint it continues cleanly."""
+    kw = {**TINY, "iters": 4, "ckpt_every": 2}
+    arm = dict(policy_name="rsr", policy_overrides=OV, pool=SMALL_POOL)
+    full = tmp_path / "full"
+    loop.train(out_dir=full, **arm, **kw)
+    (found,) = sorted(full.rglob("ckpt-000002.pt"))
+    ck2 = Path(shutil.copy2(found, tmp_path / "ck2.pt"))
+    with pytest.raises(ValueError, match="already holds rows up to step 3"):
+        loop.train(out_dir=full, resume=str(ck2), **arm, **kw)
+    fresh = tmp_path / "fresh"
+    loop.train(out_dir=fresh, resume=str(ck2), **arm, **kw)
+    assert [x["step"] for x in _step_records(fresh)] == [2, 3]
+    assert sorted({e["train_step"] for e in _evictions(fresh)}) == [2, 3]
+    part = tmp_path / "part"
+    loop.train(out_dir=part, **arm, **{**kw, "iters": 2})
+    (found,) = sorted(part.rglob("ckpt-000002.pt"))
+    loop.train(out_dir=part, resume=str(found), **arm, **kw)
+    assert [x["step"] for x in _step_records(part)] == [0, 1, 2, 3]
+
+
+@pytest.mark.parametrize(
+    "arm",
+    [
+        dict(policy_name="fifo"),
+        dict(policy_name="rsr", policy_overrides={**OV, "psi_override": AGE_ONLY}),
+    ],
+    ids=["fifo", "age_only"],
+)
+def test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms(tmp_path, monkeypatch, arm):
+    """MINOR-4(a): A1.3 puts the frozen transformer in eval mode in EVERY arm;
+    the other C-1 tests drive the content arm only. The FIFO comparator and the
+    age-only arm are in eval mode at every loop exit, and draw no dropout RNG."""
+    seen: list = []
+    real = loop.run_policy_loop
+
+    def spy(model, *a, **k):
+        before = torch.get_rng_state().clone()
+        out = real(model, *a, **k)
+        seen.append((model.training, torch.equal(before, torch.get_rng_state())))
+        return out
+
+    monkeypatch.setattr(loop, "run_policy_loop", spy)
+    loop.train(
+        freeze_transformer=True,
+        frozen_model_mode="eval",
+        out_dir=tmp_path,
+        **arm,
+        **{**TINY, "iters": 2},
+    )
+    assert seen == [(False, True), (False, True)]
