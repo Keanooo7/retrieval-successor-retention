@@ -295,6 +295,31 @@ def test_a_frozen_warm_started_arm_moves_no_transformer_weight(substrate, tmp_pa
     assert "+frozen+warm[fifo-ckpt-000003.pt@" in r["arm_label"]
 
 
+def test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy(
+    substrate, tmp_path
+):
+    """m-1, the review's liveness note: frozen FROM INIT, the decoy IS the trained
+    model (`ratio == 1.0 exactly`, invalid, exit 3 -- SLICE1-build's
+    frozen_liveness.log). Frozen from a warm start, the decoy is still "the
+    untrained model at the same seed and config" -- copied before the load -- so
+    the measurement compares the substrate against an untrained model."""
+    kw = {**TINY, "iters": 0}
+    cold = loop.train(
+        policy_name="fifo", freeze_transformer=True, out_dir=tmp_path / "c", **kw
+    )
+    warm = loop.train(
+        policy_name="fifo",
+        freeze_transformer=True,
+        warm_start=_ws(substrate),
+        out_dir=tmp_path / "w",
+        **kw,
+    )
+    assert cold["liveness"]["band"] == "invalid"
+    assert "decoy is the trained model" in cold["liveness"]["reason"]
+    assert warm["liveness"]["band"] in ("live", "inert", "inconclusive")
+    assert warm["liveness"]["ratio"] != 1.0
+
+
 def test_the_warm_start_is_stamped_into_frozen_hash_and_label(substrate, tmp_path):
     """m-1: the source's path and sha256 are in the frozen config, so in the hash
     and the run_id; the label names the file and its sha prefix."""
