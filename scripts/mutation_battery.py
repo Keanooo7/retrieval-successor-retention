@@ -718,6 +718,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_linear_multiplier_is_one_over_fan_in_in_the_output",
                 _MUP_COUPLING,
             ),
+            (
+                "tests/test_b1_beta_inertness.py::"
+                "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+                "b1-beta-inertness: train_one trains the real BilinearValueHead and "
+                "takes the pre-clip grad norm over every psi-hat parameter (run.py "
+                "_grad_norm, p.grad.double()); with the linear term dropped `u` gets no "
+                "gradient, so its grad is None and the run raises AttributeError: the "
+                "head's two terms, seen from B1's trainer. Found by the night/2026-09-30 "
+                "pre-readout screen.",
+            ),
         ),
     ),
     Mutation(
@@ -804,6 +814,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_reduction_displaces_no_ranks_on_the_real_model",
                 _DISPLACEMENT_COUPLING + " Added 2026-09-18: the on-the-real-model "
                 "variant post-dates docs/mutation-battery.md's table.",
+            ),
+            (
+                "tests/test_b2_psi_probe.py::"
+                "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+                "b2-psi-probe: ProbeArgminPolicy logs rank_shift imported from "
+                "rsr.retention.instrumentation (run.py imports it), and the test pins "
+                "the ADR-0006 displacement on a hand-built state ([2, 1]); the "
+                "window-counting shift logs [2, 2]: one metric, seen from B2's eviction "
+                "log. Found by the night/2026-09-30 pre-readout screen.",
             ),
         ),
     ),
@@ -1239,6 +1258,91 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "lookahead-room records r_i and runs its probes and online_g0 rule from "
                 "observe(); never reached, no demand is recorded: the same call site, "
                 "seen from W10.",
+            ),
+            *(
+                (
+                    n,
+                    "b2-psi-probe captures its rows through the policy's observe() hook "
+                    "(run.py capture policies run with observe=True; policy_loop calls "
+                    "policy.observe with the pre-write memory), and b1-beta-inertness "
+                    "and newcomer-bakeoff load B2's harness and read those rows; with "
+                    "the call never reached every capture is empty, so features and "
+                    "targets are NaN or empty (FloatingPointError non-finite, IndexError "
+                    "on empty index tensors): the capture bridge, seen from B2 and its "
+                    "two readers. Found by the night/2026-09-30 pre-readout screen.",
+                )
+                for n in (
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_full_memory_steps_are_those_with_m_resident",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_pack_refuses_inputs_that_carry_graph",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_psi_all_is_the_head_at_every_t_and_i",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_rows_are_b2_rowset_c_and_target_is_c_at_09",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_failed_logit_control_is_e0h_exit_3_and_b2_still_completes",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_rank_r_probe_reads_the_swapped_in_sentence_at_rank_r",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_restart_skips_completed_units_and_reproduces_the_result",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_unit_from_another_configuration_is_refused",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_class_means_use_fit_train_u_rows_at_full_memory",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_e0h_rows_pair_each_slot_with_its_own_sentence",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_eval_units_reach_disk_before_the_next_document_runs",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_one_document_one_policy_and_residency_equals_the_replay",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_a_core_fits_decides_on_fit_val_and_passes_its_controls",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_a_rows_carry_lambda_residual_age_split_and_threads",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_b_core_runs_every_tier_and_streams_e0h",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_b_summary_reads_ref_and_delta_from_phase_a",
+                    "tests/test_b2_psi_probe.py::test_row_counts_are_u_and_c",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_age_head_fits_one_hot_age_with_the_same_rule",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_attribution_source_has_row_1s_fields",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_capture_fills_every_row_and_every_control_holds",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_censored_target_is_zero_after_fifo_evicts",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_fit_selects_on_demeaned_val_mse_and_reports_raw",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_log_alpha_fallback_when_the_hook_cannot_be_built",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_prehook_source_is_recorded_when_the_hook_builds",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_val_r2_raw_is_one_minus_sse_over_sst",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_a_joint_fit_reproduces_b2_s_own_c_fit",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_r1_at_half_weight_is_resident_plus_half_the_shadow",
+                    "tests/test_newcomer_bakeoff.py::test_r1_window_truncates_at_k",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_the_r1l1_target_equals_u_s_target_on_c_rows",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_units_are_atomic_resumable_and_keyed",
+                )
             ),
         ),
     ),
@@ -1782,6 +1886,105 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "el",
                 _CARRY_FORWARD_S003_COUPLING,
             ),
+            *(
+                (
+                    n,
+                    "b2-psi-probe builds its documents with the S0-03 generator and "
+                    "encodes them through loop.answer_targets, which refuses a query "
+                    "that does not end in its answer ('The answer is out of band'); "
+                    "b1-beta-inertness and newcomer-bakeoff load B2's harness and its "
+                    "documents. A corpus with no in-stream answer cannot be encoded: "
+                    "_S003_REFUSAL_COUPLING, seen from B2 and its two readers. Found by "
+                    "the night/2026-09-30 pre-readout screen.",
+                )
+                for n in (
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_full_memory_steps_are_those_with_m_resident",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_pack_refuses_inputs_that_carry_graph",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_psi_all_is_the_head_at_every_t_and_i",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_rows_are_b2_rowset_c_and_target_is_c_at_09",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_failed_logit_control_is_e0h_exit_3_and_b2_still_completes",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_rank_r_probe_reads_the_swapped_in_sentence_at_rank_r",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_restart_skips_completed_units_and_reproduces_the_result",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_unit_from_another_configuration_is_refused",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_age_decodability_is_raw_mse_lambda_and_r2_on_fit_val",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_age_decodability_split_by_index_partitions_the_fit_val_rows",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_captured_s_and_c_are_stop_grad_and_nothing_reaches_the_model",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_class_means_use_fit_train_u_rows_at_full_memory",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_e0h_rows_pair_each_slot_with_its_own_sentence",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_eval_units_reach_disk_before_the_next_document_runs",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_one_document_one_policy_and_residency_equals_the_replay",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_a_core_fits_decides_on_fit_val_and_passes_its_controls",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_a_rows_carry_lambda_residual_age_split_and_threads",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_b_core_runs_every_tier_and_streams_e0h",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_b_summary_reads_ref_and_delta_from_phase_a",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_probes_never_feed_back_into_the_fifo_rollout",
+                    "tests/test_b2_psi_probe.py::test_row_counts_are_u_and_c",
+                    "tests/test_b2_psi_probe.py::test_target_matrices_by_arm",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_age_head_fits_one_hot_age_with_the_same_rule",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_attribution_source_has_row_1s_fields",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_capture_fills_every_row_and_every_control_holds",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_censored_target_is_zero_after_fifo_evicts",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_fit_selects_on_demeaned_val_mse_and_reports_raw",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_log_alpha_fallback_when_the_hook_cannot_be_built",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_prehook_source_is_recorded_when_the_hook_builds",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_val_r2_raw_is_one_minus_sse_over_sst",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_a_joint_fit_reproduces_b2_s_own_c_fit",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_install_keeps_every_b2_target_and_puts_r1_on_c_rows",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_r1_at_full_weight_and_open_window_is_u_s_demand",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_r1_at_half_weight_is_resident_plus_half_the_shadow",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_r1_at_zero_weight_is_the_censored_target",
+                    "tests/test_newcomer_bakeoff.py::test_r1_window_truncates_at_k",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_the_r1l1_target_equals_u_s_target_on_c_rows",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_units_are_atomic_resumable_and_keyed",
+                )
+            ),
         ),
     ),
     # --- orchestrator: workqueue ---
@@ -2044,6 +2247,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    # "preregistration/*",\n',
         "an unattended branch that edits a signed threshold merges into the night "
         "branch -- 'a threshold registered after seeing the data is not a threshold'.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_the_frozen_guard_trips_even_without_a_review",
+                "T5(b): the review-gate file re-asserts that the frozen-path guard HALTs "
+                "a preregistration/ edit with no review on record, through the same "
+                "FROZEN_GLOBS entry this mutation comments out: one glob, seen from the "
+                "review gate's side (the review gate must not weaken the guard). Found "
+                "by the night/2026-09-30 review.",
+            ),
+        ),
     ),
     Mutation(
         "merge: a changed FROZEN definition is not compared",
@@ -2062,6 +2276,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if rec is None and False:\n        return Exit.DID_NOT_RUN,",
         "the verification gate stops being a gate: with no record the merge crashes "
         "(1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_run_prefix_still_needs_verification_even_with_a_review",
+                "T5(b): the review-gate file re-asserts that a run/ branch WITH a review "
+                "but no verification record is refused 3 'no verification record', "
+                "through the same `rec is None` branch of _verification_gate: one "
+                "refusal, seen from the review side (a review never replaces "
+                "verification for run/). Found by the night/2026-09-30 review.",
+            ),
+        ),
     ),
     Mutation(
         "tick: HALT ignored",
