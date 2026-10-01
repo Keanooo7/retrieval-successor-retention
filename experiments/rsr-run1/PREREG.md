@@ -2626,3 +2626,296 @@ seed 2: pool max gap 40 (cfg.max_gap 40); max exponent q-t-1 at a full-memory de
 - the pool's assert/query structure, with no model.
 
 No EVAL document has gone through any model, and no φ has been trained.
+
+
+---
+
+## AMENDMENT 3c (2026-10-01): srep_norm_reg_weight 0.0 in every arm (launcher v5); tie rule; cost and C5 corrections
+
+**Written 2026-10-01 by a model** (Claude Opus 5.5, the PREREG author, on the PM's instruction).
+**Not written by Brendan.** It is committed alone, before any run-1 step and before any EVAL
+document has gone through any model. Everything above this heading is unedited.
+
+**What prompted it.** The harness rebase hand-back: `feat/rsr-run1-harness` at `6267fd6`, which
+merges `feat/rsr-run1-ready` at `c02b16d`. Its addendum is in
+`~/Documents/RSR-2026-09-30-day/reports/RUN1-HARNESS-build.md`, under "srep_norm_reg_weight",
+"Cost reconciliation (A3.2)" and "Still open". The decision in A3c.1 is the PM's.
+
+**🔴 The owner slots stay BLANK.** O1, O4, R-1 and O5 are not filled here; Amendment 4 fills them.
+In the probes below, `GAMMA=0.9`, `WD=0.01` and both O5 values are placeholders.
+
+**Precedence.** Where this amendment and anything above it disagree, this amendment governs.
+Superseded:
+
+- §6's `srep_norm_reg_weight` row and §13's fourth code observation ("The CLI has no
+  `--srep-norm-reg-weight`") → A3c.1;
+- A3b.1's launcher → A3c.1;
+- A3.2's cost figures → A3c.3;
+- A3b.3's per-seed rule, which had no tie rule for arms → A3c.2;
+- A3b.3's liveness row → A3c.4, which completes it;
+- A3.7a's C10 list → A3c.5, which extends it.
+
+**Also corrected, for accuracy.** A1.8 m-6 says the heartbeat's `attribution` is `None` in every
+arm. That described `211d6da`. At `c02b16d` the beat's attribution is set for RSR arms (harness
+addendum, adapter 11). With `b` off and ν = 0, §3.4's decomposition still has a single term.
+
+### A3c.1 Launcher, version 5
+
+**`srep_norm_reg_weight` = 0.0 in every arm (the PM's decision).**
+
+**§6's premise is false at the run's code.**
+
+- §6 said: "`0.01` (the CLI has no flag; arm B trained at `0.0`)".
+- `c02b16d` has the flag: `--srep-norm-reg-weight` (`loop.py:1833`, passed at `:1881`). `train()`
+  validates it as finite and ≥ 0 (`:1062-1065`) and stamps it into `frozen` and the config hash.
+- Without the flag, `train()` resolves `None` to TGConfig's **0.01**. The harness e2e recorded
+  0.01 in all three arms.
+- `loop.py` is byte-identical at `c02b16d` and `6267fd6` (`git diff --quiet`, rc 0).
+
+**Why 0.0:**
+
+1. **It changes no update.** Under freeze, `objective = None if freeze_transformer else loss`
+   (`loop.py:1398`), so the hinge reaches no parameter at any value. It enters only the `loss` and
+   `loss_sum` fields: `loss = (lm + w_srep * hinge) if w_srep else lm` (`:1325`). The analysis
+   reads `loss_lm` (§13), which does not contain it.
+2. **It matches the substrate.** Arm B trained at `srep_norm_reg_weight` 0.0 (its `result.json`
+   config; fresh-stream manifest). At 0.0, the run-1 `loss` field equals `loss_lm` and is
+   interpretable. At 0.01 it would carry about +2.2 nats of hinge (arm B's last
+   `loss_srep_hinge` was 222.9).
+3. **No silent 0.01 for a successor.** A later "training continues" arm (D2(b)) built from this
+   command line would otherwise inherit 0.01 against the substrate's 0.0, and optimise a different
+   objective from the one arm B trained under, without anyone choosing it.
+
+**The change from v4** is one argument in the training command, `--srep-norm-reg-weight 0.0`, on
+its own line after `--freeze-transformer …`, plus two header comment lines. Nothing else changed.
+
+**Coordination.** `experiments/rsr-run1/launch_run1.zsh` must be **byte-identical** to the text
+below. The harness's `LAUNCHER_HEADING` becomes **"### A3c.1 Launcher, version 5"**, this
+subsection's heading. `cli_argv` must include the new argument at the same position, token for
+token. Both are TO-CONFIRM T14 and T17.
+
+**sha256 by the harness extraction rule** (`t.index(heading)`, then
+`t.index("```zsh\n", i) + len("```zsh\n")` up to `"\n```\n"`, plus `"\n"`):
+**`5cbaa14c26c72fc69fb5a96cd95fb950fdd9285862afc76cb790d226d5c22152`**.
+
+```zsh
+#!/bin/zsh
+# RSR run 1 launch, version 5 (PREREG Amendment 3c, A3c.1; supersedes A3b.1's text).
+# Run with /bin/zsh INSIDE tmux (A2.4), from the dedicated run worktree at the final
+# reviewed commit. Owner slots: GAMMA (O1), WD (O4), STEPS (R-1), O5 (eval|train).
+# CKPT is DERIVED here from STEPS (A1.8 m-9), never read from input. Code-change flags:
+# C1_FLAGS (C-1), C2_FLAGS (C-2), C3_FLAGS (C-3, only if O4 != 0.01). Every arm passes
+# --srep-norm-reg-weight 0.0, arm B's training value (A3c.1).
+# RSR_ORCH_ROOT must be unset or the shared root, and OUT / JOB_SUFFIX unset, unless
+# DRY_RUN=1, and DRY_RUN=1 requires STEPS=0 (a dry run never trains). All four are
+# recorded in launch-git.json, written by a JSON encoder. OUT defaults to runs/rsr-run1.
+# Any unfilled or inconsistent slot exits 3 ("did not run"). One rc per arm x seed.
+R=/Users/keanooo7/retrieval-successor-retention
+GIT=/opt/homebrew/bin/git
+refuse() { print -u2 "DID NOT RUN: $1"; exit 3 }
+[[ -z ${DRY_RUN:-} || $DRY_RUN == 1 ]] || refuse "DRY_RUN must be unset or 1, got '$DRY_RUN'"
+if [[ -z ${DRY_RUN:-} ]]; then
+  [[ -z ${RSR_ORCH_ROOT:-} || ${RSR_ORCH_ROOT:A} == ${R:A} ]] \
+    || refuse "RSR_ORCH_ROOT=$RSR_ORCH_ROOT is not the shared root $R"
+  [[ -z ${OUT:-} ]] || refuse "OUT=$OUT is set (a dry-run hook)"
+  [[ -z ${JOB_SUFFIX:-} ]] || refuse "JOB_SUFFIX=$JOB_SUFFIX is set (a dry-run hook)"
+fi
+[[ -z ${CKPT:-} ]] || refuse "CKPT is derived from STEPS (A1.8 m-9); do not set it"
+for v in GAMMA WD STEPS O5; do [[ -n ${(P)v} ]] || refuse "slot $v unfilled"; done
+[[ $STEPS == <-> ]] || refuse "STEPS must be a non-negative integer, got '$STEPS'"
+[[ -n ${DRY_RUN:-} ]] && (( STEPS != 0 )) && refuse "DRY_RUN=1 needs STEPS=0 (a dry run never trains), got STEPS=$STEPS"
+(( STEPS >= 1 )) || [[ -n ${DRY_RUN:-} ]] || refuse "STEPS must be >= 1"
+[[ $O5 == eval || $O5 == train ]] || refuse "O5 must be eval or train, got '$O5'"
+[[ $O5 == eval && -z ${C1_FLAGS:-} ]] && refuse "O5=eval needs C1_FLAGS (C-1's flag)"
+[[ $O5 == train && -n ${C1_FLAGS:-} ]] && refuse "O5=train: C1_FLAGS must be empty"
+[[ $WD != 0.01 && -z ${C3_FLAGS:-} ]] && refuse "O4=$WD needs C3_FLAGS (code change C-3)"
+[[ $WD == 0.01 && -n ${C3_FLAGS:-} ]] && refuse "O4=0.01 is the built value: C3_FLAGS must be empty"
+if (( STEPS > 0 && STEPS % 3 == 0 )); then CKPT=$(( STEPS / 3 )); else CKPT=$STEPS; fi
+ORCH_REC=${RSR_ORCH_ROOT:-} ; OUT_REC=${OUT:-} ; SUFFIX_REC=${JOB_SUFFIX:-}
+: ${OUT:=runs/rsr-run1}
+C1=(${=C1_FLAGS:-}) ; C2=(${=C2_FLAGS:-}) ; C3=(${=C3_FLAGS:-})
+
+RUN_SHA=$($GIT rev-parse HEAD); rc_sha=$?
+PORCELAIN=$($GIT status --porcelain); rc_status=$?
+if (( rc_sha != 0 || rc_status != 0 )) || [[ -n $PORCELAIN ]]; then
+  refuse "not a clean committed head (rc_sha=$rc_sha rc_status=$rc_status)"
+fi
+mkdir -p $OUT/logs; rc_mkdir=$?
+(( rc_mkdir == 0 )) || refuse "mkdir $OUT/logs rc=$rc_mkdir"
+LAUNCHED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+.venv/bin/python -c 'import json, sys
+a = sys.argv[2:]
+d = dict(zip(a[0::2], a[1::2]))
+d["dirty"] = False
+d["porcelain_lines"] = 0
+with open(sys.argv[1], "w") as f:
+    json.dump(d, f)
+    f.write("\n")' $OUT/launch-git.json \
+  run_sha "$RUN_SHA" gamma "$GAMMA" wd "$WD" steps "$STEPS" ckpt "$CKPT" \
+  ckpt_rule "STEPS/3 if STEPS>0 and STEPS%3==0 else STEPS (A1.8 m-9)" o5 "$O5" \
+  c1_flags "${C1_FLAGS:-}" c2_flags "${C2_FLAGS:-}" c3_flags "${C3_FLAGS:-}" \
+  rsr_orch_root "$ORCH_REC" out "$OUT_REC" job_suffix "$SUFFIX_REC" \
+  dry_run "${DRY_RUN:-}" launched_utc "$LAUNCHED_UTC"; rc_json=$?
+(( rc_json == 0 )) || refuse "writing $OUT/launch-git.json rc=$rc_json"
+
+typeset -A SHA
+SHA[0]=0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60
+SHA[1]=dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8
+SHA[2]=b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8
+SLOT=(env PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run
+      --lane cpu-det --slots 1 --wait 3600 --pinned-sha $RUN_SHA)
+RSR=(--policy rsr --policy-override b_enabled=false --policy-override shadow_enabled=false
+     --policy-override nu=0 --policy-override beta=1 --policy-override gamma=$GAMMA)
+
+typeset -A pid rcs
+for s in 0 1 2; do
+  B=$R/.worktrees/fresh-stream/runs/fresh-stream/B/seed$s
+  for a in psiC fifo age; do
+    case $a in
+      psiC) P=("${RSR[@]}") ;;
+      fifo) P=(--policy fifo) ;;
+      age)  P=("${RSR[@]}" --policy-override psi_override=age_only) ;;
+    esac
+    k=$a-s$s
+    "${SLOT[@]}" --job-id rsr-run1-$k${JOB_SUFFIX:-} -- \
+      .venv/bin/python -m rsr.train.loop \
+        --d 128 --batch 16 --iters $STEPS --steps-per-stream 48 --memory-slots 16 \
+        --lr 0.001 --seed $s --beat-every 1 --ckpt-every $CKPT --device cpu \
+        --freeze-transformer "${C1[@]}" "${C3[@]}" \
+        --srep-norm-reg-weight 0.0 \
+        --pool-offset 993000 --pool-length 256 --pool-vocab-documents 64 "${C2[@]}" \
+        --warm-start $B/ckpt-003000.pt --warm-start-sha256 ${SHA[$s]} \
+        --warm-start-manifest /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256 \
+        --warm-start-root $R --warm-start-source-config $B/result.json \
+        "${P[@]}" --out-dir $OUT/$a/seed$s \
+      > $OUT/logs/$k.log 2>&1 &
+    p=$!; pid[$k]=$p      # measured: pid[$k]=$! stores the literal string "$!" in zsh 5.9
+  done
+done
+for k in ${(ok)pid}; do
+  wait ${pid[$k]}; rcs[$k]=$?
+  print -r -- ${rcs[$k]} > $OUT/logs/$k.rc
+  print -r -- "rc[$k]=${rcs[$k]}"
+done
+```
+
+**Measured: the refusal matrix, re-run against v5.**
+
+- Setup: `env -i HOME PATH` plus the listed variables; `GAMMA=0.9 WD=0.01 STEPS=3000 O5=train`
+  unless stated. Logs in `exitprobe/v5/`.
+- No case created an output directory, and `runs/rsr-run1` stayed absent.
+
+| case | rc | message |
+|---|---|---|
+| `DRY_RUN=1 STEPS=3000` | 3 | `DRY_RUN=1 needs STEPS=0 (a dry run never trains), got STEPS=3000` |
+| the same, plus a foreign root, `OUT` and `JOB_SUFFIX` | 3 | the same |
+| `DRY_RUN=1 STEPS=1` | 3 | the same, `got STEPS=1` |
+| `DRY_RUN=1 STEPS=0` with an isolated root, `OUT` and `JOB_SUFFIX`, in a dirty scratch repo | 3 | `not a clean committed head`. The guards passed |
+| leftover `OUT` | 3 | `OUT=… is set (a dry-run hook)` |
+| leftover `JOB_SUFFIX` | 3 | `JOB_SUFFIX=-x is set (a dry-run hook)` |
+| foreign `RSR_ORCH_ROOT` | 3 | `… is not the shared root /Users/keanooo7/retrieval-successor-retention` |
+| `CKPT=1000` given | 3 | `CKPT is derived from STEPS (A1.8 m-9); do not set it` |
+| `STEPS=abc` | 3 | `STEPS must be a non-negative integer, got 'abc'` |
+| `STEPS=0` without `DRY_RUN` | 3 | `STEPS must be >= 1` |
+| `DRY_RUN=2` | 3 | `DRY_RUN must be unset or 1, got '2'` |
+| nothing set | 3 | `slot GAMMA unfilled` |
+| `O5=maybe` | 3 | `O5 must be eval or train, got 'maybe'` |
+| `O5=eval` without `C1_FLAGS` | 3 | `O5=eval needs C1_FLAGS (C-1's flag)` |
+| `O5=train` with `C1_FLAGS='--frozen-model-mode eval'` | 3 | `O5=train: C1_FLAGS must be empty` |
+| `WD=0.0` without `C3_FLAGS` | 3 | `O4=0.0 needs C3_FLAGS (code change C-3)` |
+| `WD=0.01` with `C3_FLAGS` | 3 | `O4=0.01 is the built value: C3_FLAGS must be empty` |
+| `RSR_ORCH_ROOT` = the shared root, in a dirty scratch repo | 3 | `not a clean committed head`. The guard passed |
+| a dirty tree | 3 | `not a clean committed head (rc_sha=0 rc_status=0)` |
+
+**Measured: the nine-job dry run inside tmux, with the A3b.2 command shape, at the code the run
+uses.**
+
+- **Where.** My `.worktrees/rsr-run1-prereg` is based on `211d6da`, which has no `--srep-norm-reg-weight`.
+  So the dry run ran from a new detached worktree, `.worktrees/rsr-run1-prereg-v5dry`, at the
+  harness head `6267fd6`, with its own `.venv` (`uv sync --frozen --extra dev`, rc 0; `rsr.__file__`
+  under it).
+- **The launcher** was the scratch v5 file, byte-identical to the text above.
+- **The command** was `env -u RSR_ORCH_ROOT -u OUT -u JOB_SUFFIX -u DRY_RUN -u CKPT` on the client
+  and in the pane, then `DRY_RUN=1`, an isolated root, `OUT` and `JOB_SUFFIX` set after the strip,
+  `STEPS=0`.
+- **Clean before and after:** the worktree's `git status --porcelain` was empty.
+- **It was run twice**, once for each O5 value. C-1 exists at `6267fd6`, so `O5=eval` could run
+  with `C1_FLAGS='--frozen-model-mode eval'`.
+
+| | O5 = train | O5 = eval |
+|---|---|---|
+| `rc_tmux` / launcher rc | 0 / 0 (14 s) | 0 / 0 (10 s) |
+| `rc[…]=0` lines | 9 of 9 | 9 of 9 |
+| job records | 9 × `done 0`, `threads 1`, `pinned 6267fd645698` | the same |
+| **job command `--srep-norm-reg-weight`** | **`0.0` in all 9** | **`0.0` in all 9** |
+| **recorded `config.srep_norm_reg_weight`** | **`0.0` in all 9** | **`0.0` in all 9** |
+| recorded `frozen_model_mode` | `train (dropout live)` × 9 | `eval (dropout off)` × 9; labels `+frozen[eval]` |
+| `launch-git.json` | `run_sha 6267fd64…`, `o5 train`, `c1_flags ""`, `dry_run "1"`, `dirty False` | `o5 eval`, `c1_flags "--frozen-model-mode eval"`, otherwise the same |
+
+The per-arm lines are literal in `launch_dry_v5_{train,eval}.log` and the job records under
+`exitprobe/root12/.orchestrator/jobs/rsr-run1-*-dry5{train,eval}.json`.
+
+### A3c.2 Tie rule between arms in a seed (completes A3b.3)
+
+A3b.3 ranks a seed's arms by exit, in the order 5 > 3 > 1 > 0 (A3b.5's order).
+
+- **If two or more arms share the seed's worst exit, the seed's status and note are those of the
+  first such arm in the order psiC, fifo, age.**
+- Example: psiC `crashed` (3) and fifo `did_not_run` (3) give the seed `crashed`. The note lists
+  every non-OK arm anyway (`ARM_CRASHED: psiC`, `ARM_DID_NOT_RUN: fifo`), so nothing is hidden.
+- This is what the harness does at `6267fd6` (its addendum, "Still open"). The rule across seeds
+  is unchanged: ties go to the lowest seed (A3b.5).
+
+### A3c.3 A3.2's cost, corrected
+
+The harness report's "about 1.8 CPU-h" was an arithmetic error, which its author confirmed. The
+corrected figure, `eval_forward` against `step_forward` for the held-out RSR decision context:
+
+- per seed ≈ 109.3 (psiC) + 109.9 (age) + 216.7 (sz_psiC) + 216.7 (sz_age, assumed equal to
+  sz_psiC, not measured) + 438.4 (four snapshot passes) ≈ **1,091 s**;
+- over three seeds ≈ 3,273 s ≈ **0.91 CPU-h**.
+
+This is extrapolated from **one batch per pass** (the T5 table: psiC 1.7108 s, fifo 0.8571 s, age
+1.7156 s, sz_psiC 2.5410 s, sz_fifo 0.8483 s per 16-document batch). The choice in A3.2 was not
+made on cost and stands.
+
+### A3c.4 Inconclusive liveness read only by C5, with rc 0 (completes A3b.3)
+
+R-2026-09-22-inert-exit-5, line 21: "inconclusive — otherwise (the 0.01–0.1 band) | `1 FAIL` —
+liveness not demonstrated; the ledger records the band label. Never `0`, never `5`."
+
+- **If C5 reads an `inconclusive` band for an arm whose training rc is 0**, that arm is
+  **`failed`, exit 1**, with the note `LIVENESS_INCONCLUSIVE: <arm>`. This is the same as the rc 1
+  case in A3b.3.
+- `train()` maps an inconclusive band to rc 1 itself (`liveness_exit`), so this case should not
+  arise. It is registered so that a mismatch between the two readings cannot fall through to `ok`.
+- This is the harness's behaviour at `6267fd6`.
+
+### A3c.5 C10 records `srep_norm_reg_weight` and requires 0.0 (extends A3.7a)
+
+- For every arm × seed job, C10 records `config.srep_norm_reg_weight` from the job's result, and
+  the token after `--srep-norm-reg-weight` in the job record's `cmd`.
+- It **requires both to equal 0.0**. Any other value, or a missing value or token, is a C10
+  failure: exit 3, `did_not_run`, `CONTROL_FAILED: [C10]` (A3b.3).
+- 0.0 is this PREREG's registered value (A3c.1), not an owner slot. C10 compares it with the
+  constant registered here.
+
+### A3c.6 TO-CONFIRM, updated
+
+- **T14:** `LAUNCHER_HEADING` = "### A3c.1 Launcher, version 5". The committed launcher's sha256 is
+  `5cbaa14c26c72fc69fb5a96cd95fb950fdd9285862afc76cb790d226d5c22152`.
+- **T17:** `cli_argv` includes `--srep-norm-reg-weight 0.0` at the launcher's position, for 3 seeds
+  × 3 arms × both O5 values. C10 implements A3c.5. The e2e then records 0.0, not 0.01. A
+  seed's notes list **every** non-OK arm, not only the arm that sets the status (A3c.2).
+- **Standing:** T9 is confirmed by the harness at `c02b16d` (`--frozen-model-mode eval`), and T10
+  likewise (`C2_FLAGS` empty). Both are filled at launch per A3b.2. The four owner slots come in
+  Amendment 4.
+
+### A3c.7 What this author has additionally seen (declared)
+
+- The v5 refusal probes.
+- Two `--iters 0` nine-job dry runs at `6267fd6`. Only rcs, job records, recorded configs and
+  labels were read; the liveness numbers were not.
+- **Left in place, not deleted:** the new detached worktree `.worktrees/rsr-run1-prereg-v5dry`, at
+  `6267fd6`, clean.
+- No EVAL document has gone through any model, and no φ has been trained.
