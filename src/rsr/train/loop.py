@@ -643,6 +643,12 @@ def epoch_steps(pool_documents: int | None, batch: int) -> float | None:
 DIAGNOSTICS_FILE = "diagnostics.jsonl"
 
 
+def _write_step_diagnostics(path: Path, record: dict) -> None:
+    """Append one step's §7.1 diagnostics as a JSON line (MINOR-3)."""
+    with open(path, "a") as fh:
+        fh.write(json.dumps(record, default=str) + "\n")
+
+
 def phi_generator(seed: int) -> tuple[torch.Generator, int]:
     """ADR-0009 L11: `phi`'s own **CPU** generator, seeded from `(seed, "phi")`.
 
@@ -1304,20 +1310,16 @@ def train(
                 # Review MINOR-3: the diagnostics are computed EVERY step, so they
                 # are written every step -- to their own file -- whatever
                 # beat_every is. The beat carries the same dict on beat steps.
-                with open(out / DIAGNOSTICS_FILE, "a") as dfh:
-                    dfh.write(
-                        json.dumps(
-                            {
-                                "run_id": run_id,
-                                "arm_label": label,
-                                "step": it,
-                                "train_step": it,
-                                "diag": rsr_beat["diag"],
-                            },
-                            default=str,
-                        )
-                        + "\n"
-                    )
+                _write_step_diagnostics(
+                    out / DIAGNOSTICS_FILE,
+                    {
+                        "run_id": run_id,
+                        "arm_label": label,
+                        "step": it,
+                        "train_step": it,
+                        "diag": rsr_beat["diag"],
+                    },
+                )
             if it % beat_every == 0:
                 attr = policy.attribution() if hasattr(policy, "attribution") else None
                 hb.beat(

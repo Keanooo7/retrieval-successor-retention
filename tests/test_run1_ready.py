@@ -400,6 +400,18 @@ def _ws_for(ck: Path, root: Path, **kw) -> loop.WarmStart:
     return loop.WarmStart(str(ck), str(_manifest(root, ck)), str(root), **kw)
 
 
+def test_checkpoints_record_their_config_and_vocabulary(tmp_path):
+    """MAJOR-1's foundation: every checkpoint train() writes carries its frozen
+    config (hashing to the run_id's suffix) and the sha256 of its token -> id
+    map, so a later warm start checks the map and the seed against the bytes."""
+    ck = _fifo_source(tmp_path, "rec")
+    meta = torch.load(ck, map_location="cpu", weights_only=False)["meta"]
+    assert loop._config_hash(meta["config"]) == meta["run_id"].rsplit("-", 1)[1]
+    assert meta["config"]["seed"] == 0
+    docs = loop.generate(loop.SyntheticConfig(sentences_per_document=48, seed=0))
+    assert meta["vocab_sha256"] == loop.vocab_sha256(loop.build_vocab(docs))
+
+
 def test_a_source_with_a_different_vocabulary_map_is_refused(tmp_path):
     """MAJOR-1: the token -> id MAP is compared, not a document count. A source
     whose vocabulary came from 2 documents (133 words at S = 48, seed 0) is not
