@@ -282,24 +282,49 @@ class WarmStartRefused(ValueError):
 @dataclass(frozen=True)
 class WarmStart:
     """A **weights-only** warm start (m-1; `R-2026-09-30-rsr-run-1-scope` D2(a):
-    run 1 resumes from fresh-stream arm B ``ckpt-003000.pt``).
+    run 1 resumes from fresh-stream arm B ``ckpt-003000.pt``, seed 0).
 
     ``checkpoint`` is read only; ``manifest`` is the T0 backup manifest
     (``shasum -a 256`` lines, paths relative to ``root``); ``root`` is the
     directory those paths resolve against -- the repo root for the originals,
     the backup root for the copies. A checkpoint whose sha256 is not the
-    manifest's, or that the manifest does not list, is refused.
+    manifest's, or that the manifest does not list, is refused; so is one whose
+    sha256 is not ``expected_sha256`` when that is given (the CLI requires it).
+
+    **The source's config** -- its seed and the inputs of its vocabulary -- is
+    read from the checkpoint's ``meta["config"]`` (every checkpoint `train()`
+    writes from feat/rsr-run1-ready on carries it), or else from
+    ``source_config``, a JSON file holding the source run's frozen config (a
+    `train()` result, e.g. arm B's ``result.json``). Either way it is accepted
+    only if its config hash equals the hash in the checkpoint's own sha-verified
+    ``meta["run_id"]`` -- so the config is bound to the bytes, not trusted.
+
+    Two refusals, each lifted only by a **labelled** flag that enters the
+    frozen config, the hash and the label (review MAJOR-1 and the seed ruling):
+
+    * the source's token -> id map must EQUAL this run's (compared as a sha256
+      of the map, not as a document count); a source with no recorded config
+      is refused unless ``allow_unrecorded_vocabulary`` (label
+      ``vocab=unchecked``);
+    * the source's seed must equal this run's seed; a different or unrecorded
+      seed is refused unless ``allow_seed_mismatch`` (label
+      ``seed_mismatch=allowed``).
 
     What it loads: the transformer and ``W_sent`` (the model ``state_dict``),
     nothing else. Not the optimizer (fresh groups), not the RNG (the run's own
     seed), not the policy (``phi`` is built fresh from its own generator, L11),
     not the step: ``k`` counts from 0 at the warm start, so ``T_warm`` (§3.4,
-    correction 31) runs at relative steps ``0 .. T_warm - 1``.
+    correction 31) runs at relative steps ``0 .. T_warm - 1``. The bytes loaded
+    are the bytes hashed: read once, hashed, loaded from memory (MINOR-5).
     """
 
     checkpoint: str
     manifest: str
     root: str
+    expected_sha256: str | None = None
+    source_config: str | None = None
+    allow_unrecorded_vocabulary: bool = False
+    allow_seed_mismatch: bool = False
 
 
 def _sha256_file(path: Path) -> str:
@@ -310,12 +335,15 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def verify_warm_start(ws: WarmStart) -> dict[str, Any]:
-    """The checkpoint's provenance, or `WarmStartRefused`.
+def vocab_sha256(vocab: Mapping[str, int]) -> str:
+    """sha256 of a token -> id map, order-free: what "same vocabulary" means."""
+    blob = json.dumps(sorted(vocab.items()), separators=(",", ":")).encode()
+    return hashlib.sha256(blob).hexdigest()
 
-    Reads the checkpoint and the manifest, writes nothing. The checkpoint must
-    sit under ``root``, be listed in the manifest at its path relative to
-    ``root``, and hash to exactly the listed sha256."""
+
+def _verified_bytes(ws: WarmStart) -> tuple[dict[str, Any], bytes]:
+    """Read the checkpoint ONCE; hash that buffer; check it against the manifest
+    (and ``expected_sha256``). Returns the provenance record and the bytes."""
     ckpt = Path(ws.checkpoint).expanduser().resolve()
     manifest = Path(ws.manifest).expanduser().resolve()
     root = Path(ws.root).expanduser().resolve()
@@ -341,30 +369,89 @@ def verify_warm_start(ws: WarmStart) -> dict[str, Any]:
             f"warm start: {rel} is not in the manifest {manifest} "
             f"({len(listed)} entries); only a T0-listed checkpoint may seed a run"
         )
-    got = _sha256_file(ckpt)
+    data = ckpt.read_bytes()
+    got = hashlib.sha256(data).hexdigest()
     if got != want:
         raise WarmStartRefused(
             f"warm start: {rel} has sha256 {got}, the manifest {manifest} lists "
             f"{want}. Refused: this is not the checkpoint the manifest froze."
         )
-    return {
+    if ws.expected_sha256 is not None and got != ws.expected_sha256.lower():
+        raise WarmStartRefused(
+            f"warm start: {rel} has sha256 {got}, the caller expected "
+            f"{ws.expected_sha256}. Refused: not the checkpoint the command names."
+        )
+    rec = {
         "checkpoint": str(ckpt),
         "manifest": str(manifest),
         "manifest_sha256": _sha256_file(manifest),
         "manifest_entry": rel,
         "sha256": got,
+        "expected_sha256": ws.expected_sha256,
     }
+    return rec, data
 
 
-def _load_warm_start(model: TGModel, ws: WarmStart, *, vocab_documents: int) -> dict:
+def verify_warm_start(ws: WarmStart) -> dict[str, Any]:
+    """The checkpoint's provenance, or `WarmStartRefused`. Reads the checkpoint
+    and the manifest, writes nothing. The checkpoint must sit under ``root``, be
+    listed in the manifest at its path relative to ``root``, and hash to exactly
+    the listed sha256 (and to ``expected_sha256`` if given)."""
+    return _verified_bytes(ws)[0]
+
+
+def _config_vocab_documents(config: Mapping[str, Any]) -> int:
+    """How many documents a run's vocabulary was built from, from its frozen
+    config -- the same precedence `train()` uses (pool, stream, n_documents,
+    SyntheticConfig's default)."""
+    if "pool" in config:
+        return int(config["pool"]["vocab_documents"])
+    if "stream" in config:
+        return int(config["stream"]["vocab_documents"])
+    if "n_documents" in config:
+        return int(config["n_documents"])
+    return SyntheticConfig().n_documents
+
+
+def _source_config(payload: Mapping[str, Any], ws: WarmStart) -> tuple[dict, str] | None:
+    """The source run's frozen config, bound to the checkpoint by its hash, and
+    where it came from; None if neither the checkpoint nor ``source_config``
+    records one. A config whose hash is not the run_id's is REFUSED, not
+    treated as unrecorded."""
+    meta = payload.get("meta") or {}
+    run_id = str(meta.get("run_id") or "")
+    want = run_id.rsplit("-", 1)[-1] if run_id else None
+    found = None
+    if isinstance(meta.get("config"), Mapping):
+        found = (dict(meta["config"]), "checkpoint meta")
+    elif ws.source_config is not None:
+        path = Path(ws.source_config).expanduser().resolve()
+        doc = json.loads(path.read_text())
+        cfg = doc.get("config", doc) if isinstance(doc, dict) else None
+        if not isinstance(cfg, dict):
+            raise WarmStartRefused(f"warm start: {path} holds no config dict")
+        found = (cfg, f"{path} (sha256 {_sha256_file(path)})")
+    if found is None:
+        return None
+    cfg, origin = found
+    if want is None or _config_hash(cfg) != want:
+        raise WarmStartRefused(
+            f"warm start: the source config from {origin} hashes to "
+            f"{_config_hash(cfg)}, but the checkpoint's run_id {run_id!r} names "
+            f"{want!r}. Refused: that config is not the run that wrote these bytes."
+        )
+    return cfg, origin
+
+
+def _load_warm_start(
+    model: TGModel, ws: WarmStart, *, vocab_map: Mapping[str, int], seed: int
+) -> dict:
     """Verify, then load ONLY the model weights (strict: every tensor, every
-    shape). Returns the record stamped into ``frozen``. Draws no RNG and
-    restores none: ``restore_rng=False``, and no optimizer or policy is passed."""
-    rec = verify_warm_start(ws)
+    shape) from the very bytes that were hashed. Returns the record stamped into
+    ``frozen``. Draws no RNG and restores none."""
+    rec, data = _verified_bytes(ws)
     # Read with nothing to restore into; checked; THEN the weights are copied.
-    payload = ck.load(
-        rec["checkpoint"], model=None, optimizer=None, policy=None, restore_rng=False
-    )
+    payload = ck.load_bytes(data, source=rec["checkpoint"])
     source_policy = (payload.get("policy") or {}).get("__policy_name__")
     if source_policy != "fifo":
         raise WarmStartRefused(
@@ -372,21 +459,60 @@ def _load_warm_start(model: TGModel, ws: WarmStart, *, vocab_documents: int) -> 
             "substrate is a FIFO checkpoint (R-2026-09-30-rsr-run-1-scope D2(a)), and "
             "any other policy's state would be silently dropped here"
         )
-    src_vocab = (payload.get("stream") or {}).get("vocab_documents")
-    if src_vocab is not None and int(src_vocab) != vocab_documents:
+    run_vocab = vocab_sha256(vocab_map)
+    found = _source_config(payload, ws)
+    src_cfg, origin = found if found is not None else (None, None)
+    src_vocab = src_seed = None
+    if src_cfg is not None:
+        src_seed = int(src_cfg["seed"])
+        recorded = (payload.get("meta") or {}).get("vocab_sha256")
+        if recorded is not None:
+            src_vocab = str(recorded)
+        else:
+            # Legacy source: rebuild its map from its own (hash-bound) config.
+            # Assumes this tree's generator; the checkpoint's sha pins the bytes.
+            src_docs = generate(
+                SyntheticConfig(
+                    sentences_per_document=int(src_cfg["steps_per_stream"]),
+                    seed=src_seed,
+                    n_documents=_config_vocab_documents(src_cfg),
+                )
+            )
+            src_vocab = vocab_sha256(build_vocab(src_docs))
+        if src_vocab != run_vocab:
+            raise WarmStartRefused(
+                f"warm start: the source's token->id map (sha256 {src_vocab[:12]}) "
+                f"is not this run's ({run_vocab[:12]}). Token ids would mean "
+                "different words."
+            )
+    elif not ws.allow_unrecorded_vocabulary:
         raise WarmStartRefused(
-            f"warm start: the source's vocabulary was built from documents "
-            f"[0, {src_vocab}); this run builds it from [0, {vocab_documents}). "
-            "Token ids would mean different words."
+            "warm start: the source records no config, so its vocabulary cannot be "
+            "compared with this run's. Pass source_config= (a JSON frozen config "
+            "whose hash is the checkpoint's run_id), or set the labelled flag "
+            "allow_unrecorded_vocabulary=True."
+        )
+    if src_seed != seed and not ws.allow_seed_mismatch:
+        raise WarmStartRefused(
+            f"warm start: the source's seed is {src_seed!r} and this run's is {seed}. "
+            "'Documents the source never saw' is a statement about the source's "
+            "seed. Refused unless the labelled flag allow_seed_mismatch=True."
         )
     model.load_state_dict(payload["model"])  # strict: every tensor, every shape
     rec.update(
         source_step=int(payload.get("step", 0)),
         source_run_id=(payload.get("meta") or {}).get("run_id"),
         source_policy=source_policy,
-        source_vocab_documents=src_vocab,
-        loaded="model state_dict only (transformer + W_sent); optimizer, RNG, "
-        "policy and step NOT loaded",
+        source_seed=src_seed,
+        source_config_origin=origin,
+        source_vocab_sha256=src_vocab,
+        run_vocab_sha256=run_vocab,
+        vocab_checked=src_vocab is not None,
+        seed_matches=src_seed == seed,
+        allow_unrecorded_vocabulary=ws.allow_unrecorded_vocabulary,
+        allow_seed_mismatch=ws.allow_seed_mismatch,
+        loaded="model state_dict only (transformer + W_sent), from the hashed "
+        "bytes; optimizer, RNG, policy and step NOT loaded",
         train_step_origin="k = 0 at the warm start (§3.4 T_warm counts from here)",
     )
     return rec
@@ -513,6 +639,10 @@ def epoch_steps(pool_documents: int | None, batch: int) -> float | None:
     return pool_documents / batch
 
 
+#: Every RSR step's §7.1 diagnostics, one JSON line per optimizer step (MINOR-3).
+DIAGNOSTICS_FILE = "diagnostics.jsonl"
+
+
 def phi_generator(seed: int) -> tuple[torch.Generator, int]:
     """ADR-0009 L11: `phi`'s own **CPU** generator, seeded from `(seed, "phi")`.
 
@@ -553,8 +683,10 @@ def arm_label(
     departure, so it is in the name; two arms that differ in one cannot share a
     label, and (stamped into `frozen`) cannot share a config hash either. The
     frozen-transformer option (R-2026-09-30-rsr-run-1-scope D2(b)) is appended,
-    then the warm start's source (m-1): `+warm[ckpt-003000.pt@0ee3f8a69b50]`,
-    the checkpoint's file name and the first 12 hex of its sha256.
+    then the warm start's source (m-1):
+    `+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]` -- the checkpoint's file
+    name, the first 12 hex of its sha256 and its seed, plus `vocab=unchecked` /
+    `seed_mismatch=allowed` when a labelled allow flag was needed.
     """
     toks = [
         f"{_LABEL_NAMES.get(k, k)}={_label_value(v)}"
@@ -564,7 +696,16 @@ def arm_label(
     label = f"{label}+frozen" if freeze_transformer else label
     if warm_start is not None:
         name = Path(warm_start["checkpoint"]).name
-        label = f"{label}+warm[{name}@{warm_start['sha256'][:12]}]"
+        seed = warm_start.get("source_seed")
+        toks = [
+            f"{name}@{warm_start['sha256'][:12]}",
+            f"src_seed={'unrecorded' if seed is None else seed}",
+        ]
+        if not warm_start.get("vocab_checked", True):
+            toks.append("vocab=unchecked")
+        if not warm_start.get("seed_matches", True):
+            toks.append("seed_mismatch=allowed")
+        label = f"{label}+warm[{','.join(toks)}]"
     return label
 
 
@@ -807,7 +948,9 @@ def train(
     # three are this run's own). Reads the checkpoint; draws and restores no RNG.
     ws_record = None
     if warm_start is not None:
-        ws_record = _load_warm_start(model, warm_start, vocab_documents=len(probe))
+        ws_record = _load_warm_start(
+            model, warm_start, vocab_map=build_vocab(probe), seed=seed
+        )
 
     # S0-01 defect (c). `StepOutput.srep_norm_penalty` is computed at `model.py:424`
     # and was discarded: `grep -c srep_norm src/rsr/train/loop.py` returned 0.
@@ -862,9 +1005,10 @@ def train(
         model.requires_grad_(False)  # D2(b): no L_NTP update to transformer, W_sent
 
     # muP groups, NOT a flat AdamW: the value head lands in its OWN `value_head`
-    # group (§4.3; ADR-0009 T9). One AdamW, decoupled decay, eps = torch's default
-    # (ADR-0009 L8 provisional answer; B1). A frozen arm with no head has nothing
-    # to optimise, and builds no optimizer rather than an empty one.
+    # group (§4.3; ADR-0009 T9). One AdamW, decoupled decay, eps pinned at 1e-8
+    # (ADAMW_EPS, P-2: B1's measured regime; ADR-0009 L8 provisional answer).
+    # A frozen arm with no head has nothing to optimise, and builds no
+    # optimizer rather than an empty one.
     opt = None
     if any(p.requires_grad for p in model.parameters()) or phi_params:
         groups = build_param_groups(model, head, base_lr=lr, d_model=d, base_width=128)
@@ -1157,6 +1301,23 @@ def train(
                     eval_forward_s=rsr_beat["eval_forward_s"],
                     step_s=dt,
                 )
+                # Review MINOR-3: the diagnostics are computed EVERY step, so they
+                # are written every step -- to their own file -- whatever
+                # beat_every is. The beat carries the same dict on beat steps.
+                with open(out / DIAGNOSTICS_FILE, "a") as dfh:
+                    dfh.write(
+                        json.dumps(
+                            {
+                                "run_id": run_id,
+                                "arm_label": label,
+                                "step": it,
+                                "train_step": it,
+                                "diag": rsr_beat["diag"],
+                            },
+                            default=str,
+                        )
+                        + "\n"
+                    )
             if it % beat_every == 0:
                 attr = policy.attribution() if hasattr(policy, "attribution") else None
                 hb.beat(
@@ -1199,7 +1360,14 @@ def train(
                     model=model,
                     optimizer=opt,
                     policy=policy,
-                    meta={"run_id": run_id},
+                    # The frozen config and the vocabulary's sha256 travel with
+                    # the bytes, so a later warm start can check the map and the
+                    # seed against the checkpoint itself (review MAJOR-1).
+                    meta={
+                        "run_id": run_id,
+                        "config": json.loads(json.dumps(frozen, default=str)),
+                        "vocab_sha256": vocab_sha256(vocab_map),
+                    },
                     **(
                         {}
                         if stream is None
@@ -1371,6 +1539,52 @@ def parse_overrides(items: list[str]) -> dict[str, Any]:
     return out
 
 
+def _cli_pool_and_warm_start(p, a) -> tuple[DocumentPool | None, WarmStart | None]:
+    """The CLI's pool and warm start, built as the same objects `train()` takes.
+    A partial or inconsistent set of flags is a usage error (exit 3), never a
+    silently ignored flag."""
+    pool = warm = None
+    if (a.pool_offset is None) != (a.pool_length is None):
+        p.error("--pool-offset and --pool-length go together")
+    if a.pool_offset is not None:
+        try:
+            pool = DocumentPool(a.pool_offset, a.pool_length, a.pool_vocab_documents)
+        except ValueError as e:
+            p.error(str(e))
+    ws_flags = (
+        a.warm_start_sha256,
+        a.warm_start_manifest,
+        a.warm_start_root,
+        a.warm_start_source_config,
+    )
+    flagged = a.allow_unrecorded_vocabulary or a.allow_seed_mismatch
+    if a.warm_start is None:
+        if any(f is not None for f in ws_flags) or flagged:
+            p.error("--warm-start-* and --allow-* flags need --warm-start")
+        return pool, None
+    missing = [
+        n
+        for n, v in (
+            ("--warm-start-sha256", a.warm_start_sha256),
+            ("--warm-start-manifest", a.warm_start_manifest),
+            ("--warm-start-root", a.warm_start_root),
+        )
+        if v is None
+    ]
+    if missing:
+        p.error(f"--warm-start needs {', '.join(missing)}")
+    warm = WarmStart(
+        checkpoint=a.warm_start,
+        manifest=a.warm_start_manifest,
+        root=a.warm_start_root,
+        expected_sha256=a.warm_start_sha256,
+        source_config=a.warm_start_source_config,
+        allow_unrecorded_vocabulary=a.allow_unrecorded_vocabulary,
+        allow_seed_mismatch=a.allow_seed_mismatch,
+    )
+    return pool, warm
+
+
 def main(argv: list[str] | None = None) -> Exit:
     p = ArgumentParser(prog="rsr-train", description=__doc__)
     for name, typ, dflt in (
@@ -1429,7 +1643,27 @@ def main(argv: list[str] | None = None) -> Exit:
     p.add_argument("--device", default="mps")
     p.add_argument("--out-dir", default="runs/dev")
     p.add_argument("--resume", default=None)
+    # Review MINOR-7: run 1's RESULTS.md quotes ONE command. The pool and the warm
+    # start are reachable from the CLI and go through the same objects train()
+    # validates (DocumentPool / WarmStart), never a second parser of their own.
+    g = p.add_argument_group("document pool (m-2)")
+    g.add_argument("--pool-offset", type=int, default=None)
+    g.add_argument("--pool-length", type=int, default=None)
+    g.add_argument("--pool-vocab-documents", type=int, default=64)
+    w = p.add_argument_group("weights-only warm start (m-1, D2(a))")
+    w.add_argument("--warm-start", default=None, metavar="CKPT")
+    w.add_argument(
+        "--warm-start-sha256",
+        default=None,
+        help="required with --warm-start: the checkpoint's expected sha256",
+    )
+    w.add_argument("--warm-start-manifest", default=None, metavar="T0_MANIFEST")
+    w.add_argument("--warm-start-root", default=None, metavar="MANIFEST_ROOT")
+    w.add_argument("--warm-start-source-config", default=None, metavar="JSON")
+    w.add_argument("--allow-unrecorded-vocabulary", action="store_true")
+    w.add_argument("--allow-seed-mismatch", action="store_true")
     a = p.parse_args(argv)
+    pool, warm = _cli_pool_and_warm_start(p, a)
     r = train(
         d=a.d,
         batch=a.batch,
@@ -1448,6 +1682,8 @@ def main(argv: list[str] | None = None) -> Exit:
         policy_overrides=parse_overrides(a.policy_override) or None,
         no_warmup_ablation=a.no_warmup_ablation,
         freeze_transformer=a.freeze_transformer,
+        pool=pool,
+        warm_start=warm,
     )
     print(json.dumps(r, indent=2, default=str))
     # liveness-wiring: 0 live, 5 INERT, 1 inconclusive, 3 not a valid measurement.

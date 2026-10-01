@@ -52,6 +52,7 @@ __all__ = [
     "RngState",
     "atomic_write",
     "load",
+    "load_bytes",
     "save",
 ]
 
@@ -373,6 +374,44 @@ def load(
         load_policy_state(policy, payload.get("policy") or {})
     if restore_rng and payload.get("rng") is not None:
         RngState(**payload["rng"]).restore()
+    return payload
+
+
+def load_bytes(
+    data: bytes,
+    *,
+    source: Path | str,
+    map_location: Any = "cpu",
+    allow_quarantined: bool = False,
+) -> dict[str, Any]:
+    """Read a checkpoint payload from bytes ALREADY in memory -- restore nothing.
+
+    For a caller that hashed exactly these bytes (the warm start, review MINOR-5
+    of feat/rsr-run1-ready): reading the path a second time would open a window
+    in which the bytes loaded need not be the bytes verified. ``source`` is the
+    path the bytes came from, for the quarantine rule and for messages. The same
+    refusals as `load`: quarantined (unless allowed), unreadable, wrong version.
+    """
+    source = Path(source)
+    if is_quarantined(source) and not allow_quarantined:
+        raise QuarantinedCheckpoint(
+            f"{source} is quarantined: its run measured memory INERT (exit 5, "
+            f"R-2026-09-22-inert-exit-5). Retention experiments on it are refused."
+        )
+    try:
+        payload = torch.load(
+            io.BytesIO(data), map_location=map_location, weights_only=False
+        )
+    except Exception as exc:
+        raise CheckpointError(
+            f"{source} could not be read ({type(exc).__name__}: {exc})"
+        ) from exc
+    version = payload.get("format_version")
+    if version != FORMAT_VERSION:
+        raise CheckpointError(
+            f"{source} is format version {version!r}, this build writes "
+            f"{FORMAT_VERSION}. Refusing rather than guessing at the difference."
+        )
     return payload
 
 
