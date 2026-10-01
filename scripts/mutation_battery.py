@@ -6573,6 +6573,90 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if False:  # MUTATED\n",
         "MINOR-7: a partial flag set is a usage error (exit 3), never half a pool.",
     ),
+    # ---- PREREG-drafter defects (prereg/rsr-run1 @ 7c58777): attribution,
+    # bounded records, data-order resume, the srep flag, split histograms.
+    Mutation(
+        "run1: RSR beats carry no attribution again",
+        "test_rsr_beats_carry_the_decision_attribution",
+        "src/rsr/retention/rsr.py",
+        "    def attribution(self) -> dict[str, float] | None:\n",
+        "    def _attribution_unreached(self) -> dict[str, float] | None:  # MUTATED\n",
+        "Defect 1 (RESEARCH-CONTEXT §10.1 defect 4): train() asks "
+        "policy.attribution(); without it every RSR beat records null, against "
+        "§3.4's per-eviction attribution from the first policy run.",
+    ),
+    Mutation(
+        "run1: train() stops draining the eviction records",
+        "test_records_are_drained_and_checkpoints_stay_bounded",
+        "src/rsr/train/loop.py",
+        "                _drain_evictions(policy, out / EVICTIONS_FILE)\n",
+        "                pass  # MUTATED\n",
+        "Defect 2: ~1.5M records per run-1 arm held in memory and pickled into "
+        "every checkpoint.",
+    ),
+    Mutation(
+        "run1: drain_records keeps the records",
+        "test_records_are_drained_and_checkpoints_stay_bounded",
+        "src/rsr/retention/rsr.py",
+        "        out, self.records = self.records, []\n",
+        "        out = list(self.records)  # MUTATED\n",
+        "Defect 2: a drain that copies leaves memory and checkpoints unbounded "
+        "and writes every record again each step.",
+    ),
+    Mutation(
+        "run1: the data-order generator is not checkpointed",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        '{DATA_GENERATOR_STATE: gen.get_state(), "next_step": it + 1}',
+        '{"next_step": it + 1}  # MUTATED',
+        "Defect 3: without the sampler's state a resumed arm cannot continue its "
+        "data order.",
+    ),
+    Mutation(
+        "run1: the saved data-order state is not restored",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        "            gen.set_state(gen_state)\n",
+        "            pass  # MUTATED\n",
+        "Defect 3: restarted from the seed, a resumed arm re-reads step 0's "
+        "batches and stops pairing with an uninterrupted arm.",
+    ),
+    Mutation(
+        "run1: a resume without data-order state is not refused",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        "            if gen_state is None:\n",
+        "            if False:  # MUTATED\n",
+        "Defect 3: a pre-fix checkpoint must be refused with a clear message, "
+        "not resumed into a different data order.",
+    ),
+    Mutation(
+        "run1: srep_norm_reg_weight is not validated",
+        "test_srep_norm_reg_weight_is_a_validated_cli_flag",
+        "src/rsr/train/loop.py",
+        "    if not (math.isfinite(w_srep) and w_srep >= 0.0):\n",
+        "    if False:  # MUTATED\n",
+        "Defect 4: reachable from the CLI now, so a negative or non-finite "
+        "hinge weight must be refused, not trained.",
+    ),
+    Mutation(
+        "run1: the CLI drops srep_norm_reg_weight",
+        "test_srep_norm_reg_weight_is_a_validated_cli_flag",
+        "src/rsr/train/loop.py",
+        "        srep_norm_reg_weight=a.srep_norm_reg_weight,\n",
+        "        srep_norm_reg_weight=None,  # MUTATED\n",
+        "Defect 4: arm B trained at 0.0; a flag that does not reach train() "
+        "runs run 1 at 0.01 under a command that says 0.0.",
+    ),
+    Mutation(
+        "run1: the run-level histograms merge warmup and scored evictions",
+        "test_the_run_level_histograms_split_warmup_from_scored",
+        "src/rsr/retention/rsr.py",
+        '        self.phase_shifts["fifo_warmup" if warm else "scored"].add(record)\n',
+        '        self.phase_shifts["fifo_warmup"].add(record)  # MUTATED\n',
+        "Defect 5: a RESULTS must never read one histogram that mixes FIFO-warmup "
+        "and scored evictions.",
+    ),
 )
 
 
