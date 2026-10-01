@@ -5829,6 +5829,188 @@ MUTATIONS: tuple[Mutation, ...] = (
         "gradient opposes a span charge on its still-ageing memories; charging it "
         "pushes spans down for nothing.",
     ),
+    # --- I6: RSR_* environment (PLAN-v4 §4; red-team m-2) ---
+    Mutation(
+        "battery-env: a stray RSR_* variable is not refused",
+        "test_stray_variable",
+        "scripts/battery_env.py",
+        "    if stray:\n        named = []",
+        "    if False:\n        named = []",
+        "red-team m-2: the battery hands its whole environment to pytest. An "
+        "RSR_* name nothing declares is a typo of a real control or a leftover; "
+        "on 09-26/27 the verdicts moved with ambient state nobody recorded.",
+    ),
+    Mutation(
+        "battery: main() records the RSR_* environment without checking it",
+        "test_stray_variable_stops_main",
+        "scripts/mutation_battery.py",
+        # split literals: this row must not be the occurrence apply() replaces
+        "    print(battery_env.header(battery_env.che" + "ck()))",
+        "    print(battery_env.header(battery_env.present()))",
+        "I6: the refusal is one call in main(). Without it battery_env.check is "
+        "correct and unused, and a stray override runs every suite.",
+    ),
+    Mutation(
+        "battery: a driver that skips main() is not checked",
+        "test_stray_variable_stops_a_driver",
+        "scripts/mutation_battery.py",
+        "        own = battery_env.che" + "ck()",
+        "        own = battery_env.present()",
+        "I6 fix round 1, defence in depth: a driver that bypasses main() and "
+        "calls _run_isolated directly would otherwise run every suite under a "
+        "stray override. (No driver does so today; I2's run_shard calls main().)",
+    ),
+    Mutation(
+        "battery-env: RSR_ORCH_CMD_ with any suffix is declared",
+        "test_stray_variable_orch_cmd",
+        "scripts/battery_env.py",
+        "    return name in DECLARED or name in ORCH_CMD_NAMES",
+        "    return name in DECLARED or name.startswith(ORCH_CMD_PREFIX)",
+        "review MINOR-5: orch_cmd reads RSR_ORCH_CMD_<module.upper()>; a misspelled "
+        "module stubs nothing, the typo class the gate exists for.",
+    ),
+    Mutation(
+        "battery: the --json rows drop the RSR_* environment",
+        "test_declared_variable_is_recorded",
+        "scripts/mutation_battery.py",
+        "rows.append(battery_env.sta" + "mp(_row(m, failing, did_not_run), own, suite))",
+        "rows.append(_row(m, failing, did_not_run))",
+        "I6: the json record is what a later reader has. Until 09-30 it carried "
+        "nothing of the environment the verdicts were issued under.",
+    ),
+    Mutation(
+        "battery-env: the json record carries names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '    out.setdefault("rsr_env", dict(own))',
+        '    out.setdefault("rsr_env", sorted(own))',
+        "I6: RSR_BATTERY_THREADS=2 and =14 are the same name; the 09-26/27 "
+        "verdicts differed by the value.",
+    ),
+    Mutation(
+        "battery-env: the json record carries the suite's names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '    out.setdefault("rsr_env_suite", dict(suite))',
+        '    out.setdefault("rsr_env_suite", sorted(suite))',
+        "review MAJOR-3: the suite's values are the ones pytest ran under.",
+    ),
+    Mutation(
+        "battery-env: the header prints names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '        lines.append(f"  {name}={value!r} -- {_role(name)}")',
+        '        lines.append(f"  {name} -- {_role(name)}")',
+        "I6: the stdout header is the record of a battery run without --json.",
+    ),
+    Mutation(
+        "battery-env: the suite header does not mark a replaced value",
+        "test_suite_header_marks",
+        "scripts/battery_env.py",
+        '            note = f" [replaced by the battery; its own value is '
+        '{own[name]!r}]"',
+        '            note = ""',
+        "review MAJOR-3/MINOR-6: ambient RSR_TORCH_THREADS=14 under a cap of 2 was "
+        "recorded as 14 with nothing to say the suite ran with 2.",
+    ),
+    Mutation(
+        "battery-env: stamp overwrites a row's recorded environment",
+        "test_stamp_keeps",
+        "scripts/battery_env.py",
+        '    out.setdefault("rsr_env", dict(own))',
+        '    out["rsr_env"] = dict(own)',
+        "review MAJOR-4: a driver merging per-shard rows would record its own "
+        "environment on every row instead of each shard's.",
+    ),
+    Mutation(
+        "battery-env: a name the tree reads is not declared",
+        "test_inventory_every_rsr_name",
+        "scripts/battery_env.py",
+        '    "RSR_NB_B2_FITS": "experiments/newcomer-bakeoff/run.py: where B2\'s '
+        'fits are",\n',
+        "    # (declaration removed)\n",
+        "I6: the red team counted twelve RSR_* names; this tree has 36 and a "
+        "family of per-module names. A declared list nothing holds to the tree is "
+        "stale the day after it is written, and a legitimate launch is then "
+        "refused. (The mutation replaces the line with a comment rather than "
+        "renaming the key: a renamed key would itself be a new RSR_* token in "
+        "this file.)",
+    ),
+    Mutation(
+        "battery-env: rows carry the shard's root path",
+        "test_rows_do_not_depend_on_where_the_shard_lives",
+        "scripts/battery_env.py",
+        "        (str(root), SHARD_TOKEN),\n",
+        "        # (shard root not replaced)\n",
+        "I6 second review MAJOR-2: a row that carries its shard's path is never "
+        "equal to the same verdict from another pool, so a serial and a sharded "
+        "run at one SHA cannot be compared row by row.",
+    ),
+    Mutation(
+        "battery: each mutation's suite rebuilds its own environment",
+        "test_declared_variable_is_recorded_as_the_env_the_suite_got",
+        "scripts/mutation_battery.py",
+        "                failing = run_suite(shard, e" + "nv)",
+        "                failing = run_suite(shard)",
+        "I6 second review MINOR-3: a rebuilt env re-reads ops/lanes.json and "
+        "os.environ, and was measured to drift from the recorded one mid-run.",
+    ),
+    Mutation(
+        "battery-env: the inventory reads ignored files",
+        "test_inventory_skips_ignored",
+        "scripts/battery_env.py",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--others", "--", *CODE_DIRS',
+        "I6 second review MAJOR-1: git-ignored agent checkouts under "
+        ".claude/worktrees/ made the inventory test red on a machine-local file.",
+    ),
+    Mutation(
+        "battery-env: the inventory misses a new untracked file",
+        "test_inventory_reads_a_new_untracked",
+        "scripts/battery_env.py",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--cached", "--", *CODE_DIRS',
+        "I6 third review MINOR-3: a new file reading an RSR_* name was invisible "
+        "until committed, so the author's run was green and CI red.",
+    ),
+    Mutation(
+        "battery-env: the inventory accepts a directory inside a checkout",
+        "test_inventory_refuses_a_directory_inside",
+        "scripts/battery_env.py",
+        "    if not os.path.samefile(top, root):",
+        "    if False:",
+        "I6 third review MINOR-2: inside a checkout ls-files exits 0 and lists "
+        "nothing, so an empty inventory passed as a measurement.",
+    ),
+    Mutation(
+        "battery-env: the inventory reads untracked .claude files",
+        "test_inventory_skips_untracked_claude_files",
+        "scripts/battery_env.py",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--others", "--exclude-standard", "--", *SCANNED',
+        "I6 fourth review MINOR-1: whether git ignores .claude/settings.local.json "
+        "depends on each machine's excludes file; reading untracked .claude/ files "
+        "made the inventory red on one machine and green on another.",
+    ),
+    Mutation(
+        "battery-env: the checkout-top check compares path strings",
+        "test_tracked_accepts_a_differently_cased_root",
+        "scripts/battery_env.py",
+        "    if not os.path.samefile(top, root):",
+        "    if Path(top) != Path(root):",
+        "I6 fourth review MINOR-2: on case-insensitive APFS a differently-cased "
+        "root is the same checkout, and a string comparison refused it.",
+    ),
+    Mutation(
+        "battery-env: rows carry the probe's path",
+        "test_rows_do_not_depend_on_where_the_shard_lives",
+        "scripts/battery_env.py",
+        "        (str(probe), PROBE_TOKEN),\n",
+        "        # (probe not replaced)\n",
+        "I6 third review MAJOR-1: the probe lives in the pool, outside the shard "
+        "root (battery_isolation.make_shard); without its token a row carries the "
+        "pool's absolute path, which differs between a serial and a sharded run.",
+    ),
 )
 
 
@@ -6040,7 +6222,9 @@ def _spawn(argv: list[str], cwd: Path, env: dict[str, str]):
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 
 
-def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
+def run_suite(
+    shard: iso.Shard | None = None, env: dict[str, str] | None = None
+) -> dict[str, str | None]:
     """Return ``{failing node id: one-line reason}`` (``None`` if pytest printed none).
 
     🔴 I1: with a ``shard``, the suite runs there on the shard's own pytest, and
@@ -6054,15 +6238,18 @@ def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     ``test_submit_launches_the_slot_detached_at_the_pinned_sha`` left only a node
     id. The reason is recorded on the verdict row; it never enters a verdict --
     the node set is parsed exactly as before (`parse_failures`).
+
+    I6: ``env``, when given, is the suite's whole environment, used as is:
+    `_run_isolated` builds it once and records that same object.
     """
-    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    if env is None:
+        env = suite_env(shard)
     argv = ["-p", "no:cacheprovider", "-rfE", "--tb=line", "-q", "--no-header"]
     if shard is None:
         proc = subprocess.run(
             [str(PYTEST), *argv], cwd=ROOT, capture_output=True, text=True, env=env
         )
         return parse_failures(proc.stdout + proc.stderr, proc.returncode)
-    env = iso.shard_env(shard, env)
     with contextlib.suppress(FileNotFoundError):
         shard.probe.unlink()
     proc = _spawn([str(shard.root / ".venv" / "bin" / "pytest"), *argv], shard.root, env)
@@ -6070,6 +6257,13 @@ def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     if problem:
         raise SuiteDidNotRun(f"{problem} (in {shard.root})")
     return parse_failures(proc.stdout + proc.stderr, proc.returncode)
+
+
+def suite_env(shard: iso.Shard | None = None) -> dict[str, str]:
+    """The environment a suite runs under: ``_suite_env`` and ``COLUMNS``, then the
+    shard's own (``battery_isolation.shard_env``) when there is a shard."""
+    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    return env if shard is None else iso.shard_env(shard, env)
 
 
 def parse_failures(text: str, returncode: int) -> dict[str, str | None]:
@@ -6186,6 +6380,12 @@ def reset(shard: iso.Shard) -> None:
     iso.reset_shard(shard)
 
 
+# I6 (PLAN-v4 §4). Imported here, not with the imports above MUTATIONS, so that the
+# whole I6 diff outside the table is in this file's tail: `battery_union` refuses a
+# merge in which both sides changed the head.
+import battery_env  # noqa: E402
+
+
 def main() -> Exit:
     ap = ArgumentParser()
     ap.add_argument(
@@ -6236,6 +6436,10 @@ def main() -> Exit:
             return Exit.DID_NOT_RUN
         print(f"no shard worktrees registered under {pool}")
         return Exit.OK
+
+    # 🔴 I6: every RSR_* variable is recorded, and an undeclared one is DID NOT RUN
+    # (3) here -- before the anchor check and before any suite.
+    print(battery_env.header(battery_env.check()))
 
     if not MUTATIONS:
         # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has no
@@ -6290,8 +6494,17 @@ def _run_isolated(args) -> Exit:
             f"shard: {shard.root} at {shard.sha[:12]} "
             + " ".join(f"{k}={v:.2f}" for k, v in shard.timings.items())
         )
+        # 🔴 I6: the environment every suite below runs under, built ONCE and passed
+        # to run_suite, so the record is what the suite got. check() again only as
+        # defence in depth, for a driver that bypasses main(). The row carries the
+        # suite env with the shard's paths as tokens: it must not depend on where
+        # the shard lives (battery_env.portable).
+        own = battery_env.check()
+        env = suite_env(shard)
+        print(battery_env.suite_header(own, battery_env.present(env)))
+        suite = battery_env.portable(battery_env.present(env), shard.root, shard.probe)
         try:
-            baseline = run_suite(shard)
+            baseline = run_suite(shard, env)
         except SuiteDidNotRun as e:
             refuse(Exit.DID_NOT_RUN, f"the baseline suite did not run: {e}")
         if baseline:
@@ -6309,7 +6522,7 @@ def _run_isolated(args) -> Exit:
             original = apply(m, shard.root)
             did_not_run = None
             try:
-                failing = run_suite(shard)
+                failing = run_suite(shard, env)
             except SuiteDidNotRun as e:
                 failing, did_not_run = {}, str(e)
             finally:
@@ -6317,7 +6530,7 @@ def _run_isolated(args) -> Exit:
                 t0 = time.perf_counter()
                 reset(shard)
                 resets.append(time.perf_counter() - t0)
-            rows.append(_row(m, failing, did_not_run))
+            rows.append(battery_env.stamp(_row(m, failing, did_not_run), own, suite))
             print(
                 f"{rows[-1]['verdict']:13s} {m.name:42s} "
                 f"-> {rows[-1]['n_on_gate']} on gate, {len(rows[-1]['off_gate'])} off "
