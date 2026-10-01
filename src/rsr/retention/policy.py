@@ -198,6 +198,16 @@ class AttentionTrace:
     **non-stationary**: `r_i` at epoch 1 and at epoch 12 are not the same
     measurement. Computed both ways and reported both against LOO in E0d."""
 
+    context: Tensor | None = None
+    """`[d]` the `c_t` this step's `r_i` is paired with, or None if not supplied.
+
+    ADR-0009 L10(a): additive, with a default, so FIFO / LRU / H2O and every test
+    policy are untouched. `run_policy_loop(..., eval_capture=True)` sets it to the
+    **eval-mode** forward's sentence gestalt -- the same tensor the eviction
+    decision reads (L2) -- so `r_i(t)` and `c_t` come from one forward by
+    construction. Detached: it is an input to `psi_hat`, never a path back into
+    the transformer (§3.3). `RSRPolicy.observe` refuses a trace without it."""
+
 
 @runtime_checkable
 class RetentionPolicy(Protocol):

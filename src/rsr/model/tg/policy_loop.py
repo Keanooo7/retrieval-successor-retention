@@ -29,6 +29,7 @@ measured on the reference: identical loss, 113 of 206 gradient arrays moved.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 import torch
@@ -40,7 +41,9 @@ from rsr.retention.policy import AttentionTrace, MemoryState
 __all__ = [
     "Q_TOK_COLLAPSE",
     "CrossCapture",
+    "EvalForward",
     "cross_capture",
+    "eval_forward",
     "memory_state",
     "newcomer_slot",
     "run_policy_loop",
@@ -278,11 +281,17 @@ def cross_capture(
 
 
 def trace_for_row(
-    cap: CrossCapture, mem_valid: Tensor, row: int, step: int
+    cap: CrossCapture,
+    mem_valid: Tensor,
+    row: int,
+    step: int,
+    context: Tensor | None = None,
 ) -> AttentionTrace:
     """One row of a `CrossCapture` as the protocol's `AttentionTrace`.
 
-    `mem_valid` is the **pre-write** validity mask, matching `cap`.
+    `mem_valid` is the **pre-write** validity mask, matching `cap`. `context` is
+    the batch's `[B, D]` `c_t` from the forward that produced `cap` (ADR-0009
+    L10(a)); its row is attached detached.
     """
     return AttentionTrace(
         alpha=cap.alpha[:, row],
@@ -291,7 +300,66 @@ def trace_for_row(
         step=step,
         eval_mode=cap.eval_mode,
         gate=cap.gate,
+        context=None if context is None else context[row].detach(),
     )
+
+
+@dataclass
+class EvalForward:
+    """ADR-0009 L1(a): one step's second, `no_grad`, eval-mode forward.
+
+    `srep` is the eval sentence gestalt -- `c_t` for **both** the regression and
+    the eviction decision (L2: one tensor, so the head is never fitted on one
+    `c_t` and decided on another). `cap` is the eval-mode capture `r_i` is read
+    from (correction 20 / D-F), or None when `observe` is off. `seconds` is the
+    wall time it cost, kept so L1's unmeasured cost is measured by every run that
+    pays it.
+    """
+
+    srep: Tensor
+    cap: CrossCapture | None
+    seconds: float
+
+
+def eval_forward(
+    model: TGModel,
+    ids_t: Tensor,
+    mask_t: Tensor,
+    mem: Memory,
+    bos_ctx: Tensor,
+    bos_valid: Tensor,
+    *,
+    capture: bool,
+) -> EvalForward:
+    """The same step again, over the same PRE-write memory and `bos_ctx`, in
+    `model.eval()` under `no_grad`; the model's mode is restored on the way out.
+
+    🔴 **The capture is taken INSIDE the eval block.** `cross_capture` stamps
+    `eval_mode` from `model.training` at the time it is called, so a capture
+    built after the mode is restored would carry `eval_mode=False` and be refused
+    by `reward._require_eval` -- correctly, because it would be lying.
+
+    Every dropout in `model.py` is an `nn.Dropout`, which in eval mode is the
+    identity and draws nothing, so this forward consumes no RNG: the training
+    forward's masks, the data order and the global stream are where they would be
+    without it (ADR-0009 T6 measures that rather than trusting this sentence).
+    """
+    t0 = time.perf_counter()
+    was_training = model.training
+    with torch.no_grad():
+        model.eval()
+        try:
+            out = model(
+                ids_t, mask_t, mem.kv, mem.valid, bos_ctx, bos_valid, capture=capture
+            )
+            cap = (
+                cross_capture(model, out, mem.kv, mask_t, mem.valid) if capture else None
+            )
+        finally:
+            model.train(was_training)
+    if out.srep.device.type == "mps":
+        torch.mps.synchronize()
+    return EvalForward(srep=out.srep.detach(), cap=cap, seconds=time.perf_counter() - t0)
 
 
 def run_policy_loop(
@@ -304,8 +372,20 @@ def run_policy_loop(
     step_fn,
     capture: bool = False,
     observe: bool = False,
+    eval_capture: bool = False,
+    timings: dict | None = None,
 ):
     """`run_sentence_loop`, with the eviction rule supplied by `policy`.
+
+    `eval_capture=True` is ADR-0009 L1(a) + L2: every step runs a second,
+    `no_grad`, eval-mode forward over the same pre-write memory (`eval_forward`).
+    Its gestalt is the `c_t` handed to `select_eviction` **and** attached to the
+    trace `observe` receives, so the regression and the decision read one tensor;
+    with `observe` on, `r_i` is read from its eval-mode capture (correction 20).
+    The training forward, its loss, its dropout draws and the memory write are
+    unchanged -- the eval forward only feeds the policy. **Off by default**, and
+    off it forms nothing: E0b's path (`test_reduction.py`) does not reach it.
+    `timings`, if given, accumulates `eval_forward_s` (L1's cost, measured).
 
     `policy.select_eviction(slots, context, step)` is consulted **only when the
     row's memory is full**, which is the same condition under which the
@@ -347,6 +427,14 @@ def run_policy_loop(
     # Every other policy has no `memory_weight`, and the model is then called with
     # exactly the arguments it always was -- E0b's bit-exact path is untouched.
     weight_fn = getattr(policy, "memory_weight", None)
+    if eval_capture and weight_fn is not None:
+        # ADR-0009 slice 1 does not wire Expire-Span: its mask enters the forward,
+        # and an eval forward without it would read a different memory than the
+        # training forward attended. Refused rather than half-supported.
+        raise ValueError(
+            "eval_capture is not wired for a policy that shapes the forward pass "
+            "(Expire-Span's memory_weight); ADR-0009 slice 1 is RSR only"
+        )
 
     for t in range(steps):
         ids_t, mask_t = sentences[:, t], masks[:, t]
@@ -370,19 +458,33 @@ def run_policy_loop(
             mem.valid,
             bos_ctx,
             bos_valid,
-            capture=capture or observe,
+            # With eval_capture the capture comes from the eval forward, so the
+            # training forward is called exactly as an observe-off arm calls it.
+            capture=capture or (observe and not eval_capture),
             **extra,
         )
         if capture:
             captured.append(out)
+        ev = None
+        if eval_capture:
+            # ADR-0009 L1(a): same step, same pre-write memory and bos_ctx.
+            ev = eval_forward(
+                model, ids_t, mask_t, mem, bos_ctx, bos_valid, capture=observe
+            )
+            if timings is not None:
+                spent = timings.get("eval_forward_s", 0.0)
+                timings["eval_forward_s"] = spent + ev.seconds
         if observe:
             # Pre-write memory, deliberately: this is what the forward attended to.
-            cap = cross_capture(model, out, mem.kv, mask_t, mem.valid)
+            if ev is not None:
+                cap, ctx = ev.cap, ev.srep
+            else:
+                cap, ctx = cross_capture(model, out, mem.kv, mask_t, mem.valid), None
             for row in range(batch):
                 if bool(row_valid[row]):
                     policy.observe(
                         memory_state(mem, t, row),
-                        trace_for_row(cap, mem.valid, row, t),
+                        trace_for_row(cap, mem.valid, row, t, ctx),
                         t,
                     )
         contrib = step_fn(t, out, ids_t, mask_t, row_valid)
@@ -398,11 +500,14 @@ def run_policy_loop(
         srep_mem = out.srep.detach() if cfg.detach_sreps_for_memory else out.srep
         write = row_valid & out.has_eos
 
+        # ADR-0009 L2: with eval_capture the decision reads the SAME eval-mode
+        # c_t the regression is fitted on; otherwise the training srep, as before.
+        decision_ctx = ev.srep if ev is not None else out.srep.detach()
         victims = []
         for row in range(batch):
             if bool(mem.valid[row].all()):
                 slots = memory_state(mem, t, row)
-                victims.append(policy.select_eviction(slots, out.srep[row].detach(), t))
+                victims.append(policy.select_eviction(slots, decision_ctx[row], t))
             else:
                 victims.append(0)  # unused: the row is not full
         victim = torch.tensor(victims, device=device, dtype=torch.long)
