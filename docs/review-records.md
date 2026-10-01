@@ -3,8 +3,9 @@
 `orchestrator.merge` refuses to merge a branch into `night/<date>` unless the branch
 carries a **committed adversarial-review record**. This file is the format and the
 rule. The code is `review_gate()` in `scripts/orchestrator/merge.py`; the tests are
-`tests/test_orch_merge_review.py`. The battery has five mutations whose names start
-with "merge:" and cover the review gate.
+`tests/test_orch_merge_review.py`. The battery has eight mutations whose names start
+with "merge:" and cover the review gate (five from the gate's first two rounds, three
+from the round-2 minors of `docs/reviews/eng-t5b-review-gate/defe2dd7c489.md`).
 
 These are tech decisions made under the PM's delegation on 2026-09-30 (T5B). They were
 revised on the same day after the adversarial review
@@ -51,7 +52,9 @@ The review itself: findings, severities, and what was checked.
 | `fixes_verified_at` | no | **informational only**. The gate never uses it to pass a merge. If present, it must be the full 40-hex sha of a commit that exists. A ref name such as `fix/x` or `HEAD` makes the record malformed |
 
 The front matter is plain `key: value` lines between two `---` lines. It is not YAML;
-quotes around values are stripped.
+quotes around values are stripped. **A key may appear only once**: a repeated key
+makes the record malformed rather than letting the last line win (review
+`docs/reviews/eng-t5b-review-gate/defe2dd7c489.md` MINOR-2).
 
 ## The gate
 
@@ -60,8 +63,8 @@ To merge `branch@head`:
 1. **Records are read** from `head:docs/reviews/<branch-slug>/*.md`. If there are
    none, the exit is **3** with the message "no review record", naming the expected
    path.
-2. **Fail closed on malformed records.** If any record has no front matter, a missing
-   field, a `branch` other than this branch, a `reviewed_head` that is not a full sha,
+2. **Fail closed on malformed records.** If any record has no front matter, a
+   repeated front-matter key, a missing field, a `branch` other than this branch, a `reviewed_head` that is not a full sha,
    a file name that does not match `reviewed_head[:12]`, a `fixes_verified_at` that is
    not the full sha of a commit, an unknown verdict, or a self-review, the exit is
    **3** and each problem is named. A malformed record is
@@ -69,7 +72,11 @@ To merge `branch@head`:
 3. Records whose `reviewed_head` is **not an ancestor of head**, for example a
    rebased-away commit, are ignored. If no record is left, the exit is **3**.
 4. **The record nearest head governs**, meaning the one with the fewest commits in
-   `reviewed_head..head`.
+   `reviewed_head..head`. Two or more records can tie only across a merge (parallel
+   lines). If tied records **disagree on the verdict**, the exit is **3**
+   ("conflicting review records"); the tie is never broken on the file name (review
+   `docs/reviews/eng-t5b-review-gate/defe2dd7c489.md` MINOR-1). A record at head
+   decides.
 5. A verdict of `DO NOT MERGE` exits **1**.
 6. A verdict of `MERGE WITH FIXES` exits **3**: **it is never mergeable on its own**
    (PM decision, 2026-09-30). The fixes are code that no record covers, and
@@ -79,7 +86,10 @@ To merge `branch@head`:
    governs.
 7. **Staleness.** `git diff --name-only reviewed_head..head` may change only exempt
    paths:
-   - `docs/reviews/**`
+   - **this branch's own records**, `docs/reviews/<branch-slug>/*.md`, directly in
+     its slug directory. Another branch's record, a subdirectory, or a non-`.md` file
+     under `docs/reviews/` is **not** exempt (review
+     `docs/reviews/eng-t5b-review-gate/defe2dd7c489.md` MINOR-3);
    - `.orchestrator/outbox/**`
    - when the target is `run/<item>`, **that run's own**
      `runs/<item>/verification.json`, and nothing else under `runs/`. On any other
@@ -135,8 +145,8 @@ Any other prefix exits 3.
   matches a git author of `base..head`. It cannot prove that a different session, or
   a different mind, wrote the review. Anyone who can commit to the branch can commit
   a forged record.
-- **Records can be edited after the fact (review MINOR-1).** `docs/reviews/**` is
-  exempt from staleness, so a later commit can edit an existing record, for example
+- **Records can be edited after the fact (review MINOR-1).** A branch's own records
+  (`docs/reviews/<branch-slug>/*.md`) are exempt from staleness, so a later commit can edit an existing record, for example
   flipping `DO NOT MERGE` to `MERGE`, and the gate will accept it. Making records
   append-only would close the accidental case, but it was left as a documented limit
   by decision. Whoever merges should read the record's history

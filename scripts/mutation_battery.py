@@ -4945,7 +4945,31 @@ MUTATIONS: tuple[Mutation, ...] = (
         "no adversarial review on record.",
         off_gate_allowed=tuple(
             (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
-            for t in _REVIEW_GATE_REFUSALS
+            for t in (
+                *_REVIEW_GATE_REFUSALS,
+                # the round-2 minors' refusals (docs/reviews/eng-t5b-review-gate/
+                # defe2dd7c489.md MINOR-1..3), listed here because
+                # fix/review-minors-0930 was scoped to the MUTATIONS table
+                *(
+                    "test_records_at_equal_distance_with_different_verdicts_are_"
+                    f"refused[{v}]"
+                    for v in ("verdicts0", "verdicts1")
+                ),
+                *(
+                    f"test_a_repeated_front_matter_key_is_malformed[{k}]"
+                    for k in ("verdict", "reviewer")
+                ),
+                *(
+                    f"test_only_this_branchs_own_review_records_are_exempt[{p}]"
+                    for p in (
+                        "docs/reviews/eng-victim/0123456789ab.md",
+                        "docs/reviews/payload.py",
+                        "docs/reviews/run-a/payload.py",
+                        "docs/reviews/run-a/notes.txt",
+                        "docs/reviews/run-a/sub/0123456789ab.md",
+                    )
+                ),
+            )
         ),
     ),
     Mutation(
@@ -4954,7 +4978,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scripts/orchestrator/merge.py",
         "    unreviewed = [\n"
         "        p for p in diff.stdout.splitlines() if p and not review_exempt(p, "
-        "run_item)\n"
+        "rdir, run_item)\n"
         "    ]\n",
         "    unreviewed = []\n",
         "a review of an early head waves through every commit made after it -- "
@@ -4969,6 +4993,22 @@ MUTATIONS: tuple[Mutation, ...] = (
             for t in (
                 "test_only_the_merging_runs_own_verification_is_exempt",
                 "test_no_verification_json_is_exempt_on_other_prefixes",
+            )
+        )
+        + tuple(
+            (
+                "tests/test_orch_merge_review.py::"
+                f"test_only_this_branchs_own_review_records_are_exempt[{p}]",
+                "review MINOR-3 (defe2dd7c489.md): a path under docs/reviews/ that is "
+                "not this branch's own record is refused by the same staleness diff; "
+                "no diff, no refusal.",
+            )
+            for p in (
+                "docs/reviews/eng-victim/0123456789ab.md",
+                "docs/reviews/payload.py",
+                "docs/reviews/run-a/payload.py",
+                "docs/reviews/run-a/notes.txt",
+                "docs/reviews/run-a/sub/0123456789ab.md",
             )
         ),
     ),
@@ -5023,6 +5063,38 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the same exemption, reached from a non-run/ prefix.",
             ),
         ),
+    ),
+    # T5(b) round-2 minors, 2026-09-30 (docs/reviews/eng-t5b-review-gate/
+    # defe2dd7c489.md). Proven by hand on tests/test_orch_merge*.py only (the
+    # integration battery holds the CPU; branch fix/review-minors-0930).
+    Mutation(
+        "merge: review records tied in distance are decided by sha order",
+        "test_records_at_equal_distance_with_different_verdicts_are_refused",
+        "scripts/orchestrator/merge.py",
+        '    if len({fm["verdict"] for _, _, fm in tied}) > 1:\n',
+        "    if False:\n",
+        "review MINOR-1 (probes N8/N8b): a DO NOT MERGE and a MERGE record at the "
+        "same distance from head, on parallel lines over identical code, resolve by "
+        "which reviewed sha sorts first -- the verdict is a coin flip.",
+    ),
+    Mutation(
+        "merge: a repeated front-matter key is accepted, last wins",
+        "test_a_repeated_front_matter_key_is_malformed",
+        "scripts/orchestrator/merge.py",
+        "        if k in out:\n            if repeated is not None:\n",
+        "        if False:\n            if repeated is not None:\n",
+        "review MINOR-2 (probe N6): a record that reads `verdict: DO NOT MERGE` at "
+        "the top and `verdict: MERGE` below it merges.",
+    ),
+    Mutation(
+        "merge: every path under docs/reviews/ is staleness-exempt",
+        "test_only_this_branchs_own_review_records_are_exempt",
+        "scripts/orchestrator/merge.py",
+        '    if name != path and "/" not in name and name.endswith(".md"):\n',
+        '    if path.startswith("docs/reviews/"):\n',
+        "review MINOR-3 (probe N9): after review, another branch's record or a "
+        "non-record file such as docs/reviews/payload.py rides into the night "
+        "branch without staling the record.",
     ),
     Mutation(
         "battery-union: a one-sided tail change keeps ours",
@@ -5083,6 +5155,49 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the union cannot reproduce 7eda821 without it",
             ),
         ),
+    ),
+    # battery-union review minors, 2026-09-30 (docs/reviews/eng-battery-union/
+    # 7d90e27a400b.md, docs/reviews/eng-battery-union-annotated/66d1dfa5c440.md).
+    # Proven by hand on tests/test_battery_union.py (fix/review-minors-0930).
+    Mutation(
+        "battery-union: git is hard-coded to the homebrew path",
+        "test_git_falls_back_to_path_git_where_homebrew_git_is_absent",
+        "scripts/battery_union.py",
+        'GIT = _HOMEBREW_GIT if Path(_HOMEBREW_GIT).exists() else shutil.which("git") '
+        'or "git"\n',
+        "GIT = _HOMEBREW_GIT\n",
+        "review 7d90e27a400b MINOR-3: on the ubuntu CI runner there is no "
+        "/opt/homebrew/bin/git, so the repo fixture and _have() raise "
+        "FileNotFoundError and four tests ERROR instead of running.",
+    ),
+    Mutation(
+        "battery-union: a new constant is anchored on any line naming its successor",
+        "test_a_new_constant_is_anchored_on_its_successors_definition",
+        "scripts/battery_union.py",
+        r'    m = re.search(rf"^{re.escape(succ)}(?:: [^\n=]+)? = \(\n", h, re.M)',
+        r'    m = re.search(rf"^{re.escape(succ)}\b", h, re.M)',
+        "review 66d1dfa5c440 MINOR-1: a column-0 head-code line that starts with the "
+        "successor's name (an annotation-only declaration, `_A[0] = ...`) above its "
+        "definition gets the new constant inserted above it, silently.",
+    ),
+    Mutation(
+        "battery-union: the output check does not compare entries and constants",
+        "test_the_output_check_compares_",
+        "scripts/battery_union.py",
+        "    if problems:\n        raise Refused(\n",
+        "    if False:\n        raise Refused(\n",
+        "review 66d1dfa5c440 MINOR-2: a union that loses one entry or constant and "
+        "gains another, or changes a value, is written as if it were the merge.",
+    ),
+    Mutation(
+        "battery-union: an ours-only constant is appended to theirs' head",
+        "test_a_constant_new_in_ours_lands_where_ours_put_it_when_theirs_head_is_taken",
+        "scripts/battery_union.py",
+        "                h = _insert_new_const(h, k, o, t)\n",
+        '                h = h + v + "\\n"\n',
+        "review 66d1dfa5c440 MINOR-3: when only theirs changed head code, a constant "
+        "only ours has moves to the end of the head instead of where ours put it -- "
+        "the placement rule applied to one side only.",
     ),
     Mutation(
         "b2-psi-probe: age leaks into psi-hat",

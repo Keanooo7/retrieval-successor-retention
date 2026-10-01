@@ -206,12 +206,19 @@ def resolve_target(target: str) -> tuple[str | None, str | None, str]:
     return target, (rest if prefix == "run" else None), ""
 
 
-def review_exempt(path: str, run_item: str | None = None) -> bool:
+def review_exempt(path: str, rdir: str, run_item: str | None = None) -> bool:
     """Paths that may change after the reviewed head without staling the record.
     Only the merging `run/<item>`'s OWN verification.json is exempt (review
     MINOR-2): another run's record would ride into the night branch unreviewed and
-    then satisfy gate 1 for that run. No verification.json is exempt off `run/`."""
-    if path.startswith((f"{REVIEW_DIR}/", ".orchestrator/outbox/")):
+    then satisfy gate 1 for that run. No verification.json is exempt off `run/`.
+    Under docs/reviews/, only this branch's own records -- `<rdir>/*.md`, directly
+    in its slug directory -- are exempt (review MINOR-3,
+    docs/reviews/eng-t5b-review-gate/defe2dd7c489.md, probe N9): another branch's
+    record or a non-record file such as docs/reviews/payload.py rode in unreviewed."""
+    if path.startswith(".orchestrator/outbox/"):
+        return True
+    name = path.removeprefix(f"{rdir}/")
+    if name != path and "/" not in name and name.endswith(".md"):
         return True
     return run_item is not None and path == f"runs/{run_item}/verification.json"
 
@@ -220,9 +227,11 @@ def _full_sha(value: str) -> bool:
     return len(value) == 40 and all(c in "0123456789abcdef" for c in value)
 
 
-def front_matter(text: str) -> dict[str, str] | None:
+def front_matter(text: str, repeated: list[str] | None = None) -> dict[str, str] | None:
     """`key: value` lines between a leading `---` and the next `---`; None if absent,
-    unterminated, or a line is not `key: value`."""
+    unterminated, a line is not `key: value`, or a key repeats (review MINOR-2,
+    docs/reviews/eng-t5b-review-gate/defe2dd7c489.md: last-wins let a record that
+    reads DO NOT MERGE at the top merge). A repeated key is appended to `repeated`."""
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return None
@@ -235,7 +244,12 @@ def front_matter(text: str) -> dict[str, str] | None:
         if ":" not in line:
             return None
         k, v = line.split(":", 1)
-        out[k.strip()] = v.strip().strip("\"'")
+        k = k.strip()
+        if k in out:
+            if repeated is not None:
+                repeated.append(k)
+            return None
+        out[k] = v.strip().strip("\"'")
     return None
 
 
@@ -274,9 +288,14 @@ def review_gate(
     usable: list[tuple[int, str, dict[str, str]]] = []
     for name in names:
         path = f"{rdir}/{name}"
-        fm = front_matter(_show(root, head, path) or "")
+        repeated: list[str] = []
+        fm = front_matter(_show(root, head, path) or "", repeated)
         if fm is None:
-            malformed.append(f"{path}: no `---` front matter")
+            malformed.append(
+                f"{path}: repeated key {repeated[0]!r} in the front matter"
+                if repeated
+                else f"{path}: no `---` front matter"
+            )
             continue
         missing = [f for f in REVIEW_FIELDS if not fm.get(f)]
         if missing:
@@ -321,7 +340,19 @@ def review_gate(
             + "; ".join(elsewhere)
             + f" -- expected {want}; not merged"
         )
-    _, path, fm = min(usable)  # the record nearest head governs
+    nearest = min(d for d, _, _ in usable)  # the record nearest head governs
+    tied = sorted(u for u in usable if u[0] == nearest)
+    # Review MINOR-1 (docs/reviews/eng-t5b-review-gate/defe2dd7c489.md): a tie in
+    # distance (parallel lines, then a merge) used to be broken on the file name,
+    # i.e. on a sha prefix. Records that tie and disagree fail closed.
+    if len({fm["verdict"] for _, _, fm in tied}) > 1:
+        return Exit.DID_NOT_RUN, (
+            "conflicting review records at the same distance from "
+            f"{head[:12]}: "
+            + "; ".join(f"{p} says {fm['verdict']}" for _, p, fm in tied)
+            + f" -- a record at {head[:12]} decides; not merged"
+        )
+    _, path, fm = tied[0]
     who = f"{path} (reviewer {fm['reviewer']})"
     if fm["verdict"] == "DO NOT MERGE":
         return Exit.FAIL, f"review verdict DO NOT MERGE: {who} -- not merged"
@@ -341,7 +372,7 @@ def review_gate(
     if diff.returncode != 0:
         return Exit.DID_NOT_RUN, f"git diff {anchor[:12]}..{head[:12]} failed: {who}"
     unreviewed = [
-        p for p in diff.stdout.splitlines() if p and not review_exempt(p, run_item)
+        p for p in diff.stdout.splitlines() if p and not review_exempt(p, rdir, run_item)
     ]
     if unreviewed:
         return Exit.DID_NOT_RUN, (
