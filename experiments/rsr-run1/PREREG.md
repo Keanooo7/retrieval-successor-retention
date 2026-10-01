@@ -1369,3 +1369,373 @@ kind.)
 - **C2 fingerprint counts:** computed from document text only, with no model.
 - **Not seen:** no EVAL document has been run through any model; no φ has been trained beyond the
   single-step timing runs (§14a); no number about a trained φ exists.
+
+
+---
+
+## AMENDMENT 2 (2026-10-01): correction-20 slot O5, oracle decoupled from O1, launch under tmux
+
+**Written 2026-10-01 by a model** (Claude Opus 5.5, the PREREG author, on the PM's instruction).
+**Not written by Brendan.** It is committed alone, before any run-1 step. Everything above this
+heading is unedited: the original PREREG at `7c58777` and Amendment 1 at `6a4c5a8`.
+
+**What prompted it.** The second review, `docs/reviews/prereg-rsr-run1/6a4c5a8c6785.md` (commit
+`c02cae7`), returned MERGE WITH FIXES. It raised two new MAJOR findings (A1-1, A1-2) and four new
+MINOR findings (A1-1 to A1-4). The PM decided the oracle's γ (A2.2). The owner is asked for the
+four slots in A2.8.
+
+**Precedence.** Where this amendment and anything above it disagree, this amendment governs.
+Superseded:
+
+- A1.2's launch script and step 3 → A2.4 and A2.7;
+- A1.2's E19 row → A2.5;
+- the A1.4 scope sentence → A2.6;
+- A1.3's C5 sentence → A2.3;
+- A1.9's slot table and the oracle clause of its O1 row → A2.8 and A2.2;
+- A1.10 T7, T9 and T10 → A2.9.
+
+**Launch preconditions, restated.** All of these must hold before any run-1 training command:
+
+1. **All four owner slots** (A2.8: O1, O4, R-1, O5) are filled.
+2. C-1 (needed only if O5 = eval) and C-2 are on a reviewed head of `feat/rsr-run1-ready`.
+3. `experiments/rsr-run1/run.py` and the launcher are committed and reviewed, and the preflight
+   passes.
+4. The launch is from a clean pinned head (A1.5), **inside tmux** (A2.4).
+
+### A2.1 MAJOR-A1-1: the correction-20 reading becomes owner slot O5
+
+**What O5 asks.** For run 1's frozen transformer, which mode is the substrate run in, during
+training and during evaluation?
+
+- **`eval`** is this PREREG's proposed reading (A1.3): dropout off in every arm. It needs code
+  change C-1.
+- **`train`** is the literal text of correction 20 for the LM loss, even though under D2(b) the
+  LM loss is reported and not optimised. It is the as-built `frozen_model_mode = "train (dropout
+  live)"`.
+
+**Nothing launches until Brendan fills O5.** The launcher refuses an unfilled or invalid O5, with
+exit 3 (A2.5).
+
+**Evidence that `eval` is consistent with correction 20** (review §c, items 1–6):
+
+1. The retention clause is satisfied: `r_i` stays eval-mode, from L1(a)'s eval forward.
+2. The correction's rationale ("noise in a policy-relevant direction") extends to `s_i`, the input
+   the policy reads. The signed ADR-0009 L2 already extended it to `c_t`.
+3. There is no optimised LM loss to protect: under D2(b), `objective = None`
+   (`loop.py:1239`). The correction predates any frozen configuration.
+4. It is an explicit, recorded mode switch: a flag, stamped into `frozen`, the hash and the label,
+   and refused without freeze.
+5. Every measurement that selected or characterised the substrate ran it in `eval()`: S0-03's
+   `answer_readout` (C4's instrument) and B2.
+6. Pairing is unaffected, because every arm uses the same mode. This is unlike ADR-0009's
+   rejected L1(b).
+
+**Evidence that `eval` departs from correction 20, or needs the owner** (review §c, items 1–5):
+
+1. The literal text has no "if optimised" condition. Under `eval`, the reported `L_NTP` is
+   computed in eval mode.
+2. It moves run 1 away from its planned successors. The "training continues" arm and E1/E3 run the
+   training forward in train mode, so a run-1 φ differs from theirs in mode as well as in
+   freezing.
+3. It changes the setting a signed item assumed. L1(a)'s second forward becomes numerically
+   redundant.
+4. It reverses a reviewed build decision (m-4: "train (dropout live)").
+5. The substrate *learned* to use memory while writing train-mode gestalts. `eval` matches how it
+   was *measured*, not how it was *trained*.
+
+**If O5 = `train`, exactly this changes:**
+
+1. **The C-1 flag is dropped.** `C1_FLAGS` is empty. The launcher enforces this: O5 = train with a
+   C-1 flag refuses (E21). Each arm runs `frozen_model_mode = "train (dropout live)"`, the
+   as-built default, which is recorded in `frozen` and the hash. C-1 itself is then not a launch
+   precondition.
+2. **A named confound is declared on every ψ̂-C contrast.** Name: **TRAIN/EVAL MEMORY SHIFT
+   (psiC only)**. During training, psiC regresses on and decides over dropout-noised train-mode
+   slot gestalts `s_i`. During held-out evaluation it reads clean eval-mode gestalts. The fifo, age
+   and LRU arms read no gestalt, so the shift enters only contrasts involving psiC.
+   - RESULTS prints the name and this description beside the headline (psiC − fifo, per seed and
+     across seeds).
+   - It also prints them beside psiC − age, psiC − LRU, and every psiC entry in §7.2–§7.4.
+   - The headline remains the headline, read with the confound named. No other headline is
+     substituted.
+3. **Unchanged under `train`:**
+   - C2(c): `loss_lm` is bitwise equal across arms for `k < 16`. Dropout masks are drawn in the
+     same order in every arm, and this was measured at `k = 0` in §8's timing runs.
+   - A1.3's statement that liveness consumes the global RNG stream stays a note; C5 is per A2.3.
+   - Every other control and outcome.
+
+### A2.2 MAJOR-A1-2: the oracle reference uses γ_o = 0.9, a construction parameter decoupled from O1
+
+**PM's decision: the oracle reference is built as `OraclePolicy(discounted_demand(doc, 0.9))`
+whatever O1 is.**
+
+- γ_o is a construction parameter of a reference, not a ψ̂ constant. It is not read from or
+  written to the registry, and it is recorded in RESULTS as `oracle_gamma: 0.9`.
+- A1.9's clause "also the oracle reference's construction" is withdrawn. O1 sets only the RSR
+  arms' γ.
+
+**Why this is not result-sensitive.** I measured T7 at `c02cae7`.
+
+- Setup: model-free (`rsr.metrics.headroom.simulate`, M = 16), on the **pool** documents
+  `[993000, 993256)` of each seed, never EVAL. The script was `oracle_gamma.py <seed> 256`, 1
+  thread, rc 0 for each seed.
+- Output, literally:
+
+```
+seed 0 docs 256: gamma_o=0.5 vs 0.9: decisions 8192, differing 0, documents differing 0
+seed 0 docs 256: gamma_o=0.97 vs 0.9: decisions 8192, differing 0, documents differing 0
+seed 0 docs 256: gamma_o=0.0 vs 0.9: decisions 8192, differing 5562, documents differing 250
+seed 0: gamma_o=0.5 model-free oracle hit rate 4717/4717 = 1.0000
+seed 0: gamma_o=0.9 model-free oracle hit rate 4717/4717 = 1.0000
+seed 0: gamma_o=0.97 model-free oracle hit rate 4717/4717 = 1.0000
+seed 0: gamma_o=0.0 model-free oracle hit rate 3884/4717 = 0.8234
+seed 1 docs 256: gamma_o=0.5 vs 0.9: decisions 8192, differing 0, documents differing 0
+seed 1 docs 256: gamma_o=0.97 vs 0.9: decisions 8192, differing 0, documents differing 0
+seed 1 docs 256: gamma_o=0.0 vs 0.9: decisions 8192, differing 5656, documents differing 249
+seed 1: gamma_o=0.5 model-free oracle hit rate 4775/4775 = 1.0000
+seed 1: gamma_o=0.9 model-free oracle hit rate 4775/4775 = 1.0000
+seed 1: gamma_o=0.97 model-free oracle hit rate 4775/4775 = 1.0000
+seed 1: gamma_o=0.0 model-free oracle hit rate 3911/4775 = 0.8191
+seed 2 docs 256: gamma_o=0.5 vs 0.9: decisions 8192, differing 0, documents differing 0
+seed 2 docs 256: gamma_o=0.97 vs 0.9: decisions 8192, differing 0, documents differing 0
+seed 2 docs 256: gamma_o=0.0 vs 0.9: decisions 8192, differing 5539, documents differing 247
+seed 2: gamma_o=0.5 model-free oracle hit rate 4793/4793 = 1.0000
+seed 2: gamma_o=0.9 model-free oracle hit rate 4793/4793 = 1.0000
+seed 2: gamma_o=0.97 model-free oracle hit rate 4793/4793 = 1.0000
+seed 2: gamma_o=0.0 model-free oracle hit rate 3956/4793 = 0.8254
+```
+
+**What this shows:**
+
+- **At 0.5, 0.9 and 0.97, the decisions are identical:** 0 of 8192 differ per seed, and the
+  model-free hit rate is 1.0. That is Belady's MIN.
+- **At γ_o = 0 the rule is something else.** Its decisions differ on 5539–5656 of 8192, and its
+  hit rate is 0.82. That is the one-step-lookahead rule the review describes.
+- So coupling the oracle to O1 would have changed the reference's meaning exactly when O1 = 0.
+
+**New control C9 (in run, per seed).** On one batch, the first 16 EVAL documents of the seed
+(`[995000, 995016)`), `run.py` runs the oracle reference through the **same model-read evaluation
+loop** at γ_o = 0.5 and at γ_o = 0.9. It asserts that the two victim sequences are identical,
+document by document.
+
+- If it fails, the run is inconclusive (exit 3). Oracle regret and headroom share are not read.
+- It runs before the full oracle measurement (TO-CONFIRM T13).
+- It checks in the model loop what the model-free measurement above shows: there, decisions
+  could differ only if the loop's memory differed from `simulate`'s, for example a sentence with
+  no EOS write.
+
+### A2.3 MINOR-A1-4: C5 restated
+
+**The liveness band stays a control in every arm and seed.**
+
+- `live` is required.
+- `inert` → exit 5, quarantine per R-2026-09-22-inert-checkpoint-quarantine, and **no** retention
+  number is reported for that seed (the reading rule's rc 5 row).
+- `inconclusive` → rc 1 with a completed footer. The arm is not read.
+
+**Only the liveness *ratio* is reported.** It is not compared across arms or seeds, and it is not a
+control.
+
+### A2.4 MINOR-A1-2: launch inside tmux (measured); `nohup` does NOT protect the jobs
+
+**Hang-up probe.** SIGHUP was sent to the launch's process group 4 s after start, as a terminal
+hang-up does. Each launch form ran the launcher's own backgrounding pattern, with two slot jobs
+that sleep 20 s.
+
+- Isolated orchestrator root; zsh 5.9; tmux 3.7b on dedicated sockets.
+- Logs: `scratchpad/run1-prereg/exitprobe/hup/`; probes `hup_probe.py` and `hup_tmux2.py`.
+
+| id | launch form | result |
+|---|---|---|
+| H1 | `/bin/zsh launcher` | launcher rc 1; **both jobs `crashed`, rc 129, signal 1** |
+| H2 | `nohup /bin/zsh launcher` | launcher rc 0; **both jobs `crashed`, rc 129, signal 1** |
+| H3 | `tmux -L … new-session -d … "/bin/zsh launcher …"`, then SIGHUP to the launching group | launching group killed (rc −1). The tmux pane is a **different session** (pane sid 79630 vs launcher sid 79618). **Both jobs `done`, rc 0**; the inner launcher printed `rc[j1]=0`, `rc[j2]=0` |
+
+**Why `nohup` fails.** `nohup` sets SIGHUP to ignored, but `orchestrator/slot.py` installs its own
+SIGHUP handler (`_FORWARDED` includes SIGHUP). That handler overrides the inherited ignore and
+forwards the signal to the child. So a slot-wrapped job under `nohup` still dies on a hang-up.
+
+**The procedure, replacing A1.2's step 3.** Launch **inside a detached tmux session on a
+dedicated socket**. The dedicated socket keeps it apart from any existing tmux server.
+
+```zsh
+W=/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run1-run
+/opt/homebrew/bin/tmux -L rsr-run1 new-session -d -s rsr-run1 \
+  "cd $W && GAMMA=<O1> WD=<O4> STEPS=<R-1> CKPT=<derived> O5=<O5> C1_FLAGS='<T9>' C2_FLAGS='<T10>' \
+   /bin/zsh experiments/rsr-run1/launch_run1.zsh > runs/rsr-run1-launch.log 2>&1; \
+   echo \$? > runs/rsr-run1-launch.rc"
+rc_tmux=$?          # 0 = the session started; the launcher's own rc is runs/rsr-run1-launch.rc
+```
+
+To watch it: `tmux -L rsr-run1 attach -t rsr-run1`.
+
+**Measured: launcher v2 dry run inside tmux (E22).**
+
+- At `c02cae7`: `GAMMA=0.9` (a placeholder), `WD=0.01`, `STEPS=0`, `CKPT=1000`, `O5=train`. O5
+  was `train` only because C-1 is absent at this base. Isolated root, `JOB_SUFFIX=-dry2`.
+- `tmux new-session` rc 0. Launcher rc (from its rc file) 0. 11 s wall.
+- All nine `rc[…]=0`.
+- Nine job records: `done 0 threads 1 pinned c02cae749d79`.
+- `launch-git.json`:
+
+```
+{"run_sha": "c02cae749d79f0184bffb0ec3e1a19d14a178be2", "dirty": false, "porcelain_lines": 0, "gamma": "0.9", "wd": "0.01", "steps": "0", "ckpt": "1000", "o5": "train", "c1_flags": "", "c2_flags": "", "c3_flags": "", "launched_utc": "2026-10-01T10:42:09Z"}
+```
+
+### A2.5 MINOR-A1-3: an unfilled or inconsistent slot exits 3
+
+Launcher v2 (A2.7) checks every slot before doing anything else. Measured (E21 and E20v2), each
+with **no output directory created**:
+
+| case | rc | message |
+|---|---|---|
+| no slots set | **3** | `DID NOT RUN: slot GAMMA unfilled` |
+| `O5=maybe` | **3** | `O5 must be eval or train, got 'maybe'` |
+| `O5=eval` without `C1_FLAGS` | **3** | `O5=eval needs C1_FLAGS (C-1's flag)` |
+| `O5=train` with `C1_FLAGS='--frozen-model-mode eval'` | **3** | `O5=train: C1_FLAGS must be empty` |
+| `WD=0.0` without `C3_FLAGS` | **3** | `O4=0.0 needs C3_FLAGS (code change C-3)` |
+| dirty tree (scratch repo with an untracked file) | **3** | `not a clean committed head (rc_sha=0 rc_status=0)` |
+
+**Reading rule for the launcher's own rc** (`runs/rsr-run1-launch.rc`):
+
+- **0**: every training process was started and collected. Each one's own rc is in
+  `logs/<arm>-s<seed>.rc`, read by A1.2's per-job rule.
+- **3**: did not run. Nothing was started.
+
+Any other value is reported as itself. The A1.2 E19 row (rc 1) described the old launcher and is
+superseded.
+
+### A2.6 MINOR-A1-1: the scope sentence, replaced
+
+Verbatim in RESULTS, beside every within-seed CI:
+
+> This interval resamples EVAL documents only. It holds fixed the trained φ (one φ
+> initialisation, one data order), the substrate seed and the pool. It is a within-seed interval.
+> The three per-seed values show the **combined** variation of substrate seed, φ initialisation,
+> data order and EVAL documents, which change together across seeds. They cannot separate
+> run-to-run variation from substrate-seed variation.
+
+### A2.7 Launcher, version 2 (exact text; supersedes A1.2's)
+
+`experiments/rsr-run1/launch_run1.zsh` is committed **byte-identical** to the text below
+(TO-CONFIRM T3). This is the text that ran E20v2, E21 and E22.
+
+**Changes from A1.2:**
+
+- slot checks with exit 3;
+- O5 and WD as slots, with consistency checks against `C1_FLAGS` and `C3_FLAGS`;
+- every slot value is recorded in `launch-git.json`.
+
+At launch, `JOB_SUFFIX` (a dry-run hook) and `OUT` must be **unset**.
+
+```zsh
+#!/bin/zsh
+# RSR run 1 launch, version 2 (PREREG Amendment 2, A2.4; supersedes A1.2's text).
+# Run with /bin/zsh INSIDE tmux (A2.4), from the dedicated run worktree at the final
+# reviewed commit. Owner slots: GAMMA (O1), WD (O4), STEPS (R-1), O5 (eval|train).
+# Derived: CKPT (A1.8 m-9). Code-change flags: C1_FLAGS (C-1), C2_FLAGS (C-2), C3_FLAGS
+# (C-3, only if O4 != 0.01). OUT defaults to runs/rsr-run1. Any unfilled or inconsistent
+# slot exits 3 ("did not run"). Every rc is captured directly, one per arm x seed.
+R=/Users/keanooo7/retrieval-successor-retention
+GIT=/opt/homebrew/bin/git
+refuse() { print -u2 "DID NOT RUN: $1"; exit 3 }
+for v in GAMMA WD STEPS CKPT O5; do [[ -n ${(P)v} ]] || refuse "slot $v unfilled"; done
+[[ $O5 == eval || $O5 == train ]] || refuse "O5 must be eval or train, got '$O5'"
+[[ $O5 == eval && -z ${C1_FLAGS:-} ]] && refuse "O5=eval needs C1_FLAGS (C-1's flag)"
+[[ $O5 == train && -n ${C1_FLAGS:-} ]] && refuse "O5=train: C1_FLAGS must be empty"
+[[ $WD != 0.01 && -z ${C3_FLAGS:-} ]] && refuse "O4=$WD needs C3_FLAGS (code change C-3)"
+[[ $WD == 0.01 && -n ${C3_FLAGS:-} ]] && refuse "O4=0.01 is the built value: C3_FLAGS must be empty"
+: ${OUT:=runs/rsr-run1}
+C1=(${=C1_FLAGS:-}) ; C2=(${=C2_FLAGS:-}) ; C3=(${=C3_FLAGS:-})
+
+RUN_SHA=$($GIT rev-parse HEAD); rc_sha=$?
+PORCELAIN=$($GIT status --porcelain); rc_status=$?
+if (( rc_sha != 0 || rc_status != 0 )) || [[ -n $PORCELAIN ]]; then
+  refuse "not a clean committed head (rc_sha=$rc_sha rc_status=$rc_status)"
+fi
+mkdir -p $OUT/logs; rc_mkdir=$?
+(( rc_mkdir == 0 )) || refuse "mkdir $OUT/logs rc=$rc_mkdir"
+print -r -- "{\"run_sha\": \"$RUN_SHA\", \"dirty\": false, \"porcelain_lines\": 0, \"gamma\": \"$GAMMA\", \"wd\": \"$WD\", \"steps\": \"$STEPS\", \"ckpt\": \"$CKPT\", \"o5\": \"$O5\", \"c1_flags\": \"${C1_FLAGS:-}\", \"c2_flags\": \"${C2_FLAGS:-}\", \"c3_flags\": \"${C3_FLAGS:-}\", \"launched_utc\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > $OUT/launch-git.json
+
+typeset -A SHA
+SHA[0]=0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60
+SHA[1]=dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8
+SHA[2]=b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8
+SLOT=(env PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run
+      --lane cpu-det --slots 1 --wait 3600 --pinned-sha $RUN_SHA)
+RSR=(--policy rsr --policy-override b_enabled=false --policy-override shadow_enabled=false
+     --policy-override nu=0 --policy-override beta=1 --policy-override gamma=$GAMMA)
+
+typeset -A pid rcs
+for s in 0 1 2; do
+  B=$R/.worktrees/fresh-stream/runs/fresh-stream/B/seed$s
+  for a in psiC fifo age; do
+    case $a in
+      psiC) P=("${RSR[@]}") ;;
+      fifo) P=(--policy fifo) ;;
+      age)  P=("${RSR[@]}" --policy-override psi_override=age_only) ;;
+    esac
+    k=$a-s$s
+    "${SLOT[@]}" --job-id rsr-run1-$k${JOB_SUFFIX:-} -- \
+      .venv/bin/python -m rsr.train.loop \
+        --d 128 --batch 16 --iters $STEPS --steps-per-stream 48 --memory-slots 16 \
+        --lr 0.001 --seed $s --beat-every 1 --ckpt-every $CKPT --device cpu \
+        --freeze-transformer "${C1[@]}" "${C3[@]}" \
+        --pool-offset 993000 --pool-length 256 --pool-vocab-documents 64 "${C2[@]}" \
+        --warm-start $B/ckpt-003000.pt --warm-start-sha256 ${SHA[$s]} \
+        --warm-start-manifest /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256 \
+        --warm-start-root $R --warm-start-source-config $B/result.json \
+        "${P[@]}" --out-dir $OUT/$a/seed$s \
+      > $OUT/logs/$k.log 2>&1 &
+    p=$!; pid[$k]=$p      # measured: pid[$k]=$! stores the literal string "$!" in zsh 5.9
+  done
+done
+for k in ${(ok)pid}; do
+  wait ${pid[$k]}; rcs[$k]=$?
+  print -r -- ${rcs[$k]} > $OUT/logs/$k.rc
+  print -r -- "rc[$k]=${rcs[$k]}"
+done
+```
+
+### A2.8 Owner slots: one value each (supersedes A1.9's table)
+
+| slot | value |
+|---|---|
+| **O1** γ, both RSR arms only (the oracle uses γ_o = 0.9, A2.2) | `______` |
+| **O4** φ weight decay (decoupled) | `______` |
+| **R-1** total optimizer steps per arm | `______` |
+| **O5** substrate mode under freeze: `eval` (this PREREG's proposed reading of correction 20, needs C-1) or `train` (the literal reading; adds the named confound of A2.1) | `______` |
+
+- The evidence for O1, O4 and R-1 is A1.9's. The O1 table's "also the oracle" clause no longer
+  applies.
+- The evidence for O5 is A2.1.
+- R-1 is fixed before the run and **not revisited after any snapshot reading** (review §d).
+- The derived values are unchanged: the `T_warm` fraction `16 / R-1`, and `CKPT` per A1.8 m-9.
+
+### A2.9 TO-CONFIRM, updated
+
+- **T7: measured model-free** (A2.2). It is also enforced in the run by C9.
+- **T9: `C1_FLAGS`.** Filled from the run1-ready author's final hand-back, once the PM sends it.
+  Until then, TO-CONFIRM. Observed spellings, read only, not chosen:
+  - at `67c2450`, `--frozen-eval-mode`;
+  - at the later head `c02b16d`, after `6d89ac3` ("C-1 frozen_model_mode {train,eval}
+    (--frozen-model-mode)"), the flag is `--frozen-model-mode {train,eval}`, so eval is
+    `--frozen-model-mode eval`.
+  - The `.worktrees/rsr-run1-ready` worktree showed an uncommitted `src/rsr/train/loop.py` edit
+    when this was checked, so the head may still move.
+  - Under O5 = train, `C1_FLAGS` is empty whatever the spelling.
+- **T10: `C2_FLAGS`.** At `c02b16d`, a pool run samples permutation epochs with no flag, and each
+  step record carries `pool_doc_ids` (C2(a)'s field). If the final head confirms this, `C2_FLAGS`
+  is empty. TO-CONFIRM from the same hand-back.
+- **T13: C9.** The oracle at γ_o = 0.5 and 0.9 on the first EVAL batch, in the model-read loop,
+  implemented in `run.py` before the full oracle measurement.
+- **T3:** now covers launcher v2, committed byte-identical (A2.7).
+
+### A2.10 What this author has additionally seen (declared)
+
+- **The oracle's model-free decisions and hit rates** on the **pool** documents of seeds 0–2
+  (A2.2). These are document-structure facts with no model. No EVAL document was used.
+- **The hang-up probes**: sleep jobs only.
+- **Launcher v2's dry run at `--iters 0`**: only the rcs, job records and `launch-git.json` were
+  read.
+- No EVAL document has been run through any model, and no φ has been trained.
