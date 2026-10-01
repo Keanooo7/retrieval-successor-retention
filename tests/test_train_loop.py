@@ -108,7 +108,7 @@ def test_train_does_not_stamp_a_policy_it_did_not_build(tmp_path):
     History of the refusal: until 2026-09-26 it was the registry's
     `UnmeasuredConstant`, reached with `steps_per_epoch=iters` (the warmup was the
     whole run); then correction 31's epoch check (`steps_per_epoch=None`). Since the
-    31(b) ruling (R-2026-09-30-rsr-run-1-scope, owner draft) `train()` passes the
+    31(b) ruling (docs/owner/rulings/R-2026-09-30-rsr-run-1-scope.md) `train()` passes the
     derived `pool / batch`, so with no overrides it is the registry again: `nu`,
     `beta`, `gamma` are MEASURED and owed by E1. Either refusal proves the policy
     was built from the name. That `iters` is not the epoch is now

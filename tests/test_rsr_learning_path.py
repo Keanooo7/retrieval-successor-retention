@@ -1,9 +1,10 @@
 """ADR-0009 slice 1 -- the psi-hat learning path, its gates (T1-T13) and the run-1 build.
 
 `observe` -> realized `r_i` (eval mode) -> Monte-Carlo return -> `L_MC` on `phi` only.
-Signed items (owner draft `R-2026-09-30-adr0009-signoff`): L1(a), L2, L6(a), L8 clip,
-L9, L10(a), L11, L12, L13(a). Run-1 scope (owner draft `R-2026-09-30-rsr-run-1-scope`):
-31(b) "one pass over the doc pool", and a frozen-transformer option.
+Signed items (`docs/owner/rulings/R-2026-09-30-adr0009-signoff.md`): L1(a), L2,
+L6(a), L8 clip, L9, L10(a), L11, L12, L13(a). Run-1 scope
+(`docs/owner/rulings/R-2026-09-30-rsr-run-1-scope.md`): 31(b) "one pass over the doc
+pool", and a frozen-transformer option.
 
 🔴 **ADR-0009 T4 is vacuous under a frozen transformer**, so every isolation test here
 (T1, T3, T4) runs the transformer **un-frozen**, in train mode, with dropout live.
@@ -692,12 +693,16 @@ def test_overrides_are_stamped_into_frozen_hash_and_label(tmp_path):
 
 
 def test_the_adamw_eps_is_torchs_default_and_recorded():
-    """L7/L8 after B1: eps left at the AdamW default, read from torch, never typed."""
+    """L7/L8 after B1, then P-2 of this branch's review: eps is PINNED at 1e-8,
+    B1's measured regime (`tests/test_run1_ready.py` gates the pin). torch's own
+    default is read from its signature and recorded beside it, never used; at
+    torch 2.14.0 the two agree, which this asserts so an upgrade that moves the
+    default is seen."""
     import inspect
 
     default = inspect.signature(torch.optim.AdamW).parameters["eps"].default
-    assert default == loop.ADAMW_EPS
-    assert loop.optimizer_record()["eps"] == default
+    assert default == loop.TORCH_DEFAULT_ADAMW_EPS == loop.ADAMW_EPS
+    assert loop.optimizer_record()["torch_default_eps"] == default
     assert loop.optimizer_record()["phi_in_transformer_clip"] is False
 
 
@@ -793,7 +798,7 @@ def test_the_reduction_through_train_has_no_head_no_observe_and_no_loss(
 
 @pytest.mark.parametrize("n_docs", [8, 16])
 def test_steps_per_epoch_is_derived_from_the_pool(tmp_path, monkeypatch, n_docs):
-    """31(b), R-2026-09-30-rsr-run-1-scope (owner draft): one epoch is one pass
+    """31(b), docs/owner/rulings/R-2026-09-30-rsr-run-1-scope.md: one epoch is one pass
     over the document pool, n_docs / batch optimizer steps -- from the pool train()
     built, never typed and never `iters`. T_warm (§3.4: one epoch) follows, and is
     reported as a fraction of total epochs."""
