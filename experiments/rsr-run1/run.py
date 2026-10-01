@@ -1,39 +1,39 @@
-"""RSR run 1 -- the measurement harness (PREREG `experiments/rsr-run1/PREREG.md`, T3-T8).
+"""RSR run 1 -- the measurement harness (PREREG `experiments/rsr-run1/PREREG.md`, T3).
 
-Pre-registration: `experiments/rsr-run1/PREREG.md`, committed alone at `7c58777`, ahead of
-this file; reviewed at `787875b` (MERGE WITH FIXES, an amendment pending). **Descriptive.
-No gate, no pass/fail threshold**: the controls C0-C8 decide only whether the run is
-readable, and every contrast is read only as "CI above 0", "CI below 0" or
-"CI includes 0".
+Pre-registration: the PREREG at `7c58777`, Amendment 1 (`6a4c5a8`) and Amendment 2
+(`7fcd3f9`), reviewed at `787875b`, `c02cae7` and `7f7e2ad`. **Descriptive. No gate, no
+pass/fail threshold.** The controls decide only whether the run is readable; every
+contrast is read only as "CI above 0", "CI below 0" or "CI includes 0".
 
-What it does (PREREG §9: "Measurement ... come from run.py"):
+The launch is NOT here: it is `experiments/rsr-run1/launch_run1.zsh`, committed
+byte-identical to Amendment 2 A2.7 (a test pins it), run inside tmux (A2.4). This file:
 
-* ``launch`` -- refuses without the owner-open values (O1 gamma, O4 phi weight decay, the
-  run length; and the seed list): no defaults. Refuses a dirty tree (review MAJOR-5) and
-  pins the launch to HEAD through the slot wrapper's ``--pinned-sha`` with a ``--wait``.
-  Re-asserts C0 before any model loads, freezes the manifest, then starts every
-  (arm, seed) through **the PREREG §9 command line** at a parameterised thread cap. Each
-  (arm, seed) gets its own record and its own rc, classified (review MAJOR-2: an uncaught
-  `train()` exception, `WarmStartRefused` included, is rc 1 with no heartbeat). A started
-  arm is **refused, never resumed** (PREREG §11.3).
-* ``measure`` -- per seed: C1-C8 and T7 from the arms' own artefacts; the held-out harness
-  on EVAL (eval mode, ``no_grad``, final phi from ``__head__``, ``set_train_step(iters)``,
-  observe off) for every arm and for the oracle, LRU, random x5 and the slots-zeroed floor
-  under each arm; per-document answer vectors written for the paired bootstrap; C4 through
-  fresh-stream's own ``measure_checkpoint`` (imported unchanged). Then across seeds: the
-  ONE designated headline contrast per seed and across seeds, everything else labelled
-  secondary or diagnostic; the ledger; ``RESULTS.md``.
-* ``time-batch`` (T5) and ``probe-oracle`` (T7) -- build-time measurements only.
+* ``--preflight`` (A1.2 step 2, A1.8 m-3): C0 for seeds 0-2 before any model loads; the
+  launcher is byte-identical to A2.7; the substrate checkpoints hash to their T0 values;
+  ``RSR_ORCH_ROOT`` / ``OUT`` / ``JOB_SUFFIX`` recorded, and a real launch refused unless
+  the orchestrator root is the shared one and the dry-run variables are unset (review
+  7fcd3f91ca8f MINOR-A2-3).
+* ``measure-seed --seed s`` (A1.6: one process per seed): C0-C10, the held-out harness on
+  EVAL (eval mode, ``no_grad``, phi from ``__head__``, ``set_train_step``, observe off)
+  for
+  the three arms, the oracle (gamma_o = 0.9, A2.2; scoped controls C9 / C9b), LRU (observe
+  on, A1.1 / T11), random x5 and the slots-zeroed floor under each arm; the intermediate
+  phi snapshots (A1.8 m-9, DIAGNOSTIC); per-document answer vectors; C4 through
+  fresh-stream's own ``measure_checkpoint``, imported unchanged.
+* ``finalize``: the ONE headline (psiC - FIFO, all-query held-out accuracy) per seed and
+  across seeds (points, mean, sd, sign count; A1.4), everything else labelled SECONDARY
+  or DIAGNOSTIC; the ledger; ``RESULTS.md``.
+* ``time-batch`` (T5) and ``probe-oracle`` (T7): build-time measurements only.
 
-🔴 **Every call into `feat/rsr-run1-ready` code goes through an ADAPTER** (search for
-``ADAPTER``). That branch is mid-fix; the adapters are the list to re-check on rebase.
+🔴 Every call into `feat/rsr-run1-ready` code goes through an ADAPTER (search
+``ADAPTER``); they are the list to re-check on rebase.
 
-Never: trains anything itself (the arms are the CLI's); calls `rsr.constants.record()`;
-fills §15; reads `loss` (the analysis reads ``loss_lm``); calls the rescaled target by any
-stronger name than "rescaled"; makes a scaling claim; scores the author's expectation.
+Never: trains anything; calls `rsr.constants.record()`; fills §15; reads `loss` (the
+analysis reads ``loss_lm``); names the rescaled target anything stronger; makes a scaling
+claim; scores the author's expectation.
 
-Exit codes (`rsr.exit_codes`): 0 every control passed in every seed · 3 did not run, or a
-control failed (inconclusive; numbers written, marked not read) · 5 an arm measured INERT.
+Exit codes (`rsr.exit_codes`): 0 every control passed in every seed · 3 did not run, or
+a control failed (numbers written, marked not read) · 5 an arm measured INERT.
 """
 
 from __future__ import annotations
@@ -44,6 +44,7 @@ import functools
 import gzip
 import hashlib
 import importlib.util
+import inspect
 import itertools
 import json
 import math
@@ -81,10 +82,11 @@ from rsr.train import checkpoint as ck  # noqa: E402
 from rsr.train import loop  # noqa: E402
 
 EXPERIMENT = "experiments/rsr-run1/run.py"
+LAUNCHER = "experiments/rsr-run1/launch_run1.zsh"
 RUN_ID = "rsr-run1"
 PREREG = "experiments/rsr-run1/PREREG.md"
-PREREG_COMMIT = "7c58777"
-REVIEW_COMMIT = "787875b"
+PREREG_COMMITS = {"base": "7c58777", "A1": "6a4c5a8", "A2": "7fcd3f9"}
+REVIEW_COMMITS = ("787875b", "c02cae7", "7f7e2ad")
 
 
 def _load(name: str, rel: str):
@@ -101,14 +103,14 @@ def _load(name: str, rel: str):
 @functools.cache
 def B2():
     """B2's harness (PREREG T3): `random_policy` (§7 seeding), `Scripted` (§9.1 replay)
-    and the §9.2 bootstrap convention. Its `run_arm` is NOT used: it calls
-    `run_policy_loop` without `eval_capture`, which an RSR policy needs (PREREG T3)."""
+    and the §9.2 bootstrap draw. Its `run_arm` is NOT used: it calls `run_policy_loop`
+    without `eval_capture`, which an RSR policy needs (T3)."""
     return _load("_rsr_run1_b2", "experiments/b2-psi-probe/run.py")
 
 
 @functools.cache
 def FS():
-    """fresh-stream (PREREG C4, T8): `measure_checkpoint` and `r_quantity`, unchanged."""
+    """fresh-stream (C4, T8): `measure_checkpoint` and `r_quantity`, unchanged."""
     return _load("_rsr_run1_fresh_stream", "experiments/fresh-stream/run.py")
 
 
@@ -116,8 +118,9 @@ def FS():
 # 🔒 PREREG, transcribed. Changing any of these is changing the PREREG.
 # --------------------------------------------------------------------------- #
 
-ARMS = ("psiC", "fifo", "age")  # PREREG §5
+ARMS = ("psiC", "fifo", "age")  # §5
 RSR_ARMS = ("psiC", "age")
+SEEDS = (0, 1, 2)  # A1.4
 POOL = (993000, 993256)  # §2
 EVAL = (995000, 997048)  # §2, §7.1
 VOCAB_DOCUMENTS = 64  # §3
@@ -146,15 +149,12 @@ S_STEPS = 48
 M_SLOTS = 16
 LR = 1e-3
 BEAT_EVERY = 1
-DEVICE = "cpu"  # §6 "Why CPU"
-#: §3, and the review's cross-sha check (seed-invariant map).
+DEVICE = "cpu"  # §6
+#: §3 and A1.4: one map for every seed.
 EXPECTED_VOCAB_SHA256 = "afbaf994e9d1f617fdc2e68579bf5f55622ee17aee056d33d8667d218d245031"
 _R = "/Users/keanooo7/retrieval-successor-retention"
 _B = f"{_R}/.worktrees/fresh-stream/runs/fresh-stream/B"
-#: §1 for seed 0. Seeds 1 and 2: the coordinator's amendment brief (3 seeds); their
-#: sha256 are T0 manifest lines 130 and 150, read from that file (the PREREG's O2 row
-#: quotes them truncated: `dadd1e08…3da8`, `b507ebc5…63b8`). PREREG-AMBIGUITY A1: the
-#: amendment must restate them.
+#: A1.4's substrate table (and launcher v2's SHA[...] lines).
 SUBSTRATE: dict[int, dict[str, str]] = {
     s: {
         "checkpoint": f"{_B}/seed{s}/ckpt-003000.pt",
@@ -170,42 +170,35 @@ SUBSTRATE: dict[int, dict[str, str]] = {
     )
 }
 MANIFEST_SHA256 = "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f"
-#: C4: fresh-stream's ledger row, read by key and seed position, never retyped. The
-#: typed seed-0 value is only the cross-check that the row read is the one the PREREG
-#: names; seeds 1 and 2 have no PREREG value (A1).
+#: C4: fresh-stream's ledger row, read by key and seed position (never retyped). A1.4's
+#: table gives every seed's value; they are the cross-check that the row read is it.
 C4_LEDGER = f"{_R}/.worktrees/fresh-stream/runs/fresh-stream/ledger.json"
 C4_KEY = "B.ckpt3000.R_quantity"
-C4_PREREG_VALUE = {0: 0.8597733527421951}
+C4_PREREG_VALUE = {0: 0.8597733527421951, 1: 0.8531856164336205, 2: 0.879943523555994}
 C4_TOL = 1e-6
 C4_N = 64  # measure_checkpoint's `n`: arm B's vocabulary documents
 N_BOOT = 2000
-BOOT_SEED_BASE = 20260927  # B2 PREREG §9.2's convention, reused (front matter)
+BOOT_SEED_BASE = 20260927  # B2 PREREG §9.2's convention (front matter)
 N_RANDOM = 5
-#: §7.2: Belady's MIN "for any gamma_o in (0, 1)" (T7). B2's primary gamma is the one
-#: run; `probe_oracle_invariance` checks T7 on every EVAL document first (A4).
-ORACLE_GAMMA = 0.9
+ORACLE_GAMMA = 0.9  # A2.2: a construction parameter, decoupled from O1
+C9_N_DOCS = 16  # A2.2: the first 16 EVAL documents, [995000, 995016)
+C9_GAMMAS = (0.5, 0.9)
 T7_GAMMAS = (0.01, 0.1, 0.5, 0.9, 0.97, 0.999)
 DELTA_BLOCK = 500  # §7.3
-#: A3 (not fixed by the PREREG): the held-out batch; all arms share it.
+FIRST_SCORED_STEPS = 500  # A1.8 m-2
+O5_VALUES = ("eval", "train")  # A2.1
+#: The shared orchestrator root (lanes.orch_root() with RSR_ORCH_ROOT unset: the main
+#: checkout). A real launch's job records live under it.
+SHARED_ORCH_ROOT = _R
+LAUNCH_ENV_VARS = ("RSR_ORCH_ROOT", "OUT", "JOB_SUFFIX")  # A2.7; MINOR-A2-3
+#: A3 (not fixed by the PREREG): the held-out batch. Every arm shares it.
 EVAL_BATCH = 16
-#: The ONE designated headline (review MAJOR-4; coordinator's amendment brief): psiC -
-#: FIFO, all-query held-out answer accuracy. Everything else is secondary/diagnostic.
-HEADLINE = "acc.all.psiC_minus_fifo"
-SCOPE_SENTENCE = (
-    "Every CI here is a within-seed CI: it is conditional on that seed's one trained "
-    "phi, "
-    "one data order, one dropout realisation and one substrate checkpoint, and it does "
-    "not estimate run-to-run variance. Only the across-seed spread speaks to that."
-)
-MULTIPLICITY_SENTENCE = (
-    "Apart from the one headline contrast, every CI is unadjusted for multiplicity and "
-    "is secondary or diagnostic."
-)
+HEADLINE = "acc.all.psiC_minus_fifo"  # A1.4
 QUESTION = (
     "On fresh-stream arm B's ckpt-003000 with the transformer frozen, when psi_hat is "
-    "trained online by L_MC on a fixed pool of 256 documents arm B never saw, how do its "
-    "evictions and the frozen model's held-out answer accuracy and LM loss compare with "
-    "FIFO and with a learned age-only head, arms that differ from it only in the "
+    "trained online by L_MC on a fixed pool of 256 documents arm B never saw, how do "
+    "its evictions and the frozen model's held-out answer accuracy and LM loss compare "
+    "with FIFO and with a learned age-only head, arms that differ from it only in the "
     "eviction rule?"
 )
 FALSIFIER = (
@@ -217,8 +210,9 @@ CONTRASTS = {
     "psiC_minus_fifo": ("psiC", "fifo"),
     "age_minus_fifo": ("age", "fifo"),
     "psiC_minus_age": ("psiC", "age"),
-    "psiC_minus_lru": ("psiC", "lru"),  # review MAJOR-1
+    "psiC_minus_lru": ("psiC", "lru"),  # A1.1
     "age_minus_lru": ("age", "lru"),
+    "lru_minus_fifo": ("lru", "fifo"),  # A1.1: LRU's distance from FIFO
 }
 BUCKET_NAMES = ("all", "gap_eq_1", "gap_ge_2", "gap_2_to_M", "gap_gt_M")  # §7.1
 
@@ -234,8 +228,13 @@ def buckets_for(m: int) -> dict:
     }
 
 
+def derive_ckpt(steps: int) -> int:
+    """A1.8 m-9: CKPT = STEPS / 3 when divisible by 3, else STEPS. Never typed."""
+    return steps // 3 if steps % 3 == 0 else steps
+
+
 class ControlFailure(RuntimeError):
-    """A PREREG §8 control (or T7) failed: inconclusive, exit 3."""
+    """A PREREG §8 control failed: inconclusive, exit 3."""
 
 
 class Refused(RuntimeError):
@@ -258,19 +257,24 @@ class Substrate:
 
 @dataclass(frozen=True)
 class OwnerValues:
-    """Owner-open (PREREG §12 O1, O4; review R-1 run length) plus the seed list
-    (O2, per the coordinator's amendment brief). **No defaults.**"""
+    """A2.8's owner slots -- O1 gamma, O4 phi weight decay, R-1 steps, O5 frozen mode --
+    plus the seed list (A1.4: 0, 1, 2; tests use fewer). **No defaults.**"""
 
     gamma: float
-    seeds: tuple[int, ...]
     phi_weight_decay: float
     iters: int
+    o5: str
+    seeds: tuple[int, ...]
 
 
 @dataclass(frozen=True)
 class Run1Config:
     """What the harness reads that a test may shrink. `prereg_config()` builds the one
-    the real run uses; the CLI has no flag that changes it."""
+    the real run uses; the CLI has no flag that changes it.
+
+    ``prereg_strict=False`` is for the test fixture only (a tree without C-2, launched
+    directly, from a dirty worktree): it waives C2(a)'s logged pool ids, the slot job
+    records and the clean-launch provenance. RESULTS prints it in bold."""
 
     seed: int
     substrate: Substrate
@@ -292,20 +296,30 @@ class Run1Config:
     c4_key: str = C4_KEY
     c4_prereg_value: float | None = None
     n_boot: int = N_BOOT
+    orch_root: str = SHARED_ORCH_ROOT
+    prereg_strict: bool = True
 
     @property
     def ckpt_every(self) -> int:
-        """§6: one checkpoint, at the end, holding the trained phi."""
-        return self.iters
+        return derive_ckpt(self.iters)
+
+    @property
+    def snapshots(self) -> list[int]:
+        """Every checkpoint step the arms write: CKPT, 2 CKPT, ..., iters."""
+        return list(range(self.ckpt_every, self.iters + 1, self.ckpt_every))
 
     @property
     def pool_length(self) -> int:
         return self.pool[1] - self.pool[0]
 
     @property
+    def steps_per_epoch(self) -> float:
+        return self.pool_length / self.batch
+
+    @property
     def t_warm_steps(self) -> float:
         """§6: one epoch = pool / batch steps (31(b)); T_warm_epochs = 1 (FROZEN)."""
-        return self.pool_length / self.batch
+        return self.steps_per_epoch
 
     def eval_ids(self) -> range:
         return range(*self.eval_range)
@@ -326,44 +340,56 @@ def prereg_config(seed: int, iters: int) -> Run1Config:
 
 
 def validate_owner_values(ov: OwnerValues) -> None:
-    """Refuse anything not ruled, or that the code would not actually run."""
-    for name in ("gamma", "seeds", "phi_weight_decay", "iters"):
+    """Refuse anything not ruled, or that the code would not actually run (A2.5)."""
+    for name in ("gamma", "phi_weight_decay", "iters", "o5", "seeds"):
         if getattr(ov, name, None) is None:
-            raise Refused(f"owner value {name} is not given (PREREG §12): refused")
+            raise Refused(f"owner value {name} is not given (PREREG A2.8): refused")
     g = float(ov.gamma)
     if g != g or not (0.0 <= g < 1.0):
         raise Refused(f"gamma={ov.gamma!r} is outside [0, 1) (spec §4.5)")
     if not ov.seeds or len(set(ov.seeds)) != len(ov.seeds):
         raise Refused(f"seeds={ov.seeds!r}: a non-empty list of distinct seeds")
     if int(ov.iters) != ov.iters or ov.iters < 1:
-        raise Refused(f"iters={ov.iters!r}: a positive integer run length")
+        raise Refused(f"iters={ov.iters!r}: a positive integer run length (R-1)")
+    if ov.o5 not in O5_VALUES:
+        raise Refused(f"O5 must be one of {O5_VALUES}, got {ov.o5!r} (A2.1)")
+    if not frozen_mode_supported(ov.o5):
+        raise Refused(f"O5={ov.o5}: this tree has no C-1 (frozen_model_mode) (A2.1)")
     wd = code_phi_weight_decay()
     if float(ov.phi_weight_decay) != wd:
         raise Refused(
             f"phi weight decay {ov.phi_weight_decay!r} was given, but the code pins "
-            f"{wd!r} (loop.ADAMW_WEIGHT_DECAY) and offers no other value (PREREG O4): "
-            f"running it would report a decay that did not run. A code change and its "
-            f"review come first."
+            f"{wd!r} and has no C-3 (A1.9 O4): running it would report a decay that "
+            f"did not run"
         )
 
 
 # --------------------------------------------------------------------------- #
-# ADAPTERS -- every call into feat/rsr-run1-ready (built against 211d6da).
+# ADAPTERS -- every call into feat/rsr-run1-ready (built against 211d6da; C-1/C-2
+# shapes read from c02b16d, TO-CONFIRM T9/T10).
 # --------------------------------------------------------------------------- #
 
-#: ADAPTER (resume). PREREG §11.3: no resume; at 211d6da the data-order generator is
-#: not checkpointed. Even if the fixed head checkpoints it, the PREREG forbids resume
-#: until amended, so this stays False and `refuse_resume` asserts it.
+#: ADAPTER (resume). PREREG §11.3: no resume. Stays False until an amendment says so.
 RESUME_PERMITTED = False
 
-#: ADAPTER: the arms' `max_tokens` -- `train()`'s default; the CLI has no flag for it
-#: at 211d6da (PREREG §6: 64, arm B's).
+#: ADAPTER (C-1, T9): what `frozen["frozen_model_mode"]` records for each O5 value
+#: (`FROZEN_MODEL_MODE_RECORD` at c02b16d; "train (dropout live)" at 211d6da).
+FROZEN_MODE_RECORDED = {"train": "train (dropout live)", "eval": "eval (dropout off)"}
+#: ADAPTER (C-1, T9): the flag launcher v2's C1_FLAGS carries for each O5 value.
+C1_FLAGS = {"train": (), "eval": ("--frozen-model-mode", "eval")}
+#: ADAPTER (C-2, T10): flags for the permutation pass (none at c02b16d: automatic in
+#: pool mode) and the per-step field holding the step's pool ids.
+C2_FLAGS: tuple[str, ...] = ()
+POOL_IDS_FIELD = "pool_doc_ids"
+#: ADAPTER: `max_tokens` -- `train()`'s default; the CLI has no flag (§6: 64).
 CLI_MAX_TOKENS = 64
 
-#: ADAPTER (flags). Extra flags the fixed head may require on every arm's command line
-#: -- e.g. an eval-mode flag for the frozen transformer (review MAJOR-3) or a
-#: `--srep-norm-reg-weight`. Empty at 211d6da; an amendment names them.
-EXTRA_TRAIN_FLAGS: tuple[str, ...] = ()
+
+def frozen_mode_supported(o5: str) -> bool:
+    """ADAPTER (C-1): "train" is as built; "eval" needs `train(frozen_model_mode)`."""
+    if o5 == "train":
+        return True
+    return "frozen_model_mode" in inspect.signature(loop.train).parameters
 
 
 def code_phi_weight_decay() -> float:
@@ -371,11 +397,35 @@ def code_phi_weight_decay() -> float:
     return float(loop.ADAMW_WEIGHT_DECAY)
 
 
-def cli_argv(cfg: Run1Config, arm: str, gamma: float, out_dir: Path) -> list[str]:
-    """ADAPTER (flags, T1): the PREREG §9 command for one arm, as an argv. ``<O1>`` is
-    the ruled gamma, written with `repr` so the CLI parses back the same float."""
+def cli_argv(cfg: Run1Config, arm: str, owner: OwnerValues, out_dir: Path) -> list[str]:
+    """ADAPTER (flags, T1): one arm's command, exactly as launcher v2 builds it (a test
+    compares the two token by token)."""
     s = cfg.substrate
-    common = [
+    rsr = [
+        "--policy",
+        "rsr",
+        "--policy-override",
+        "b_enabled=false",
+        "--policy-override",
+        "shadow_enabled=false",
+        "--policy-override",
+        "nu=0",
+        "--policy-override",
+        "beta=1",
+        "--policy-override",
+        f"gamma={owner.gamma!r}",
+    ]
+    per_arm = {
+        "psiC": rsr,
+        "fifo": ["--policy", "fifo"],
+        "age": [*rsr, "--policy-override", "psi_override=age_only"],
+    }
+    if arm not in per_arm:
+        raise ValueError(f"unknown arm {arm!r}; the arms are {ARMS}")
+    return [
+        ".venv/bin/python",
+        "-m",
+        "rsr.train.loop",
         "--d",
         str(cfg.d),
         "--batch",
@@ -397,12 +447,14 @@ def cli_argv(cfg: Run1Config, arm: str, gamma: float, out_dir: Path) -> list[str
         "--device",
         cfg.device,
         "--freeze-transformer",
+        *C1_FLAGS[owner.o5],
         "--pool-offset",
         str(cfg.pool[0]),
         "--pool-length",
         str(cfg.pool_length),
         "--pool-vocab-documents",
         str(cfg.vocab_documents),
+        *C2_FLAGS,
         "--warm-start",
         s.checkpoint,
         "--warm-start-sha256",
@@ -411,66 +463,15 @@ def cli_argv(cfg: Run1Config, arm: str, gamma: float, out_dir: Path) -> list[str
         s.manifest,
         "--warm-start-root",
         s.root,
-    ]
-    if s.source_config is not None:
-        common += ["--warm-start-source-config", s.source_config]
-    common += list(EXTRA_TRAIN_FLAGS)
-    rsr = [
-        "--policy",
-        "rsr",
-        "--policy-override",
-        "b_enabled=false",
-        "--policy-override",
-        "shadow_enabled=false",
-        "--policy-override",
-        "nu=0",
-        "--policy-override",
-        "beta=1",
-        "--policy-override",
-        f"gamma={float(gamma)!r}",
-    ]
-    py = [str(ROOT / ".venv" / "bin" / "python"), "-m", "rsr.train.loop"]
-    tail = ["--out-dir", str(out_dir)]
-    if arm == "psiC":
-        return py + common + rsr + tail
-    if arm == "fifo":
-        return py + common + ["--policy", "fifo"] + tail
-    if arm == "age":
-        return py + common + rsr + ["--policy-override", "psi_override=age_only"] + tail
-    raise ValueError(f"unknown arm {arm!r}; the arms are {ARMS}")
-
-
-def slot_prefix(
-    threads: int, *, pinned_sha: str, wait_s: float, job_id: str
-) -> list[str]:
-    """The PREREG §9 `SLOT=(...)` wrapper, with the review's MAJOR-2/-5 fixes:
-    `--wait` (a busy lane waits instead of refusing with 3) and `--pinned-sha` (HEAD
-    must be this sha and the tree clean outside runs/, `slot.py:84-101`)."""
-    return [
-        "env",
-        "PYTHONPATH=scripts",
-        str(ROOT / ".venv" / "bin" / "python"),
-        "-m",
-        "orchestrator.slot",
-        "run",
-        "--lane",
-        "cpu-det",
-        "--slots",
-        str(threads),
-        "--wait",
-        repr(float(wait_s)),
-        "--pinned-sha",
-        pinned_sha,
-        "--job-id",
-        job_id,
-        "--cwd",
-        str(ROOT),
-        "--",
+        "--warm-start-source-config",
+        str(s.source_config),
+        *per_arm[arm],
+        "--out-dir",
+        str(out_dir),
     ]
 
 
-#: `orchestrator.lanes.THREAD_ENV_VARS`, set here too so a direct launch is capped
-#: exactly as a slot launch is (T4).
+#: `orchestrator.lanes.THREAD_ENV_VARS`, so a direct (test) launch is capped as a slot is.
 THREAD_ENV_VARS = (
     "OMP_NUM_THREADS",
     "MKL_NUM_THREADS",
@@ -488,8 +489,8 @@ def thread_env(threads: int) -> dict[str, str]:
 
 
 def read_cli_result(log_path: Path) -> dict | None:
-    """ADAPTER: the result dict `rsr.train.loop.main` prints last
-    (`json.dumps(r, indent=2)`). None if absent -- the run raised before printing."""
+    """ADAPTER: the result dict `rsr.train.loop.main` prints last (indent=2). None if
+    absent -- the run raised before printing (A1.2's rc-1 rows)."""
     p = Path(log_path)
     if not p.exists():
         return None
@@ -510,8 +511,7 @@ def read_cli_result(log_path: Path) -> dict | None:
 
 
 def read_heartbeat(out_dir: Path) -> dict[str, Any]:
-    """ADAPTER: `heartbeat.jsonl` -> header, beats (by step), footer, crash. A missing
-    file is returned as ``exists: False`` (a refusal before the loop writes none)."""
+    """ADAPTER: `heartbeat.jsonl` -> header, beats (by step), footer, crash, last line."""
     path = Path(out_dir) / "heartbeat.jsonl"
     if not path.exists():
         return {
@@ -520,6 +520,7 @@ def read_heartbeat(out_dir: Path) -> dict[str, Any]:
             "beats": [],
             "footer": None,
             "crash": None,
+            "last": None,
         }
     rows = [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
     beats = [r for r in rows if r.get("kind") == "beat"]
@@ -529,51 +530,32 @@ def read_heartbeat(out_dir: Path) -> dict[str, Any]:
         "beats": sorted(beats, key=lambda r: r["step"]),
         "footer": next((r for r in rows if r.get("kind") == "footer"), None),
         "crash": next((r for r in rows if r.get("kind") == "crash"), None),
+        "last": rows[-1] if rows else None,
     }
 
 
-def batch_fingerprint(beat: dict, cfg: Run1Config) -> tuple:
-    """ADAPTER (C2; review MINOR-4). What identifies the batch a step drew. If the
-    fixed head logs a hash of the drawn ids, that is used; at 211d6da it does not, so
-    the fingerprint is `(n_answer_targets, n_pad_targets)`: both depend only on the drawn
-    documents and not on the eviction rule. `n_targets_scored` is NOT used -- it is
-    `batch x S x (L - 1)` every step and cannot see a batch mismatch."""
-    for key in ("batch_ids_sha256", "batch_sha256", "batch_ids"):
-        if beat.get(key) is not None:
-            return (key, json.dumps(beat[key]))
-    n_pad = round(float(beat["pad_target_fraction"]) * float(beat["n_targets_scored"]))
-    return ("counts", int(beat["n_answer_targets"]), int(n_pad))
-
-
-def replay_batches(cfg: Run1Config, steps: int) -> list[list[int]]:
-    """ADAPTER (sampler; permutation epochs may replace it). The pool indices `train()`
-    draws at each step at 211d6da: `torch.randint(0, len(pool), (batch,))` from
-    `torch.Generator(device).manual_seed(seed)`, nothing else drawing from it
-    (`loop.py:919`, `:1200-1202`)."""
-    g = torch.Generator(device=cfg.device).manual_seed(cfg.seed)
-    return [
-        torch.randint(
-            0, cfg.pool_length, (cfg.batch,), generator=g, device=cfg.device
-        ).tolist()
-        for _ in range(steps)
-    ]
-
-
-def read_step_diagnostics(out_dir: Path) -> list[dict]:
-    """ADAPTER (per-step diagnostics; the warm/scored split): one normalised dict per
-    line of `diagnostics.jsonl`. JSON histogram keys come back as strings; made ints."""
+def read_step_records(out_dir: Path) -> list[dict]:
+    """ADAPTER: `diagnostics.jsonl`, one record per step (RSR arms always; every pool
+    arm at c02b16d, which logs `pool_doc_ids` there). [] if the file is absent."""
     path = Path(out_dir) / loop.DIAGNOSTICS_FILE
+    if not path.exists():
+        return []
+    rows = [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
+    return sorted(rows, key=lambda r: int(r["step"]))
+
+
+def step_diagnostics(records: list[dict]) -> list[dict]:
+    """ADAPTER (per-step §7.1 diagnostics; the warm/scored split): normalised, one per
+    step that carries a `diag`. JSON histogram keys come back as strings; made ints."""
     out = []
-    for line in path.read_text().splitlines():
-        if not line.strip():
+    for r in records:
+        d = r.get("diag")
+        if d is None:
             continue
-        r = json.loads(line)
-        d = r["diag"]
         warm = d.get("warm") or []
         if len(warm) != 1:
             raise ControlFailure(
-                f"{path}: step {r['step']} has warm flags {warm!r}; one optimizer step "
-                f"is either warm or scored (§3.4)"
+                f"step {r['step']} has warm flags {warm!r}; a step is warm or scored"
             )
 
         def ints(h):
@@ -583,19 +565,57 @@ def read_step_diagnostics(out_dir: Path) -> list[dict]:
             {
                 "step": int(r["step"]),
                 "warm": bool(warm[0]),
-                "n_evictions": int(d.get("n_evictions", 0)),
                 "shift": ints(d.get("shift_distribution")),
                 "victim_age": ints(d.get("victim_age_distribution")),
                 "partial_rho": d.get("partial_rho_score_age_given_content"),
                 "spearman_rho": d.get("spearman_rho_score_age"),
             }
         )
-    return sorted(out, key=lambda r: r["step"])
+    return out
 
 
-def final_checkpoint(out_dir: Path, iters: int) -> Path:
-    """ADAPTER: the loop's filename (`ckpt-{step:06d}.pt`, `loop.py:1359`)."""
-    return Path(out_dir) / f"ckpt-{iters:06d}.pt"
+def step_pool_ids(records: list[dict]) -> dict[int, list[int]]:
+    """ADAPTER (C-2, T10): the pool ids each step read, from the step records."""
+    return {
+        int(r["step"]): [int(i) for i in r[POOL_IDS_FIELD]]
+        for r in records
+        if r.get(POOL_IDS_FIELD) is not None
+    }
+
+
+def batch_fingerprint(beat: dict) -> tuple:
+    """ADAPTER (C2(b), A1.8 m-4): `(n_answer_targets, n_pad_targets)` of the step's
+    batch. Both depend only on the drawn documents. `n_targets_scored` is NOT used: it is
+    `batch x S x (L - 1)` every step."""
+    n_pad = round(float(beat["pad_target_fraction"]) * float(beat["n_targets_scored"]))
+    return (int(beat["n_answer_targets"]), int(n_pad))
+
+
+def replay_batches(cfg: Run1Config, steps: int, sampling: str | None) -> list[list[int]]:
+    """ADAPTER (sampler). The pool positions each step draws, replayed from
+    `torch.Generator(device).manual_seed(seed)`, nothing else drawing from it:
+    with replacement at 211d6da (`torch.randint`); per-epoch permutation at c02b16d
+    (`PermutationEpochs`: a queue of `randperm(n)` drawn when used up)."""
+    g = torch.Generator(device=cfg.device).manual_seed(cfg.seed)
+    n, b = cfg.pool_length, cfg.batch
+    if sampling is not None and "permutation" in sampling:
+        queue: list[int] = []
+        out = []
+        for _ in range(steps):
+            while len(queue) < b:
+                queue += torch.randperm(n, generator=g, device=cfg.device).tolist()
+            out.append(queue[:b])
+            queue = queue[b:]
+        return out
+    return [
+        torch.randint(0, n, (b,), generator=g, device=cfg.device).tolist()
+        for _ in range(steps)
+    ]
+
+
+def checkpoint_path(out_dir: Path, step: int) -> Path:
+    """ADAPTER: the loop's filename (`ckpt-{step:06d}.pt`)."""
+    return Path(out_dir) / f"ckpt-{step:06d}.pt"
 
 
 def read_checkpoint(path: Path) -> dict:
@@ -618,21 +638,27 @@ def warm_start_record(result: dict) -> dict:
     return dict(result["config"].get("warm_start") or {})
 
 
-def frozen_model_mode(result: dict) -> str | None:
-    """ADAPTER (review MAJOR-3): the training-time mode of the frozen model, as the
-    arm recorded it ("train (dropout live)" at 211d6da)."""
-    return result["config"].get("frozen_model_mode")
-
-
 def head_state(payload: dict) -> dict | None:
     """ADAPTER: the trained phi (`checkpoint.py:444-445`)."""
     return (payload.get("policy") or {}).get("__head__")
 
 
+def job_record(cfg: Run1Config, arm: str) -> dict | None:
+    """ADAPTER (orchestrator): the slot's job record for launcher v2's job id
+    `rsr-run1-<arm>-s<seed>` in the shared root (`slot.py:150-152`)."""
+    p = (
+        Path(cfg.orch_root)
+        / ".orchestrator"
+        / "jobs"
+        / f"{RUN_ID}-{arm}-s{cfg.seed}.json"
+    )
+    return json.loads(p.read_text()) if p.exists() else None
+
+
 def eval_policy(arm: str, payload: dict, cfg: Run1Config):
-    """ADAPTER: an arm's FINAL policy (PREREG §7.1). psiC / age: `build_policy` with the
-    arm's own frozen overrides (read from the checkpoint, never retyped), phi from
-    ``__head__``, ``set_train_step(iters)``. FIFO: `FIFOPolicy`."""
+    """ADAPTER: an arm's policy at a checkpoint, for the held-out harness (§7.1). psiC /
+    age: `build_policy` with the arm's own frozen overrides (read from the checkpoint),
+    phi from ``__head__``, ``set_train_step(<the checkpoint's step>)``. FIFO: FIFO."""
     conf = payload["meta"]["config"]
     if arm == "fifo":
         if conf.get("policy") != "fifo":
@@ -642,30 +668,28 @@ def eval_policy(arm: str, payload: dict, cfg: Run1Config):
         return FIFOPolicy()
     if conf.get("policy") != "rsr":
         raise ControlFailure(f"the {arm} arm's checkpoint is policy {conf['policy']!r}")
-    want_age = arm == "age"
-    if (conf["policy_overrides"].get("psi_override") == "age_only") is not want_age:
-        raise ControlFailure(
-            f"the {arm} arm's checkpoint has overrides {conf['policy_overrides']}"
-        )
+    ov = conf["policy_overrides"]
+    if (ov.get("psi_override") == "age_only") is not (arm == "age"):
+        raise ControlFailure(f"the {arm} arm's checkpoint has overrides {ov}")
     gen, _ = loop.phi_generator(int(conf["seed"]))  # never the global RNG
     pol = loop.build_policy(
         "rsr",
         d_model=int(conf["tg"]["D"]),
         steps_per_epoch=float(conf["epoch"]["steps_per_epoch"]),
         generator=gen,
-        overrides=dict(conf["policy_overrides"]),
+        overrides=dict(ov),
         no_warmup_ablation=bool(conf.get("no_warmup_ablation", False)),
     )
     head = head_state(payload)
     if head is None or pol.head is None:
         raise ControlFailure(f"the {arm} arm's checkpoint carries no __head__")
     pol.head.load_state_dict(head)
-    pol.set_train_step(int(cfg.iters))
+    pol.set_train_step(int(payload["step"]))
     return pol
 
 
 # --------------------------------------------------------------------------- #
-# Provenance
+# Provenance and environment
 # --------------------------------------------------------------------------- #
 
 
@@ -676,7 +700,7 @@ def ledger_mod():
 
 
 def tree_state() -> dict[str, Any]:
-    """HEAD and whether anything outside runs/ is uncommitted (review MAJOR-5)."""
+    """HEAD and the full porcelain, as launcher v2 reads them (A1.5)."""
     exe = "/opt/homebrew/bin/git"
     try:
         head = subprocess.run(
@@ -686,16 +710,7 @@ def tree_state() -> dict[str, Any]:
             timeout=15,
         )
         st = subprocess.run(
-            [
-                exe,
-                "-C",
-                str(ROOT),
-                "status",
-                "--porcelain",
-                "--",
-                ":(top)",
-                ":(top,exclude)runs",
-            ],
+            [exe, "-C", str(ROOT), "status", "--porcelain"],
             capture_output=True,
             text=True,
             timeout=15,
@@ -703,12 +718,8 @@ def tree_state() -> dict[str, Any]:
     except (OSError, subprocess.SubprocessError) as e:
         return {"sha": None, "dirty": None, "porcelain": None, "error": str(e)}
     if head.returncode != 0 or st.returncode != 0:
-        return {
-            "sha": None,
-            "dirty": None,
-            "porcelain": None,
-            "error": (head.stderr or st.stderr).strip(),
-        }
+        err = (head.stderr or st.stderr).strip()
+        return {"sha": None, "dirty": None, "porcelain": None, "error": err}
     return {
         "sha": head.stdout.strip(),
         "dirty": bool(st.stdout.strip()),
@@ -735,21 +746,45 @@ def hardware() -> dict[str, Any]:
     }
 
 
-def probe_threads(threads: int) -> int:
-    """T4: the thread count torch reports in a child under this harness's thread env,
-    the env the slot wrapper sets for a cpu-det job (`slot.py:167-170`)."""
-    r = subprocess.run(
-        [sys.executable, "-c", "import torch; print(torch.get_num_threads())"],
-        env=thread_env(threads),
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    return int(r.stdout.strip())
+def launch_env(environ=None) -> dict[str, str | None]:
+    environ = os.environ if environ is None else environ
+    return {k: environ.get(k) for k in LAUNCH_ENV_VARS}
+
+
+def env_problems(env: dict[str, str | None], *, dry_run: bool) -> list[str]:
+    """Review 7fcd3f91ca8f MINOR-A2-3: a leftover RSR_ORCH_ROOT puts the real jobs in an
+    isolated lane root; OUT / JOB_SUFFIX are dry-run hooks that must be unset."""
+    out = []
+    root = env.get("RSR_ORCH_ROOT")
+    if root and Path(root).resolve() != Path(SHARED_ORCH_ROOT).resolve():
+        out.append(f"RSR_ORCH_ROOT={root!r} is not the shared root {SHARED_ORCH_ROOT}")
+    if not dry_run:
+        out += [
+            f"{k}={env[k]!r} is set (a dry-run hook)"
+            for k in ("OUT", "JOB_SUFFIX")
+            if env.get(k)
+        ]
+    return out
+
+
+def launcher_text_from_prereg() -> str:
+    """A2.7's launcher, read from the PREREG (the committed file must equal it)."""
+    t = (ROOT / PREREG).read_text()
+    i = t.index("### A2.7 Launcher, version 2")
+    j = t.index("```zsh\n", i) + len("```zsh\n")
+    return t[j : t.index("\n```\n", j)] + "\n"
+
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 # --------------------------------------------------------------------------- #
-# Documents, vocabulary, C0
+# Documents, vocabulary, C0, preflight
 # --------------------------------------------------------------------------- #
 
 
@@ -779,9 +814,9 @@ def _overlap(a, b) -> bool:
 
 
 def check_c0(cfg: Run1Config) -> dict:
-    """C0 (§8, §2): pool and EVAL disjoint from every used range and from each other,
-    below `1_000_003`, closed under the vocabulary, and the PREREG's map hash. Asserted
-    before any model loads (review MINOR-3: before launch, too). Raises."""
+    """C0 (§8, §2, A1.8 m-3): pool and EVAL disjoint from every used range and from each
+    other, below `1_000_003`, closed under the vocabulary, and the PREREG's map hash.
+    Before any model loads. Raises `ControlFailure`."""
     out: dict[str, Any] = {}
     for name, rng in (("pool", cfg.pool), ("eval", cfg.eval_range)):
         out[f"{name}_overlaps"] = [
@@ -810,10 +845,8 @@ def check_c0(cfg: Run1Config) -> dict:
         )
         if out[k] is not True
     ]
-    if (
-        cfg.expected_vocab_sha256 is not None
-        and out["vocab_sha256"] != cfg.expected_vocab_sha256
-    ):
+    want = cfg.expected_vocab_sha256
+    if want is not None and out["vocab_sha256"] != want:
         problems.append("vocab_sha256")
     out["ok"] = not problems
     out["failed"] = problems
@@ -822,13 +855,47 @@ def check_c0(cfg: Run1Config) -> dict:
     return out
 
 
+def preflight(*, dry_run: bool = False, environ=None) -> dict:
+    """A1.2 step 2 / A1.8 m-3: run through the slot before any training command; rc 0
+    required. Never loads a model and never reads an EVAL document through one."""
+    out: dict[str, Any] = {"env": launch_env(environ), "dry_run": dry_run, "seeds": {}}
+    out["env_problems"] = env_problems(out["env"], dry_run=dry_run)
+    committed = (ROOT / LAUNCHER).read_text() if (ROOT / LAUNCHER).exists() else None
+    out["launcher_byte_identical_to_A2_7"] = committed == launcher_text_from_prereg()
+    man = Path(SUBSTRATE[0]["manifest"])
+    out["manifest_sha256_ok"] = man.exists() and sha256_file(man) == MANIFEST_SHA256
+    for s in SEEDS:
+        cfg = prereg_config(s, 3)  # iters is not read by C0 or the hash
+        row: dict[str, Any] = {}
+        try:
+            row["C0"] = check_c0(cfg)
+        except ControlFailure as e:
+            row["C0"] = {"ok": False, "error": str(e)}
+        ckpt = Path(cfg.substrate.checkpoint)
+        row["substrate_sha256_ok"] = (
+            ckpt.exists() and sha256_file(ckpt) == cfg.substrate.sha256
+        )
+        out["seeds"][s] = row
+    out["ok"] = (
+        not out["env_problems"]
+        and out["launcher_byte_identical_to_A2_7"]
+        and out["manifest_sha256_ok"]
+        and all(r["C0"]["ok"] and r["substrate_sha256_ok"] for r in out["seeds"].values())
+    )
+    return out
+
+
 # --------------------------------------------------------------------------- #
-# launch
+# The direct launch (tests and dry runs ONLY -- the real launch is launcher v2)
 # --------------------------------------------------------------------------- #
 
 
 def arm_dir(out_root: Path, arm: str, seed: int) -> Path:
     return Path(out_root) / arm / f"seed{seed}"
+
+
+def job_key(arm: str, seed: int) -> str:
+    return f"{arm}-s{seed}"  # launcher v2's `k=$a-s$s`
 
 
 def refuse_resume(out_dir: Path) -> None:
@@ -838,202 +905,99 @@ def refuse_resume(out_dir: Path) -> None:
     if out_dir.exists() and any(out_dir.iterdir()):
         raise Refused(
             f"{out_dir} already holds {sorted(p.name for p in out_dir.iterdir())[:6]}: "
-            f"an arm that has started is never resumed (PREREG §11.3 -- the data-order "
-            f"generator is not checkpointed, so a resumed arm is not paired). A re-run "
-            f"starts from step 0 under an amendment, with this attempt kept on record."
+            "an "
+            f"arm that has started is never resumed (PREREG §11.3)"
         )
 
 
-def classify_rc(rc: int | None, result: dict | None, hb: dict) -> str:
-    """Review MAJOR-2: what an arm's rc means, disambiguated by the heartbeat.
-
-    rc 1 is EITHER an uncaught `train()` exception (`WarmStartRefused`, a closure or
-    override `ValueError`, a crash after `hb.crash`) OR inconclusive liveness."""
-    foot = (hb.get("footer") or {}).get("status")
-    if rc is None:
-        return "not finished"
-    if result is not None and foot == "completed":
-        band = (result.get("liveness") or {}).get("band")
-        return {
-            0: "completed, live",
-            5: "completed, INERT",
-            1: "completed, liveness inconclusive",
-            3: "completed, liveness measurement invalid",
-        }.get(rc, f"completed, rc {rc} (band {band})")
-    if hb.get("crash") is not None:
-        return f"crashed after start (heartbeat crash record), rc {rc}"
-    if not hb.get("exists"):
-        if rc == 1:
-            return "refused before the loop: uncaught exception, no heartbeat (rc 1)"
-        if rc == 3:
-            return "slot refused or usage error, no heartbeat (rc 3)"
-        return f"no heartbeat, rc {rc}"
-    return f"incomplete heartbeat, no footer, rc {rc}"
-
-
-def write_manifest(
-    out_root: Path, cfgs: list[Run1Config], owner: OwnerValues, plan: dict
-) -> Path:
-    """Freeze the config before any arm starts (the ledger's `manifest()`)."""
-    led = ledger_mod().Ledger(RUN_ID, question=QUESTION, runs_root=Path(out_root).parent)
-    if led.path.parent.resolve() != Path(out_root).resolve():
-        raise Refused(f"the ledger dir {led.path.parent} is not {out_root}")
-    return led.manifest(
-        {
-            "experiment": EXPERIMENT,
-            "prereg": PREREG,
-            "prereg_commit": PREREG_COMMIT,
-            "review_commit": REVIEW_COMMIT,
-            "configs": [c.as_dict() for c in cfgs],
-            "owner_values": dataclasses.asdict(owner),
-            "plan": plan,
-            "headline": HEADLINE,
-            "falsifier": FALSIFIER,
-            "expected": EXPECTED,
-            "hardware": hardware(),
-        }
-    )
-
-
-def launch_arm(cfg, owner, arm, out_root, *, launcher, threads, tree, wait_s):
-    """Start one (arm, seed); the record is written before the child exists."""
-    out_root = Path(out_root)
-    out_root.mkdir(parents=True, exist_ok=True)  # review MAJOR-2: the log's directory
-    out = arm_dir(out_root, arm, cfg.seed)
-    refuse_resume(out)
-    out.mkdir(parents=True, exist_ok=True)
-    argv = cli_argv(cfg, arm, owner.gamma, out)
-    job_id = f"{RUN_ID}-{arm}-seed{cfg.seed}"
-    full = (
-        slot_prefix(threads, pinned_sha=tree["sha"], wait_s=wait_s, job_id=job_id)
-        if launcher == "slot"
-        else []
-    ) + argv
-    record = {
-        "arm": arm,
-        "seed": cfg.seed,
-        "argv": argv,
-        "launcher": launcher,
-        "full_argv": full,
-        "threads": threads,
-        "thread_env": {k: str(threads) for k in THREAD_ENV_VARS},
-        "git_sha": tree["sha"],
-        "git_dirty": tree["dirty"],
-        "git_porcelain": tree["porcelain"],
-        "hardware": hardware(),
-        "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "started_epoch": time.time(),
-        "job_id": job_id,
-    }
-    (out_root / f"launch-{arm}-seed{cfg.seed}.json").write_text(
-        json.dumps(record, indent=2) + "\n"
-    )
-    log = open(out_root / f"{arm}-seed{cfg.seed}.log", "w")  # noqa: SIM115 -- closed in finish
-    proc = subprocess.Popen(
-        full, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, env=thread_env(threads)
-    )
-    return proc, log, record
-
-
-def finish_arm(proc, log, record: dict, out_root: Path) -> dict:
-    rc = proc.wait()  # the child's own status, never a pipe's
-    log.close()
-    rec = dict(record)
-    arm, seed = rec["arm"], rec["seed"]
-    log_path = Path(out_root) / f"{arm}-seed{seed}.log"
-    result = read_cli_result(log_path)
-    hb = read_heartbeat(arm_dir(out_root, arm, seed))
-    rec.update(
-        rc=rc,
-        rc_meaning=classify_rc(rc, result, hb),
-        finished_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        wall_s=time.time() - rec["started_epoch"],
-        log=str(log_path),
-        result=result,
-        run_id=None if result is None else result.get("run_id"),
-        config_hash=None if result is None else result.get("config_hash"),
-        arm_label=None if result is None else result.get("arm_label"),
-        heartbeat_exists=hb["exists"],
-    )
-    (Path(out_root) / f"arm-{arm}-seed{seed}.json").write_text(
-        json.dumps(rec, indent=2, default=str) + "\n"
-    )
-    return rec
-
-
-def launch(
+def launch_direct(
     cfgs: list[Run1Config],
     owner: OwnerValues,
     out_root: Path,
     *,
-    arms=ARMS,
-    launcher: str,
     threads: int,
-    parallel: bool,
-    wait_s: float = 0.0,
     allow_dirty: bool = False,
-) -> dict[str, dict]:
-    """C0 per seed, a clean pinned tree, the frozen manifest, then every (arm, seed)
-    through the §9 command line. Returns ``{f"{arm}-seed{s}": record}``."""
+) -> dict[str, int]:
+    """The arms through the same command line, WITHOUT the slot, into launcher v2's
+    layout (`launch-git.json`, `logs/<arm>-s<seed>.{log,rc}`, `<arm>/seed<s>/`). For the
+    test fixture and dry runs; a real launch is `launch_run1.zsh` inside tmux."""
     validate_owner_values(owner)
-    if sorted(c.seed for c in cfgs) != sorted(owner.seeds):
-        raise Refused(
-            f"configs for seeds {[c.seed for c in cfgs]} != ruled {owner.seeds}"
-        )
-    if any(c.iters != owner.iters for c in cfgs):
-        raise Refused("a config's iters is not the ruled run length")
-    if launcher not in ("slot", "direct"):
-        raise Refused(f"launcher={launcher!r}: 'slot' (PREREG §9) or 'direct' (tests)")
-    if threads < 1:
-        raise Refused(f"threads={threads}")
+    out_root = Path(out_root)
+    if (out_root / "launch-git.json").exists():
+        raise Refused(f"{out_root} was launched already (launch-git.json exists)")
     for c in cfgs:
-        for arm in arms:
+        for arm in ARMS:
             refuse_resume(arm_dir(out_root, arm, c.seed))
     tree = tree_state()
-    if tree["sha"] is None or tree["dirty"] is None:
-        raise Refused(f"git did not answer: {tree}")
-    if tree["dirty"] and not allow_dirty:
-        raise Refused(
-            "the tree has uncommitted changes outside runs/ (review MAJOR-5): run 1 "
-            f"launches only at a clean committed head.\n{tree['porcelain']}"
+    if tree["sha"] is None or (tree["dirty"] and not allow_dirty):
+        raise Refused(f"not a clean committed head: {tree}")
+    for c in cfgs:
+        check_c0(c)  # before any model loads
+    (out_root / "logs").mkdir(parents=True, exist_ok=True)
+    (out_root / "launch-git.json").write_text(
+        json.dumps(
+            {
+                "run_sha": tree["sha"],
+                "dirty": tree["dirty"],
+                "porcelain_lines": len((tree["porcelain"] or "").splitlines()),
+                "gamma": repr(owner.gamma),
+                "wd": repr(owner.phi_weight_decay),
+                "steps": str(owner.iters),
+                "ckpt": str(derive_ckpt(owner.iters)),
+                "o5": owner.o5,
+                "c1_flags": " ".join(C1_FLAGS[owner.o5]),
+                "c2_flags": " ".join(C2_FLAGS),
+                "c3_flags": "",
+                "launched_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "launcher": "run.py launch_direct (tests / dry runs; no slot)",
+                "env": launch_env(),
+            }
         )
-    c0 = {c.seed: check_c0(c) for c in cfgs}  # before any model loads
-    Path(out_root).mkdir(parents=True, exist_ok=True)
-    plan = {
-        "arms": list(arms),
-        "seeds": [c.seed for c in cfgs],
-        "launcher": launcher,
-        "threads_per_arm": threads,
-        "parallel": parallel,
-        "slot_wait_s": wait_s,
-        "tree": tree,
-        "allow_dirty": allow_dirty,
-        "c0": c0,
-        "thread_probe": probe_threads(threads),
-        "argv": {
-            f"{a}-seed{c.seed}": cli_argv(c, a, owner.gamma, arm_dir(out_root, a, c.seed))
-            for c in cfgs
-            for a in arms
-        },
-    }
-    write_manifest(out_root, cfgs, owner, plan)
-    jobs = [(c, a) for c in cfgs for a in arms]
-    recs: dict[str, dict] = {}
-    kw = dict(launcher=launcher, threads=threads, tree=tree, wait_s=wait_s)
-    if parallel:
-        started = [launch_arm(c, owner, a, out_root, **kw) for c, a in jobs]
-        for p, log, rec in started:
-            r = finish_arm(p, log, rec, out_root)
-            recs[f"{r['arm']}-seed{r['seed']}"] = r
-    else:
-        for c, a in jobs:
-            r = finish_arm(*launch_arm(c, owner, a, out_root, **kw), out_root)
-            recs[f"{a}-seed{c.seed}"] = r
-    return recs
+        + "\n"
+    )
+    rcs = {}
+    for c in cfgs:
+        for arm in ARMS:
+            k = job_key(arm, c.seed)
+            argv = cli_argv(c, arm, owner, arm_dir(out_root, arm, c.seed))
+            with open(out_root / "logs" / f"{k}.log", "w") as log:
+                rc = subprocess.run(
+                    argv,
+                    cwd=ROOT,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    env=thread_env(threads),
+                ).returncode
+            (out_root / "logs" / f"{k}.rc").write_text(f"{rc}\n")
+            rcs[k] = rc
+    return rcs
+
+
+def classify_rc(rc: int | None, job: dict | None, hb: dict, result: dict | None) -> str:
+    """A1.2's reading rule: what an arm's rc means, disambiguated by the job record and
+    the heartbeat."""
+    if rc is None:
+        return "no rc file: never collected"
+    foot = (hb.get("footer") or {}).get("status")
+    if rc == 0 and foot == "completed":
+        return "ran, live" if result else "ran (no printed result)"
+    if rc == 1 and foot == "completed":
+        return "liveness inconclusive: the arm is not read"
+    if rc == 5 and foot == "completed":
+        return "INERT"
+    if rc == 1 and not hb.get("exists"):
+        return "did not run: exception before the heartbeat (e.g. WarmStartRefused)"
+    if rc == 1 and hb.get("crash") is not None:
+        return "crashed mid-loop (heartbeat crash line)"
+    if rc == 3 and not hb.get("exists"):
+        return "slot refused (no job record)" if job is None else "CLI usage error"
+    if rc > 128:
+        return f"killed by signal {rc - 128}"
+    return f"rc {rc}: reported as itself"
 
 
 # --------------------------------------------------------------------------- #
-# The held-out harness (PREREG §7.1, §7.2, T3)
+# The held-out harness (PREREG §7.1, §7.2, T3, T11, T13)
 # --------------------------------------------------------------------------- #
 
 
@@ -1043,8 +1007,8 @@ class Recorder:
     -- read off the memory the loop holds (`on_write`'s `MemoryState`), not derived from
     the victims, so C7 compares two independent records.
 
-    `observe` is refused unless ``forward_observe`` (LRU reads attention; an RSR arm
-    never observes in the held-out harness, PREREG §7.1)."""
+    `observe` is refused unless ``forward_observe`` (LRU reads attention, T11); an RSR
+    arm never observes in the held-out harness (§7.1)."""
 
     def __init__(self, inner, *, forward_observe: bool = False) -> None:
         self.inner = inner
@@ -1104,7 +1068,8 @@ class Recorder:
 
 
 class PerRow:
-    """One policy object per batch row (a per-document oracle or random arm)."""
+    """T13: a row-correct batched wrapper -- one per-document policy per batch row,
+    dispatched on `MemoryState.row`. C9b checks it hands each row its own document."""
 
     def __init__(self, policies: list, name: str) -> None:
         self.policies = policies
@@ -1127,8 +1092,7 @@ class PerRow:
 class ZeroSlots(torch.nn.Module):
     """S0-03's ``slots_zeroed`` (`answer_readout`): every forward reads an all-zero
     memory, validity mask unchanged; writes unchanged. Under a policy, the policy still
-    decides over the gestalts written (§7.2: the floor "is also measured under each
-    arm")."""
+    decides over the gestalts written (§7.2: the floor "under each arm")."""
 
     def __init__(self, model: TGModel) -> None:
         super().__init__()
@@ -1144,9 +1108,8 @@ class ZeroSlots(torch.nn.Module):
         return self.inner.blocks
 
     def forward(self, ids_t, mask_t, kv, valid, bos_ctx, bos_valid, **kw):
-        return self.inner(
-            ids_t, mask_t, torch.zeros_like(kv), valid, bos_ctx, bos_valid, **kw
-        )
+        zero = torch.zeros_like(kv)
+        return self.inner(ids_t, mask_t, zero, valid, bos_ctx, bos_valid, **kw)
 
 
 def run_batch(
@@ -1166,7 +1129,7 @@ def run_batch(
     in-loop residency of every queried assert, and `|memory_t|` before each forward.
 
     ``decision_context="eval_forward"`` runs `run_policy_loop(eval_capture=True)` for a
-    policy that `needs_eval_context` -- training's decision path (ADR-0009 L2). With
+    policy that `needs_eval_context`: training's decision path (ADR-0009 L2). With
     ``"step_forward"`` the decision reads the loop's own srep (here also eval-mode)."""
     if decision_context not in ("eval_forward", "step_forward"):
         raise ValueError(decision_context)
@@ -1193,9 +1156,8 @@ def run_batch(
             pred = out.logits[:, :-1].argmax(-1)
             tgt = ids_t[:, 1:]
             for b, j in am.nonzero().tolist():
-                answers[b].append(
-                    (t, int(gap[b, t]), bool(pred[b, j] == tgt[b, j]), float(per[b, j]))
-                )
+                ok = bool(pred[b, j] == tgt[b, j])
+                answers[b].append((t, int(gap[b, t]), ok, float(per[b, j])))
         return torch.zeros((), device=dev)
 
     rec = Recorder(policy, forward_observe=observe)
@@ -1205,11 +1167,12 @@ def run_batch(
     model.eval()
     try:
         with torch.no_grad():
+            lengths = torch.full((B,), S, device=dev)
             run_policy_loop(
                 net,
                 ids,
                 mask,
-                torch.full((B,), S, device=dev),
+                lengths,
                 rec,
                 step_fn=step_fn,
                 observe=observe,
@@ -1220,6 +1183,10 @@ def run_batch(
     out = []
     for b, doc in enumerate(docs):
         assert_of = {q: a for a, q in doc.pairs}
+        hits = [
+            (q - assert_of[q], assert_of[q] in rec.resident_before(b, q))
+            for q in sorted(assert_of)
+        ]
         out.append(
             {
                 "doc": doc.doc_id,
@@ -1228,10 +1195,7 @@ def run_batch(
                 "real_n": real_n[b],
                 "victims": {str(k): v for k, v in sorted(rec.victims.get(b, {}).items())},
                 "evictions": rec.evictions.get(b, []),
-                "hits": [
-                    (q - assert_of[q], assert_of[q] in rec.resident_before(b, q))
-                    for q in sorted(assert_of)
-                ],
+                "hits": hits,
                 "n_live_before": [len(rec.resident_before(b, t)) for t in range(S)],
             }
         )
@@ -1246,12 +1210,15 @@ def residency_ok(doc, record: dict, m: int) -> bool:
     return [(q["gap"], q["hit"]) for q in rep] == [tuple(h) for h in record["hits"]]
 
 
+def oracle_policy(docs: list, gamma: float = ORACLE_GAMMA) -> PerRow:
+    """§7.2 / A2.2: `OraclePolicy(discounted_demand(doc, gamma_o))`, one per row."""
+    return PerRow([OraclePolicy(discounted_demand(d, gamma)) for d in docs], "oracle")
+
+
 def reference_policy(name: str, docs: list, seed: int):
-    """Evaluation-only references (§7.2; review MAJOR-1 adds LRU)."""
+    """Evaluation-only references (§7.2; A1.1 LRU)."""
     if name == "oracle":
-        return PerRow(
-            [OraclePolicy(discounted_demand(d, ORACLE_GAMMA)) for d in docs], "oracle"
-        )
+        return oracle_policy(docs)
     if name == "lru":
         return LRUPolicy()  # keyed by (row, written_at); reset at each loop entry
     if name.startswith("random"):
@@ -1260,15 +1227,23 @@ def reference_policy(name: str, docs: list, seed: int):
     raise ValueError(name)
 
 
-def heldout_passes() -> list[tuple[str, str, bool]]:
-    """Every held-out pass: (name, the arm whose checkpoint supplies model and policy,
-    slots zeroed). `sz_fifo` is S0-03's floor; `sz_psiC` / `sz_age` are §7.2's "under
-    each arm"."""
+def heldout_passes(
+    snapshot_steps: list[int] | None = None,
+) -> list[tuple[str, str, bool]]:
+    """Every held-out pass: (name, payload key, slots zeroed). `sz_fifo` is S0-03's
+    floor; `sz_psiC` / `sz_age` are §7.2's "under each arm". `psiC@k` / `age@k` are the
+    A1.8 m-9 snapshots (DIAGNOSTIC)."""
     passes = [(a, a, False) for a in ARMS]
     passes += [("oracle", "fifo", False), ("lru", "fifo", False)]
     passes += [(f"random{k}", "fifo", False) for k in range(N_RANDOM)]
     passes += [(f"sz_{a}", a, True) for a in ARMS]
+    for k in snapshot_steps or []:
+        passes += [(f"{a}@{k}", f"{a}@{k}", False) for a in RSR_ARMS]
     return passes
+
+
+def arm_of(key: str) -> str:
+    return key.split("@")[0]
 
 
 def run_heldout(
@@ -1276,7 +1251,7 @@ def run_heldout(
     payloads: dict[str, dict],
     out_dir: Path,
     *,
-    passes=None,
+    passes,
     limit: int | None = None,
     decision_context="eval_forward",
 ) -> dict:
@@ -1287,16 +1262,16 @@ def run_heldout(
     docs = docs_by_id(cfg, ids)
     loop.check_vocabulary_closure(docs, vmap)
     out_dir.mkdir(parents=True, exist_ok=True)
-    models = {a: model_from_payload(p).to(cfg.device) for a, p in payloads.items()}
+    models = {k: model_from_payload(p).to(cfg.device) for k, p in payloads.items()}
     timing: dict[str, dict] = {}
     residency: dict[str, dict] = {}
-    for name, src, zero in passes or heldout_passes():
+    for name, src, zero in passes:
         recs: list[dict] = []
         secs: list[float] = []
         for i in range(0, len(docs), cfg.eval_batch):
             chunk = docs[i : i + cfg.eval_batch]
-            if name in ARMS or name.startswith("sz_"):
-                pol = eval_policy(src, payloads[src], cfg)
+            if src == name or name.startswith("sz_"):
+                pol = eval_policy(arm_of(src), payloads[src], cfg)
             else:
                 pol = reference_policy(name, chunk, cfg.seed)
             t0 = time.perf_counter()
@@ -1340,19 +1315,50 @@ def read_pass(out_dir: Path, name: str) -> list[dict]:
 
 
 # --------------------------------------------------------------------------- #
-# T7: is the oracle the same rule at every gamma in (0, 1)?
+# C9 / C9b (A2.2, T13; review 7fcd3f91ca8f MINOR-A2-2) and the T7 probe
 # --------------------------------------------------------------------------- #
 
 
 def oracle_victims(doc, gamma: float, m: int) -> dict[int, int]:
+    """The model-free oracle replay, from the document's OWN demand."""
     rec = Recorder(OraclePolicy(discounted_demand(doc, gamma)))
     simulate(doc, rec, m)
     return rec.victims.get(0, {})
 
 
+def c9_oracle(model, cfg: Run1Config, vmap, *, policy_fn=oracle_policy) -> dict:
+    """C9: on the first 16 EVAL documents, the model-read loop's oracle victims at
+    gamma_o 0.5 and 0.9 are identical document by document. C9b: at 0.9 they equal the
+    model-free replay built from each document's own demand -- which catches a batched
+    wrapper handing a row another document's demand (C9 and C7 cannot). A failure
+    invalidates ONLY the oracle-derived numbers (regret, headroom share)."""
+    docs = docs_by_id(cfg, list(cfg.eval_ids())[:C9_N_DOCS])
+    loop_v: dict[float, dict[int, dict]] = {}
+    for g in C9_GAMMAS:
+        loop_v[g] = {}
+        for i in range(0, len(docs), cfg.eval_batch):
+            chunk = docs[i : i + cfg.eval_batch]
+            for r in run_batch(model, policy_fn(chunk, g), chunk, vmap, cfg):
+                loop_v[g][r["doc"]] = {int(k): v for k, v in r["victims"].items()}
+    lo, hi = C9_GAMMAS
+    c9_bad = [d.doc_id for d in docs if loop_v[lo][d.doc_id] != loop_v[hi][d.doc_id]]
+    c9b_bad = [
+        d.doc_id
+        for d in docs
+        if loop_v[ORACLE_GAMMA][d.doc_id]
+        != oracle_victims(d, ORACLE_GAMMA, cfg.memory_slots)
+    ]
+    return {
+        "documents": [docs[0].doc_id, docs[-1].doc_id + 1] if docs else None,
+        "C9": {"gammas": list(C9_GAMMAS), "differing_docs": c9_bad, "ok": not c9_bad},
+        "C9b": {"gamma": ORACLE_GAMMA, "differing_docs": c9b_bad, "ok": not c9b_bad},
+        "ok": bool(docs) and not c9_bad and not c9b_bad,
+        "scope": "a failure invalidates oracle regret and headroom share only (A2.2)",
+    }
+
+
 def probe_oracle_invariance(docs, m: int, gammas=T7_GAMMAS) -> dict:
-    """T7: `OraclePolicy`'s eviction sequence is identical at every gamma in ``gammas``
-    on every document (model-free, `headroom.simulate`)."""
+    """T7 (build-time, model-free): the oracle's victims at every gamma in ``gammas``."""
     differ = []
     for d in docs:
         ref = oracle_victims(d, gammas[0], m)
@@ -1376,19 +1382,17 @@ def c1_warm_start(results: dict[str, dict], cfg: Run1Config) -> dict:
     for arm, r in results.items():
         ws = warm_start_record(r)
         want = cfg.expected_vocab_sha256 or ws.get("run_vocab_sha256")
-        out[arm] = {
-            k: ws.get(k)
-            for k in (
-                "sha256",
-                "source_vocab_sha256",
-                "run_vocab_sha256",
-                "vocab_checked",
-                "seed_matches",
-                "source_seed",
-                "allow_unrecorded_vocabulary",
-                "allow_seed_mismatch",
-            )
-        }
+        keys = (
+            "sha256",
+            "source_vocab_sha256",
+            "run_vocab_sha256",
+            "vocab_checked",
+            "seed_matches",
+            "source_seed",
+            "allow_unrecorded_vocabulary",
+            "allow_seed_mismatch",
+        )
+        out[arm] = {k: ws.get(k) for k in keys}
         out[arm]["ok"] = (
             ws.get("sha256") == cfg.substrate.sha256
             and ws.get("source_vocab_sha256") == want
@@ -1404,64 +1408,96 @@ def c1_warm_start(results: dict[str, dict], cfg: Run1Config) -> dict:
 
 def pool_fingerprints(cfg: Run1Config) -> list[tuple[int, int]]:
     """Per pool document: (answer targets, padding targets), as `train()`'s tally counts
-    them (`loop.py:1173-1191`) -- the inputs of the expected batch fingerprint."""
+    them -- the inputs of the expected batch fingerprint."""
     vmap = vocab_map(cfg)
     docs = docs_by_id(cfg, range(*cfg.pool))
-    L = CLI_MAX_TOKENS
-    _ids, mask = loop.encode(docs, vmap, max_tokens=L, steps=cfg.steps_per_stream)
-    tm, _ = loop.answer_targets(docs, vmap, max_tokens=L, steps=cfg.steps_per_stream)
-    n_t = cfg.steps_per_stream * (L - 1)
-    real = mask[:, :, 1:].sum(dim=(1, 2))
-    ans = tm[:, :, 1:].sum(dim=(1, 2))
-    return [
-        (int(a), int(n_t - r)) for a, r in zip(ans.tolist(), real.tolist(), strict=True)
-    ]
+    L, S = CLI_MAX_TOKENS, cfg.steps_per_stream
+    _ids, mask = loop.encode(docs, vmap, max_tokens=L, steps=S)
+    tm, _ = loop.answer_targets(docs, vmap, max_tokens=L, steps=S)
+    real = mask[:, :, 1:].sum(dim=(1, 2)).tolist()
+    ans = tm[:, :, 1:].sum(dim=(1, 2)).tolist()
+    return [(int(a), int(S * (L - 1) - r)) for a, r in zip(ans, real, strict=True)]
 
 
-def c2_pairing(beats: dict[str, list[dict]], cfg: Run1Config) -> dict:
-    """C2 (review MINOR-4): every step drew the same batch in every arm, and that batch
-    is the one the sampler replay predicts; `loss_lm` bitwise equal for `k < T_warm`.
+def c2_pairing(
+    beats: dict[str, list[dict]],
+    ids: dict[str, dict[int, list[int]]],
+    cfg: Run1Config,
+    sampling: str | None,
+) -> dict:
+    """C2 (A1.8 m-4).
 
-    The batch check compares `batch_fingerprint` across arms AND against the
-    replayed sampler's expected fingerprint (`replay_batches` + `pool_fingerprints`).
-    It is a fingerprint, not an identity: two different 16-document batches could
-    share one, so a mismatch is proof and a match is strong evidence, not proof. The
-    warm-step bitwise `loss_lm` check is the stronger one, where it applies."""
-    t_warm = cfg.t_warm_steps
+    (a) PRIMARY: the logged per-step pool ids are identical across the arms at every
+        step, and every full epoch's ids are the pool exactly once (C-2).
+    (b) the per-step fingerprint (`n_answer_targets`, padding targets) is identical
+        across arms AND equals the one the replayed sampler predicts.
+    (c) `loss_lm` bitwise equal across arms for `k < T_warm`."""
+    tw = cfg.t_warm_steps
     arms = list(beats)
     by = {a: {b["step"]: b for b in beats[a]} for a in arms}
     steps = sorted(set.intersection(*(set(v) for v in by.values()))) if by else []
-    fp = pool_fingerprints(cfg)
-    expected = replay_batches(cfg, len(steps) and steps[-1] + 1)
-    cross, vs_replay, lm = [], [], []
-    for k in steps:
-        prints = {a: batch_fingerprint(by[a][k], cfg) for a in arms}
-        if len(set(prints.values())) != 1:
-            cross.append(k)
-        if fp is not None:
-            idx = expected[k]
-            want = ("counts", sum(fp[i][0] for i in idx), sum(fp[i][1] for i in idx))
-            if any(p[0] == "counts" and p != want for p in prints.values()):
-                vs_replay.append(k)
-        if k < t_warm and len({by[a][k]["loss_lm"] for a in arms}) != 1:
-            lm.append(k)
     same_steps = all(set(v) == set(steps) for v in by.values())
+    # (a)
+    have_ids = bool(ids) and all(ids.get(a) for a in arms)
+    a_cross, a_epoch = [], []
+    if have_ids:
+        a_cross = [k for k in steps if len({tuple(ids[a].get(k, ())) for a in arms}) != 1]
+        spe = int(cfg.steps_per_epoch)
+        first = ids[arms[0]]
+        pool = list(range(*cfg.pool))
+        for e in range(len(steps) // spe):
+            seen = sorted(
+                i for k in range(e * spe, (e + 1) * spe) for i in first.get(k, [])
+            )
+            if seen != pool:
+                a_epoch.append(e)
+    a_ok = have_ids and not a_cross and not a_epoch
+    # (b)
+    fp = pool_fingerprints(cfg)
+    expected = replay_batches(cfg, steps[-1] + 1 if steps else 0, sampling)
+    b_cross, b_replay = [], []
+    for k in steps:
+        prints = {a: batch_fingerprint(by[a][k]) for a in arms}
+        if len(set(prints.values())) != 1:
+            b_cross.append(k)
+        want = (sum(fp[i][0] for i in expected[k]), sum(fp[i][1] for i in expected[k]))
+        if any(p != want for p in prints.values()):
+            b_replay.append(k)
+        if have_ids:
+            got = [i - cfg.pool[0] for i in ids[arms[0]].get(k, [])]
+            if got != expected[k]:
+                b_replay.append(k)
+    # (c)
+    lm = [k for k in steps if k < tw and len({by[a][k]["loss_lm"] for a in arms}) != 1]
+    required_a = cfg.prereg_strict
     return {
         "steps_compared": len(steps),
-        "warm_steps_compared": sum(1 for k in steps if k < t_warm),
-        "fingerprint": "batch_fingerprint (ADAPTER)",
-        "cross_arm_mismatch_steps": cross[:20],
-        "replay_mismatch_steps": vs_replay[:20],
-        "replay_checked": fp is not None,
-        "loss_lm_warm_mismatch_steps": lm[:20],
+        "warm_steps_compared": sum(1 for k in steps if k < tw),
+        "a_pool_ids": {
+            "present": have_ids,
+            "required": required_a,
+            "cross_arm_mismatch_steps": a_cross[:20],
+            "epochs_not_exactly_the_pool": a_epoch[:20],
+        },
+        "b_fingerprint": {
+            "cross_arm_mismatch_steps": b_cross[:20],
+            "replay_mismatch_steps": sorted(set(b_replay))[:20],
+            "sampling": sampling,
+        },
+        "c_loss_lm_warm_mismatch_steps": lm[:20],
         "same_step_sets": same_steps,
-        "ok": bool(steps) and same_steps and not cross and not vs_replay and not lm,
+        "ok": bool(steps)
+        and same_steps
+        and not b_cross
+        and not b_replay
+        and not lm
+        and (a_ok or (not required_a and not have_ids)),
     }
 
 
 def c3_frozen(payloads: dict[str, dict], substrate_model: dict) -> dict:
     out = {}
-    for arm, p in payloads.items():
+    for key, p in payloads.items():
         m = p["model"]
         keys_equal = set(m) == set(substrate_model)
         differ = [
@@ -1469,14 +1505,14 @@ def c3_frozen(payloads: dict[str, dict], substrate_model: dict) -> dict:
             for k in substrate_model
             if k in m and not torch.equal(m[k], substrate_model[k])
         ]
-        out[arm] = {
+        out[key] = {
             "n_tensors": len(m),
             "keys_equal": keys_equal,
             "differ": differ[:10],
             "ok": keys_equal and not differ,
         }
     return {
-        "per_arm": out,
+        "per_checkpoint": out,
         "n_substrate_tensors": len(substrate_model),
         "ok": bool(out) and all(v["ok"] for v in out.values()),
     }
@@ -1492,6 +1528,7 @@ def load_substrate_model(cfg: Run1Config) -> tuple[dict, str]:
 
 
 def c5_liveness(results: dict[str, dict]) -> dict:
+    """A2.3: `live` required in every arm; `inert` -> exit 5; the ratio is reported."""
     per = {
         a: {k: (r.get("liveness") or {}).get(k) for k in ("band", "ratio", "exit_code")}
         for a, r in results.items()
@@ -1500,6 +1537,7 @@ def c5_liveness(results: dict[str, dict]) -> dict:
         "per_arm": per,
         "ok": bool(per) and all(v["band"] == "live" for v in per.values()),
         "inert": [a for a, v in per.items() if v["band"] == "inert"],
+        "ratio_note": "the ratio is reported, never a control (A2.3)",
     }
 
 
@@ -1541,6 +1579,144 @@ def c8_finite(beats: dict[str, list[dict]]) -> dict:
                 "ok": not bad,
             }
     return {"per_arm": per, "ok": bool(per) and all(v["ok"] for v in per.values())}
+
+
+def _cmd_flag(cmd: list[str] | None, flag: str) -> str | None:
+    if not cmd or flag not in cmd:
+        return None
+    i = cmd.index(flag)
+    return cmd[i + 1] if i + 1 < len(cmd) else None
+
+
+def c10_launch_values(
+    cfg: Run1Config,
+    owner: OwnerValues,
+    launch: dict,
+    results: dict[str, dict],
+    hbs: dict[str, dict],
+    jobs: dict[str, dict | None],
+    out_root: Path,
+) -> dict:
+    """C10 (review 7fcd3f91ca8f MINOR-A2-1 / A2-4; A1.5): each job ran the values the
+    launcher recorded and the owner ruled -- not just flag presence -- and the
+    provenance agrees. Per job: `frozen_model_mode` is O5's; the optimizer's
+    `weight_decay` is WD; the label's and the overrides' gamma are GAMMA; the checkpoint
+    cadence is the derived CKPT (the job's own command and the files on disk); iters is
+    STEPS. Launch: launch-git.json's slots equal the owner values; run_sha = each job
+    record's pinned_sha = each heartbeat's git_sha; dirty false; the jobs are in the
+    shared orchestrator root under their exact ids (no JOB_SUFFIX). Exit 3 on any."""
+    ckpt = derive_ckpt(owner.iters)
+    problems: list[str] = []
+
+    def want(cond: bool, msg: str) -> None:
+        if not cond:
+            problems.append(msg)
+
+    def num(x):
+        try:
+            return float(x)
+        except (TypeError, ValueError):
+            return None
+
+    want(num(launch.get("gamma")) == owner.gamma, f"launch gamma {launch.get('gamma')!r}")
+    want(
+        num(launch.get("wd")) == owner.phi_weight_decay, f"launch wd {launch.get('wd')!r}"
+    )
+    want(
+        str(launch.get("steps")) == str(owner.iters),
+        f"launch steps {launch.get('steps')!r}",
+    )
+    want(
+        str(launch.get("ckpt")) == str(ckpt),
+        f"launch ckpt {launch.get('ckpt')!r} != {ckpt}",
+    )
+    want(launch.get("o5") == owner.o5, f"launch o5 {launch.get('o5')!r}")
+    want(
+        launch.get("c1_flags", "") == " ".join(C1_FLAGS[owner.o5]),
+        f"launch c1_flags {launch.get('c1_flags')!r}",
+    )
+    sha = launch.get("run_sha")
+    if cfg.prereg_strict:
+        want(launch.get("dirty") is False, f"launch dirty {launch.get('dirty')!r}")
+    per = {}
+    for a, r in results.items():
+        conf = r["config"]
+        hb_sha = ((hbs[a].get("header") or {}).get("provenance") or {}).get("git_sha")
+        job = jobs.get(a)
+        files = sorted(
+            int(p.stem.split("-")[1])
+            for p in arm_dir(out_root, a, cfg.seed).glob("ckpt-*.pt")
+        )
+        row = {
+            "frozen_model_mode": conf.get("frozen_model_mode"),
+            "weight_decay": (conf.get("optimizer") or {}).get("weight_decay"),
+            "iters": conf.get("iters"),
+            "label": conf.get("arm_label"),
+            "gamma_override": (conf.get("policy_overrides") or {}).get("gamma"),
+            "checkpoint_steps": files,
+            "heartbeat_git_sha": hb_sha,
+            "job_pinned_sha": None if job is None else job.get("pinned_sha"),
+            "job_cmd_ckpt_every": None
+            if job is None
+            else _cmd_flag(job.get("cmd"), "--ckpt-every"),
+        }
+        rp: list[str] = []
+        if row["frozen_model_mode"] != FROZEN_MODE_RECORDED[owner.o5]:
+            rp.append(
+                f"frozen_model_mode {row['frozen_model_mode']!r} is not O5={owner.o5}"
+            )
+        if row["weight_decay"] != owner.phi_weight_decay:
+            rp.append(f"weight_decay {row['weight_decay']!r}")
+        if row["iters"] != owner.iters:
+            rp.append(f"iters {row['iters']!r}")
+        if a in RSR_ARMS:
+            g = format(float(owner.gamma), "g")
+            if (
+                f"gamma={g}" not in (row["label"] or "")
+                or row["gamma_override"] != owner.gamma
+            ):
+                rp.append(
+                    f"gamma: label {row['label']!r}, override {row['gamma_override']!r}"
+                )
+        if files != cfg.snapshots:
+            rp.append(f"checkpoints {files} != the derived cadence {cfg.snapshots}")
+        if hb_sha != sha:
+            rp.append(f"heartbeat git_sha {hb_sha!r} != launch run_sha {sha!r}")
+        if cfg.prereg_strict:
+            if job is None:
+                rp.append(
+                    f"no job record {RUN_ID}-{job_key(a, cfg.seed)} in {cfg.orch_root}"
+                )
+            else:
+                if job.get("pinned_sha") != sha:
+                    rp.append(f"job pinned_sha {job.get('pinned_sha')!r} != run_sha")
+                if row["job_cmd_ckpt_every"] != str(ckpt):
+                    rp.append(f"job --ckpt-every {row['job_cmd_ckpt_every']!r} != {ckpt}")
+        row["problems"] = rp
+        row["ok"] = not rp
+        per[a] = row
+    env = launch.get("env")
+    return {
+        "derived_ckpt": ckpt,
+        "launch": {
+            k: launch.get(k)
+            for k in (
+                "run_sha",
+                "dirty",
+                "gamma",
+                "wd",
+                "steps",
+                "ckpt",
+                "o5",
+                "c1_flags",
+                "c2_flags",
+            )
+        },
+        "launch_env": env,
+        "launch_problems": problems,
+        "per_arm": per,
+        "ok": not problems and bool(per) and all(v["ok"] for v in per.values()),
+    }
 
 
 def c4_reference(cfg: Run1Config) -> float | None:
@@ -1677,9 +1853,9 @@ def loss_counts(records: list[dict], kind: str) -> torch.Tensor:
     return torch.tensor(rows, dtype=torch.float64).reshape(-1, 2)
 
 
-def analyse_heldout(out_dir: Path, cfg: Run1Config) -> dict:
-    """§7.1 and §7.2 from the per-document records of one seed."""
-    names = [p[0] for p in heldout_passes()]
+def analyse_heldout(out_dir: Path, cfg: Run1Config, passes) -> dict:
+    """§7.1 and §7.2 from one seed's per-document records."""
+    names = [p[0] for p in passes]
     recs = {n: read_pass(out_dir, n) for n in names}
     order = [r["doc"] for r in recs["fifo"]]
     for n, rs in recs.items():
@@ -1690,10 +1866,12 @@ def analyse_heldout(out_dir: Path, cfg: Run1Config) -> dict:
     W = boot_weights(len(order), cfg.seed, cfg.n_boot)
     buckets = buckets_for(cfg.memory_slots)
     rnd = [f"random{k}" for k in range(N_RANDOM)]
+    snaps = [n for n in names if "@" in n]
     out: dict[str, Any] = {
         "n_documents": len(order),
         "n_boot": cfg.n_boot,
         "boot_seed": BOOT_SEED_BASE + cfg.seed,
+        "oracle_gamma": ORACLE_GAMMA,
     }
     acc: dict[str, dict] = {}
     con: dict[str, dict] = {}
@@ -1715,11 +1893,17 @@ def analyse_heldout(out_dir: Path, cfg: Run1Config) -> dict:
                 con[f"R.{arm}"] = contrast(per, arm, "sz_fifo", W)
                 con[f"R_own_floor.{arm}"] = contrast(per, arm, f"sz_{arm}", W)
             for arm in RSR_ARMS:
-                con[f"floor_difference.sz_{arm}_minus_sz_fifo"] = contrast(
-                    per, f"sz_{arm}", "sz_fifo", W
-                )
+                key = f"floor_difference.sz_{arm}_minus_sz_fifo"
+                con[key] = contrast(per, f"sz_{arm}", "sz_fifo", W)
         if bname == "all":
             out["headroom_share"] = {a: share(per, a, W) for a in RSR_ARMS}
+            out["snapshots"] = {
+                s: {
+                    "level": acc[bname][s],
+                    "minus_final_fifo": contrast(per, s, "fifo", W),
+                }
+                for s in snaps
+            }
     out["accuracy"] = acc
     out["nll"] = {}
     for kind in ("real", "answer"):
@@ -1750,7 +1934,7 @@ def analyse_heldout(out_dir: Path, cfg: Run1Config) -> dict:
 
 
 # --------------------------------------------------------------------------- #
-# Analysis: training time (§7.3) and the §7.1 diagnostics (§7.4)
+# Analysis: training time (§7.3) and the §7.1 diagnostics (§7.4, A1.8 m-2)
 # --------------------------------------------------------------------------- #
 
 
@@ -1793,10 +1977,23 @@ def _blocks(pairs, lo: int, hi: int, width: int = DELTA_BLOCK):
     return out
 
 
+def _mc(b: dict, key: str):
+    return (b.get("mc") or {}).get(key)
+
+
+def _g_by_t(beats: list[dict]) -> dict[int, float]:
+    acc: dict[int, list[float]] = {}
+    for b in beats:
+        for t, v in (_mc(b, "g_mean_by_t") or {}).items():
+            acc.setdefault(int(t), []).append(float(v))
+    return {t: sum(v) / len(v) for t, v in sorted(acc.items())}
+
+
 def analyse_training(
     hbs: dict[str, dict], diags: dict[str, list[dict]], cfg: Run1Config
 ) -> dict:
-    """§7.3 (paired per step; in-sample for phi; descriptive) and §7.4 (warm / scored)."""
+    """§7.3 (paired per step; in-sample for phi; SECONDARY) and §7.4 (DIAGNOSTIC, split
+    warm / scored), plus A1.8 m-2's first scored block beside uniform random."""
     tw = cfg.t_warm_steps
     lm = {a: {b["step"]: b["loss_lm"] for b in hbs[a]["beats"]} for a in hbs}
     out: dict[str, Any] = {"t_warm_steps": tw, "iters": cfg.iters, "delta_loss_lm": {}}
@@ -1820,21 +2017,10 @@ def analyse_training(
         beats = hbs[a]["beats"]
         warm = [b for b in beats if b["step"] < tw]
         post = [b for b in beats if b["step"] >= tw]
-
-        def g_by_t(bs):
-            acc: dict[int, list[float]] = {}
-            for b in bs:
-                for t, v in ((b.get("mc") or {}).get("g_mean_by_t") or {}).items():
-                    acc.setdefault(int(t), []).append(float(v))
-            return {t: sum(v) / len(v) for t, v in sorted(acc.items())}
-
-        def mc(b, key):
-            return (b.get("mc") or {}).get(key)
-
         fills = [
-            mc(b, "n_samples") / (mc(b, "n_groups") * cfg.memory_slots)
+            _mc(b, "n_samples") / (_mc(b, "n_groups") * cfg.memory_slots)
             for b in beats
-            if mc(b, "n_groups")
+            if _mc(b, "n_groups")
         ]
         out["rsr"][a] = {
             "loss_mc_warm": _summary([b.get("loss_mc") for b in warm]),
@@ -1842,12 +2028,12 @@ def analyse_training(
             "loss_mc_blocks": _blocks(
                 [(b["step"], b.get("loss_mc")) for b in beats], 0, cfg.iters
             ),
-            "g_mean_by_t_warm": g_by_t(warm),
-            "g_mean_by_t_post_warm": g_by_t(post),
-            "corr_psi_age_warm": _summary([mc(b, "corr_psi_age") for b in warm]),
-            "corr_psi_age_post_warm": _summary([mc(b, "corr_psi_age") for b in post]),
+            "g_mean_by_t_warm": _g_by_t(warm),
+            "g_mean_by_t_post_warm": _g_by_t(post),
+            "corr_psi_age_warm": _summary([_mc(b, "corr_psi_age") for b in warm]),
+            "corr_psi_age_post_warm": _summary([_mc(b, "corr_psi_age") for b in post]),
             "corr_psi_age_none_steps": sum(
-                1 for b in beats if mc(b, "corr_psi_age") is None
+                1 for b in beats if _mc(b, "corr_psi_age") is None
             ),
             "phi_grad_norm": _summary([b.get("phi_grad_norm") for b in beats]),
             "eval_forward_s": {
@@ -1863,15 +2049,25 @@ def analyse_training(
     out["diagnostics"] = {}
     for a, rows in diags.items():
         out["diagnostics"][a] = {}
-        for phase, sel in (("warm", True), ("scored", False)):
-            rs = [r for r in rows if r["warm"] is sel]
+        lo = math.ceil(tw)
+        for phase, sel in (
+            ("warm", lambda r: r["warm"]),
+            ("scored", lambda r: not r["warm"]),
+            (
+                "first_scored_block",
+                lambda r, lo=lo: (
+                    not r["warm"] and lo <= r["step"] < lo + FIRST_SCORED_STEPS
+                ),
+            ),
+        ):
+            rs = [r for r in rows if sel(r)]
             shift: Counter = Counter()
             ages: Counter = Counter()
             for r in rs:
                 shift.update(r["shift"])
                 ages.update(r["victim_age"])
             tot = sum(shift.values())
-            out["diagnostics"][a][phase] = {
+            row = {
                 "n_steps": len(rs),
                 "n_evictions": tot,
                 "victim_age_distribution": dict(sorted(ages.items())),
@@ -1886,11 +2082,16 @@ def analyse_training(
                 "partial_rho_none_steps": sum(1 for r in rs if r["partial_rho"] is None),
                 "warm_flag_matches_step": all((r["step"] < tw) is r["warm"] for r in rs),
             }
+            if phase == "first_scored_block":
+                m = cfg.memory_slots
+                row["uniform_random_expected"] = {k: tot / m for k in range(m)}
+                row["steps"] = [lo, lo + FIRST_SCORED_STEPS]
+            out["diagnostics"][a][phase] = row
     return out
 
 
 # --------------------------------------------------------------------------- #
-# measure (per seed), then finalize (across seeds)
+# measure-seed, then finalize
 # --------------------------------------------------------------------------- #
 
 
@@ -1902,11 +2103,13 @@ def measure_seed(
     threads: int,
     limit: int | None = None,
     c4_fn=None,
+    environ=None,
 ) -> dict:
-    """Every control and number for one seed -> ``measure-seed{s}.json``. Never raises
-    for a failed control: the failure is recorded and the status says so."""
+    """Every control and number for one seed -> ``measure-seed{s}.json``. A failed
+    control is recorded and the status says so; nothing is dropped."""
     torch.set_num_threads(threads)
     out_root = Path(out_root)
+    env = launch_env(environ)
     doc: dict[str, Any] = {
         "run_id": RUN_ID,
         "seed": cfg.seed,
@@ -1915,113 +2118,121 @@ def measure_seed(
         "tree": tree_state(),
         "hardware": hardware(),
         "measure_threads": torch.get_num_threads(),
+        "measure_env": env,
         "controls": {},
+        "scoped_controls": {},
         "status": None,
         "exit": None,
         "notes": [],
     }
-    arms = {}
-    for a in ARMS:
-        p = out_root / f"arm-{a}-seed{cfg.seed}.json"
-        arms[a] = json.loads(p.read_text()) if p.exists() else None
-    doc["arms"] = {
-        a: None
-        if r is None
-        else {
-            k: r.get(k)
-            for k in (
-                "argv",
-                "full_argv",
-                "launcher",
-                "threads",
-                "rc",
-                "rc_meaning",
-                "run_id",
-                "config_hash",
-                "arm_label",
-                "git_sha",
-                "git_dirty",
-                "wall_s",
-                "started_utc",
-                "finished_utc",
-                "heartbeat_exists",
-            )
-        }
-        for a, r in arms.items()
-    }
 
     def done(code: Exit, status: str) -> dict:
-        failed = [
-            k
-            for k, v in doc["controls"].items()
-            if isinstance(v, dict) and v.get("ok") is not True
-        ]
+        failed = [k for k, v in doc["controls"].items() if v.get("ok") is not True]
         doc.update(status=status, exit=int(code), controls_failed=failed)
-        (out_root / f"measure-seed{cfg.seed}.json").write_text(
-            json.dumps(doc, indent=2, default=str) + "\n"
-        )
+        f = out_root / f"measure-seed{cfg.seed}.json"
+        f.write_text(json.dumps(doc, indent=2, default=str) + "\n")
         return doc
 
+    if cfg.prereg_strict and env_problems(env, dry_run=False):
+        doc["notes"].append(f"environment: {env_problems(env, dry_run=False)}")
+        return done(Exit.DID_NOT_RUN, "did_not_run")
     try:
         doc["controls"]["C0"] = check_c0(cfg)
     except ControlFailure as e:
         doc["controls"]["C0"] = {"ok": False, "error": str(e)}
         return done(Exit.DID_NOT_RUN, "did_not_run")
-    missing = [a for a, r in arms.items() if r is None or r.get("result") is None]
-    if missing:
-        doc["notes"].append(
-            "arms with no result: "
-            f"{[(a, (arms[a] or {}).get('rc_meaning')) for a in missing]}"
-        )
+    lg = out_root / "launch-git.json"
+    launch = json.loads(lg.read_text()) if lg.exists() else None
+    doc["launch"] = launch
+    if launch is None:
+        doc["notes"].append(f"{lg} is missing: the launcher never ran here")
+        return done(Exit.DID_NOT_RUN, "did_not_run")
+    arms: dict[str, dict] = {}
+    for a in ARMS:
+        k = job_key(a, cfg.seed)
+        rcf, logf = out_root / "logs" / f"{k}.rc", out_root / "logs" / f"{k}.log"
+        rc = int(rcf.read_text().strip()) if rcf.exists() else None
+        result = read_cli_result(logf)
+        hb = read_heartbeat(arm_dir(out_root, a, cfg.seed))
+        job = job_record(cfg, a)
+        arms[a] = {
+            "rc": rc,
+            "result": result,
+            "hb": hb,
+            "job": job,
+            "meaning": classify_rc(rc, job, hb, result),
+            "log": str(logf),
+        }
+    doc["arms"] = {
+        a: {
+            "rc": v["rc"],
+            "rc_meaning": v["meaning"],
+            "log": v["log"],
+            "run_id": (v["result"] or {}).get("run_id"),
+            "config_hash": (v["result"] or {}).get("config_hash"),
+            "arm_label": (v["result"] or {}).get("arm_label"),
+            "argv": cli_argv(cfg, a, owner, arm_dir(out_root, a, cfg.seed)),
+            "job_record": v["job"],
+            "heartbeat_last": v["hb"]["last"],
+        }
+        for a, v in arms.items()
+    }
+    if any(v["rc"] != 0 or v["result"] is None for v in arms.values()):
+        if any(v["rc"] == 5 for v in arms.values()):
+            doc["notes"].append("an arm measured INERT: quarantined; no retention number")
+            return done(Exit.INERT, "failed")
+        doc["notes"].append("an arm's rc is not 0: that arm's reading stops (A1.2)")
         return done(Exit.DID_NOT_RUN, "crashed")
-    results = {a: r["result"] for a, r in arms.items()}
-    hbs = {a: read_heartbeat(arm_dir(out_root, a, cfg.seed)) for a in ARMS}
-    doc["frozen_model_mode"] = {a: frozen_model_mode(r) for a, r in results.items()}
+    results = {a: v["result"] for a, v in arms.items()}
+    hbs = {a: v["hb"] for a, v in arms.items()}
+    doc["frozen_model_mode"] = {
+        a: r["config"].get("frozen_model_mode") for a, r in results.items()
+    }
     doc["controls"]["C1"] = c1_warm_start(results, cfg)
     doc["controls"]["C5"] = c5_liveness(results)
     doc["controls"]["C6"] = c6_steps(results, hbs, cfg)
-    ran = {
-        a: (results[a]["config"].get("policy_overrides") or {}).get("gamma")
-        for a in RSR_ARMS
-    }
-    wd = {
-        a: (results[a]["config"].get("optimizer") or {}).get("weight_decay") for a in ARMS
-    }
-    doc["controls"]["owner_values_ran"] = {
-        "gamma": ran,
-        "weight_decay": wd,
-        "launched_clean": {a: (arms[a] or {}).get("git_dirty") is False for a in ARMS},
-        "ok": all(v == owner.gamma for v in ran.values())
-        and all(v == owner.phi_weight_decay for v in wd.values()),
-    }
+    doc["controls"]["C10"] = c10_launch_values(
+        cfg, owner, launch, results, hbs, {a: v["job"] for a, v in arms.items()}, out_root
+    )
     if doc["controls"]["C5"]["inert"]:
-        doc["notes"].append(
-            "an arm measured INERT (R-2026-09-22-inert-exit-5): quarantined; "
-            "no retention number is reported"
-        )
         return done(Exit.INERT, "failed")
     if not doc["controls"]["C6"]["ok"]:
         return done(Exit.DID_NOT_RUN, "crashed")
     beats = {a: hbs[a]["beats"] for a in ARMS}
-    doc["controls"]["C2"] = c2_pairing(beats, cfg)
+    steprecs = {a: read_step_records(arm_dir(out_root, a, cfg.seed)) for a in ARMS}
+    sampling = (results["psiC"]["config"].get("epoch") or {}).get("sampling")
+    doc["controls"]["C2"] = c2_pairing(
+        beats, {a: step_pool_ids(steprecs[a]) for a in ARMS}, cfg, sampling
+    )
     doc["controls"]["C8"] = c8_finite(beats)
-    ckpts = {a: final_checkpoint(arm_dir(out_root, a, cfg.seed), cfg.iters) for a in ARMS}
-    payloads = {a: read_checkpoint(p) for a, p in ckpts.items()}
+    payloads = {
+        a: read_checkpoint(checkpoint_path(arm_dir(out_root, a, cfg.seed), cfg.iters))
+        for a in ARMS
+    }
+    snaps = [k for k in cfg.snapshots if k != cfg.iters]
+    for k in snaps:
+        for a in RSR_ARMS:
+            payloads[f"{a}@{k}"] = read_checkpoint(
+                checkpoint_path(arm_dir(out_root, a, cfg.seed), k)
+            )
     sub_model, sub_sha = load_substrate_model(cfg)
     doc["controls"]["C3"] = {
         **c3_frozen(payloads, sub_model),
         "substrate_sha256": sub_sha,
     }
     del sub_model
-    doc["checkpoint_bytes"] = {a: p.stat().st_size for a, p in ckpts.items()}  # T6
-    eval_docs = docs_by_id(cfg, list(cfg.eval_ids())[: limit or None])
-    doc["controls"]["T7"] = probe_oracle_invariance(eval_docs, cfg.memory_slots)
-    hd = out_root / "heldout" / f"seed{cfg.seed}"
-    ho = run_heldout(cfg, payloads, hd, limit=limit)
-    doc["controls"]["C7"] = {
-        "per_pass": ho["residency"],
-        "ok": all(v["n_mismatched"] == 0 for v in ho["residency"].values()),
+    doc["checkpoint_bytes"] = {
+        a: checkpoint_path(arm_dir(out_root, a, cfg.seed), cfg.iters).stat().st_size
+        for a in ARMS
     }
+    vmap = vocab_map(cfg)
+    fifo_model = model_from_payload(payloads["fifo"]).to(cfg.device)
+    doc["scoped_controls"]["C9_C9b"] = c9_oracle(fifo_model, cfg, vmap)
+    passes = heldout_passes(snaps)
+    hd = out_root / "heldout" / f"seed{cfg.seed}"
+    ho = run_heldout(cfg, payloads, hd, passes=passes, limit=limit)
+    ok7 = all(v["n_mismatched"] == 0 for v in ho["residency"].values())
+    doc["controls"]["C7"] = {"per_pass": ho["residency"], "ok": ok7}
     n_batches = math.ceil((cfg.eval_range[1] - cfg.eval_range[0]) / cfg.eval_batch)
     doc["T5"] = {
         n: {
@@ -2035,20 +2246,16 @@ def measure_seed(
         for n, t in ho["timing"].items()
     }
     try:
-        doc["controls"]["C4"] = (c4_fn or c4_measure)(
-            arm_dir(out_root, "fifo", cfg.seed), cfg
-        )
+        fifo_dir = arm_dir(out_root, "fifo", cfg.seed)
+        doc["controls"]["C4"] = (c4_fn or c4_measure)(fifo_dir, cfg)
     except Exception as e:  # the control did not run: recorded, never a pass
         doc["controls"]["C4"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
-    doc["heldout"] = analyse_heldout(hd, cfg)
-    diags = {a: read_step_diagnostics(arm_dir(out_root, a, cfg.seed)) for a in RSR_ARMS}
+    doc["heldout"] = analyse_heldout(hd, cfg, passes)
+    doc["oracle_numbers_read"] = doc["scoped_controls"]["C9_C9b"]["ok"]
+    diags = {a: step_diagnostics(steprecs[a]) for a in RSR_ARMS}
     doc["training"] = analyse_training(hbs, diags, cfg)
     doc["epoch"] = {a: results[a]["config"].get("epoch") for a in RSR_ARMS}
-    failed = [
-        k
-        for k, v in doc["controls"].items()
-        if isinstance(v, dict) and v.get("ok") is not True
-    ]
+    failed = [k for k, v in doc["controls"].items() if v.get("ok") is not True]
     if failed:
         doc["notes"].append(
             f"controls failed: {failed} -- inconclusive; numbers NOT read"
@@ -2058,8 +2265,8 @@ def measure_seed(
 
 
 def headline(docs: list[dict]) -> dict:
-    """The ONE designated contrast (`HEADLINE`), per seed (within-seed CI, labelled so)
-    and across seeds (per-seed points, mean, sd over seeds; no across-seed CI)."""
+    """A1.4: the ONE contrast, per seed (within-seed CI) and across seeds (the points,
+    their mean and sd, and how many are above / below / exactly 0; no CI, no test)."""
     per = {}
     for d in docs:
         c = ((d.get("heldout") or {}).get("contrasts") or {}).get(HEADLINE)
@@ -2070,6 +2277,11 @@ def headline(docs: list[dict]) -> dict:
     n = len(pts)
     mean = sum(pts) / n if n else None
     sd = math.sqrt(sum((x - mean) ** 2 for x in pts) / (n - 1)) if n > 1 else None
+    signs = {
+        "above_0": sum(x > 0 for x in pts),
+        "below_0": sum(x < 0 for x in pts),
+        "exactly_0": sum(x == 0 for x in pts),
+    }
     return {
         "contrast": HEADLINE,
         "per_seed": per,
@@ -2079,7 +2291,7 @@ def headline(docs: list[dict]) -> dict:
             "mean": mean,
             "sd": sd,
             "sd_exactly_zero": sd == 0.0,
-            "readings": [v.get("reading") for v in per.values() if v],
+            "sign_count": signs,
         },
     }
 
@@ -2093,13 +2305,14 @@ def finalize(
     write_ledger: bool = True,
 ) -> Exit:
     """Across seeds: the headline, RESULTS.md, the ledger. The exit is the worst seed's
-    (INERT 5 over did-not-run 3 over 0)."""
+    (INERT 5 over 3 over 0)."""
     codes = [Exit(d["exit"]) for d in docs]
-    code = (
-        Exit.INERT
-        if Exit.INERT in codes
-        else (Exit.DID_NOT_RUN if any(c != Exit.OK for c in codes) else Exit.OK)
-    )
+    if Exit.INERT in codes:
+        code = Exit.INERT
+    elif any(c != Exit.OK for c in codes):
+        code = Exit.DID_NOT_RUN
+    else:
+        code = Exit.OK
     status = (
         "ok" if code == Exit.OK else next(d["status"] for d in docs if d["exit"] != 0)
     )
@@ -2111,6 +2324,7 @@ def finalize(
         "owner_values": dataclasses.asdict(owner),
         "headline": headline(docs),
         "tree": tree_state(),
+        "prereg_strict": all(d["config"].get("prereg_strict", True) for d in docs),
     }
     (Path(out_root) / "run.json").write_text(
         json.dumps(run, indent=2, default=str) + "\n"
@@ -2122,57 +2336,47 @@ def finalize(
 
 
 def write_run_ledger(run: dict, docs: list[dict], out_root: Path) -> Path:
-    """Every number into `runs/rsr-run1/ledger.json` (scripts/ledger.py)."""
+    """Every number into `runs/rsr-run1/ledger.json` (scripts/ledger.py). The manifest is
+    launcher v2's `launch-git.json`, frozen before any slot call (A1.5)."""
     L = ledger_mod()
     led = L.Ledger(RUN_ID, question=QUESTION, runs_root=Path(out_root).parent)
-    man = Path(out_root) / "manifest.json"
-    if man.exists():  # the manifest was frozen at launch; its hash is adopted, not redone
-        led.doc["config_hash"] = hashlib.sha256(man.read_bytes()).hexdigest()
-        led.doc["manifest_written_utc"] = time.strftime(
-            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(man.stat().st_mtime)
-        )
+    lg = Path(out_root) / "launch-git.json"
+    if lg.exists():
+        led.doc["config_hash"] = hashlib.sha256(lg.read_bytes()).hexdigest()
+        led.doc["manifest_written_utc"] = json.loads(lg.read_text()).get("launched_utc")
     for d in docs:
         for a, r in (d.get("arms") or {}).items():
-            if r is not None:
-                led.command(
-                    r["argv"],
-                    exit_code=r.get("rc"),
-                    note=f"arm {a} seed {d['seed']} via {r.get('launcher')}: "
-                    f"{r.get('rc_meaning')}",
-                )
+            note = f"arm {a} seed {d['seed']}: {r.get('rc_meaning')}"
+            led.command(r["argv"], exit_code=r.get("rc"), note=note)
     led.command(
-        [str(ROOT / ".venv" / "bin" / "python"), EXPERIMENT, "measure"],
+        [".venv/bin/python", EXPERIMENT, "finalize"],
         exit_code=run["exit"],
         note="this measurement",
     )
     done = [
         ((d.get("controls") or {}).get("C6") or {}).get("per_arm") or {} for d in docs
     ]
+    steps = [v.get("steps_done") or 0 for p in done for v in p.values()]
     led.run_meta(
         device=DEVICE,
         seeds_actually_run=run["seeds"],
         steps_requested=run["owner_values"]["iters"],
-        steps_done=min(
-            (v.get("steps_done") or 0 for p in done for v in p.values()), default=0
-        ),
+        steps_done=min(steps) if steps else 0,
     )
     led.note("headline", run["headline"], how=f"{EXPERIMENT} run.json")
+    keys = (
+        "controls",
+        "scoped_controls",
+        "heldout",
+        "training",
+        "T5",
+        "checkpoint_bytes",
+        "epoch",
+        "arms",
+        "launch",
+    )
     for d in docs:
-        for key, val in _flatten(
-            f"seed{d['seed']}",
-            {
-                k: d.get(k)
-                for k in (
-                    "controls",
-                    "heldout",
-                    "training",
-                    "T5",
-                    "checkpoint_bytes",
-                    "epoch",
-                    "arms",
-                )
-            },
-        ):
+        for key, val in _flatten(f"seed{d['seed']}", {k: d.get(k) for k in keys}):
             led.note(key, val, how=f"{EXPERIMENT} measure-seed{d['seed']}.json")
     led.status(run["status"])
     return led.write()
@@ -2191,11 +2395,57 @@ def _flatten(prefix: str, x: Any, depth: int = 0):
 # --------------------------------------------------------------------------- #
 
 
-def prereg_section(start: str, stop: str) -> str:
-    """A PREREG passage, read from the file: quoted, never retyped."""
+def prereg_quote(after: str, start: str, stop: str) -> str:
+    """A PREREG passage, read from the file (quoted, never retyped): from ``start`` to
+    ``stop``, searching from the heading ``after``."""
     text = (ROOT / PREREG).read_text()
-    i = text.index(start)
+    i = text.index(start, text.index(after))
     return text[i : text.index(stop, i + len(start))].rstrip()
+
+
+def scope_sentence() -> str:
+    """A2.6's sentence, verbatim (it replaced A1.4's)."""
+    return prereg_quote("### A2.6", "> This interval resamples", "\n\n")
+
+
+def confound_text() -> str:
+    """A2.1 item 2's named confound, verbatim, for O5 = train."""
+    return prereg_quote("### A2.1", "2. **A named confound", "\n   - RESULTS prints")
+
+
+def caveat_text() -> str:
+    """§7.5's censored-target caveat, verbatim."""
+    return prereg_quote(
+        "### 7.5", "  > The shadow buffer is off", "- Every number is reported"
+    )
+
+
+def expectation_text() -> str:
+    return prereg_quote(
+        "## 7. Outcomes", "### 7.6 Author's expectation", "## 8. Controls"
+    )
+
+
+MULTIPLICITY = (
+    "SECONDARY and DIAGNOSTIC intervals are unadjusted for multiplicity (A1.4); only the "
+    "headline is designated."
+)
+LRU_CAVEAT = (
+    "`LRUPolicy` falls back to the write step for a never-attended slot, so it degrades "
+    "toward FIFO by design; its distance from FIFO is `acc.*.lru_minus_fifo` (A1.1)."
+)
+ATTRIBUTION_NOTE = (
+    "The heartbeat's `attribution` is None in every arm: neither RSRPolicy nor "
+    "FIFOPolicy "
+    "defines `attribution()`. With b off and nu = 0, §3.4's decomposition has one term, "
+    "so it is vacuous in run 1, not covered (A1.8 m-6)."
+)
+TIMING_CAVEAT = (
+    "The §10 step_s projections were measured with one run-1 process beside the battery; "
+    "per-step cost with ten concurrent single-thread processes was not measured before "
+    "the run. The measured step_s and wall-clock are below (A1.6)."
+)
+BROKEN = " **sd exactly 0: broken, not clean**"
 
 
 def _f(x, nd: int = 4) -> str:
@@ -2206,9 +2456,6 @@ def _f(x, nd: int = 4) -> str:
     if isinstance(x, float):
         return "nan" if x != x else f"{x:+.{nd}f}"
     return str(x)
-
-
-BROKEN = " **sd exactly 0: broken, not clean**"
 
 
 def _ci_str(c: dict | None, *, reading: bool = True) -> str:
@@ -2224,97 +2471,184 @@ def _join(*parts: object) -> str:
     return "".join(str(p) for p in parts)
 
 
+def _psic_confound(owner: dict) -> str:
+    return (
+        " -- **TRAIN/EVAL MEMORY SHIFT (psiC only)**"
+        if owner.get("o5") == "train"
+        else ""
+    )
+
+
 def render_results(run: dict, docs: list[dict]) -> str:
-    """RESULTS.md (PREREG §14b). Every number is read from `run.json` and the
+    """RESULTS.md (§14b as amended). Every number is read from `run.json` and the
     `measure-seed*.json` documents; nothing is typed."""
     L: list[str] = []
     w = L.append
+    ow = run["owner_values"]
     w("# RESULTS: RSR run 1 -- psi_hat trained online on frozen arm B ckpt3000\n")
     w(
-        "**Descriptive. No gate, no pass/fail threshold.** Every contrast is read "
-        "only as CI above 0 / CI below 0 / CI includes 0.\n"
+        "**Descriptive. No gate, no pass/fail threshold.** Every contrast is read only "
+        "as CI above 0 / CI below 0 / CI includes 0.\n"
     )
-    w(f"> {SCOPE_SENTENCE}\n>\n> {MULTIPLICITY_SENTENCE}\n")
+    if not run.get("prereg_strict", True):
+        w("> **TEST FIXTURE (prereg_strict False): not a run-1 result.**\n")
     if run["status"] != "ok":
         w(
             _join(
-                "> 🔴 **NOT READ.** status `", run["status"], "`, exit `", run["exit"],
-                "`. Every number below is reported and none is read "
-                "(PREREG §8, §11.7).\n",
+                "> 🔴 **NOT READ.** status `",
+                run["status"],
+                "`, exit `",
+                run["exit"],
+                "`. Every number below is reported and none is read.\n",
             )
-        )  # fmt: skip
-    w("## 1. Headline (the one designated contrast)\n")
+        )
+    w("## 1. HEADLINE (the one designated contrast)\n")
     h = run["headline"]
-    w(f"`{h['contrast']}` (psiC - FIFO, all-query held-out answer accuracy):\n")
+    w(
+        f"`{h['contrast']}`: psiC - FIFO, all-query held-out answer accuracy"
+        f"{_psic_confound(ow)}.\n"
+    )
+    w(scope_sentence() + "\n")
     for s, c in h["per_seed"].items():
-        w(f"- seed {s}: {_ci_str(c)} (CI is within-seed only)")
+        w(f"- seed {s}: {_ci_str(c)} (within-seed)")
     a = h["across_seeds"]
     pts = [round(x, 6) for x in a["points"]]
     w(
         _join(
-            "- across seeds: n = ", a["n_seeds"], ", points ", pts, ", mean ",
-            _f(a["mean"]), ", sd over seeds ", _f(a["sd"]),
-            BROKEN if a["sd_exactly_zero"] else "", "\n",
+            "- across seeds: n = ",
+            a["n_seeds"],
+            ", points ",
+            pts,
+            ", mean ",
+            _f(a["mean"]),
+            ", sd ",
+            _f(a["sd"]),
+            BROKEN if a["sd_exactly_zero"] else "",
+            ", sign count ",
+            a["sign_count"],
+            " (no CI across seeds, no test)\n",
         )
-    )  # fmt: skip
+    )
+    if ow.get("o5") == "train":
+        w("**Named confound (O5 = train), verbatim from A2.1:**\n")
+        w(confound_text() + "\n")
+    w(f"> {MULTIPLICITY}\n")
     w("## 2. Commands, exit codes, provenance\n")
     tree = run.get("tree") or {}
     w(
         _join(
-            "- measure: `.venv/bin/python ", EXPERIMENT, " measure` -> exit `",
-            run["exit"], "`, status `", run["status"], "`; tree `", tree.get("sha"),
-            "` dirty `", tree.get("dirty"), "`; PREREG `", PREREG_COMMIT,
-            "`, review `", REVIEW_COMMIT, "`",
+            "- finalize -> exit `",
+            run["exit"],
+            "`, status `",
+            run["status"],
+            "`; tree `",
+            tree.get("sha"),
+            "` dirty `",
+            tree.get("dirty"),
+            "`; PREREG ",
+            PREREG_COMMITS,
+            ", reviews ",
+            list(REVIEW_COMMITS),
         )
-    )  # fmt: skip
-    w(f"- owner values: `{run['owner_values']}`")
+    )
+    w(f"- owner values: `{ow}`; oracle_gamma `{ORACLE_GAMMA}` (A2.2)")
     for d in docs:
+        lg = d.get("launch") or {}
+        w(
+            _join(
+                "- seed ",
+                d["seed"],
+                ": launch-git `",
+                {
+                    k: lg.get(k)
+                    for k in (
+                        "run_sha",
+                        "dirty",
+                        "gamma",
+                        "wd",
+                        "steps",
+                        "ckpt",
+                        "o5",
+                        "c1_flags",
+                        "c2_flags",
+                        "launched_utc",
+                        "env",
+                    )
+                },
+                "`",
+            )
+        )
         for arm, r in (d.get("arms") or {}).items():
-            if r is None:
-                w(f"- seed {d['seed']} **{arm}**: no record")
-                continue
+            job = r.get("job_record") or {}
             w(
                 _join(
-                    "- seed ", d["seed"], " **", arm, "**: rc `", r.get("rc"), "` (",
-                    r.get("rc_meaning"), "), run_id `", r.get("run_id"),
-                    "`, config_hash `", r.get("config_hash"), "`, label `",
-                    r.get("arm_label"), "`, git `", r.get("git_sha"), "` dirty `",
-                    r.get("git_dirty"), "`, launcher `", r.get("launcher"),
-                    "`, threads `", r.get("threads"), "`, wall `",
-                    _f(r.get("wall_s"), 1), "` s",
+                    "  - **",
+                    arm,
+                    "** rc `",
+                    r.get("rc"),
+                    "` (",
+                    r.get("rc_meaning"),
+                    "), run_id `",
+                    r.get("run_id"),
+                    "`, config_hash `",
+                    r.get("config_hash"),
+                    "`, label `",
+                    r.get("arm_label"),
+                    "`, job pinned_sha `",
+                    job.get("pinned_sha"),
+                    "`",
                 )
-            )  # fmt: skip
-            w(f"  - `{shlex.join(r.get('full_argv') or r.get('argv') or [])}`")
+            )
+            w(f"    - `{shlex.join(r.get('argv') or [])}`")
     hw = (docs[0].get("hardware") if docs else None) or {}
     w(
         _join(
-            "\n**Hardware:** ", hw.get("cpu"), ", ", hw.get("platform"), ", CPU, torch ",
-            hw.get("torch"), ", Python ", hw.get("python"), ".\n",
+            "\n**Hardware:** ",
+            hw.get("cpu"),
+            ", ",
+            hw.get("platform"),
+            ", CPU, torch ",
+            hw.get("torch"),
+            ", Python ",
+            hw.get("python"),
+            ".\n",
         )
-    )  # fmt: skip
+    )
+    w(f"{TIMING_CAVEAT}\n")
     for d in docs:
         w(
             _join(
-                "## Seed ", d["seed"], " (status `", d["status"], "`, exit `", d["exit"],
-                "`; everything in this section is secondary or diagnostic)\n",
+                "## Seed ",
+                d["seed"],
+                " (status `",
+                d["status"],
+                "`, exit `",
+                d["exit"],
+                "`). Everything below is SECONDARY or DIAGNOSTIC.\n",
             )
-        )  # fmt: skip
-        _render_seed(d, w)
+        )
+        _render_seed(d, w, ow)
     w("## What this does not show\n")
     w(
         "Not E1 and not E2 (ADR-0009 L6). Not evidence on the cognitive claim. No "
         "scaling claim. One corpus (synthetic S0-03), `M = 16`, one width, a frozen "
-        "substrate, the shadow buffer off, `b` off. The rescaled target is reported as "
-        "rescaled and nothing stronger. Training-time differences are in-sample for "
-        "phi. Within-seed CIs do not estimate run-to-run variance. The frozen model's "
-        "training-time mode is recorded per seed (`frozen_model_mode`); the held-out "
-        "pass runs it in eval mode.\n"
+        "substrate, the "
+        "shadow buffer off, `b` off. The rescaled target is reported as rescaled and "
+        "nothing stronger. Training-time differences are in-sample for phi. Within-seed "
+        "CIs do not estimate run-to-run or seed-to-seed variation.\n"
     )
+    w(f"{ATTRIBUTION_NOTE}\n")
+    if ow.get("o5") == "eval":
+        w(
+            "In-loop `loss_lm` values are eval-mode values and are not comparable with "
+            "arm "
+            "B's train-mode heartbeat losses (A1.3).\n"
+        )
     w("## The author's expectation (PREREG §7.6, verbatim), and the outcome beside it\n")
-    w(prereg_section("### 7.6 Author's expectation", "## 8. Controls"))
+    w(expectation_text())
     w(
-        "\nThe outcome, as numbers in the expectation's terms (reported as text; "
-        "never scored as met or missed):\n"
+        "\nThe outcome, as numbers in the expectation's terms (reported as text; never "
+        "scored as met or missed, A1.8 m-10):\n"
     )
     for d in docs:
         _render_expectation_outcome(d, w)
@@ -2338,85 +2672,120 @@ def _render_expectation_outcome(d: dict, w) -> None:
         if s:
             w(
                 _join(
-                    "- seed ", d["seed"], " `", arm, "` scored: fraction_shifting ",
-                    _f(s.get("fraction_shifting")), ", fraction oldest ",
-                    _f(s.get("fraction_oldest")), ", raw rho median ",
-                    _f(s["spearman_rho_score_age"]["median"]), ", partial rho median ",
+                    "- seed ",
+                    d["seed"],
+                    " `",
+                    arm,
+                    "` scored: fraction_shifting ",
+                    _f(s.get("fraction_shifting")),
+                    ", fraction oldest ",
+                    _f(s.get("fraction_oldest")),
+                    ", raw rho median ",
+                    _f(s["spearman_rho_score_age"]["median"]),
+                    ", partial rho median ",
                     _f(s["partial_rho_diagnostic"]["median"]),
                 )
-            )  # fmt: skip
+            )
     for key in EXPECTATION_KEYS:
         if key in con:
             w(f"- seed {d['seed']} `{key}`: {_ci_str(con[key], reading=False)}")
     w(f"- seed {d['seed']} controls failed: `{d.get('controls_failed')}`")
 
 
-CONTROL_KEYS = ("C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "T7")
+CONTROL_KEYS = ("C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C10")
 
 
-def _render_seed(d: dict, w) -> None:
+def _render_seed(d: dict, w, ow: dict) -> None:
     ctl = d.get("controls") or {}
     if d.get("notes"):
         w(f"Notes: {d['notes']}\n")
-    w("### Controls (PREREG §8; T7)\n")
-    for k in (*CONTROL_KEYS, "owner_values_ran"):
+    w("### Controls (§8 as amended)\n")
+    for k in CONTROL_KEYS:
         v = ctl.get(k)
         if v is None:
             w(f"- **{k}**: not run")
         else:
             w(f"- **{k}**: ok = `{v.get('ok')}` -- `{json.dumps(v, default=str)[:700]}`")
+    sc = (d.get("scoped_controls") or {}).get("C9_C9b")
+    if sc is not None:
+        w(
+            f"- **C9 / C9b** (scoped to the oracle numbers): ok = `{sc.get('ok')}` "
+            f"-- `{sc}`"
+        )
     w("\n### What ran\n")
     for a, v in ((ctl.get("C6") or {}).get("per_arm") or {}).items():
         w(
             _join(
-                "- ", a, ": steps_requested `", v.get("steps_requested"),
-                "`, steps_done `", v.get("steps_done"), "`, status `",
-                v.get("status"), "`",
+                "- ",
+                a,
+                ": steps_requested `",
+                v.get("steps_requested"),
+                "`, steps_done `",
+                v.get("steps_done"),
+                "`, status `",
+                v.get("status"),
+                "`",
             )
-        )  # fmt: skip
+        )
     for a, e in (d.get("epoch") or {}).items():
         if e:
             w(
                 _join(
-                    "- ", a, ": T_warm `", e.get("t_warm_steps"), "` steps = `",
-                    e.get("t_warm_epochs"), "` epoch; total epochs `",
-                    e.get("total_epochs"), "`; T_warm / total epochs `",
-                    e.get("t_warm_fraction_of_total_epochs"), "` (31(b)); sampling `",
-                    e.get("sampling"), "`",
+                    "- ",
+                    a,
+                    ": T_warm `",
+                    e.get("t_warm_steps"),
+                    "` steps = `",
+                    e.get("t_warm_epochs"),
+                    "` epoch; total epochs `",
+                    e.get("total_epochs"),
+                    "`; T_warm / total epochs `",
+                    e.get("t_warm_fraction_of_total_epochs"),
+                    "` (31(b)); sampling `",
+                    e.get("sampling"),
+                    "`",
                 )
-            )  # fmt: skip
+            )
     if d.get("frozen_model_mode"):
         w(f"- frozen model mode during training: `{d['frozen_model_mode']}`")
     if d.get("checkpoint_bytes"):
         w(f"- final checkpoint bytes (T6): `{d['checkpoint_bytes']}`")
     ho = d.get("heldout") or {}
-    _render_heldout(ho, w)
+    _render_heldout(ho, w, ow, d.get("oracle_numbers_read", True))
     _render_training(d.get("training") or {}, w)
-    w("\n### §7.5 reporting\n")
+    w("\n### §7.5 reporting (SECONDARY)\n")
     w(f"- fill fraction, held-out in-loop: {_f(ho.get('fill_fraction_heldout'))}")
     w("- The censored-target caveat, verbatim from the PREREG:\n")
-    w(prereg_section("  > The shadow buffer is off", "- Every number is reported"))
-    w("\n### T5 (held-out cost, measured in this run)\n")
+    w(caveat_text())
+    w("\n### T5 (held-out cost, measured in this run; DIAGNOSTIC)\n")
     for n, t in (d.get("T5") or {}).items():
         w(
             _join(
-                "- `", n, "`: first batch ", _f(t["first_batch_s"], 2),
-                " s; projected full EVAL ", _f(t["projected_full_eval_s"], 1),
-                " s; measured ", _f(t["measured_total_s"], 1), " s over ",
-                t["batches_run"], " batches",
+                "- `",
+                n,
+                "`: first batch ",
+                _f(t["first_batch_s"], 2),
+                " s; projected full EVAL ",
+                _f(t["projected_full_eval_s"], 1),
+                " s; measured ",
+                _f(t["measured_total_s"], 1),
+                " s over ",
+                t["batches_run"],
+                " batches",
             )
-        )  # fmt: skip
+        )
     w("")
 
 
-def _render_heldout(ho: dict, w) -> None:
+def _render_heldout(ho: dict, w, ow: dict, oracle_read: bool) -> None:
     acc = ho.get("accuracy") or {}
+    conf = _psic_confound(ow)
     if acc:
-        w(f"\n### Held-out accuracy (§7.1), EVAL n = {ho.get('n_documents')} documents\n")
         w(
-            "Pooled answer accuracy, model-read (argmax over the full vocabulary); 95% "
-            "percentile CI over 2000 paired per-document resamples (within-seed).\n"
+            "\n### Held-out accuracy (§7.1; SECONDARY), EVAL n = "
+            f"{ho.get('n_documents')}\n"
         )
+        w(scope_sentence() + "\n")
         cols = ("psiC", "fifo", "age", "lru", "oracle", "random")
         w("| bucket | n | " + " | ".join(cols) + " |")
         w("|---|---|" + "---|" * len(cols))
@@ -2424,91 +2793,147 @@ def _render_heldout(ho: dict, w) -> None:
             row = acc.get(b) or {}
             cells = " | ".join(_ci_str(row.get(n), reading=False) for n in cols)
             w(f"| {b} | {(row.get('fifo') or {}).get('n')} | {cells} |")
+        w(f"\n{LRU_CAVEAT}")
     con = ho.get("contrasts") or {}
     if not con:
         return
-    w("\n### Contrasts (secondary; the headline is §1)\n")
+    w("\n### Contrasts (SECONDARY; the headline is §1)\n")
     for key in sorted(con):
         tag = " **(HEADLINE)**" if key == HEADLINE else ""
-        w(f"- `{key}`{tag}: {_ci_str(con[key])}")
+        psic = conf if "psiC" in key else ""
+        unread = ""
+        if key.startswith("oracle_regret.") and not oracle_read:
+            unread = " **NOT READ (C9/C9b failed)**"
+        w(f"- `{key}`{tag}{psic}{unread}: {_ci_str(con[key])}")
     for kind in ("real", "answer"):
         row = (ho.get("nll") or {}).get(kind) or {}
-        lv = "; ".join(
-            f"{n} {_f((row.get(n) or {}).get('point'))}"
-            for n in ("psiC", "fifo", "age", "lru")
-        )
-        w(f"- NLL `{kind}` level: {lv}")
+        names = ("psiC", "fifo", "age", "lru")
+        lv = "; ".join(f"{n} {_f((row.get(n) or {}).get('point'))}" for n in names)
+        w(f"- NLL `{kind}` level (pooled per target): {lv}")
     for a, s in (ho.get("headroom_share") or {}).items():
+        unread = "" if oracle_read else " **NOT READ (C9/C9b failed)**"
         w(
-            f"- headroom share `{a}` (all): {_ci_str(s, reading=False)}, "
+            f"- headroom share `{a}` (all){unread}: {_ci_str(s, reading=False)}, "
             f"dropped {s.get('dropped')}"
+        )
+    for s, v in (ho.get("snapshots") or {}).items():
+        w(
+            f"- DIAGNOSTIC snapshot `{s}` (A1.8 m-9): accuracy "
+            f"{_ci_str(v['level'], reading=False)}; "
+            f"minus final fifo {_ci_str(v['minus_final_fifo'])}"
         )
     for n, e in (ho.get("heldout_evictions") or {}).items():
         w(
             _join(
-                "- held-out evictions `", n, "`: n ", e["n_evictions"],
-                ", fraction oldest ", _f(e["fraction_oldest"]), ", victim ages `",
-                e["victim_age_distribution"], "`",
+                "- DIAGNOSTIC held-out evictions `",
+                n,
+                "`: n ",
+                e["n_evictions"],
+                ", fraction oldest ",
+                _f(e["fraction_oldest"]),
+                ", victim ages `",
+                e["victim_age_distribution"],
+                "`",
             )
-        )  # fmt: skip
+        )
 
 
 def _render_training(tr: dict, w) -> None:
     if not tr:
         return
-    w("\n### Training time, on the pool (§7.3; in-sample for phi; descriptive)\n")
+    w("\n### Training time, on the pool (§7.3: SECONDARY; in-sample for phi)\n")
     for a, dl in (tr.get("delta_loss_lm") or {}).items():
         blocks = [(b["steps"], _f(b["mean"])) for b in dl.get("blocks", [])]
         w(
             _join(
-                "- delta loss_lm `", a, "` - fifo, post-warm: mean ", _f(dl.get("mean")),
-                ", sd ", _f(dl.get("sd")), BROKEN if dl.get("sd_exactly_zero") else "",
-                "; 500-step blocks ", blocks,
+                "- delta loss_lm `",
+                a,
+                "` - fifo, post-warm: mean ",
+                _f(dl.get("mean")),
+                ", sd ",
+                _f(dl.get("sd")),
+                BROKEN if dl.get("sd_exactly_zero") else "",
+                "; 500-step blocks ",
+                blocks,
             )
-        )  # fmt: skip
+        )
     for a, r in (tr.get("rsr") or {}).items():
         w(
             _join(
-                "- `", a, "`: L_MC warm mean ", _f(r["loss_mc_warm"]["mean"]),
-                ", post-warm mean ", _f(r["loss_mc_post_warm"]["mean"]),
+                "- DIAGNOSTIC `",
+                a,
+                "`: L_MC warm mean ",
+                _f(r["loss_mc_warm"]["mean"]),
+                ", post-warm mean ",
+                _f(r["loss_mc_post_warm"]["mean"]),
                 "; corr_psi_age post-warm median ",
-                _f(r["corr_psi_age_post_warm"]["median"]), " (None on ",
-                r["corr_psi_age_none_steps"], " steps); phi grad norm median ",
-                _f(r["phi_grad_norm"]["median"]), "; eval_forward_s total ",
-                _f(r["eval_forward_s"]["total"], 1), "; fill fraction (regression rows) ",
+                _f(r["corr_psi_age_post_warm"]["median"]),
+                " (None on ",
+                r["corr_psi_age_none_steps"],
+                " steps); phi grad norm median ",
+                _f(r["phi_grad_norm"]["median"]),
+                "; eval_forward_s total ",
+                _f(r["eval_forward_s"]["total"], 1),
+                "; fill fraction (regression rows) ",
                 _f(r["fill_fraction_regression_rows"]),
             )
-        )  # fmt: skip
-    w("\n### §7.1 diagnostics (§7.4; logged, never a gate; split warm / scored)\n")
+        )
+    w("\n### §7.1 diagnostics (§7.4: DIAGNOSTIC; never a gate; warm / scored split)\n")
     for a, ph in (tr.get("diagnostics") or {}).items():
         for p, v in ph.items():
             pr = v["partial_rho_diagnostic"]
             w(
                 _join(
-                    "- `", a, "` ", p, ": steps ", v["n_steps"], ", evictions ",
-                    v["n_evictions"], ", fraction oldest ", _f(v["fraction_oldest"]),
-                    ", fraction_shifting ", _f(v["fraction_shifting"]), ", mean_shift ",
-                    _f(v["mean_shift"]), "; raw Spearman rho(score, age) median ",
+                    "- `",
+                    a,
+                    "` ",
+                    p,
+                    ": steps ",
+                    v["n_steps"],
+                    ", evictions ",
+                    v["n_evictions"],
+                    ", fraction oldest ",
+                    _f(v["fraction_oldest"]),
+                    ", fraction_shifting ",
+                    _f(v["fraction_shifting"]),
+                    ", mean_shift ",
+                    _f(v["mean_shift"]),
+                    "; raw Spearman rho(score, age) median ",
                     _f(v["spearman_rho_score_age"]["median"]),
-                    "; **partial rho (a diagnostic, never a gate)** median ",
-                    _f(pr["median"]), " IQR [", _f(pr["q25"]), ", ", _f(pr["q75"]),
-                    "], None on ", v["partial_rho_none_steps"], " steps",
+                    "; partial rho (a diagnostic, never a gate) median ",
+                    _f(pr["median"]),
+                    " IQR [",
+                    _f(pr["q25"]),
+                    ", ",
+                    _f(pr["q75"]),
+                    "], None on ",
+                    v["partial_rho_none_steps"],
+                    " steps",
                 )
-            )  # fmt: skip
+            )
             w(
                 _join(
-                    "  - victim ages `", v["victim_age_distribution"],
+                    "  - victim ages `",
+                    v["victim_age_distribution"],
                     "`; displacement `",
-                    v["displacement_distribution"], "`",
+                    v["displacement_distribution"],
+                    "`",
                 )
-            )  # fmt: skip
+            )
+            if "uniform_random_expected" in v:
+                w(
+                    _join(
+                        "  - uniform random over the live slots would give `",
+                        v["uniform_random_expected"],
+                        "` (A1.8 m-2)",
+                    )
+                )
     w(
         "- Partial rho partials out the slot gestalts only (linear), not `c_t`; no "
         "verdict is drawn from any comparison with the spec's E2 value. Leading-edge "
-        "statistic: not computed (the spec defines a baseline, not a statistic; "
-        "`leading_edge.py` is a stub). LRU runs as an evaluation-only reference "
-        "(review MAJOR-1). Attention-share Gini and heartbeat attribution: not "
-        "available."
+        "statistic: not "
+        "computed (the spec defines a baseline, not a statistic; `leading_edge.py` is a "
+        "stub). Attention-share Gini: not available."
     )
 
 
@@ -2519,10 +2944,8 @@ def _render_training(tr: dict, w) -> None:
 
 def time_one_batch(cfg: Run1Config, doc_ids: list[int]) -> dict:
     """T5: one batch per pass on the REAL substrate, read-only, the process's threads.
-
-    **Timing only**: no accuracy or loss is returned or printed. RSR arms run a FRESH
-    head (no trained phi exists before the run; the cost does not depend on its values).
-    ``doc_ids`` must not be EVAL: EVAL stays unseen until the run (PREREG §14a)."""
+    **Timing only**: no accuracy or loss is returned. RSR arms run a FRESH head (no
+    trained phi exists; the cost does not depend on its values). Never EVAL (§14a)."""
     if any(cfg.eval_range[0] <= i < cfg.eval_range[1] for i in doc_ids):
         raise Refused("time-batch never runs an EVAL document (PREREG §14a)")
     data = Path(cfg.substrate.checkpoint).read_bytes()
@@ -2545,7 +2968,6 @@ def time_one_batch(cfg: Run1Config, doc_ids: list[int]) -> dict:
         model = TGModel(tg)
     model.load_state_dict(payload["model"])
     docs = docs_by_id(cfg, doc_ids)
-    spe = cfg.pool_length / cfg.batch
     out: dict[str, Any] = {}
     for name in ("psiC", "fifo", "age", "oracle", "lru", "random0", "sz_fifo", "sz_psiC"):
         if name in ("psiC", "sz_psiC", "age"):
@@ -2561,7 +2983,7 @@ def time_one_batch(cfg: Run1Config, doc_ids: list[int]) -> dict:
             pol = loop.build_policy(
                 "rsr",
                 d_model=cfg.d,
-                steps_per_epoch=spe,
+                steps_per_epoch=cfg.steps_per_epoch,
                 generator=loop.phi_generator(cfg.seed)[0],
                 overrides=ov,
             )
@@ -2596,28 +3018,35 @@ def time_one_batch(cfg: Run1Config, doc_ids: list[int]) -> dict:
 
 
 def _owner_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--gamma", type=float, required=True, help="O1: owner-ruled")
-    p.add_argument("--seeds", type=int, nargs="+", required=True, help="O2: ruled list")
-    p.add_argument(
-        "--phi-weight-decay", type=float, required=True, help="O4: owner-ruled"
-    )
-    p.add_argument("--iters", type=int, required=True, help="run length (review R-1)")
+    p.add_argument("--gamma", type=float, required=True, help="O1")
+    p.add_argument("--phi-weight-decay", type=float, required=True, help="O4")
+    p.add_argument("--iters", type=int, required=True, help="R-1")
+    p.add_argument("--o5", required=True, help="O5: eval or train (A2.1)")
+
+
+def _owner(a) -> OwnerValues:
+    ov = OwnerValues(a.gamma, a.phi_weight_decay, a.iters, a.o5, SEEDS)
+    validate_owner_values(ov)
+    return ov
 
 
 def main(argv: list[str] | None = None) -> Exit:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] == ["--preflight"]:  # A1.2 step 2's literal spelling
+        argv = ["preflight", *argv[1:]]
     p = ArgumentParser(prog="rsr-run1", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
-    pl = sub.add_parser("launch", help="every (arm, seed) through the slot wrapper")
-    _owner_args(pl)
-    pl.add_argument("--threads", type=int, required=True)
-    pl.add_argument("--slot-wait", type=float, required=True, help="seconds; slot --wait")
-    pl.add_argument("--parallel", action="store_true")
-    pl.add_argument("--out-root", default=str(ROOT / "runs" / RUN_ID))
-    pm = sub.add_parser("measure")
-    _owner_args(pm)
-    pm.add_argument("--threads", type=int, required=True)
-    pm.add_argument("--out-root", default=str(ROOT / "runs" / RUN_ID))
-    pm.add_argument(
+    pp = sub.add_parser("preflight", help="C0 x 3 seeds, launcher, substrate, env")
+    pp.add_argument("--dry-run", action="store_true", help="allow OUT / JOB_SUFFIX")
+    ps = sub.add_parser("measure-seed", help="one seed -> measure-seed<s>.json")
+    _owner_args(ps)
+    ps.add_argument("--seed", type=int, required=True)
+    ps.add_argument("--threads", type=int, required=True)
+    ps.add_argument("--out-root", default=str(ROOT / "runs" / RUN_ID))
+    pf = sub.add_parser("finalize", help="the three measure-seed jsons -> RESULTS")
+    _owner_args(pf)
+    pf.add_argument("--out-root", default=str(ROOT / "runs" / RUN_ID))
+    pf.add_argument(
         "--results", default=str(ROOT / "experiments" / "rsr-run1" / "RESULTS.md")
     )
     pt = sub.add_parser("time-batch")
@@ -2628,38 +3057,27 @@ def main(argv: list[str] | None = None) -> Exit:
     po.add_argument("--n-docs", type=int, default=256)
     a = p.parse_args(argv)
     try:
-        if a.cmd in ("launch", "measure"):
-            owner = OwnerValues(a.gamma, tuple(a.seeds), a.phi_weight_decay, a.iters)
-            validate_owner_values(owner)
-            cfgs = [prereg_config(s, owner.iters) for s in owner.seeds]
-            if a.cmd == "launch":
-                recs = launch(
-                    cfgs,
-                    owner,
-                    Path(a.out_root),
-                    launcher="slot",
-                    threads=a.threads,
-                    parallel=a.parallel,
-                    wait_s=a.slot_wait,
-                )
-                print(
-                    json.dumps(
-                        {
-                            f"rc_{k}": {"rc": v["rc"], "meaning": v["rc_meaning"]}
-                            for k, v in recs.items()
-                        },
-                        indent=2,
-                    )
-                )
-                return (
-                    Exit.OK
-                    if all(v["rc"] == 0 for v in recs.values())
-                    else Exit.DID_NOT_RUN
-                )
-            docs = [
-                measure_seed(c, owner, Path(a.out_root), threads=a.threads) for c in cfgs
-            ]
-            return finalize(docs, owner, Path(a.out_root), results_path=Path(a.results))
+        if a.cmd == "preflight":
+            r = preflight(dry_run=a.dry_run)
+            print(json.dumps(r, indent=2, default=str))
+            return Exit.OK if r["ok"] else Exit.DID_NOT_RUN
+        if a.cmd == "measure-seed":
+            ow = _owner(a)
+            if a.seed not in SEEDS:
+                raise Refused(f"seed {a.seed} is not one of {SEEDS}")
+            doc = measure_seed(
+                prereg_config(a.seed, ow.iters), ow, Path(a.out_root), threads=a.threads
+            )
+            return Exit(doc["exit"])
+        if a.cmd == "finalize":
+            ow = _owner(a)
+            docs = []
+            for s in SEEDS:
+                f = Path(a.out_root) / f"measure-seed{s}.json"
+                if not f.exists():
+                    raise Refused(f"{f} is missing: run measure-seed --seed {s} first")
+                docs.append(json.loads(f.read_text()))
+            return finalize(docs, ow, Path(a.out_root), results_path=Path(a.results))
         if a.cmd == "time-batch":
             torch.set_num_threads(a.threads)
             cfg = prereg_config(0, 3000)
