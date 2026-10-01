@@ -2919,3 +2919,136 @@ liveness not demonstrated; the ledger records the band label. Never `0`, never `
 - **Left in place, not deleted:** the new detached worktree `.worktrees/rsr-run1-prereg-v5dry`, at
   `6267fd6`, clean.
 - No EVAL document has gone through any model, and no φ has been trained.
+
+
+---
+
+## AMENDMENT 3d (2026-10-01): where Amendment 4 records the owner values; the within-seed exit-3 tie rule
+
+**Written 2026-10-01 by a model** (Claude Opus 5.5, the PREREG author, on the PM's instruction).
+**Not written by Brendan.** It is committed alone, before any run-1 step and before any EVAL
+document has gone through any model. Everything above this heading is unedited.
+
+**🔴 The owner slots stay BLANK.** This amendment fills no owner value. It fixes only *where* and
+*in what form* Amendment 4 records them.
+
+**Why it is needed.** The amendments are append-only, so Amendment 4 cannot fill A2.8's
+`______` cells in place. The harness's C10 must read the owner's values from one exact, parseable
+place. The harness is `feat/rsr-run1-harness` at `a811714`. Its parser is `parse_owner_table`, its
+heading constant is `OWNER_TABLE_HEADING`, and C10 exits 3 unless the table is fully filled.
+
+### A3d.1 Amendment 4's owner table: heading and exact format
+
+1. **The heading.** Amendment 4 will contain a line that is exactly the following text, and
+   nothing else on the line:
+   `### A4.1 Owner values (fills A2.8's slots)`
+   - It must appear **exactly once in the whole file**, as a line of its own.
+   - This amendment quotes it only inline, so no line here equals it.
+   - The harness's `OWNER_TABLE_HEADING` becomes that string (TO-CONFIRM T18).
+2. **After the heading:**
+   - zero or more blank lines;
+   - then the line `| slot | value |`;
+   - then the line `|---|---|`;
+   - then **exactly four rows**, in this order: **O1, O4, R-1, O5**.
+3. **Each row.** The template, with the value cell left blank:
+
+   ```
+   | **O1** <text> | `______` |
+   | **O4** <text> | `______` |
+   | **R-1** <text> | `______` |
+   | **O5** <text> | `______` |
+   ```
+
+   - The row begins `| **<slot>** ` and ends ` |`.
+   - `<text>` is free text that does **not** contain the sequence `" | "`.
+   - The value cell holds a **single backtick-quoted token** and nothing else.
+4. **The allowed values**, each matched in full:
+
+   | slot | pattern | parsed as |
+   |---|---|---|
+   | O1 (γ, both RSR arms) | `[0-9]+(\.[0-9]+)?` | float |
+   | O4 (φ weight decay) | `[0-9]+(\.[0-9]+)?` | float |
+   | R-1 (total optimizer steps per arm) | `[1-9][0-9]*` | int |
+   | O5 (substrate mode under freeze) | `eval` or `train` | string |
+
+   A token that is a run of underscores (`______`) is a **blank**.
+5. **The table ends** at the first line after the header that does not start with `|`.
+6. **C10's reading:**
+   - fully filled and well formed → **filled**, and C10 may pass;
+   - any blank slot → **blank**;
+   - a missing or extra row, rows out of order, a malformed row, a value outside its pattern, or
+     the heading absent or present more than once → **absent** or **malformed**.
+
+   Anything other than filled means **C10 fails: exit 3, `did_not_run`, `CONTROL_FAILED: [C10]`**
+   (A3b.3).
+7. **The older tables are superseded.** A2.8's and A1.9's `______` cells are superseded by A4.1,
+   and **are never parsed**. They stay in the file as history, blank.
+8. **Unchanged:** the launcher's own slot checks (`GAMMA`, `WD`, `STEPS`, `O5`; A3c.1) and C10's
+   comparison of each job's recorded values with A4.1's. Those values must also agree with
+   `launch-git.json` (A3.7a).
+
+**Measured: the harness's parser, unchanged from `a811714`.** I extracted it verbatim into
+`scratchpad/run1-prereg/owner_parser_a811714.py` and called it with
+`heading="### A4.1 Owner values (fills A2.8's slots)"` on constructed texts. The values below are
+probe placeholders, **not** owner values.
+
+| case | status | problems |
+|---|---|---|
+| four well-formed rows | **filled** | none; values `gamma 0.9, phi_weight_decay 0.01, iters 3000, o5 'eval'` |
+| O5 left `______` | **blank** | `owner slot(s) ['O5'] still blank` |
+| three rows | **malformed** | `3 slot rows, not 4` |
+| O4 before O1 | **malformed** | the row is not `\| **O1** <text> \| …` |
+| `" \| "` inside the text | **malformed** | the row is not `\| **O1** <text> \| …` |
+| two tokens in the value cell | **malformed** | `the value cell … is not one quoted token` |
+| O4 `1e-2` | **malformed** | `'1e-2' is not in the registered format` |
+| R-1 `03000` | **malformed** | `'03000' is not in the registered format` |
+| O5 `Eval` | **malformed** | `'Eval' is not in the registered format` |
+| heading twice | **malformed** | `occurs 2 times, not once` |
+| no heading line | **absent** | `occurs 0 times, not once` |
+
+After this amendment is appended, the parser run on the whole PREREG with that heading returns
+**absent** (see A3d.4). No line here equals the heading, and A2.8's blanks are not read.
+
+### A3d.2 Within a seed: the order spans arms and controls; the exit-3 tie rule
+
+- **The A3b.5 exit order spans everything in a seed.** It ranks 5 > 3 > 1 > 0 across **both** the
+  arms' outcomes (A1.2's per-job rule) **and** the controls (C1–C8, C10). It is not applied to the
+  arms alone.
+  - So if C5 reads `inconclusive` (exit 1) and C6 or a control fails (exit 3), the seed exits
+    **3**.
+  - At `6267fd6` the harness can return the 1 first (review `de8f813`, MINOR-A3c-1). That is
+    TO-CONFIRM T18.
+- **Ties at exit 3 within a seed** are broken in this order:
+  1. an arm's rc outcome (`did_not_run` or `crashed`, per A1.2), with arms ordered psiC, fifo,
+     age (A3c.2);
+  2. **C6 (`crashed`)**;
+  3. a control failure (`did_not_run`): C1 and C10, then C2–C4, C7 and C8.
+
+  In particular, **when C6 (`crashed`) and a C1 or C10 failure (`did_not_run`) both give exit 3,
+  C6 sets the seed's status.** This is the harness's current order.
+- **Every non-OK arm and every failed control is still listed in the seed's notes** (A3c.2), so the
+  tie rule hides nothing.
+
+### A3d.3 Review MINOR-A3c-2: a successor does not inherit `srep_norm_reg_weight`
+
+A3c.1's third reason is narrowed. A later "training continues" arm (D2(b)) must choose its
+`srep_norm_reg_weight` **explicitly, in its own PREREG**. It does not inherit run 1's 0.0 or the
+CLI default 0.01. For an unfrozen run the value changes the objective (correction 15 item 4), and
+that may be an owner question. This changes nothing in run 1.
+
+### A3d.4 What was checked and seen (declared)
+
+- The parser probes above used constructed text only.
+- `parse_owner_table` with the A4.1 heading, run on the full PREREG with this amendment
+  appended (before commit), returned status `absent`, problems `['heading "### A4.1 Owner values (fills A2.8\'s slots)" occurs 0 times, not once']`. A2.8's heading is not consulted.
+- The seven `______` blanks are unchanged.
+- No EVAL document has gone through any model, and no φ has been trained.
+
+### A3d.5 TO-CONFIRM, added
+
+- **T18:**
+  - the harness's `OWNER_TABLE_HEADING` = `### A4.1 Owner values (fills A2.8's slots)`;
+  - `parse_owner_table` unchanged;
+  - C10 fails on anything but `filled`;
+  - `measure_seed` applies A3d.2: the exit order across arms and controls, and the exit-3 tie
+    order.
