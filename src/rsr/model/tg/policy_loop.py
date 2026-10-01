@@ -47,6 +47,7 @@ __all__ = [
     "memory_state",
     "newcomer_slot",
     "run_policy_loop",
+    "synchronize",
     "trace_for_row",
     "write_at",
 ]
@@ -304,6 +305,20 @@ def trace_for_row(
     )
 
 
+def synchronize(device: torch.device) -> None:
+    """Wait for the accelerator's queued work, so a wall-clock read times the work
+    and not its launch. MPS and CUDA are both asynchronous; CPU is a no-op.
+
+    m-7 (feat/rsr-slice1 review): `eval_forward` synchronised only on MPS, so on
+    CUDA `eval_forward_s` would have timed the launch. CLAUDE.md: all code must
+    run on CUDA without modification -- this path is written, not exercised here
+    (no CUDA on the Mac Studio; `tests/test_run1_ready.py` checks the dispatch)."""
+    if device.type == "mps":
+        torch.mps.synchronize()
+    elif device.type == "cuda":
+        torch.cuda.synchronize(device)
+
+
 @dataclass
 class EvalForward:
     """ADR-0009 L1(a): one step's second, `no_grad`, eval-mode forward.
@@ -357,8 +372,7 @@ def eval_forward(
             )
         finally:
             model.train(was_training)
-    if out.srep.device.type == "mps":
-        torch.mps.synchronize()
+    synchronize(out.srep.device)  # m-7: MPS and CUDA alike
     return EvalForward(srep=out.srep.detach(), cap=cap, seconds=time.perf_counter() - t0)
 
 
