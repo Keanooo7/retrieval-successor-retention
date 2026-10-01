@@ -6282,17 +6282,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the frozen model mode not recorded",
         "test_frozen_mode_records_that_dropout_stays_on",
         "src/rsr/train/loop.py",
-        # Re-anchored at item 7 (the record names eval mode when it is on).
-        '            "eval (dropout off)" if frozen_eval_mode else '
-        '"train (dropout live)"\n',
-        "            None  # MUTATED\n",
-        "m-4: freezing removes the update only; dropout stays live, and nothing "
-        "else in the config says so.",
-        off_gate_allowed=_r1_declare(
-            "the frozen warm-start test asserts the same record on a frozen arm "
-            "(KeyError 'frozen_model_mode'); one stamp, read from two frozen arms.",
-            "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
-        ),
+        # Re-anchored at C-1: the record is looked up from the mode.
+        '        frozen["frozen_model_mode"] = '
+        "FROZEN_MODEL_MODE_RECORD[frozen_model_mode]\n",
+        "        pass  # MUTATED\n",
+        "m-4 and C-1 test (f): freezing removes the update only, and the mode the "
+        "frozen model ran in -- train or eval -- must be on the record.",
     ),
     Mutation(
         "run1: no_warmup_ablation accepted on the FIFO arm",
@@ -6554,9 +6549,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the §7.1 diagnostics written on beat steps only",
         "test_the_diagnostics_are_written_every_step_whatever_beat_every",
         "src/rsr/train/loop.py",
-        "                _write_step_diagnostics(\n",
+        # Re-anchored at C-2: one per-step record carries diag and the pool ids.
+        "                _write_step_diagnostics(out / DIAGNOSTICS_FILE, step_record)\n",
         "                (it % beat_every == 0) and _write_step_diagnostics(  "
-        "# MUTATED\n",
+        "# MUTATED\n                    out / DIAGNOSTICS_FILE, step_record)\n",
         "MINOR-3: computed every step, so written every step; at beat_every > 1 "
         "partial rho for the other steps was computed and discarded.",
     ),
@@ -6702,21 +6698,77 @@ MUTATIONS: tuple[Mutation, ...] = (
         "not resumed into a different epoch.",
     ),
     Mutation(
-        "run1: frozen eval mode not applied",
-        "test_frozen_eval_mode_runs_the_frozen_transformer_without_dropout",
+        "run1: frozen_model_mode eval not applied",
+        "test_c1_the_training_forward_equals_the_eval_forward",
         "src/rsr/train/loop.py",
         "        model.eval()\n",
         "        pass  # MUTATED\n",
-        "Item 7: an arm labelled '+frozen+eval' must not run with dropout live.",
+        "C-1 test (a): an arm recorded as eval (dropout off) must not train its "
+        "memory through a dropout-live forward.",
     ),
     Mutation(
-        "run1: frozen eval mode accepted without the freeze",
-        "test_frozen_eval_mode_runs_the_frozen_transformer_without_dropout",
+        "run1: frozen eval mode leaves the blocks in train mode",
+        "test_c1_a_training_step_draws_no_global_rng",
         "src/rsr/train/loop.py",
-        "    if frozen_eval_mode:\n        if not freeze_transformer:\n",
-        "    if frozen_eval_mode:\n        if False:  # MUTATED\n",
-        "Item 7: dropout off while the transformer trains would change TG's "
-        "training (§3.1); only a frozen transformer may run in eval mode.",
+        "        model.eval()\n",
+        "        model.eval()\n        model.blocks.train()  # MUTATED\n",
+        "C-1 test (b): with any dropout left live a step draws masks from the "
+        "global RNG; the top-level flag still reads eval, so (c) cannot see it.",
+    ),
+    Mutation(
+        "run1: eval_forward restores train mode, not the prior mode",
+        "test_c1_the_model_is_in_eval_mode_at_loop_end",
+        "src/rsr/model/tg/policy_loop.py",
+        "            model.train(was_training)\n",
+        "            model.train()  # MUTATED\n",
+        "C-1 test (c): the one mode switch on the training path must restore the "
+        "PRIOR mode, or a frozen eval-mode model is back in train mode from the "
+        "second sentence on.",
+    ),
+    Mutation(
+        "run1: an unknown frozen_model_mode is accepted",
+        "test_c1_eval_without_the_freeze_is_refused",
+        "src/rsr/train/loop.py",
+        "    if frozen_model_mode not in FROZEN_MODEL_MODES:\n",
+        "    if False:  # MUTATED\n",
+        "C-1 test (d): a mode that is neither train nor eval would be recorded "
+        "and labelled as if it meant something.",
+    ),
+    Mutation(
+        "run1: the eval mode is missing from the label",
+        "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+        "src/rsr/train/loop.py",
+        '        label = f"{label}[eval]"  # C-1: "+frozen[eval]" (PREREG A1.3 item 3)\n',
+        "        pass  # MUTATED\n",
+        "C-1 test (e): an eval-mode arm must not read like a train-mode one.",
+    ),
+    Mutation(
+        "run1: a pool not divisible by the batch is accepted",
+        "test_a_pool_not_divisible_by_the_batch_is_refused",
+        "src/rsr/train/loop.py",
+        "        if pool.length % batch:\n",
+        "        if False:  # MUTATED\n",
+        "C-2 (A1.7 item 1): one epoch must be a whole number of steps, or step k "
+        "no longer reads pi_e[batch*(k mod E) : ... + batch].",
+    ),
+    Mutation(
+        "run1: the per-step pool ids are not logged",
+        "test_every_pool_epoch_covers_the_pool_exactly_once",
+        "src/rsr/train/loop.py",
+        '                step_record["pool_doc_ids"] = step_pool_ids  # A1.7 item 3 '
+        "(C-2)\n",
+        "                pass  # MUTATED\n",
+        "C-2 (A1.7 item 3; A1.8 m-4 (a)): the PREREG's primary pairing check reads "
+        "the logged per-step pool ids.",
+    ),
+    Mutation(
+        "run1: frozen_model_mode eval accepted without the freeze",
+        "test_c1_eval_without_the_freeze_is_refused",
+        "src/rsr/train/loop.py",
+        '    if frozen_model_mode == "eval":\n        if not freeze_transformer:\n',
+        '    if frozen_model_mode == "eval":\n        if False:  # MUTATED\n',
+        "C-1 test (d): eval mode without the freeze would silently remove dropout "
+        "from an optimised L_NTP (A1.3 item 1; correction 20).",
     ),
 )
 
