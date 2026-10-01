@@ -55,6 +55,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -84,6 +85,18 @@ CLEAN_ARGV = ("clean", "-ffdxq", "-e", "/.venv/")
 venv kept (review MAJOR-2)."""
 
 
+ADMIN_LOCK = "rsr-worktree-admin.lock"
+"""I2 fix round 1 (review BLOCKER-1): the file in the git COMMON dir whose ``flock``
+serializes every ``git worktree add``/``remove``/``list`` the battery runs. git's
+worktree administration is not safe under concurrency: a ``worktree add`` writes
+``.git/worktrees/<id>/commondir`` non-atomically, and a concurrent ``add``, ``list``
+or ``remove`` that reads it empty dies with ``fatal: failed to read
+.git/worktrees/<id>/commondir`` (reproduced with git 2.55.0: 2-7% of 6-way
+concurrent adds lost). One lock per repository, shared by every worktree, because
+the common dir is. It guards the battery's own calls only; a worktree some other
+tool adds at the same instant is not covered."""
+
+
 class Unisolated(Exception):
     """Isolation could not be established or verified: DID NOT RUN, never a verdict."""
 
@@ -108,6 +121,22 @@ def _ok(proc: subprocess.CompletedProcess, what: str) -> str:
     if proc.returncode != 0:
         raise Unisolated(f"{what} -> rc={proc.returncode}: {proc.stderr.strip()}")
     return proc.stdout
+
+
+@contextlib.contextmanager
+def worktree_admin_lock(source: Path) -> Iterator[None]:
+    """Exclusive, BLOCKING ``flock`` on ``<common dir>/ADMIN_LOCK``: every holder is
+    one short git call, and the lock dies with its process."""
+    path = common_dir(source) / ADMIN_LOCK
+    with path.open("a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        yield
+
+
+def admin_git(source: Path, *args: str) -> subprocess.CompletedProcess:
+    """``git(source, *args)`` for a worktree-administration command, under the lock."""
+    with worktree_admin_lock(source):
+        return git(source, *args)
 
 
 def is_under(path: str | Path | None, root: Path) -> bool:
@@ -309,7 +338,7 @@ def verify_clean(shard: Shard) -> None:
 
 
 def _registered(source: Path) -> set[Path]:
-    out = _ok(git(source, "worktree", "list", "--porcelain"), "git worktree list")
+    out = _ok(admin_git(source, "worktree", "list", "--porcelain"), "git worktree list")
     return {
         Path(line.split(" ", 1)[1]).resolve()
         for line in out.splitlines()
@@ -335,7 +364,7 @@ def make_shard(source: Path, pool: Path, index: int, sha: str) -> Shard:
         purge_bytecode(path)
     else:
         _ok(
-            git(source, "worktree", "add", "--detach", str(path), sha),
+            admin_git(source, "worktree", "add", "--detach", str(path), sha),
             f"git worktree add {path}",
         )
     t1 = time.perf_counter()
@@ -348,8 +377,13 @@ def make_shard(source: Path, pool: Path, index: int, sha: str) -> Shard:
 
 
 def remove_shard(source: Path, path: Path) -> str | None:
-    """Unregister and remove one shard worktree; returns an error line or None."""
-    proc = git(source, "worktree", "remove", "--force", str(path))
+    """Unregister and remove one shard worktree; returns an error line or None.
+
+    Raises `Unisolated` (or `OSError`) when the worktree-admin lock cannot be taken
+    -- ``common_dir()`` failing, or the lock file not opening. `teardown` catches
+    both; any other caller is before a verdict, where refusing is right.
+    """
+    proc = admin_git(source, "worktree", "remove", "--force", str(path))
     if proc.returncode != 0 and path.exists():
         return f"git worktree remove {path}: {proc.stderr.strip()}"
     return None
@@ -421,6 +455,33 @@ def open_pool(
             yield shards
         finally:
             if not keep:
-                for s in shards:
-                    remove_shard(source, s.root)
-                _prune_unlocked(source, pool)
+                teardown(source, pool, shards)
+
+
+def teardown(source: Path, pool: Path, shards: list[Shard]) -> None:
+    """Remove the pool's shards; say what could not be removed, never raise.
+
+    I2 fix round 1 (review BLOCKER-1, second fix): this runs in ``open_pool``'s
+    ``finally``, AFTER every verdict was scored and before ``_report`` writes them.
+    A ``git worktree list`` that failed here used to raise, and the battery refused
+    3 with its finished rows discarded. A worktree left registered is cleanup
+    (``--prune-shards``), not evidence against a verdict.
+    """
+    problems = []
+    for s in shards:
+        # Review 2 MINOR-1: `remove_shard` takes the admin lock, whose path comes
+        # from `common_dir()` -- which raises. Caught per shard rather than by
+        # resolving the lock path once in `open_pool`: that would still leave the
+        # lock file's open() and the git call itself able to raise here.
+        try:
+            err = remove_shard(source, s.root)
+        except (Unisolated, OSError) as exc:
+            err = f"remove {s.root}: {exc}"
+        if err:
+            problems.append(err)
+    try:
+        problems += _prune_unlocked(source, pool)
+    except (Unisolated, OSError) as e:
+        problems.append(f"prune: {e}")
+    for p in problems:
+        print(f"SHARD TEARDOWN (verdicts kept; run --prune-shards): {p}", file=sys.stderr)
