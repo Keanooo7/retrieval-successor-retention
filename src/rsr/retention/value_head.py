@@ -180,8 +180,13 @@ class AgeOnlyValueHead(nn.Module):
 
     A learned table over slot age, fitted by the same `L_MC` on the same `G` as
     the content head. It is the best age-only predictor of the return the
-    regression can find, so "content+age ~= age-only" (section 7.1) compares the
-    content head against recency at its strongest, not against `-a_i`.
+    regression can find: recency at its strongest, not `-a_i`.
+
+    Which arms section 7.1 item 2 / E2 compares is the PREREG's to name. RSR's
+    own head (`BilinearValueHead`) is **content-only** -- age is excluded from
+    `psi_hat` (CLAUDE.md) and `b` is off in slice 1. The **content+age** head is
+    a separate baseline arm (spec §6 A3) and is **not built**; nothing here is
+    it (review MINOR-2 of feat/rsr-run1-ready).
 
     🔴 **It is a separate, labelled ARM, never an input to `psi_hat`.** CLAUDE.md:
     "Age is excluded from `psi_hat` ... An age-only head and a content+age head

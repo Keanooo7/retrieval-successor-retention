@@ -375,6 +375,15 @@ class RSRPolicy:
                     "psi_override='age_only' builds its own AgeOnlyValueHead; a "
                     "content value_head passed with it would be silently unused"
                 )
+            if config.nu != 0.0:
+                # Review MINOR-1: -nu * max cos(s_i, s_j) reads the gestalts, so
+                # with nu != 0 the arm's SCORE depends on content and the arm is
+                # no longer age-only in section 7.1 item 2's sense.
+                raise ValueError(
+                    f"psi_override='age_only' with nu={config.nu}: the redundancy "
+                    "term reads the gestalts, so the arm would not be age-only. "
+                    "The age-only arm requires nu=0.0."
+                )
             self.head = AgeOnlyValueHead(config.a_max)
         elif config.psi_override != "neg_age":
             raise ValueError(
