@@ -1099,6 +1099,14 @@ def test_ledger_statuses_follow_a3b_3(r1, e2e, tmp_path):
     assert (doc["status"], doc["exit"]) == ("failed", int(Exit.FAIL))
     assert "LIVENESS_INCONCLUSIVE: fifo" in doc["notes"]
 
+    def two(o):  # the worst arm wins (A3b.3 + A3b.5), not the first non-OK one
+        (o / "logs" / "fifo-s0.rc").write_text("1\n")
+        (o / "logs" / "age-s0.rc").write_text("5\n")
+
+    doc = run("two", two)
+    assert (doc["status"], doc["exit"]) == ("partial", int(Exit.INERT))
+    assert {"LIVENESS_INCONCLUSIVE: fifo", "INERT: age"} <= set(doc["notes"])
+
     def crash(o):
         hb = o / "psiC" / "seed0" / "heartbeat.jsonl"
         rows = [x for x in hb.read_text().splitlines() if '"kind": "footer"' not in x]
