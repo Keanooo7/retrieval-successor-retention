@@ -1940,7 +1940,9 @@ def test_the_a4_heading_counts_once_in_the_whole_file_outside_every_fence(r1):
             + _a4(r1, "0.5")
             + f"{fence.strip().rstrip('markdown')}\n"
         )
-        assert status(alone) == "malformed", fence  # one copy, but inside a fence
+        got = r1.parse_owner_table(alone)  # one copy, but inside a fence: rule 1 says so
+        assert got["status"] == "malformed", fence
+        assert "in a fence" in got["problems"][0] and "rule 1" in got["problems"][0]
     both = "```\n" + _a4(r1, "0.5") + "```\n\n" + _a4(r1)
     assert status(both) == "malformed"  # two copies (a811714's reading, restored)
     # (a) a 4-backtick fence containing a ``` line: the inner ``` does not close it
