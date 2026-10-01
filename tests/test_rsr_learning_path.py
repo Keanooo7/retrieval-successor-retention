@@ -492,6 +492,26 @@ def test_two_rows_keep_two_buffers():
     assert not torch.allclose(per_row[0], per_row[1])
 
 
+def test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps():
+    """L9 (signed): sum (psi - G)^2 over the live slots of each (row, t), then the
+    mean over (row, t) pairs -- no |memory_t|/M weight, not a mean over slots."""
+    model = _model()
+    policy = _policy()
+    _run(model, policy, *_stream(model.cfg))
+    rows = policy.mc_targets()
+    with torch.no_grad():
+        psi = policy.head(rows["s"].unsqueeze(1), rows["c"]).squeeze(1)
+        per = (psi - rows["target"]).pow(2)
+        groups = {(int(b), int(t)) for b, t in zip(rows["row"], rows["t"], strict=True)}
+        want = sum(
+            float(per[(rows["row"] == b) & (rows["t"] == t)].sum()) for b, t in groups
+        ) / len(groups)
+    assert rows["n_groups"] == len(groups)
+    assert float(policy.retention_loss()) == pytest.approx(want, rel=1e-5)
+    # Not vacuous: the per-slot mean differs from sum-then-mean when M > 1.
+    assert float(per.mean()) != pytest.approx(want, rel=1e-3)
+
+
 def test_warmup_evicts_fifo_and_phi_still_trains():
     """T8, §3.4: k < T_warm -> every eviction fifo_warmup AND phi gets a nonzero
     gradient (passive training); k >= T_warm -> scored."""
