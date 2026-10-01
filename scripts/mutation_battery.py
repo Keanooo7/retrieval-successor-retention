@@ -483,6 +483,57 @@ def _i1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
     return tuple((f"tests/test_battery_isolation.py::{n}", reason) for n in nodes)
 
 
+def _s1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
+    """Declared couplings on tests/test_rsr_learning_path.py nodes, one reason."""
+    return tuple((f"tests/test_rsr_learning_path.py::{n}", reason) for n in nodes)
+
+
+# ADR-0009 slice 1. Each reason below was written after the mutation was applied
+# by hand and every off-gate red inspected (feat/rsr-slice1, 2026-09-30).
+_S1_RSR_THROUGH_TRAIN = (
+    "every slice-1 test that drives an RSR arm through the real train() needs "
+    "build_policy to run: a FIFOPolicy has no `.config`, so train() raises "
+    "AttributeError where it stamps T_warm. The same defect -- the stamped name "
+    "and the built policy disagree -- observed from each RSR-arm test."
+)
+_S1_ITERS_EPOCH_ZERO = (
+    "these tests build an RSR arm with iters=0; `float(iters)` = 0 is refused by "
+    "the registry's `steps_per_epoch > 0` constraint (ConstraintViolation). The "
+    "iters-as-epoch defect surfacing loudly instead of as a FIFO-forever warmup."
+)
+_S1_TRAIN_MODE_TRACE = (
+    "every learning path reads r_i from the eval forward's capture; with "
+    "model.eval() dropped it is stamped eval_mode=False and reward._require_eval "
+    "raises TrainModeTrace (correction 20 / D-F, the guard working). The FIFO "
+    "tests that red instead see the 'eval' forward draw dropout RNG, which shifts "
+    "the training forward's masks or the global RNG state."
+)
+_S1_MODE_NOT_RESTORED = (
+    "the same restore, seen from train() (model.training after the loop) and "
+    "from the FIFO loss: left in eval mode, every later training forward runs "
+    "without dropout, so the loss with the eval forward differs from without."
+)
+_S1_RETURN_ARITHMETIC = (
+    "both tests read G from mc_returns: one step of gamma short changes every "
+    "multi-term target (the keying test's (3, 0)) and makes G(T_b - 1) = gamma * r "
+    "instead of r (the truncation test)."
+)
+_S1_ROWS_MERGED = (
+    "the per-row tests index mc_targets by row: merged into row 0, row 1 has no "
+    "samples (max() over an empty selection) and the (row, t) group count no "
+    "longer matches n_groups."
+)
+_S1_PHI_FROM_GEN = (
+    "phi drawn from `gen` is no longer the phi_generator(seed) head (the init and "
+    "beta=0 tests compare against it), and on MPS the CPU-built head raises on the "
+    "MPS generator -- L11's two defects, one per test."
+)
+_S1_NO_VALUE_HEAD_GROUP = (
+    "phi out of the optimizer never moves: T4's 'L_MC acted' check fails, and a "
+    "frozen arm has no trainable parameter left (build_param_groups raises)."
+)
+
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -1273,6 +1324,25 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "_stream",
                 _BUILD_POLICY_INJECTION_COUPLING,
             ),
+            *_s1_declare(
+                _S1_RSR_THROUGH_TRAIN,
+                "test_beta_zero_leaves_phi_bitwise_at_init",
+                "test_every_trace_reaching_observe_in_train_is_eval_mode",
+                "test_fifo_and_rsr_arms_see_the_same_first_batch",
+                "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                "test_overrides_are_stamped_into_frozen_hash_and_label",
+                "test_phi_is_initialised_from_its_own_seeded_stream",
+                "test_steps_per_epoch_is_derived_from_the_pool[16]",
+                "test_steps_per_epoch_is_derived_from_the_pool[8]",
+                "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                "test_the_reduction_through_train_has_no_head_no_observe_and_no_loss",
+                "test_the_rsr_arm_builds_and_steps_on_mps",
+            ),
+            (
+                "tests/test_train_loop.py::"
+                "test_the_value_head_lands_in_its_own_mup_group",
+                _S1_RSR_THROUGH_TRAIN,
+            ),
         ),
     ),
     # Correction 31: T_warm counts optimizer steps, not sentences.
@@ -1362,6 +1432,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "throughout. Since the 31(b) ruling an epoch is one pass over the pool, "
         "pool / batch steps, and an RSR arm with labelled overrides reaches the "
         "warmup -- so this line is now live, not latent.",
+        off_gate_allowed=_s1_declare(
+            _S1_ITERS_EPOCH_ZERO,
+            "test_overrides_are_stamped_into_frozen_hash_and_label",
+            "test_phi_is_initialised_from_its_own_seeded_stream",
+            "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+        ),
     ),
     Mutation(
         "--policy stops reaching train()",
@@ -5634,6 +5710,31 @@ MUTATIONS: tuple[Mutation, ...] = (
         "live yields a train-mode alpha; reward._require_eval refuses it "
         "(TrainModeTrace), which is the guard working -- the mutation proves the "
         "toggle is load-bearing, not decorative.",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_TRAIN_MODE_TRACE,
+                "test_fifo_and_rsr_arms_see_the_same_first_batch",
+                "test_l1_eval_forward_cost_is_measured",
+                "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
+                "test_l_mc_reaches_phi_and_nothing_else",
+                "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                "test_steps_per_epoch_is_derived_from_the_pool[16]",
+                "test_steps_per_epoch_is_derived_from_the_pool[8]",
+                "test_the_decision_and_the_regression_read_one_context",
+                "test_the_eval_forward_draws_no_rng_and_restores_the_mode",
+                "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                "test_the_lm_loss_never_reaches_phi",
+                "test_the_return_is_truncated_at_each_rows_length",
+                "test_the_rsr_arm_builds_and_steps_on_mps",
+                "test_the_training_forward_is_unchanged_by_the_eval_forward",
+                "test_warmup_evicts_fifo_and_phi_still_trains",
+            ),
+            (
+                "tests/test_train_loop.py::"
+                "test_the_value_head_lands_in_its_own_mup_group",
+                _S1_TRAIN_MODE_TRACE,
+            ),
+        ),
     ),
     Mutation(
         "slice1: the eval-capture forward leaves the model in eval mode",
@@ -5645,6 +5746,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "forward runs without dropout -- a different objective for the RSR arm "
         "than for the FIFO arm, so the arms no longer differ only in the eviction "
         "rule (§3.7).",
+        off_gate_allowed=_s1_declare(
+            _S1_MODE_NOT_RESTORED,
+            "test_every_trace_reaching_observe_in_train_is_eval_mode",
+            "test_the_training_forward_is_unchanged_by_the_eval_forward",
+        ),
     ),
     Mutation(
         "slice1: the decision reads the train-mode srep again",
@@ -5675,6 +5781,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 T5: G_i(t) = sum_{k=0} gamma^k r_i(t+k) (spec §3.3, correction "
         "2). Every term one power of gamma short is a plausible-looking return "
         "with the wrong scale and the wrong gamma=0 limit.",
+        off_gate_allowed=_s1_declare(
+            _S1_RETURN_ARITHMETIC,
+            "test_g_is_keyed_by_written_at_through_a_middle_slot_eviction",
+            "test_the_return_is_truncated_at_each_rows_length",
+        ),
     ),
     Mutation(
         "slice1: the return runs past the row's length",
@@ -5684,6 +5795,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "                if True:\n                    policy.observe(",
         "ADR-0009 §1 / T5: the return is truncated at T_b = lengths[b]. Observed "
         "past it, a short row regresses on r read from padding sentences.",
+        off_gate_allowed=(
+            (
+                "tests/test_capture_bridge.py::test_observe_is_called_once_per_live_row_per_step",
+                "the S0-02 call-site test counts observe calls per live row per step: "
+                "the same row_valid gate, seen from the capture bridge.",
+            ),
+        ),
     ),
     Mutation(
         "slice1: every row's samples land in row 0's buffer",
@@ -5694,6 +5812,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 L10 / T7, the row-0 bug class (OraclePolicy, LRU 2026-09-29). "
         "written_at is unique per row, not per batch: merged, two rows' keys "
         "collide and each row's G mixes in the other's r.",
+        off_gate_allowed=_s1_declare(
+            _S1_ROWS_MERGED,
+            "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
+            "test_the_return_is_truncated_at_each_rows_length",
+        ),
     ),
     Mutation(
         "slice1: L_MC is a per-slot mean, not sum-then-mean",
@@ -5729,8 +5852,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
         "src/rsr/train/loop.py",
         "gnorm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)",
-        "gnorm = torch.nn.utils.clip_grad_norm_("
-        "[*model.parameters(), *phi_params], 1.0)",
+        "gnorm = torch.nn.utils.clip_grad_norm_([*model.parameters(), *phi_params], 1.0)",
         "ADR-0009 L8 (signed part) / T4: a joint norm makes the transformer's clip "
         "factor depend on L_MC -- a gradient-free but real channel from the "
         "retention loss into transformer updates (§2).",
@@ -5744,6 +5866,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 L11 / T10, both latent defects: phi's init draws from `gen`, so "
         "an RSR arm trains on a different stream than the FIFO arm at the same "
         "seed (§3.7), and on MPS the CPU-built head raises on an MPS generator.",
+        off_gate_allowed=_s1_declare(
+            _S1_PHI_FROM_GEN,
+            "test_beta_zero_leaves_phi_bitwise_at_init",
+            "test_phi_is_initialised_from_its_own_seeded_stream",
+            "test_the_rsr_arm_builds_and_steps_on_mps",
+        ),
     ),
     Mutation(
         "slice1: value_head=None into build_param_groups again",
@@ -5753,6 +5881,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "build_param_groups(model, None, base_lr=lr, d_model=d, base_width=128)",
         "ADR-0009 T9 / §4.3, S0-01's old strict xfail: psi-hat outside its own "
         "muP group -- here, outside the optimizer altogether, so phi never moves.",
+        off_gate_allowed=_s1_declare(
+            _S1_NO_VALUE_HEAD_GROUP,
+            "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+            "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+        ),
     ),
     Mutation(
         "slice1: a t_warm override accepted without the ablation declaration",
@@ -5776,7 +5909,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "slice1: the overrides are not stamped into the frozen config",
         "test_overrides_are_stamped_into_frozen_hash_and_label",
         "src/rsr/train/loop.py",
-        "            k: _jsonable(v) for k, v in sorted((policy_overrides or {}).items())",
+        "            k: _jsonable(v) for k, v in "
+        "sorted((policy_overrides or {}).items())",
         "            k: _jsonable(v) for k, v in sorted({}.items())",
         "ADR-0009 L12: the overrides are stamped into `frozen`, so into the hash "
         "and the run_id. A frozen config that does not say what the arm departed "
@@ -5792,6 +5926,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "R-2026-09-30-rsr-run-1-scope D2(b) (owner draft): the transformer and "
         "W_sent get no update in run 1. Left trainable, the transformer sits in "
         "the optimizer (and its decoupled decay) while the run is labelled frozen.",
+        off_gate_allowed=_s1_declare(
+            "the frozen FIFO arm is the same rule with no head: left trainable, the "
+            "transformer is put in an optimizer the frozen arm must not have (its "
+            "checkpoint carries optimizer state).",
+            "test_a_frozen_fifo_arm_runs_without_an_optimizer",
+        ),
     ),
 )
 
