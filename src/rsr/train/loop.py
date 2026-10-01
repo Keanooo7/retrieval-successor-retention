@@ -34,6 +34,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
+import math
 import subprocess
 import sys
 import time
@@ -641,6 +642,37 @@ def epoch_steps(pool_documents: int | None, batch: int) -> float | None:
 
 #: Every RSR step's §7.1 diagnostics, one JSON line per optimizer step (MINOR-3).
 DIAGNOSTICS_FILE = "diagnostics.jsonl"
+#: Every eviction record, drained from the policy after each step (defect 2).
+EVICTIONS_FILE = "evictions.jsonl"
+#: The order of a row in EVICTIONS_FILE (after its header line).
+EVICTION_FIELDS = (
+    "train_step",
+    "step",
+    "victim",
+    "victim_rank",
+    "rank_shift",
+    "victim_age",
+    "n_live",
+    "warm",
+    "attribution",
+    "score_margin",
+)
+#: The checkpoint `stream` key holding the sampler's generator state (defect 3).
+DATA_GENERATOR_STATE = "data_generator_state"
+
+
+def _drain_evictions(policy, path: Path) -> int:
+    """Append the policy's records to ``path`` and drop them from memory (defect
+    2): one header line, then one compact JSON list per eviction. Returns the
+    number written."""
+    recs = policy.drain_records()
+    new = not path.exists()
+    with open(path, "a") as fh:
+        if new:
+            fh.write(json.dumps({"fields": list(EVICTION_FIELDS)}) + "\n")
+        for r in recs:
+            fh.write(json.dumps([getattr(r, f) for f in EVICTION_FIELDS]) + "\n")
+    return len(recs)
 
 
 def _write_step_diagnostics(path: Path, record: dict) -> None:
@@ -968,6 +1000,10 @@ def train(
     w_srep = (
         cfg.srep_norm_reg_weight if srep_norm_reg_weight is None else srep_norm_reg_weight
     )
+    if not (math.isfinite(w_srep) and w_srep >= 0.0):
+        # PREREG-drafter defect 4: now reachable from the CLI, so validated here,
+        # once, for both paths. It is stamped into `frozen` (and the hash) below.
+        raise ValueError(f"srep_norm_reg_weight={w_srep}: must be finite and >= 0")
 
     # Correction 31 (b), ruled 2026-09-30
     # (docs/owner/rulings/R-2026-09-30-rsr-run-1-scope.md): one epoch = one pass
@@ -1098,6 +1134,21 @@ def train(
             resume, model=model, optimizer=opt, policy=policy, restore_rng=True
         )
         start = int(state.get("step", 0))
+        if stream is None:
+            # PREREG-drafter defect 3: the with-replacement sampler draws from
+            # `gen`, which the global-RNG capture does not cover. Restarted from
+            # the seed, a resumed arm re-reads step 0's batches, so a resumed FIFO
+            # arm and an uninterrupted RSR arm stop seeing the same data. A
+            # checkpoint without the state cannot resume this path at all.
+            gen_state = (state.get("stream") or {}).get(DATA_GENERATOR_STATE)
+            if gen_state is None:
+                raise ck.CheckpointError(
+                    f"resume from {resume}: the checkpoint carries no data-order "
+                    "generator state, so this sampler-path run would restart its "
+                    "batches from the seed and silently break pairing between arms. "
+                    "Refused; resume only from a checkpoint written with it."
+                )
+            gen.set_state(gen_state)
 
     docs = generate(
         SyntheticConfig(sentences_per_document=steps_per_stream, seed=seed, **corpus_kw)
@@ -1355,6 +1406,11 @@ def train(
                     lr=None if opt is None else opt.param_groups[0]["lr"],
                     **rsr_beat,
                 )
+            if hasattr(policy, "drain_records"):
+                # Defect 2: after the beat read this step's attribution and
+                # diagnostics, BEFORE the checkpoint -- which then never carries
+                # the eviction history.
+                _drain_evictions(policy, out / EVICTIONS_FILE)
             if ckpt_every and (it + 1) % ckpt_every == 0:
                 ck.save(
                     out / f"ckpt-{it + 1:06d}.pt",
@@ -1370,10 +1426,12 @@ def train(
                         "config": json.loads(json.dumps(frozen, default=str)),
                         "vocab_sha256": vocab_sha256(vocab_map),
                     },
-                    **(
-                        {}
+                    stream=(
+                        # defect 3: the sampler's generator, so a resume
+                        # continues the data order instead of restarting it.
+                        {DATA_GENERATOR_STATE: gen.get_state(), "next_step": it + 1}
                         if stream is None
-                        else {"stream": {**asdict(stream), "next_step": it + 1}}
+                        else {**asdict(stream), "next_step": it + 1}
                     ),
                 )
     except BaseException as e:
@@ -1416,8 +1474,9 @@ def train(
         # §7.1 / ADR-0009 L6 (m-8), cumulative over the run: ADR-0006's
         # displacement distribution and the victim rank/age histograms. The
         # per-step partial rho is on every beat's `diag`.
+        # Split at §3.4's boundary (defect 5): never one mixed histogram.
         "diagnostics": (
-            policy.rank_shifts.summary() if hasattr(policy, "rank_shifts") else None
+            policy.phase_summary() if hasattr(policy, "phase_summary") else None
         ),
     }
 
@@ -1645,6 +1704,13 @@ def main(argv: list[str] | None = None) -> Exit:
     p.add_argument("--device", default="mps")
     p.add_argument("--out-dir", default="runs/dev")
     p.add_argument("--resume", default=None)
+    p.add_argument(
+        "--srep-norm-reg-weight",
+        type=float,
+        default=None,
+        help="the srep-norm hinge weight; omit for TGConfig's 0.01 (arm B trained "
+        "at 0.0). Validated and stamped into the frozen config by train()",
+    )
     # Review MINOR-7: run 1's RESULTS.md quotes ONE command. The pool and the warm
     # start are reachable from the CLI and go through the same objects train()
     # validates (DocumentPool / WarmStart), never a second parser of their own.
@@ -1686,6 +1752,7 @@ def main(argv: list[str] | None = None) -> Exit:
         freeze_transformer=a.freeze_transformer,
         pool=pool,
         warm_start=warm,
+        srep_norm_reg_weight=a.srep_norm_reg_weight,
     )
     print(json.dumps(r, indent=2, default=str))
     # liveness-wiring: 0 live, 5 INERT, 1 inconclusive, 3 not a valid measurement.
