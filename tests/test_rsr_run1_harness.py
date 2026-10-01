@@ -863,11 +863,11 @@ def test_the_diagnostics_split_warm_from_scored_and_report_the_first_block(e2e, 
 # --------------------------------------------------------------------------- #
 
 
-def test_the_committed_launcher_is_byte_identical_to_a3_7(r1):
-    """T14: launcher v3, extracted from "### A3.7 Launcher, version 3"."""
+def test_the_committed_launcher_is_byte_identical_to_the_prereg(r1):
+    """T14: launcher v4, extracted from "### A3b.1 Launcher, version 4"."""
     text = (ROOT / r1.LAUNCHER).read_text()
     assert text == r1.launcher_text_from_prereg()
-    want = "89817f42798ed401aca3b0eac26a50a5280fdd6f07ddfefc642ad7521ec228c3"
+    want = "5cd6e5fd712ffab036d87ea6481b3220a3669f071ba955255511fc840b3f7946"
     assert hashlib.sha256(text.encode()).hexdigest() == want
 
 
@@ -1067,7 +1067,8 @@ def test_a_wrong_substrate_sha_is_rc_1_with_no_heartbeat_and_measure_says_so(
         assert rcs == {"fifo-s0": 1}
         assert "WarmStartRefused" in (out_root / "logs" / "fifo-s0.log").read_text()
         doc = r1.measure_seed(cfg, owner(r1), out_root, threads=1)
-    assert doc["status"] == "crashed" and doc["exit"] == int(Exit.DID_NOT_RUN)
+    assert doc["status"] == "did_not_run" and doc["exit"] == int(Exit.DID_NOT_RUN)
+    assert any(n.startswith("ARM_DID_NOT_RUN") for n in doc["notes"])  # A3b.3
     assert doc["arms"]["fifo"]["rc_meaning"].startswith("did not run: exception before")
     with pytest.raises(r1.ControlFailure):
         r1.load_substrate_model(cfg)
@@ -1079,31 +1080,45 @@ def _copy_run(e2e, dst: Path) -> Path:
     return out
 
 
-def test_ledger_statuses_follow_a3_11(r1, e2e, tmp_path):
-    """T15: never "failed". Inert -> partial, exit 5, an INERT note; a control that
-    fails after training -> partial, exit 3; a refusal -> did_not_run; rc != 0 ->
-    crashed (the wrong-sha test)."""
-    inert = _copy_run(e2e, tmp_path / "inert")
-    (inert / "logs" / "age-s0.rc").write_text("5\n")
-    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], inert, threads=1)
+def test_ledger_statuses_follow_a3b_3(r1, e2e, tmp_path):
+    """T15, A3b.3: inert -> partial / 5 / INERT; inconclusive liveness -> failed / 1 /
+    LIVENESS_INCONCLUSIVE; an arm that crashed mid-loop -> crashed / 3 / ARM_CRASHED; a
+    control that fails after training -> did_not_run / 3 / CONTROL_FAILED, with
+    steps_done and seeds_actually_run kept; a refusal -> did_not_run / 3."""
+
+    def run(name, mutate):
+        out = _copy_run(e2e, tmp_path / name)
+        mutate(out)
+        return r1.measure_seed(e2e["cfg"], e2e["owner"], out, threads=1)
+
+    doc = run("inert", lambda o: (o / "logs" / "age-s0.rc").write_text("5\n"))
     assert (doc["status"], doc["exit"]) == ("partial", int(Exit.INERT))
-    assert any("INERT" in n for n in doc["notes"])
-    unsure = _copy_run(e2e, tmp_path / "unsure")
-    (unsure / "logs" / "fifo-s0.rc").write_text(
-        "1\n"
-    )  # footer completed: band inconclusive
-    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], unsure, threads=1)
-    assert (doc["status"], doc["exit"]) == ("partial", int(Exit.DID_NOT_RUN))
-    late = _copy_run(e2e, tmp_path / "late")
-    lg = json.loads((late / "launch-git.json").read_text())
-    (late / "launch-git.json").write_text(json.dumps({**lg, "wd": "0.0"}))
-    doc = r1.measure_seed(e2e["cfg"], e2e["owner"], late, threads=1)
-    assert (doc["status"], doc["exit"]) == ("partial", int(Exit.DID_NOT_RUN))
-    assert doc["controls_failed"] == ["C10"]
-    assert (
-        r1.measure_seed(e2e["cfg"], e2e["owner"], tmp_path / "none", threads=1)["status"]
-        == "did_not_run"
-    )
+    assert "INERT: age" in doc["notes"]
+    # rc 1 with a completed footer: the band was inconclusive
+    doc = run("unsure", lambda o: (o / "logs" / "fifo-s0.rc").write_text("1\n"))
+    assert (doc["status"], doc["exit"]) == ("failed", int(Exit.FAIL))
+    assert "LIVENESS_INCONCLUSIVE: fifo" in doc["notes"]
+
+    def crash(o):
+        hb = o / "psiC" / "seed0" / "heartbeat.jsonl"
+        rows = [x for x in hb.read_text().splitlines() if '"kind": "footer"' not in x]
+        hb.write_text("\n".join([*rows, json.dumps({"kind": "crash"})]) + "\n")
+        (o / "logs" / "psiC-s0.rc").write_text("1\n")
+
+    doc = run("crash", crash)
+    assert (doc["status"], doc["exit"]) == ("crashed", int(Exit.DID_NOT_RUN))
+    assert "ARM_CRASHED: psiC" in doc["notes"]
+
+    def late(o):
+        lg = json.loads((o / "launch-git.json").read_text())
+        (o / "launch-git.json").write_text(json.dumps({**lg, "wd": "0.0"}))
+
+    doc = run("late", late)
+    assert (doc["status"], doc["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
+    assert doc["controls_failed"] == ["C10"] and "CONTROL_FAILED: ['C10']" in doc["notes"]
+    assert doc["steps_done"] == ARM_ITERS and doc["seeds_actually_run"] == [0]
+    none = r1.measure_seed(e2e["cfg"], e2e["owner"], tmp_path / "none", threads=1)
+    assert (none["status"], none["exit"]) == ("did_not_run", int(Exit.DID_NOT_RUN))
 
 
 def test_finalize_takes_status_and_exit_from_one_worst_seed(r1, e2e, tmp_path):
@@ -1123,6 +1138,20 @@ def test_finalize_takes_status_and_exit_from_one_worst_seed(r1, e2e, tmp_path):
     code = r1.finalize(docs, ow, tmp_path, results_path=res, write_ledger=False)
     run = json.loads((tmp_path / "run.json").read_text())
     assert code == Exit.DID_NOT_RUN and (run["exit"], run["status"]) == (3, "crashed")
+    # A3b.5: 3 outranks 1; a tie goes to the lowest seed
+    docs[0].update(exit=int(Exit.FAIL), status="failed")
+    docs[2].update(exit=int(Exit.DID_NOT_RUN), status="did_not_run")
+    r1.finalize(docs, ow, tmp_path, results_path=res, write_ledger=False)
+    run = json.loads((tmp_path / "run.json").read_text())
+    assert (run["exit"], run["status"]) == (3, "crashed")
+    docs[1].update(exit=int(Exit.OK), status="ok")
+    r1.finalize(docs, ow, tmp_path, results_path=res, write_ledger=False)
+    run = json.loads((tmp_path / "run.json").read_text())
+    assert (run["exit"], run["status"]) == (3, "did_not_run")
+    docs[2].update(exit=int(Exit.OK), status="ok")
+    code = r1.finalize(docs, ow, tmp_path, results_path=res, write_ledger=False)
+    run = json.loads((tmp_path / "run.json").read_text())
+    assert code == Exit.FAIL and (run["exit"], run["status"]) == (1, "failed")
 
 
 def test_a_c9_failure_tags_the_oracle_ledger_rows(r1, e2e, tmp_path):
@@ -1140,6 +1169,12 @@ def test_a_c9_failure_tags_the_oracle_ledger_rows(r1, e2e, tmp_path):
     assert any("headroom_share" in k for k in tagged)
     assert "seed0.heldout.accuracy.all.oracle" in tagged
     assert not any("psiC_minus_fifo" in k for k in tagged)
+    by_key = {r["key"]: r for r in led["rows"]}
+    for k in tagged:  # A3b.4: the fields, and the value kept
+        assert by_key[k]["not_read"] is True
+        assert by_key[k]["not_read_reason"] == "C9/C9b failed"
+        assert "value" in by_key[k]  # kept as recorded, never deleted
+    assert all("not_read" not in r for k, r in by_key.items() if k not in tagged)
 
 
 def test_time_batch_never_runs_an_eval_document(r1, substrate):

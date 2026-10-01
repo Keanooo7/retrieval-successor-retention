@@ -776,7 +776,7 @@ def env_problems(env: dict[str, str | None], *, dry_run: bool) -> list[str]:
 
 #: T14: the PREREG heading the committed launcher is extracted from. Switching launcher
 #: versions is this one line (and the expected sha in the test).
-LAUNCHER_HEADING = "### A3.7 Launcher, version 3"
+LAUNCHER_HEADING = "### A3b.1 Launcher, version 4"
 
 
 def launcher_text_from_prereg() -> str:
@@ -989,6 +989,31 @@ def launch_direct(
             (out_root / "logs" / f"{k}.rc").write_text(f"{rc}\n")
             rcs[k] = rc
     return rcs
+
+
+#: A3b.5: the order a worst arm / seed is taken in.
+EXIT_RANK = {
+    int(Exit.INERT): 3,
+    int(Exit.DID_NOT_RUN): 2,
+    int(Exit.FAIL): 1,
+    int(Exit.OK): 0,
+}
+
+
+def arm_outcome(rc: int | None, hb: dict, result: dict | None) -> tuple[int, str, str]:
+    """A3b.3's table for one arm: (exit, ledger status, required note)."""
+    foot = (hb.get("footer") or {}).get("status")
+    if rc == 0 and foot == "completed" and result is not None:
+        return int(Exit.OK), "ok", "ARM_OK"
+    if rc == 5:
+        return int(Exit.INERT), "partial", "INERT"
+    if rc == 1 and foot == "completed":
+        return int(Exit.FAIL), "failed", "LIVENESS_INCONCLUSIVE"
+    if rc in (1, 3) and not hb.get("exists"):
+        return int(Exit.DID_NOT_RUN), "did_not_run", "ARM_DID_NOT_RUN"
+    if rc is None:
+        return int(Exit.DID_NOT_RUN), "did_not_run", "ARM_DID_NOT_RUN (no rc file)"
+    return int(Exit.DID_NOT_RUN), "crashed", "ARM_CRASHED"
 
 
 def classify_rc(rc: int | None, job: dict | None, hb: dict, result: dict | None) -> str:
@@ -2185,6 +2210,10 @@ def measure_seed(
     def done(code: Exit, status: str) -> dict:
         failed = [k for k, v in doc["controls"].items() if v.get("ok") is not True]
         doc.update(status=status, exit=int(code), controls_failed=failed)
+        per = ((doc["controls"].get("C6") or {}).get("per_arm")) or {}
+        steps = [v.get("steps_done") for v in per.values()]
+        doc["steps_done"] = min(steps) if steps and None not in steps else None
+        doc["seeds_actually_run"] = [cfg.seed] if per else []
         out_root.mkdir(parents=True, exist_ok=True)
         f = out_root / f"measure-seed{cfg.seed}.json"
         f.write_text(json.dumps(doc, indent=2, default=str) + "\n")
@@ -2235,25 +2264,15 @@ def measure_seed(
         }
         for a, v in arms.items()
     }
-    if any(v["rc"] != 0 or v["result"] is None for v in arms.values()):
-        if any(v["rc"] == 5 for v in arms.values()):
-            doc["notes"].append(
-                "INERT: an arm exited 5; quarantined; no retention number"
-            )
-            return done(Exit.INERT, "partial")
-        inconclusive = [
-            a
-            for a, v in arms.items()
-            if v["rc"] == 1 and (v["hb"].get("footer") or {}).get("status") == "completed"
-        ]
-        if inconclusive and all(
-            v["rc"] == 0 or a in inconclusive for a, v in arms.items()
-        ):
-            # Amendment 3b (announced): inconclusive liveness is not a crash.
-            doc["notes"].append(f"liveness inconclusive in {inconclusive}: not read")
-            return done(Exit.DID_NOT_RUN, "partial")
-        doc["notes"].append("an arm's rc is not 0: that arm's reading stops (A1.2)")
-        return done(Exit.DID_NOT_RUN, "crashed")
+    arm_status = {a: arm_outcome(v["rc"], v["hb"], v["result"]) for a, v in arms.items()}
+    doc["arm_outcomes"] = arm_status
+    bad = [(a, o) for a, o in arm_status.items() if o[0] != int(Exit.OK)]
+    if bad:
+        for a, (_code, _status, note) in bad:
+            doc["notes"].append(f"{note}: {a}")
+        # A3b.3 + A3b.5: the worst arm by 5 > 3 > 1 > 0; a tie goes to the first arm.
+        a, (code, status, _note) = max(bad, key=lambda x: EXIT_RANK[x[1][0]])
+        return done(Exit(code), status)
     results = {a: v["result"] for a, v in arms.items()}
     hbs = {a: v["hb"] for a, v in arms.items()}
     doc["frozen_model_mode"] = {
@@ -2266,9 +2285,15 @@ def measure_seed(
         cfg, owner, launch, results, hbs, {a: v["job"] for a, v in arms.items()}, out_root
     )
     if doc["controls"]["C5"]["inert"]:
-        doc["notes"].append("INERT (C5): quarantined; no retention number (A3.11)")
+        doc["notes"].append(f"INERT: {doc['controls']['C5']['inert']}")
         return done(Exit.INERT, "partial")
+    unsure = [a for a, v in doc["controls"]["C5"]["per_arm"].items()
+              if v["band"] == "inconclusive"]  # fmt: skip
+    if unsure:
+        doc["notes"].append(f"LIVENESS_INCONCLUSIVE: {unsure}")
+        return done(Exit.FAIL, "failed")
     if not doc["controls"]["C6"]["ok"]:
+        doc["notes"].append(f"ARM_CRASHED: C6 {doc['controls']['C6']['per_arm']}")
         return done(Exit.DID_NOT_RUN, "crashed")
     beats = {a: hbs[a]["beats"] for a in ARMS}
     steprecs = {a: read_step_records(arm_dir(out_root, a, cfg.seed)) for a in ARMS}
@@ -2335,10 +2360,10 @@ def measure_seed(
     doc["epoch"] = {a: results[a]["config"].get("epoch") for a in RSR_ARMS}
     failed = [k for k, v in doc["controls"].items() if v.get("ok") is not True]
     if failed:
-        doc["notes"].append(
-            f"controls failed: {failed} -- inconclusive; numbers NOT read"
-        )
-        return done(Exit.DID_NOT_RUN, "partial")  # A3.11: never "failed"
+        # A3b.3 / R-2026-09-22-inert-exit-5: "a control fails -> 3 DID_NOT_RUN". Training
+        # ran: the note and steps_done / seeds_actually_run say so, and stay.
+        doc["notes"].append(f"CONTROL_FAILED: {failed}")
+        return done(Exit.DID_NOT_RUN, "did_not_run")
     return done(Exit.OK, "ok")
 
 
@@ -2398,9 +2423,9 @@ def finalize(
 ) -> Exit:
     """Across seeds: the headline, RESULTS.md, the ledger. The exit is the worst seed's
     (INERT 5 over 3 over 0)."""
-    rank = {int(Exit.OK): 0, int(Exit.DID_NOT_RUN): 1, int(Exit.INERT): 2}
-    worst = max(docs, key=lambda d: rank.get(int(d["exit"]), 1))
-    code, status = Exit(worst["exit"]), worst["status"]  # one seed: both from it
+    # A3b.5: the worst seed by 5 > 3 > 1 > 0, ties to the lowest seed; both from it.
+    worst = max(docs, key=lambda d: (EXIT_RANK[int(d["exit"])], -int(d["seed"])))
+    code, status = Exit(worst["exit"]), worst["status"]
     run = {
         "run_id": RUN_ID,
         "seeds": [d["seed"] for d in docs],
@@ -2464,9 +2489,12 @@ def write_run_ledger(run: dict, docs: list[dict], out_root: Path) -> Path:
     for d in docs:
         for key, val in _flatten(f"seed{d['seed']}", {k: d.get(k) for k in keys}):
             how = f"{EXPERIMENT} measure-seed{d['seed']}.json"
-            if not d.get("oracle_numbers_read", True) and _oracle_derived(key):
+            unread = not d.get("oracle_numbers_read", True) and _oracle_derived(key)
+            if unread:
                 how = f"NOT READ (C9/C9b failed, A3.6). {how}"
             led.note(key, val, how=how)
+            if unread:  # A3b.4: the value stays; the row says it is not read
+                led.doc["rows"][-1].update(not_read=True, not_read_reason="C9/C9b failed")
     led.status(run["status"])
     return led.write()
 

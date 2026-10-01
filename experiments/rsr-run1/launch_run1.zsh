@@ -1,11 +1,12 @@
 #!/bin/zsh
-# RSR run 1 launch, version 3 (PREREG Amendment 3, A3.7; supersedes A2.7's text).
+# RSR run 1 launch, version 4 (PREREG Amendment 3b, A3b.1; supersedes A3.7's text).
 # Run with /bin/zsh INSIDE tmux (A2.4), from the dedicated run worktree at the final
 # reviewed commit. Owner slots: GAMMA (O1), WD (O4), STEPS (R-1), O5 (eval|train).
 # CKPT is DERIVED here from STEPS (A1.8 m-9), never read from input. Code-change flags:
 # C1_FLAGS (C-1), C2_FLAGS (C-2), C3_FLAGS (C-3, only if O4 != 0.01).
 # RSR_ORCH_ROOT must be unset or the shared root, and OUT / JOB_SUFFIX unset, unless
-# DRY_RUN=1; all four are recorded in launch-git.json. OUT defaults to runs/rsr-run1.
+# DRY_RUN=1, and DRY_RUN=1 requires STEPS=0 (a dry run never trains). All four are
+# recorded in launch-git.json, written by a JSON encoder. OUT defaults to runs/rsr-run1.
 # Any unfilled or inconsistent slot exits 3 ("did not run"). One rc per arm x seed.
 R=/Users/keanooo7/retrieval-successor-retention
 GIT=/opt/homebrew/bin/git
@@ -20,6 +21,7 @@ fi
 [[ -z ${CKPT:-} ]] || refuse "CKPT is derived from STEPS (A1.8 m-9); do not set it"
 for v in GAMMA WD STEPS O5; do [[ -n ${(P)v} ]] || refuse "slot $v unfilled"; done
 [[ $STEPS == <-> ]] || refuse "STEPS must be a non-negative integer, got '$STEPS'"
+[[ -n ${DRY_RUN:-} ]] && (( STEPS != 0 )) && refuse "DRY_RUN=1 needs STEPS=0 (a dry run never trains), got STEPS=$STEPS"
 (( STEPS >= 1 )) || [[ -n ${DRY_RUN:-} ]] || refuse "STEPS must be >= 1"
 [[ $O5 == eval || $O5 == train ]] || refuse "O5 must be eval or train, got '$O5'"
 [[ $O5 == eval && -z ${C1_FLAGS:-} ]] && refuse "O5=eval needs C1_FLAGS (C-1's flag)"
@@ -38,7 +40,21 @@ if (( rc_sha != 0 || rc_status != 0 )) || [[ -n $PORCELAIN ]]; then
 fi
 mkdir -p $OUT/logs; rc_mkdir=$?
 (( rc_mkdir == 0 )) || refuse "mkdir $OUT/logs rc=$rc_mkdir"
-print -r -- "{\"run_sha\": \"$RUN_SHA\", \"dirty\": false, \"porcelain_lines\": 0, \"gamma\": \"$GAMMA\", \"wd\": \"$WD\", \"steps\": \"$STEPS\", \"ckpt\": \"$CKPT\", \"ckpt_rule\": \"STEPS/3 if STEPS>0 and STEPS%3==0 else STEPS (A1.8 m-9)\", \"o5\": \"$O5\", \"c1_flags\": \"${C1_FLAGS:-}\", \"c2_flags\": \"${C2_FLAGS:-}\", \"c3_flags\": \"${C3_FLAGS:-}\", \"rsr_orch_root\": \"$ORCH_REC\", \"out\": \"$OUT_REC\", \"job_suffix\": \"$SUFFIX_REC\", \"dry_run\": \"${DRY_RUN:-}\", \"launched_utc\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > $OUT/launch-git.json
+LAUNCHED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+.venv/bin/python -c 'import json, sys
+a = sys.argv[2:]
+d = dict(zip(a[0::2], a[1::2]))
+d["dirty"] = False
+d["porcelain_lines"] = 0
+with open(sys.argv[1], "w") as f:
+    json.dump(d, f)
+    f.write("\n")' $OUT/launch-git.json \
+  run_sha "$RUN_SHA" gamma "$GAMMA" wd "$WD" steps "$STEPS" ckpt "$CKPT" \
+  ckpt_rule "STEPS/3 if STEPS>0 and STEPS%3==0 else STEPS (A1.8 m-9)" o5 "$O5" \
+  c1_flags "${C1_FLAGS:-}" c2_flags "${C2_FLAGS:-}" c3_flags "${C3_FLAGS:-}" \
+  rsr_orch_root "$ORCH_REC" out "$OUT_REC" job_suffix "$SUFFIX_REC" \
+  dry_run "${DRY_RUN:-}" launched_utc "$LAUNCHED_UTC"; rc_json=$?
+(( rc_json == 0 )) || refuse "writing $OUT/launch-git.json rc=$rc_json"
 
 typeset -A SHA
 SHA[0]=0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60
