@@ -718,6 +718,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_linear_multiplier_is_one_over_fan_in_in_the_output",
                 _MUP_COUPLING,
             ),
+            (
+                "tests/test_b1_beta_inertness.py::"
+                "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+                "b1-beta-inertness: train_one trains the real BilinearValueHead and "
+                "takes the pre-clip grad norm over every psi-hat parameter (run.py "
+                "_grad_norm, p.grad.double()); with the linear term dropped `u` gets no "
+                "gradient, so its grad is None and the run raises AttributeError: the "
+                "head's two terms, seen from B1's trainer. Found by the night/2026-09-30 "
+                "pre-readout screen.",
+            ),
         ),
     ),
     Mutation(
