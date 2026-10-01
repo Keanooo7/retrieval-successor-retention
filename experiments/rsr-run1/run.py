@@ -986,6 +986,9 @@ def launch(
         raise Refused(f"launcher={launcher!r}: 'slot' (PREREG §9) or 'direct' (tests)")
     if threads < 1:
         raise Refused(f"threads={threads}")
+    for c in cfgs:
+        for arm in arms:
+            refuse_resume(arm_dir(out_root, arm, c.seed))
     tree = tree_state()
     if tree["sha"] is None or tree["dirty"] is None:
         raise Refused(f"git did not answer: {tree}")
@@ -994,9 +997,6 @@ def launch(
             "the tree has uncommitted changes outside runs/ (review MAJOR-5): run 1 "
             f"launches only at a clean committed head.\n{tree['porcelain']}"
         )
-    for c in cfgs:
-        for arm in arms:
-            refuse_resume(arm_dir(out_root, arm, c.seed))
     c0 = {c.seed: check_c0(c) for c in cfgs}  # before any model loads
     Path(out_root).mkdir(parents=True, exist_ok=True)
     plan = {
