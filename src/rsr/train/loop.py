@@ -32,12 +32,16 @@ RAISES when
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, fields
+from enum import Enum
 from pathlib import Path
+from typing import Any
 
 import torch
 import torch.nn.functional as F
@@ -294,6 +298,134 @@ POLICIES = ("fifo", "rsr")
 not here because they are not implemented; listing a name that silently fell through
 to FIFO is the defect this tuple exists to prevent."""
 
+#: The AdamW `eps` every run uses: **torch's own default, read from its signature,
+#: never typed** (ADR-0009 L7/L8 after B1). B1 measured beta LIVE at eps = 1e-8 and
+#: inert only at 1e-12 (`experiments/b1-beta-inertness/RESULTS.md`), so eps is part
+#: of what beta means and every run records the value it actually used.
+ADAMW_EPS: float = inspect.signature(torch.optim.AdamW).parameters["eps"].default
+ADAMW_BETAS = (0.9, 0.95)
+ADAMW_WEIGHT_DECAY = 0.01
+"""Decoupled (AdamW) decay, one value for every group -- `phi`'s `value_head` group
+included, which is B1's measured `decoupled_wd` arm (PREREG row "weight decay")."""
+
+
+def optimizer_record() -> dict:
+    """What the optimizer is, as data for the frozen config and the header."""
+    return {
+        "type": "AdamW",
+        "betas": list(ADAMW_BETAS),
+        "weight_decay": ADAMW_WEIGHT_DECAY,
+        "weight_decay_kind": "decoupled",
+        "eps": ADAMW_EPS,
+        "eps_source": "torch.optim.AdamW default",
+        "transformer_clip": 1.0,
+        "phi_clip": None,
+        "phi_in_transformer_clip": False,
+    }
+
+
+def epoch_steps(pool_documents: int | None, batch: int) -> float | None:
+    """Optimizer steps per epoch: **one pass over the document pool**.
+
+    `R-2026-09-30-rsr-run-1-scope` (owner draft, 31(b)): "one epoch" is one pass
+    over the document pool, i.e. `n_docs / batch` optimizer steps -- 256 / 16 = 16
+    in the ruling's example. Derived from the pool `train()` actually built and the
+    batch it actually runs, never typed; §3.4's `T_warm` (one epoch) follows from
+    it through the registry (D-I).
+
+    A never-repeating `DocumentStream` has no pool, so it has no epoch under this
+    definition: None, and an RSR arm refuses it (the ruling does not define it).
+    """
+    if pool_documents is None:
+        return None
+    if pool_documents <= 0 or batch <= 0:
+        raise ValueError(f"pool_documents={pool_documents}, batch={batch}: both > 0")
+    return pool_documents / batch
+
+
+def phi_generator(seed: int) -> tuple[torch.Generator, int]:
+    """ADR-0009 L11: `phi`'s own **CPU** generator, seeded from `(seed, "phi")`.
+
+    Two latent defects it removes (ADR-0009 Context): `train()` built `phi` from
+    the data-order generator `gen`, so an RSR arm and a FIFO arm at the same seed
+    saw different streams (§3.7's warning); and on MPS `gen` is an MPS generator,
+    from which the CPU-built head's `normal_` raises. The head is built on CPU from
+    this generator, then moved.
+    """
+    digest = hashlib.sha256(f"{seed}:phi".encode()).digest()
+    phi_seed = int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+    return torch.Generator(device="cpu").manual_seed(phi_seed), phi_seed
+
+
+_LABEL_NAMES = {"b_enabled": "b", "shadow_enabled": "shadow", "psi_override": "psi"}
+
+
+def _label_value(v: Any) -> str:
+    if isinstance(v, bool):
+        return "on" if v else "off"
+    if v is None:
+        return "learned"
+    if isinstance(v, float):
+        return format(v, "g")
+    return str(v)
+
+
+def arm_label(
+    policy_name: str,
+    overrides: Mapping[str, Any] | None = None,
+    *,
+    freeze_transformer: bool = False,
+) -> str:
+    """The arm's label, derived from its overrides (ADR-0009 L12).
+
+    `rsr[b=off,beta=0.1,gamma=0.9,nu=0,shadow=off]`. Every override is a visible
+    departure, so it is in the name; two arms that differ in one cannot share a
+    label, and (stamped into `frozen`) cannot share a config hash either. The
+    frozen-transformer option (R-2026-09-30-rsr-run-1-scope D2(b)) is appended.
+    """
+    toks = [
+        f"{_LABEL_NAMES.get(k, k)}={_label_value(v)}"
+        for k, v in sorted((overrides or {}).items())
+    ]
+    label = f"{policy_name}[{','.join(toks)}]" if toks else policy_name
+    return f"{label}+frozen" if freeze_transformer else label
+
+
+def _check_overrides(overrides: Mapping[str, Any], no_warmup_ablation: bool) -> None:
+    """ADR-0009 L12's structural rules, before any registry read."""
+    known = {f.name for f in fields(RSRConfig)}
+    unknown = sorted(set(overrides) - known)
+    if unknown:
+        raise ValueError(
+            f"unknown RSR override(s) {unknown}; overridable fields are {sorted(known)}"
+        )
+    if "t_warm" in overrides and not no_warmup_ablation:
+        # L12: otherwise an override decides correction 31(b) by the back door --
+        # the owner ruled what an epoch is; T_warm follows from it (§3.4).
+        raise ValueError(
+            "a t_warm override is refused unless the arm is declared the no-warmup "
+            "ablation (ADR-0009 L12): T_warm is one epoch (§3.4), and what an epoch "
+            "is was ruled by the owner (R-2026-09-30-rsr-run-1-scope, 31(b))"
+        )
+    if no_warmup_ablation and overrides.get("t_warm") != 0.0:
+        raise ValueError(
+            "no_warmup_ablation=True declares the T_warm = 0 arm: pass t_warm=0.0 "
+            "explicitly. A declaration with any other value -- or none -- would be "
+            "a label that says something the arm does not do."
+        )
+
+
+def _jsonable(v: Any) -> Any:
+    return v.value if isinstance(v, Enum) else v
+
+
+def _grad_norm(params: list[torch.nn.Parameter]) -> float | None:
+    """L2 norm over the gradients that exist; None if none does (beta = 0, L13)."""
+    grads = [p.grad.detach().flatten() for p in params if p.grad is not None]
+    if not grads:
+        return None
+    return float(torch.cat(grads).norm())
+
 
 def build_policy(
     name: str,
@@ -302,6 +434,8 @@ def build_policy(
     steps_per_epoch: float | None,
     scope: str = "synthetic",
     generator: torch.Generator | None = None,
+    overrides: Mapping[str, Any] | None = None,
+    no_warmup_ablation: bool = False,
 ):
     """Map `policy_name` to the policy that will actually run (S0-01 defect (b)).
 
@@ -315,20 +449,34 @@ def build_policy(
     Routing both through one function is the fix: there is now no path on which the
     stamped name and the constructed policy can differ.
 
-    **`"rsr"` is refused on today's tree, and that is correct.** `train()` passes
-    `steps_per_epoch=None`, which raises first (correction 31 (b), below); a caller
-    with a real epoch then meets `UnmeasuredConstant`.
-    `nu`, `beta` and `gamma` are MEASURED and E1 has not run (§4.5). The registry
-    refusing the read is the D-1 guard; the answer is to run E1, never to supply a
-    default here.
+    **`"rsr"` with no overrides is refused on today's tree, and that is correct.**
+    `nu`, `beta` and `gamma` are MEASURED and E1 has not run (§4.5), so the
+    registry raises `UnmeasuredConstant`. The registry refusing the read is the D-1
+    guard; the answer is E1, or a labelled override an arm's PREREG declares
+    (ADR-0009 L12) -- never a default supplied here.
 
     `steps_per_epoch` feeds `T_warm`'s derivation (optimizer steps per epoch).
     `train()` used to pass `iters`, which made §3.4's "one epoch" the whole run and
-    the arm FIFO throughout. What an epoch is on this loop -- a with-replacement
-    sampler, or a never-repeating stream -- is open (correction 31), so `train()`
-    passes None, and `"rsr"` is refused here until it is ruled.
+    the arm FIFO throughout. **Ruled 2026-09-30** (`R-2026-09-30-rsr-run-1-scope`,
+    31(b), owner draft): one epoch is one pass over the document pool, and `train()`
+    now passes `epoch_steps(pool, batch)`. A caller with no epoch still gets None
+    refused here, naming correction 31.
+
+    **`overrides` is ADR-0009 L12's path** (signed): read lazily by
+    `RSRConfig.from_registry`, so a field not overridden still reads the registry
+    and still raises naming E1 -- `nu`, `beta` and `gamma` are MEASURED and owed by
+    E1, and run 1 supplies them only as labelled overrides declared in its own
+    PREREG. Nothing is recorded in the registry. The rules, each refused loudly:
+    `b_enabled=False` is required (no `ProtectionBias` exists, §12 item 3);
+    `shadow_enabled=False` must be passed explicitly (L6(a)); a `t_warm` override
+    needs `no_warmup_ablation=True` and must be 0.
     """
     if name == "fifo":
+        if overrides:
+            raise ValueError(
+                f"overrides {sorted(overrides)} on the FIFO arm: FIFO has no RSR "
+                "config, so they would be stamped into its label and change nothing"
+            )
         return FIFOPolicy()
     if name == "rsr":
         if steps_per_epoch is None:
@@ -338,9 +486,23 @@ def build_policy(
                 "(docs/spec-corrections.md correction 31). train() used to pass "
                 "iters, which made the warmup the entire run -- FIFO throughout."
             )
-        cfg = RSRConfig.from_registry(scope, steps_per_epoch=steps_per_epoch)
-        # `value_head=None` until the head is wired here; see the muP note below
-        # and `tests/test_train_loop.py`'s strict xfail.
+        ov = dict(overrides or {})
+        _check_overrides(ov, no_warmup_ablation)
+        cfg = RSRConfig.from_registry(scope, steps_per_epoch=steps_per_epoch, **ov)
+        if ov.get("b_enabled") is not False:
+            raise ValueError(
+                "ADR-0009 L12: b_enabled=False is required, and must be passed as an "
+                "override: ProtectionBias does not exist (RESEARCH-CONTEXT §12 item "
+                "3; E0e's tau and gamma_b are unrecorded). The arm is then partially "
+                "reduced toward TG (§3.7's b == 0) and its label says b=off."
+            )
+        if ov.get("shadow_enabled") is not False:
+            raise ValueError(
+                "ADR-0009 L6(a)/L12: shadow_enabled=False must be passed explicitly "
+                "-- the shadow buffer is slice 2, and the dataclass default is True"
+            )
+        # ADR-0009 L11: `generator` is phi's own CPU stream (see `phi_generator`),
+        # never the data-order generator.
         return RSRPolicy(cfg, d_model, generator=generator)
     raise ValueError(
         f"unknown policy_name {name!r}; known policies are {POLICIES}. "
@@ -370,7 +532,21 @@ def train(
     srep_norm_reg_weight: float | None = None,  # None -> TGConfig's 0.01
     n_documents: int | None = None,  # None -> SyntheticConfig's 64, today's path
     stream: DocumentStream | None = None,  # None -> the with-replacement sampler
+    policy_overrides: Mapping[str, Any] | None = None,  # ADR-0009 L12
+    no_warmup_ablation: bool = False,  # ADR-0009 L12: the only t_warm override
+    freeze_transformer: bool = False,  # R-2026-09-30-rsr-run-1-scope D2(b)
 ) -> dict:
+    """One training run. See the module docstring.
+
+    `freeze_transformer=True` (run 1's substrate rule, owner draft
+    `R-2026-09-30-rsr-run-1-scope` D2(b)): the transformer and `W_sent` get **no
+    update** -- `requires_grad` off, out of the optimizer, `L_NTP` reported but not
+    optimised -- so a FIFO and an RSR arm on the same substrate differ only in the
+    eviction rule. The model's train/eval MODE is unchanged (dropout stays as in
+    any training run); only the update is removed. Stamped into `frozen`, the hash
+    and the label. ADR-0009 T4 is vacuous under it, which is why the isolation
+    tests also run non-frozen.
+    """
     # fresh-stream (experiments/fresh-stream/PREREG.md): `stream=None` is today's
     # path byte for byte -- nothing below runs differently and nothing is stamped.
     # Set, it replaces only the `torch.randint` sampler; the vocabulary is still
@@ -427,19 +603,57 @@ def train(
         cfg.srep_norm_reg_weight if srep_norm_reg_weight is None else srep_norm_reg_weight
     )
 
-    # muP groups, NOT a flat AdamW. The value head is None until RSRPolicy is wired; when
-    # it is,
-    # it must be passed here or it will not get its own group and width transfer breaks.
-    groups = build_param_groups(model, None, base_lr=lr, d_model=d, base_width=128)
-    opt = torch.optim.AdamW(groups, betas=(0.9, 0.95), weight_decay=0.01)
+    # Correction 31 (b), ruled 2026-09-30 (R-2026-09-30-rsr-run-1-scope, owner
+    # draft): one epoch = one pass over the document pool = n_docs / batch optimizer
+    # steps, from the pool this run actually built -- not `iters`, which made §3.4's
+    # "one epoch" the whole run. A stream has no pool (None).
+    pool_docs = None if stream is not None else len(probe)
+    steps_per_epoch = epoch_steps(pool_docs, batch)
+    if policy_name == "rsr" and stream is not None:
+        raise ValueError(
+            "an RSR arm on a never-repeating DocumentStream: the 31(b) ruling defines "
+            "an epoch as one pass over the document POOL (R-2026-09-30-rsr-run-1-"
+            "scope), and a stream has none -- T_warm (§3.4) is undefined here. Train "
+            "on a fixed pool (n_documents), or get the stream's epoch ruled."
+        )
 
     # S0-01 defect (b): built FROM `policy_name`, so the name stamped below into the
     # frozen config and the run_id cannot disagree with the policy that ran.
-    # Correction 31 (b): `steps_per_epoch=None`, not `iters` -- `iters` made §3.4's
-    # "one epoch" the whole run. This loop has no epoch an agent may define (the
-    # sampler draws with replacement; a stream never repeats), so "rsr" is refused
-    # inside `build_policy` until the owner rules.
-    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, generator=gen)
+    # ADR-0009 L11: phi is built from its OWN CPU generator, so the data-order
+    # generator `gen` is untouched (FIFO and RSR arms at one seed see one stream),
+    # and nothing CPU-built is drawn from an MPS generator. Built BEFORE the
+    # optimizer (ADR-0009 §3), which with L11 moves no RNG.
+    phi_gen, phi_seed = phi_generator(seed)
+    policy = build_policy(
+        policy_name,
+        d_model=d,
+        steps_per_epoch=steps_per_epoch,
+        generator=phi_gen,
+        overrides=policy_overrides,
+        no_warmup_ablation=no_warmup_ablation,
+    )
+    head = getattr(policy, "head", None)
+    if head is not None:
+        head.to(device)  # built on CPU (L11), then moved -- before the optimizer
+    phi_params = [] if head is None else list(head.parameters())
+    learns = bool(getattr(policy, "learns", False))  # ADR-0009 L13(a): beta != 0
+    eval_ctx = bool(getattr(policy, "needs_eval_context", False))  # L1(a), L2
+    if freeze_transformer:
+        model.requires_grad_(False)  # D2(b): no L_NTP update to transformer, W_sent
+
+    # muP groups, NOT a flat AdamW: the value head lands in its OWN `value_head`
+    # group (§4.3; ADR-0009 T9). One AdamW, decoupled decay, eps = torch's default
+    # (ADR-0009 L8 provisional answer; B1). A frozen arm with no head has nothing
+    # to optimise, and builds no optimizer rather than an empty one.
+    opt = None
+    if any(p.requires_grad for p in model.parameters()) or phi_params:
+        groups = build_param_groups(model, head, base_lr=lr, d_model=d, base_width=128)
+        opt = torch.optim.AdamW(
+            groups, betas=ADAMW_BETAS, weight_decay=ADAMW_WEIGHT_DECAY, eps=ADAMW_EPS
+        )
+    label = arm_label(
+        policy_name, policy_overrides, freeze_transformer=freeze_transformer
+    )
 
     frozen = {
         "tg": asdict(cfg),
@@ -461,6 +675,33 @@ def train(
         # Stamped only when set, like n_documents: the default path's config_hash
         # is unchanged and a stream run can never share it.
         frozen["stream"] = asdict(stream)
+    if policy_name == "rsr" or freeze_transformer:
+        # Stamped only off the default path (its hash is S0-03's, pinned by
+        # test_corpus_size_curve / test_fresh_stream). ADR-0009 L12: the label and
+        # every override are in the hash, so two arms cannot share one.
+        frozen["arm_label"] = label
+        frozen["freeze_transformer"] = freeze_transformer
+        frozen["optimizer"] = optimizer_record()
+    if policy_name == "rsr":
+        t_warm = float(policy.config.t_warm)
+        frozen["policy_overrides"] = {
+            k: _jsonable(v) for k, v in sorted((policy_overrides or {}).items())
+        }
+        frozen["no_warmup_ablation"] = no_warmup_ablation
+        frozen["phi_seed"] = phi_seed
+        frozen["observe"] = learns
+        frozen["eval_capture"] = eval_ctx
+        # 31(b) and §3.4: T_warm in steps, and as a fraction of total epochs.
+        frozen["epoch"] = {
+            "definition": "one pass over the document pool (R-2026-09-30-rsr-run-1-"
+            "scope 31(b)): pool_documents / batch optimizer steps",
+            "pool_documents": pool_docs,
+            "steps_per_epoch": steps_per_epoch,
+            "t_warm_steps": t_warm,
+            "t_warm_epochs": t_warm / steps_per_epoch,
+            "total_epochs": iters / steps_per_epoch,
+            "t_warm_fraction_of_total_epochs": (t_warm / iters) if iters else None,
+        }
     run_id = f"{policy_name}-d{d}-s{steps_per_stream}-b{batch}-{_config_hash(frozen)}"
 
     start = 0
@@ -473,6 +714,11 @@ def train(
     docs = generate(
         SyntheticConfig(sentences_per_document=steps_per_stream, seed=seed, **corpus_kw)
     )
+    if pool_docs is not None and len(docs) != pool_docs:
+        raise RuntimeError(
+            f"the epoch was derived from a pool of {pool_docs} documents but the "
+            f"sampler draws from {len(docs)} (31(b): one pass over THIS pool)"
+        )
     vocab_map = build_vocab(docs)
     all_ids, all_mask = encode(
         docs, vocab_map, max_tokens=max_tokens, steps=steps_per_stream
@@ -505,7 +751,14 @@ def train(
         },
     )
     hb.header(
-        config=frozen, resumed_from=str(resume) if resume else None, start_step=start
+        config=frozen,
+        resumed_from=str(resume) if resume else None,
+        start_step=start,
+        # Every run records its optimizer, eps included (B1: beta's liveness turns
+        # on eps). In the header, not `frozen`, on the default path: that path's
+        # config hash is S0-03's and is pinned.
+        optimizer=optimizer_record() if opt is not None else None,
+        arm_label=label,
     )
 
     # Both numbers are computed every step and only one is optimised. The other is
@@ -572,11 +825,39 @@ def train(
             # so a resumed run keeps its place.
             if hasattr(policy, "set_train_step"):
                 policy.set_train_step(it)
-            loss = run_policy_loop(model, ids, mask, lengths, policy, step_fn=step_fn)
-            opt.zero_grad(set_to_none=True)
-            loss.backward()
-            gnorm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            opt.step()
+            timings: dict[str, float] = {}
+            loss = run_policy_loop(
+                model,
+                ids,
+                mask,
+                lengths,
+                policy,
+                step_fn=step_fn,
+                observe=learns,
+                eval_capture=eval_ctx,
+                timings=timings,
+            )
+            # §3.3, read per correction 2: L = L_NTP + beta * L_MC. ADR-0009 L13(a):
+            # beta = 0 means L_MC is NOT computed (`learns` is False), never x0.
+            l_mc = policy.retention_loss() if learns else None
+            objective = None if freeze_transformer else loss
+            if l_mc is not None:
+                weighted = policy.config.beta * l_mc
+                objective = weighted if objective is None else objective + weighted
+            gnorm = phi_gnorm = None
+            if opt is not None:
+                opt.zero_grad(set_to_none=True)
+                if objective is not None:
+                    objective.backward()
+                if not freeze_transformer:
+                    # ADR-0009 L8 (signed): phi is NOT in the transformer's clip. A
+                    # joint norm would make the transformer's clip factor depend on
+                    # L_MC -- a gradient-free channel from the retention loss into
+                    # transformer updates (§2). phi has no clip of its own (L8).
+                    gnorm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                if phi_params:
+                    phi_gnorm = _grad_norm(phi_params)  # logged, never clipped (L8)
+                opt.step()
             if device == "mps":
                 torch.mps.synchronize()
             dt = time.time() - t0
@@ -605,6 +886,27 @@ def train(
                 "answer_target_fraction": tally["n_ans"] / max(tally["n_real"], 1.0),
                 "step": it,
             }
+            rsr_beat: dict[str, Any] = {}
+            if policy_name == "rsr":
+                # ADR-0009 §4: L_MC tagged with k and warm, so it splits at §3.4's
+                # on/off-policy boundary; mean G by t (the truncation profile);
+                # corr(psi_hat, age) for §7.1; L1's eval-forward cost, measured.
+                stats = dict(getattr(policy, "last_mc_stats", {}) or {})
+                rsr_beat = {
+                    "arm_label": label,
+                    "train_step": it,
+                    "loss_mc": None if l_mc is None else float(l_mc.detach()),
+                    "mc": stats or None,
+                    "phi_grad_norm": phi_gnorm,
+                    "eval_forward_s": timings.get("eval_forward_s"),
+                    "step_s": dt,
+                }
+                last.update(
+                    loss_mc=rsr_beat["loss_mc"],
+                    phi_grad_norm=phi_gnorm,
+                    eval_forward_s=rsr_beat["eval_forward_s"],
+                    step_s=dt,
+                )
             if it % beat_every == 0:
                 attr = policy.attribution() if hasattr(policy, "attribution") else None
                 hb.beat(
@@ -632,12 +934,13 @@ def train(
                     gini=None,  # wired when the policy exposes an attention trace
                     attribution=attr,
                     rank_shift=None,  # wired with RSRPolicy; 0 under FIFO by construction
-                    grad_norm=float(gnorm),
+                    grad_norm=None if gnorm is None else float(gnorm),
                     sent_per_s=round(batch * steps_per_stream / dt, 1),
                     mem_gb=round(torch.mps.driver_allocated_memory() / 1e9, 2)
                     if device == "mps"
                     else None,
-                    lr=opt.param_groups[0]["lr"],
+                    lr=None if opt is None else opt.param_groups[0]["lr"],
+                    **rsr_beat,
                 )
             if ckpt_every and (it + 1) % ckpt_every == 0:
                 ck.save(
@@ -682,6 +985,7 @@ def train(
         # and proves nothing about what either of them ran.
         "config": frozen,
         "policy": type(policy).__name__,
+        "arm_label": label,
         "git_sha": _sha(),
         "steps_requested": iters,
         # `steps_done` is the loop's own count, not the request. A resumed or
@@ -767,6 +1071,28 @@ def _measure_liveness(
         }
 
 
+def parse_overrides(items: list[str]) -> dict[str, Any]:
+    """`["beta=0.1", "b_enabled=false", "psi_override=neg_age"]` -> a dict.
+
+    A value is read as JSON when it parses (numbers, true/false, null) and kept as
+    the bare string otherwise. A key given twice is refused, not last-one-wins."""
+    out: dict[str, Any] = {}
+    for item in items:
+        key, sep, raw = item.partition("=")
+        if not sep or not key:
+            raise ValueError(f"--policy-override {item!r}: expected KEY=VALUE")
+        if key in out:
+            raise ValueError(f"--policy-override {key!r} given twice")
+        try:
+            out[key] = json.loads(raw)
+        except json.JSONDecodeError:
+            out[key] = raw
+        if isinstance(out[key], int) and not isinstance(out[key], bool):
+            # RSRConfig's numeric fields are floats except a_max; keep a_max int.
+            out[key] = out[key] if key == "a_max" else float(out[key])
+    return out
+
+
 def main(argv: list[str] | None = None) -> Exit:
     p = ArgumentParser(prog="rsr-train", description=__doc__)
     for name, typ, dflt in (
@@ -799,6 +1125,29 @@ def main(argv: list[str] | None = None) -> Exit:
     # stamped into the run_id. `choices` refuses an unknown name rather than
     # letting it through to be stamped over a FIFO run.
     p.add_argument("--policy", default="fifo", choices=POLICIES)
+    # ADR-0009 L12: labelled overrides, e.g. --policy-override beta=0.1. Values are
+    # JSON (0.1, false, null) or a bare string (neg_age). Stamped into the frozen
+    # config, the hash and the label -- never a default.
+    p.add_argument(
+        "--policy-override",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="an RSRConfig field override (repeatable); b_enabled=false and "
+        "shadow_enabled=false are required for --policy rsr in slice 1",
+    )
+    p.add_argument(
+        "--no-warmup-ablation",
+        action="store_true",
+        help="declare the T_warm = 0 ablation arm; the only way t_warm may be "
+        "overridden (ADR-0009 L12)",
+    )
+    p.add_argument(
+        "--freeze-transformer",
+        action="store_true",
+        help="no update to the transformer or W_sent (R-2026-09-30-rsr-run-1-scope "
+        "D2(b)); recorded in the frozen config and the label",
+    )
     p.add_argument("--device", default="mps")
     p.add_argument("--out-dir", default="runs/dev")
     p.add_argument("--resume", default=None)
@@ -818,6 +1167,9 @@ def main(argv: list[str] | None = None) -> Exit:
         ckpt_every=a.ckpt_every,
         resume=a.resume,
         policy_name=a.policy,
+        policy_overrides=parse_overrides(a.policy_override) or None,
+        no_warmup_ablation=a.no_warmup_ablation,
+        freeze_transformer=a.freeze_transformer,
     )
     print(json.dumps(r, indent=2, default=str))
     # liveness-wiring: 0 live, 5 INERT, 1 inconclusive, 3 not a valid measurement.

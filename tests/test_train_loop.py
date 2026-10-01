@@ -23,8 +23,9 @@ The three defects, as the brief predicts them and as they re-measured:
   default**, which is the smaller and the true claim. `--vocab 0` always reached it.
 
 Two further items the brief listed separately, on purpose, and which are handled
-differently here: `value_head=None` into `build_param_groups` is an `xfail(strict=True)`
-rather than a speculative fix (nothing in this tree constructs a value head yet), and
+differently here: `value_head=None` into `build_param_groups` was an `xfail(strict=True)`
+rather than a speculative fix (nothing in the tree constructed a value head yet; it
+passes since ADR-0009 slice 1 wired the head through `train()`), and
 `RSRConfig.from_registry`'s eager `kw` build (`rsr.py:236-243`) is fixed, because it was
 *measured* to raise through an explicit override rather than merely suspected of it.
 
@@ -104,13 +105,16 @@ def test_train_does_not_stamp_a_policy_it_did_not_build(tmp_path):
     Before the fix this returned normally and `r["run_id"].startswith("rsr-")` was
     True while `FIFOPolicy` had evicted every slot.
 
-    It refuses at correction 31's epoch check (`build_policy` with
-    `steps_per_epoch=None`) -- before 2026-09-26 it refused at the registry's
-    `UnmeasuredConstant`, one line later, having been handed `steps_per_epoch=iters`,
-    which made the warmup the whole run. Either refusal proves the policy was built
-    from the name; matching the correction-31 message also proves `iters` is gone.
+    History of the refusal: until 2026-09-26 it was the registry's
+    `UnmeasuredConstant`, reached with `steps_per_epoch=iters` (the warmup was the
+    whole run); then correction 31's epoch check (`steps_per_epoch=None`). Since the
+    31(b) ruling (R-2026-09-30-rsr-run-1-scope, owner draft) `train()` passes the
+    derived `pool / batch`, so with no overrides it is the registry again: `nu`,
+    `beta`, `gamma` are MEASURED and owed by E1. Either refusal proves the policy
+    was built from the name. That `iters` is not the epoch is now
+    `test_rsr_learning_path.py::test_steps_per_epoch_is_derived_from_the_pool`.
     """
-    with pytest.raises(ValueError, match="correction 31"):
+    with pytest.raises(C.UnmeasuredConstant, match="E1"):
         train(policy_name="rsr", out_dir=tmp_path / "rsr", **TINY)
 
 
@@ -316,34 +320,34 @@ def test_from_registry_still_raises_for_a_field_left_unoverridden():
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "S0-01 'less certain', deliberately left failing rather than speculatively "
-        "fixed: loop.py:210 passes value_head=None into build_param_groups, so psi-hat "
-        "would train outside its muP group. Nothing in this tree constructs a value "
-        "head in the loop yet -- RSRPolicy is unreachable while E1 is unlogged -- so "
-        "there is no head to pass and a fix here would be fiction. This xfail is the "
-        "record; it turns green the day the head is wired, and strict=True means it "
-        "cannot pass unnoticed."
-    ),
-)
-def test_the_value_head_lands_in_its_own_mup_group(tmp_path):
-    from rsr.model.tg import TGConfig, TGModel
-    from rsr.mup.param_groups import build_param_groups
+def test_the_value_head_lands_in_its_own_mup_group(tmp_path, monkeypatch):
+    """S0-01's 'less certain' item, turned green by wiring the head (ADR-0009 T9).
 
-    cfg = TGConfig(
-        D=32,
-        V=160,
-        F=86,
-        max_sentence_tokens=16,
-        max_sentences_in_short_term=4,
-        pad_id=0,
-        bos_id=1,
-        eos_id=2,
-        eod_id=3,
+    It was a strict xfail from S0-01 until slice 1: `loop.py` passed
+    `value_head=None` into `build_param_groups`, so psi-hat would have trained
+    outside its muP group, and nothing constructed a head in the loop. ADR-0009
+    §3 asked for the body to be rewritten, because the old body called
+    `build_param_groups(model, None, ...)` itself and could never turn green from
+    a change to `train()`. It now asserts the groups **`train()` built**: an RSR
+    arm (labelled overrides, ADR-0009 L12) through the real call site, with the
+    groups captured on their way into AdamW.
+    """
+    import rsr.train.loop as loop
+
+    seen: list[list[dict]] = []
+    real = loop.build_param_groups
+    monkeypatch.setattr(
+        loop, "build_param_groups", lambda *a, **k: seen.append(real(*a, **k)) or seen[-1]
     )
-    model = TGModel(cfg)
-    groups = build_param_groups(model, None, base_lr=1e-3, d_model=32, base_width=128)
-    names = {g.get("name") for g in groups}
-    assert "value_head" in names
+    overrides = dict(nu=0.0, beta=1.0, gamma=0.5, b_enabled=False, shadow_enabled=False)
+    train(policy_name="rsr", policy_overrides=overrides, out_dir=tmp_path, **TINY)
+    (groups,) = seen
+    by_name = {g["name"]: g for g in groups}
+    assert "value_head" in by_name, sorted(by_name)
+    head_ids = {id(p) for p in by_name["value_head"]["params"]}
+    assert len(head_ids) == 2  # phi = {W, u}
+    for name, g in by_name.items():
+        if name != "value_head":
+            assert not head_ids & {id(p) for p in g["params"]}, name
+    # §4.3: base_lr / m for both phi parameters, m = d / base_width.
+    assert by_name["value_head"]["lr"] == pytest.approx(1e-3 / (TINY["d"] / 128))
