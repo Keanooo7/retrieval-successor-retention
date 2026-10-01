@@ -558,6 +558,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
                 _REDUCTION_WARMUP_LOUD_COUPLING,
             ),
+            *_r1_declare(
+                "the run-1 test builds RSRPolicy(reduction_to_tg(M)) and evicts once; "
+                "with T_warm = inf and no optimizer step set, select_eviction raises "
+                "(correction 31's loud refusal) -- the reduction table seen from the "
+                "diagnostics-off test.",
+                "test_a_directly_built_policy_collects_no_diagnostics",
+            ),
         ),
     ),
     Mutation(
@@ -576,6 +583,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "(measured under it, W11: {'psi': 1} != {'neg_age': 1}). The "
                 "reduction, seen from correction 16's no-counter test.",
             ),
+            *_r1_declare(
+                "the run-1 test asserts REDUCTION_SWITCHES['psi_override'] == "
+                "'neg_age': the age-only arm is a psi_override VALUE and must stay out "
+                "of the reduction. The same switch, asserted from the age-only side.",
+                "test_the_reduction_still_pins_neg_age",
+            ),
         ),
     ),
     Mutation(
@@ -585,44 +598,53 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    "nu": 0.0,\n    "beta": 0.0,',
         '    "beta": 0.0,',
         "a term with no documented off-switch; the brief records this exact hole",
-        off_gate_allowed=tuple(
-            (f"tests/test_reduction.py::{t}", _REDUCTION_TABLE_COUPLING)
-            for t in (
-                "test_a_max_tracks_capacity",
-                "test_is_reduction_detects_a_single_flipped_switch",
-                "test_reduction_agrees_with_fifo_on_every_eviction",
-                "test_reduction_config_disables_every_added_term",
-                "test_reduction_runs_through_the_score_path",
-                "test_switching_psi_source_to_the_learned_head_reddens_the_reduction",
-                "test_t_warm_is_zero_not_infinity",
-                "test_the_learned_head_does_shift_ranks",
-                "test_the_reduction_pins_the_context_source",
-                "test_the_reduction_pins_the_positional_index_to_rank",
-                "test_the_reduction_shifts_no_ranks",
-                # 📌 Added 2026-09-18. docs/mutation-battery.md recorded 11 here
-                # at 0a9f5d8; the suite has grown and the same coupling now
-                # reaches 19. The count in that table was stale, not wrong.
-                "test_a_learned_head_changes_the_loss",
-                "test_loss_curve_is_bit_exact_against_stock_tg",
-                "test_phi_construction_does_not_perturb_the_global_rng",
-                "test_the_learned_head_does_evict_middle_slots",
-                "test_the_reduction_displaces_no_ranks_on_the_real_model",
-                "test_the_reduction_ran_through_the_score_path",
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_reduction.py::{t}", _REDUCTION_TABLE_COUPLING)
+                for t in (
+                    "test_a_max_tracks_capacity",
+                    "test_is_reduction_detects_a_single_flipped_switch",
+                    "test_reduction_agrees_with_fifo_on_every_eviction",
+                    "test_reduction_config_disables_every_added_term",
+                    "test_reduction_runs_through_the_score_path",
+                    "test_switching_psi_source_to_the_learned_head_reddens_the_reduction",
+                    "test_t_warm_is_zero_not_infinity",
+                    "test_the_learned_head_does_shift_ranks",
+                    "test_the_reduction_pins_the_context_source",
+                    "test_the_reduction_pins_the_positional_index_to_rank",
+                    "test_the_reduction_shifts_no_ranks",
+                    # 📌 Added 2026-09-18. docs/mutation-battery.md recorded 11 here
+                    # at 0a9f5d8; the suite has grown and the same coupling now
+                    # reaches 19. The count in that table was stale, not wrong.
+                    "test_a_learned_head_changes_the_loss",
+                    "test_loss_curve_is_bit_exact_against_stock_tg",
+                    "test_phi_construction_does_not_perturb_the_global_rng",
+                    "test_the_learned_head_does_evict_middle_slots",
+                    "test_the_reduction_displaces_no_ranks_on_the_real_model",
+                    "test_the_reduction_ran_through_the_score_path",
+                )
             )
-        )
-        + tuple(
-            (f"tests/test_device_placement.py::{t}", _REDUCTION_TABLE_COUPLING)
-            for t in (
-                "test_rsr_policy_exposes_a_to_method",
-                "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+            + tuple(
+                (f"tests/test_device_placement.py::{t}", _REDUCTION_TABLE_COUPLING)
+                for t in (
+                    "test_rsr_policy_exposes_a_to_method",
+                    "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+                )
             )
-        )
-        + (
-            # W11: RSRConfig(...) missing 'nu' at construction, measured under it.
-            (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
-                "ep",
-                _REDUCTION_TABLE_COUPLING,
+            + (
+                # W11: RSRConfig(...) missing 'nu' at construction, measured under it.
+                (
+                    "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                    "ep",
+                    _REDUCTION_TABLE_COUPLING,
+                ),
+            ),
+            *_r1_declare(
+                "both run-1 tests construct RSRConfig.reduction_to_tg(M), which is "
+                "built from the table (TypeError: missing nu). The coupling is the "
+                "design: one enumeration (as _REDUCTION_TABLE_COUPLING).",
+                "test_a_directly_built_policy_collects_no_diagnostics",
+                "test_the_reduction_still_pins_neg_age",
             ),
         ),
     ),
@@ -860,6 +882,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_reduction_displaces_no_ranks_on_the_real_model",
                 _DISPLACEMENT_COUPLING + " Added 2026-09-18: the on-the-real-model "
                 "variant post-dates docs/mutation-battery.md's table.",
+            ),
+            *_r1_declare(
+                "the §7.1 histograms are built from EvictionRecord.rank_shift: counting "
+                "the window gives displacement != victim_rank - 1, so the by-hand {0: "
+                "1, 2: 1} and the train()-level {0: 88} both change.",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_victim_age_and_rank_histograms_by_hand",
             ),
         ),
     ),
@@ -1296,6 +1325,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "observe(); never reached, no demand is recorded: the same call site, "
                 "seen from W10.",
             ),
+            *_r1_declare(
+                "with observe never called L_MC is None, so phi (the frozen warm-start "
+                "test) and the age-only table (the age-only arm test) never move -- the "
+                "learning path seen from two run-1 arms.",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+            ),
         ),
     ),
     # ----------------------------------------------------------------------- #
@@ -1348,6 +1384,24 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_value_head_lands_in_its_own_mup_group",
                 _S1_RSR_THROUGH_TRAIN,
             ),
+            *_r1_declare(
+                "every run-1 test that drives an RSR arm through train() needs "
+                "build_policy to run: a FIFOPolicy has no `.config` (AttributeError "
+                "where T_warm is stamped). The FIFO refusal test reds because the "
+                "unconditional FIFOPolicy() never reaches build_policy's m-5 check.",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_frozen_mode_records_that_dropout_stays_on",
+                "test_no_warmup_ablation_on_the_fifo_arm_is_refused",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_epoch_records_sampling_with_replacement",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
         ),
     ),
     # Correction 31: T_warm counts optimizer steps, not sentences.
@@ -1374,6 +1428,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_t_warm_dispatch.py::test_warmup_longer_than_a_stream_ends",
                 _T_WARM_COUPLING,
             ),
+            *_r1_declare(
+                "both run-1 tests read the warm flag per optimizer step (relative steps "
+                "0, 1 warm; every train() eviction warm at T_warm = 32); compared "
+                "against the sentence index, evictions at t >= T_warm stop being warm.",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+            ),
         ),
     ),
     Mutation(
@@ -1391,6 +1452,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_traini"
                 "ng_steps",
                 _T_WARM_COUPLING,
+            ),
+            *_r1_declare(
+                "every run-1 RSR arm with T_warm > 0 run through train() raises 'no "
+                "training step was set' at its first eviction (correction 31's guard).",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
             ),
         ),
     ),
@@ -1437,11 +1509,24 @@ MUTATIONS: tuple[Mutation, ...] = (
         "throughout. Since the 31(b) ruling an epoch is one pass over the pool, "
         "pool / batch steps, and an RSR arm with labelled overrides reaches the "
         "warmup -- so this line is now live, not latent.",
-        off_gate_allowed=_s1_declare(
-            _S1_ITERS_EPOCH_ZERO,
-            "test_overrides_are_stamped_into_frozen_hash_and_label",
-            "test_phi_is_initialised_from_its_own_seeded_stream",
-            "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_ITERS_EPOCH_ZERO,
+                "test_overrides_are_stamped_into_frozen_hash_and_label",
+                "test_phi_is_initialised_from_its_own_seeded_stream",
+                "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+            ),
+            *_r1_declare(
+                "run-1 tests at iters = 0 are refused by the registry (steps_per_epoch "
+                "> 0), and the pool tests read steps_per_epoch / T_warm from the pool "
+                "(2.0), not from iters (3.0 or 1.0).",
+                "test_frozen_mode_records_that_dropout_stays_on",
+                "test_the_epoch_records_sampling_with_replacement",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
         ),
     ),
     Mutation(
@@ -1506,6 +1591,23 @@ MUTATIONS: tuple[Mutation, ...] = (
         "two arms the docstring names as the whole reason `overrides` exists -- "
         "the `gamma = 0` control and A2's `A_max = M` -- are unbuildable until "
         "E1 logs constants neither of them uses.",
+        off_gate_allowed=_r1_declare(
+            "every run-1 RSR arm is built from labelled overrides (L12); read "
+            "eagerly, the registry raises UnmeasuredConstant on nu/beta/gamma for "
+            "each, including build_policy called directly.",
+            "test_a_directly_built_policy_collects_no_diagnostics",
+            "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+            "test_frozen_mode_records_that_dropout_stays_on",
+            "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+            "test_the_age_only_arm_through_train_is_labelled_and_learns",
+            "test_the_epoch_records_sampling_with_replacement",
+            "test_the_section_7_1_diagnostics_are_logged_every_step",
+            "test_the_warm_start_builds_phi_fresh",
+            "test_the_warm_start_loads_the_source_weights_bitwise",
+            "test_the_warm_start_restores_weights_only",
+            "test_the_warm_start_runs_t_warm_at_relative_steps",
+            "test_two_pools_give_two_hashes_and_two_batches",
+        ),
     ),
     Mutation(
         "the shuffle control hands each row its own memory",
@@ -1517,12 +1619,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "permutation the control reads exactly 0.0 on ANY model, live or dead -- "
         "the reading §10.3's null was, and the one cycle 1 was rejected for not "
         "having ruled out. Only the live-memory decoy can see it.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in (
-                "test_the_controls_read_what_they_must_on_a_real_run",
-                "test_a_decoy_aliased_to_the_trained_model_is_invalid",
-            )
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in (
+                    "test_the_controls_read_what_they_must_on_a_real_run",
+                    "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+                )
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -1534,12 +1645,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the same no-op with a correct `derangement()`: the replay reaches the "
         "forward un-permuted. The derangement test stays green, so only the "
         "live-memory reading catches it.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in (
-                "test_the_controls_read_what_they_must_on_a_real_run",
-                "test_a_decoy_aliased_to_the_trained_model_is_invalid",
-            )
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in (
+                    "test_the_controls_read_what_they_must_on_a_real_run",
+                    "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+                )
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -1553,9 +1673,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the live-memory decoy still moves, so neither of the other two entries "
         "sees it -- only a replay of each row's OWN memory, which must read "
         "exactly 0.0, can tell a faithful replay from a perturbed one.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -1568,9 +1697,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "delta measures memory PLUS the bos gestalt rather than memory alone. With "
         "memory disabled the kv swap is a no-op but the bos swap is not, so the "
         "disabled-memory reading stops being exactly 0.0.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     # -- decisive run (experiments/decisive-shuffle/PREREG.md, Mutation bar) -- #
@@ -1866,6 +2004,27 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
                 "el",
                 _CARRY_FORWARD_S003_COUPLING,
+            ),
+            *_r1_declare(
+                "answer_targets() raises in every train() call, including the "
+                "module-scoped substrate fixture's FIFO run, so every run-1 test that "
+                "trains (or uses the fixture) errors before its assertion.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_a_non_fifo_source_is_refused",
+                "test_a_source_with_another_vocabulary_is_refused",
+                "test_a_wrong_sha_is_refused",
+                "test_frozen_mode_records_that_dropout_stays_on",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_epoch_records_sampling_with_replacement",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_is_stamped_into_frozen_hash_and_label",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
             ),
         ),
     ),
@@ -2675,6 +2834,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                     *_LIVENESS_HOOK_READERS,
                 )
             ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -2919,6 +3085,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_every_train_ends_with_the_liveness_measurement",
                     *_LIVENESS_HOOK_READERS,
                 )
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
             ),
         ),
     ),
@@ -3733,9 +3906,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "Bar 2: the falsifier itself -- a run that never measures and reports live "
         "exits 0 with nothing behind it, so an inert run is again indistinguishable "
         "from a live one.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_HOOK_COUPLING)
-            for t in _LIVENESS_HOOK_READERS
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_HOOK_COUPLING)
+                for t in _LIVENESS_HOOK_READERS
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -3762,6 +3944,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        decoy.load_state_dict(model.state_dict())\n",
         "decisive PREREG *Mutation bar* (decoy aliasing): A_decoy == A_trained, "
         "ratio == 1.0 exactly, which the rule makes invalid (3), never 0.",
+        off_gate_allowed=_r1_declare(
+            "the run-1 decoy test reads train()'s liveness record (band and reason, "
+            "cold and warm); a mutation of the liveness measurement -- its shuffle "
+            "controls, its hook, its decoy, or a None stamped into the config "
+            "liveness_batch reads -- changes the band or reason it asserts.",
+            "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+        ),
     ),
     Mutation(
         "liveness-wiring: an inconclusive ratio rounded to inert",
@@ -5741,6 +5930,18 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_value_head_lands_in_its_own_mup_group",
                 _S1_TRAIN_MODE_TRACE,
             ),
+            *_r1_declare(
+                "every run-1 learning arm reads r_i from the eval capture; stamped "
+                "eval_mode=False, reward._require_eval raises TrainModeTrace in each "
+                "RSR arm run through train().",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
         ),
     ),
     Mutation(
@@ -5834,6 +6035,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 L9 (signed): unweighted, sum over live slots, then mean over "
         "(row, t). B1 measured beta LIVE at eps = 1e-8, so the loss scale is not "
         "inert and the reduction is part of what beta means.",
+        off_gate_allowed=_r1_declare(
+            "the age-only L_MC by hand is sum-then-mean (0.25 + 0.0625 over one "
+            "group = 0.3125); a per-slot mean gives 0.15625.",
+            "test_the_age_only_arm_regresses_and_evicts_on_age_alone",
+        ),
     ),
     Mutation(
         "slice1: beta = 0 computes L_MC times zero",
@@ -5873,11 +6079,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 L11 / T10, both latent defects: phi's init draws from `gen`, so "
         "an RSR arm trains on a different stream than the FIFO arm at the same "
         "seed (§3.7), and on MPS the CPU-built head raises on an MPS generator.",
-        off_gate_allowed=_s1_declare(
-            _S1_PHI_FROM_GEN,
-            "test_beta_zero_leaves_phi_bitwise_at_init",
-            "test_phi_is_initialised_from_its_own_seeded_stream",
-            "test_the_rsr_arm_builds_and_steps_on_mps",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_PHI_FROM_GEN,
+                "test_beta_zero_leaves_phi_bitwise_at_init",
+                "test_phi_is_initialised_from_its_own_seeded_stream",
+                "test_the_rsr_arm_builds_and_steps_on_mps",
+            ),
+            *_r1_declare(
+                "the warm-start phi-fresh test compares phi with phi_generator(seed)'s "
+                "head; drawn from `gen` it is a different head.",
+                "test_the_warm_start_builds_phi_fresh",
+            ),
         ),
     ),
     Mutation(
@@ -5888,10 +6101,19 @@ MUTATIONS: tuple[Mutation, ...] = (
         "build_param_groups(model, None, base_lr=lr, d_model=d, base_width=128)",
         "ADR-0009 T9 / §4.3, S0-01's old strict xfail: psi-hat outside its own "
         "muP group -- here, outside the optimizer altogether, so phi never moves.",
-        off_gate_allowed=_s1_declare(
-            _S1_NO_VALUE_HEAD_GROUP,
-            "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
-            "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_NO_VALUE_HEAD_GROUP,
+                "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+            ),
+            *_r1_declare(
+                "phi (frozen warm start) and the age-only table are outside the "
+                "optimizer, so neither moves -- the value_head group seen from two "
+                "run-1 arms.",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+            ),
         ),
     ),
     Mutation(
