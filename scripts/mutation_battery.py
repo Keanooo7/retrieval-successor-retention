@@ -6271,8 +6271,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the epoch's with-replacement sampling not recorded",
         "test_the_epoch_records_sampling_with_replacement",
         "src/rsr/train/loop.py",
-        '            "sampling": "with replacement (torch.randint over the pool)",\n',
-        "            # MUTATED\n",
+        # Re-anchored at R-2 (the record now names the sampler that ran).
+        "                SAMPLING_PERMUTATION if pool is not None else "
+        "SAMPLING_WITH_REPLACEMENT\n",
+        "                None  # MUTATED\n",
         "m-3: 'one pass over the pool' overstates a with-replacement epoch "
         "(about 1 - 1/e of the documents); the record must say so.",
     ),
@@ -6280,8 +6282,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the frozen model mode not recorded",
         "test_frozen_mode_records_that_dropout_stays_on",
         "src/rsr/train/loop.py",
-        '        frozen["frozen_model_mode"] = "train (dropout live)"\n',
-        "        pass  # MUTATED\n",
+        # Re-anchored at item 7 (the record names eval mode when it is on).
+        '            "eval (dropout off)" if frozen_eval_mode else '
+        '"train (dropout live)"\n',
+        "            None  # MUTATED\n",
         "m-4: freezing removes the update only; dropout stays live, and nothing "
         "else in the config says so.",
         off_gate_allowed=_r1_declare(
@@ -6607,8 +6611,9 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the data-order generator is not checkpointed",
         "test_a_resumed_sampler_run_continues_the_data_order",
         "src/rsr/train/loop.py",
-        '{DATA_GENERATOR_STATE: gen.get_state(), "next_step": it + 1}',
-        '{"next_step": it + 1}  # MUTATED',
+        # Re-anchored at R-2 (the stream dict also carries the pool position).
+        "                            DATA_GENERATOR_STATE: gen.get_state(),\n",
+        "                            # MUTATED\n",
         "Defect 3: without the sampler's state a resumed arm cannot continue its "
         "data order.",
     ),
@@ -6656,6 +6661,62 @@ MUTATIONS: tuple[Mutation, ...] = (
         '        self.phase_shifts["fifo_warmup"].add(record)  # MUTATED\n',
         "Defect 5: a RESULTS must never read one histogram that mixes FIFO-warmup "
         "and scored evictions.",
+    ),
+    # ---- run-1 PREREG review R-2 (permutation epochs) and item 7 (eval mode)
+    Mutation(
+        "run1: pool mode samples with replacement again",
+        "test_every_pool_epoch_covers_the_pool_exactly_once",
+        "src/rsr/train/loop.py",
+        "                    sel = pool_order.take(batch)  # R-2: permutation epochs\n",
+        "                    sel = torch.randint(0, all_ids.shape[0], (batch,), "
+        "generator=gen, device=device)  # MUTATED\n",
+        "R-2 / 31(b): 'one pass over the document pool: 256 documents seen'; a "
+        "with-replacement epoch sees ~162 of them.",
+    ),
+    Mutation(
+        "run1: the pool order is fixed, not drawn",
+        "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+        "src/rsr/train/loop.py",
+        "            perm = torch.randperm(self.n, generator=self.gen, "
+        "device=self.device)\n",
+        "            perm = torch.arange(self.n, device=self.device)  # MUTATED\n",
+        "R-2: the order is drawn from the data-order generator; a fixed order is "
+        "one pass but the same document sequence every epoch and every seed.",
+    ),
+    Mutation(
+        "run1: a pool resume loses its epoch position",
+        "test_a_pool_resume_continues_its_epoch",
+        "src/rsr/train/loop.py",
+        "            pool_order.load_state(resume_pool_order)\n",
+        "            pass  # MUTATED\n",
+        "R-2 with defect 3: resumed mid-epoch without its position, a run draws a "
+        "new permutation and that epoch is no longer one pass.",
+    ),
+    Mutation(
+        "run1: a pool resume without its epoch position is not refused",
+        "test_a_pool_resume_continues_its_epoch",
+        "src/rsr/train/loop.py",
+        "            if pool is not None and resume_pool_order is None:\n",
+        "            if False:  # MUTATED\n",
+        "R-2 with defect 3: a pool checkpoint without its position is refused, "
+        "not resumed into a different epoch.",
+    ),
+    Mutation(
+        "run1: frozen eval mode not applied",
+        "test_frozen_eval_mode_runs_the_frozen_transformer_without_dropout",
+        "src/rsr/train/loop.py",
+        "        model.eval()\n",
+        "        pass  # MUTATED\n",
+        "Item 7: an arm labelled '+frozen+eval' must not run with dropout live.",
+    ),
+    Mutation(
+        "run1: frozen eval mode accepted without the freeze",
+        "test_frozen_eval_mode_runs_the_frozen_transformer_without_dropout",
+        "src/rsr/train/loop.py",
+        "    if frozen_eval_mode:\n        if not freeze_transformer:\n",
+        "    if frozen_eval_mode:\n        if False:  # MUTATED\n",
+        "Item 7: dropout off while the transformer trains would change TG's "
+        "training (§3.1); only a frozen transformer may run in eval mode.",
     ),
 )
 
