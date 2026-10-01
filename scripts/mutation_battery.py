@@ -6190,8 +6190,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "run1: the warm start restores the source's RNG",
         "test_the_warm_start_restores_weights_only",
         "src/rsr/train/loop.py",
-        'rec["checkpoint"], model=None, optimizer=None, policy=None, restore_rng=False',
-        'rec["checkpoint"], model=None, optimizer=None, policy=None, restore_rng=True',
+        # Re-anchored at the review fixes: the load is now from the hashed bytes
+        # (MINOR-5), which restore nothing; the mutation adds the restore back.
+        '    payload = ck.load_bytes(data, source=rec["checkpoint"])\n',
+        '    payload = ck.load_bytes(data, source=rec["checkpoint"])\n'
+        '    ck.RngState(**payload["rng"]).restore()  # MUTATED\n',
         "m-1: weights only. Restoring the source run's RNG makes the dropout masks "
         "and every later global draw the source's continuation, not this seed's.",
     ),
@@ -6220,21 +6223,26 @@ MUTATIONS: tuple[Mutation, ...] = (
         "would be dropped silently by a weights-only load.",
     ),
     Mutation(
-        "run1: a warm-start source with another vocabulary accepted",
-        "test_a_source_with_another_vocabulary_is_refused",
+        # Renamed and re-anchored at review MAJOR-1: the guard compares the
+        # token->id MAP now; the document-count comparison it replaces refused
+        # identical maps and skipped unrecorded sources.
+        "run1: a warm-start source with another vocabulary map accepted",
+        "test_a_source_with_a_different_vocabulary_map_is_refused",
         "src/rsr/train/loop.py",
-        "    if src_vocab is not None and int(src_vocab) != vocab_documents:\n",
-        "    if False:  # MUTATED\n",
-        "m-1: token ids from a different vocabulary mean different words.",
+        "        if src_vocab != run_vocab:\n",
+        "        if False:  # MUTATED\n",
+        "MAJOR-1: token ids from a different token->id map mean different words; "
+        "a strict shape check cannot see it when V happens to agree.",
     ),
     Mutation(
         "run1: the warm start loads before the liveness decoy is copied",
         "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
         "src/rsr/train/loop.py",
-        "        ws_record = _load_warm_start(model, warm_start, "
-        "vocab_documents=len(probe))\n",
-        "        ws_record = _load_warm_start(model, warm_start, "
-        "vocab_documents=len(probe))\n        init_state = {k: v.detach().clone() "
+        # Re-anchored at the review fixes (_load_warm_start's signature changed).
+        "            model, warm_start, vocab_map=build_vocab(probe), seed=seed\n"
+        "        )\n",
+        "            model, warm_start, vocab_map=build_vocab(probe), seed=seed\n"
+        "        )\n        init_state = {k: v.detach().clone() "
         "for k, v in model.state_dict().items()}  # MUTATED\n",
         "m-1, the review's liveness note: the decoy is the untrained model at the "
         "same seed (R-2026-09-22-inert-exit-5's decisive PREREG Decoy); copied "
@@ -6436,6 +6444,134 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    synchronize(out.srep.device)  # m-7: MPS and CUDA alike\n",
         "    pass  # MUTATED\n",
         "m-7: the dispatch is only worth having if eval_forward goes through it.",
+    ),
+    # ---- review fixes (docs/reviews/feat-rsr-run1-ready/78607cd02787.md):
+    # MAJOR-1, the seed ruling, MINOR-1/3/5/7. Each applied by hand, its gate
+    # seen red, the tree restored.
+    Mutation(
+        "run1: an unrecorded warm-start vocabulary accepted without its flag",
+        "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+        "src/rsr/train/loop.py",
+        "    elif not ws.allow_unrecorded_vocabulary:\n",
+        "    elif False:  # MUTATED\n",
+        "MAJOR-1: a source with no recorded config was accepted with no check and "
+        "no warning; only a labelled flag may lift the refusal.",
+    ),
+    Mutation(
+        "run1: a source config not bound to the run_id hash accepted",
+        "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+        "src/rsr/train/loop.py",
+        "    if want is None or _config_hash(cfg) != want:\n",
+        "    if False:  # MUTATED\n",
+        "MAJOR-1: a side-file config is trusted only because it hashes to the "
+        "sha-verified checkpoint's run_id; unbound, any JSON could vouch for it.",
+    ),
+    Mutation(
+        "run1: the unrecorded-vocabulary flag not in the label",
+        "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+        "src/rsr/train/loop.py",
+        '            toks.append("vocab=unchecked")\n',
+        "            pass  # MUTATED\n",
+        "MAJOR-1 ruling: the allow flag enters the label, so an unchecked arm "
+        "cannot read like a checked one.",
+    ),
+    Mutation(
+        "run1: the unrecorded-vocabulary flag not in the frozen config",
+        "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+        "src/rsr/train/loop.py",
+        "        allow_unrecorded_vocabulary=ws.allow_unrecorded_vocabulary,\n",
+        "        # MUTATED\n",
+        "MAJOR-1 ruling: the allow flag enters the config hash.",
+    ),
+    Mutation(
+        "run1: a warm-start seed mismatch accepted",
+        "test_a_seed_mismatch_is_refused_unless_labelled",
+        "src/rsr/train/loop.py",
+        "    if src_seed != seed and not ws.allow_seed_mismatch:\n",
+        "    if False:  # MUTATED\n",
+        "Seed ruling: 'documents arm B never saw' is a statement about arm B's "
+        "seed-0 documents; a different seed silently changes what it means.",
+    ),
+    Mutation(
+        "run1: the source seed not in the warm-start label",
+        "test_the_warm_start_is_stamped_into_frozen_hash_and_label",
+        "src/rsr/train/loop.py",
+        "            f\"src_seed={'unrecorded' if seed is None else seed}\",\n",
+        "            # MUTATED\n",
+        "Seed ruling: the source's seed is in the label.",
+    ),
+    Mutation(
+        "run1: the warm start reloads the checkpoint from its path",
+        "test_the_bytes_loaded_are_the_bytes_hashed",
+        "src/rsr/train/loop.py",
+        '    payload = ck.load_bytes(data, source=rec["checkpoint"])\n',
+        '    payload = ck.load(rec["checkpoint"], restore_rng=False)  # MUTATED\n',
+        "MINOR-5: a second read opens a window in which the bytes loaded need "
+        "not be the bytes hashed.",
+    ),
+    Mutation(
+        "run1: load_bytes defaults to allowing a quarantined checkpoint",
+        "test_load_bytes_refuses_a_quarantined_source",
+        "src/rsr/train/checkpoint.py",
+        "    allow_quarantined: bool = False,  # refuses by default, as load() does\n",
+        "    allow_quarantined: bool = True,  # MUTATED\n",
+        "R-2026-09-22-inert-checkpoint-quarantine: the byte loader keeps load()'s "
+        "refusal; an INERT run's checkpoint must not seed a run silently.",
+    ),
+    Mutation(
+        "run1: the expected warm-start sha256 is not compared",
+        "test_an_unexpected_sha256_is_refused",
+        "src/rsr/train/loop.py",
+        "    if ws.expected_sha256 is not None and got != ws.expected_sha256.lower():\n",
+        "    if False:  # MUTATED\n",
+        "MINOR-7: the command names the checkpoint by sha256; a different file "
+        "under the same name must be refused.",
+    ),
+    Mutation(
+        "run1: checkpoints stop recording their config",
+        "test_checkpoints_record_their_config_and_vocabulary",
+        "src/rsr/train/loop.py",
+        '                        "config": json.loads('
+        "json.dumps(frozen, default=str)),\n",
+        "                        # MUTATED\n",
+        "MAJOR-1's foundation: without the config in the checkpoint, every later "
+        "warm start from it is unrecorded.",
+    ),
+    Mutation(
+        "run1: the age-only arm accepts nu",
+        "test_the_age_only_arm_refuses_nu",
+        "src/rsr/retention/rsr.py",
+        "            if config.nu != 0.0:\n",
+        "            if False:  # MUTATED\n",
+        "MINOR-1: with nu != 0 the redundancy term reads the gestalts, so the "
+        "'age-only' arm's score depends on content.",
+    ),
+    Mutation(
+        "run1: the §7.1 diagnostics written on beat steps only",
+        "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+        "src/rsr/train/loop.py",
+        "                _write_step_diagnostics(\n",
+        "                (it % beat_every == 0) and _write_step_diagnostics(  "
+        "# MUTATED\n",
+        "MINOR-3: computed every step, so written every step; at beat_every > 1 "
+        "partial rho for the other steps was computed and discarded.",
+    ),
+    Mutation(
+        "run1: the CLI drops the pool",
+        "test_the_cli_routes_the_pool_and_the_warm_start",
+        "src/rsr/train/loop.py",
+        "        pool=pool,\n",
+        "        pool=None,  # MUTATED\n",
+        "MINOR-7: run 1's RESULTS quotes one command; a flag that does not reach "
+        "train() makes that command lie.",
+    ),
+    Mutation(
+        "run1: a partial pool flag set is not refused",
+        "test_the_cli_routes_the_pool_and_the_warm_start",
+        "src/rsr/train/loop.py",
+        "    if (a.pool_offset is None) != (a.pool_length is None):\n",
+        "    if False:  # MUTATED\n",
+        "MINOR-7: a partial flag set is a usage error (exit 3), never half a pool.",
     ),
 )
 
