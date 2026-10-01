@@ -483,6 +483,19 @@ def _i1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
     return tuple((f"tests/test_battery_isolation.py::{n}", reason) for n in nodes)
 
 
+#: `tests/test_verified_results.py::DOCTORED` case ids; one refusal each (review M-1).
+_VR_DOCTORED = (
+    "B2-table-line-matched-0-times",
+    "B2-table-line-matched-2-times",
+    "duplicated-ledger-key",
+    "missing-ledger-key",
+    "null-row-value",
+    "null-top-level-value",
+    "null-value-in-a-committed-json-file",
+    "row-without-a-value-field",
+    "scope-quote-absent-from-its-file",
+)
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -6746,6 +6759,119 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        except KeyError as exc:",
         "review 2 MINOR-1: remove_shard takes the admin lock, whose common_dir() "
         "raises; outside the teardown's catch that raise escaped over scored rows.",
+    ),
+    # verified-results table (docs/results/2026-09-30-verified.md), 2026-09-30
+    Mutation(
+        "verified-results: a changed number still matches the committed file",
+        "test_the_committed_file_is_the_generators_output",
+        "scripts/verified_results.py",
+        '    return f"{x:.4f}"\n',
+        '    return f"{x:.5f}"\n',
+        "every value is ledger-read at a pinned commit; any drift between the "
+        "generator and the committed Markdown must redden, not pass.",
+    ),
+    Mutation(
+        "verified-results: a timestamp makes two renders differ",
+        "test_two_runs_are_byte_identical",
+        "scripts/verified_results.py",
+        '        "# Verified results, 2026-09-29/30",\n',
+        "        f\"# Verified results {__import__('time').time_ns()}\",\n",
+        "the brief's determinism requirement: two runs are byte-identical.",
+        off_gate_allowed=(
+            (
+                "tests/test_verified_results.py::"
+                "test_the_committed_file_is_the_generators_output",
+                "a nondeterministic header also differs from the committed file; the "
+                "same defect seen from the diff test",
+            ),
+            (
+                "tests/test_verified_results.py::test_a_hand_edited_file_exits_1",
+                "its unedited copy is the fixture's render, which the next render "
+                "no longer equals; the same defect seen from --check",
+            ),
+        ),
+    ),
+    Mutation(
+        "verified-results: a missing source is reported as UNKNOWN",
+        "test_a_missing_source_exits_3",
+        "scripts/verified_results.py",
+        "        return did_not_run(str(e))\n",
+        "        return Exit.UNKNOWN\n",
+        "rsr.exit_codes: a source that cannot be read did not run (3); it is not "
+        "'ran, nothing to compare' (2).",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_verified_results.py::test_a_doctored_source_exits_3[{case}]",
+                "every doctored-source refusal exits through this one return; mapping "
+                "it to 2 turns each of them into UNKNOWN. The coupling is the design.",
+            )
+            for case in _VR_DOCTORED
+        ),
+    ),
+    Mutation(
+        "verified-results: --check passes a hand-edited file",
+        "test_a_hand_edited_file_exits_1",
+        "scripts/verified_results.py",
+        "        return Exit.FAIL\n",
+        "        return Exit.OK\n",
+        "a committed table that differs from the ledgers is a real failure (1).",
+    ),
+    Mutation(
+        "verified-results: a missing ledger key is taken as a row",
+        "test_a_doctored_source_exits_3[missing-ledger-key]",
+        "scripts/verified_results.py",
+        "    if not rows:\n",
+        "    if False:\n",
+        "review M-1: a key the table names is absent -> 3, never a crash or a blank.",
+    ),
+    Mutation(
+        "verified-results: a duplicated ledger key takes the first row",
+        "test_a_doctored_source_exits_3[duplicated-ledger-key]",
+        "scripts/verified_results.py",
+        "    if len(rows) > 1:\n",
+        "    if False:\n",
+        "review M-1: two rows with one key are ambiguous; neither may be printed.",
+    ),
+    Mutation(
+        "verified-results: a null value is printed as None",
+        "test_a_doctored_source_exits_3[null-",
+        "scripts/verified_results.py",
+        "    if val is None:\n",
+        "    if False:\n",
+        "review M-1: a null is refused for every ref kind, never printed as `None`. "
+        "The gate substring covers all three null cases (row, top-level, json file).",
+    ),
+    Mutation(
+        "verified-results: a row without a value prints the whole row",
+        "test_a_doctored_source_exits_3[row-without-a-value-field]",
+        "scripts/verified_results.py",
+        '    elif row.get("kind") == "statistic" and ref.sub:\n',
+        "    elif True:\n",
+        "review M-1: only a named field of a statistic row may stand in for `value`.",
+    ),
+    Mutation(
+        "verified-results: a scope quote absent from its file is printed anyway",
+        "test_a_doctored_source_exits_3[scope-quote-absent-from-its-file]",
+        "scripts/verified_results.py",
+        "    if not n:\n",
+        "    if False:\n",
+        "review M-1: a scope statement is quoted from the file, never paraphrased.",
+    ),
+    Mutation(
+        "verified-results: a B2 table line matched 0 times is not refused",
+        "test_a_doctored_source_exits_3[B2-table-line-matched-0-times]",
+        "scripts/verified_results.py",
+        "        if not hits:\n",
+        "        if False:\n",
+        "review M-1: a RESULTS line that is not there cannot be a value.",
+    ),
+    Mutation(
+        "verified-results: a B2 table line matched 2 times takes the first",
+        "test_a_doctored_source_exits_3[B2-table-line-matched-2-times]",
+        "scripts/verified_results.py",
+        "        if len(hits) > 1:\n",
+        "        if False:\n",
+        "review M-1: an ambiguous RESULTS line is refused, not guessed.",
     ),
 )
 
