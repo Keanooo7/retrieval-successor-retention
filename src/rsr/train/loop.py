@@ -640,6 +640,15 @@ def epoch_steps(pool_documents: int | None, batch: int) -> float | None:
     return pool_documents / batch
 
 
+#: C-1 (PREREG rsr-run1 Amendment 1 A1.3): the frozen model's mode during
+#: training. "train" stays the default -- the owner may read correction 20 as
+#: requiring it even under freeze; "eval" is an option, never implied.
+FROZEN_MODEL_MODES = ("train", "eval")
+FROZEN_MODEL_MODE_RECORD = {
+    "train": "train (dropout live)",
+    "eval": "eval (dropout off)",
+}
+
 #: Every RSR step's §7.1 diagnostics, one JSON line per optimizer step (MINOR-3).
 DIAGNOSTICS_FILE = "diagnostics.jsonl"
 #: Every eviction record, drained from the policy after each step (defect 2).
@@ -663,10 +672,8 @@ DATA_GENERATOR_STATE = "data_generator_state"
 POOL_ORDER_STATE = "pool_order_state"
 #: What `frozen["epoch"]["sampling"]` says, per sampler.
 SAMPLING_WITH_REPLACEMENT = "with replacement (torch.randint over the pool)"
-SAMPLING_PERMUTATION = (
-    "permutation epochs: each epoch visits every pool document exactly once, in "
-    "an order drawn from the data-order generator (31(b): one pass over the pool)"
-)
+#: PREREG Amendment 1 A1.7 item 2 fixes this string (it enters the hash).
+SAMPLING_PERMUTATION = "per-epoch permutation (each document once per epoch)"
 
 
 class PermutationEpochs:
@@ -720,6 +727,9 @@ def _drain_evictions(policy, path: Path) -> int:
     return len(recs)
 
 
+_STEP_RECORD_KEYS = ("run_id", "arm_label", "step", "train_step")
+
+
 def _write_step_diagnostics(path: Path, record: dict) -> None:
     """Append one step's §7.1 diagnostics as a JSON line (MINOR-3)."""
     with open(path, "a") as fh:
@@ -759,7 +769,7 @@ def arm_label(
     *,
     freeze_transformer: bool = False,
     warm_start: Mapping[str, Any] | None = None,
-    frozen_eval_mode: bool = False,
+    frozen_model_mode: str = "train",
 ) -> str:
     """The arm's label, derived from its overrides (ADR-0009 L12).
 
@@ -778,7 +788,8 @@ def arm_label(
     ]
     label = f"{policy_name}[{','.join(toks)}]" if toks else policy_name
     label = f"{label}+frozen" if freeze_transformer else label
-    label = f"{label}+eval" if frozen_eval_mode else label
+    if frozen_model_mode == "eval":
+        label = f"{label}[eval]"  # C-1: "+frozen[eval]" (PREREG A1.3 item 3)
     if warm_start is not None:
         name = Path(warm_start["checkpoint"]).name
         seed = warm_start.get("source_seed")
@@ -947,7 +958,7 @@ def train(
     policy_overrides: Mapping[str, Any] | None = None,  # ADR-0009 L12
     no_warmup_ablation: bool = False,  # ADR-0009 L12: the only t_warm override
     freeze_transformer: bool = False,  # R-2026-09-30-rsr-run-1-scope D2(b)
-    frozen_eval_mode: bool = False,  # dropout off for a FROZEN transformer only
+    frozen_model_mode: str = "train",  # C-1: "eval" = dropout off, frozen only
     pool: DocumentPool | None = None,  # m-2: None -> documents [0, n_documents)
     warm_start: WarmStart | None = None,  # m-1: weights-only, D2(a)
 ) -> dict:
@@ -1093,15 +1104,22 @@ def train(
     eval_ctx = bool(getattr(policy, "needs_eval_context", False))  # L1(a), L2
     if freeze_transformer:
         model.requires_grad_(False)  # D2(b): no L_NTP update to transformer, W_sent
-    if frozen_eval_mode:
+    if frozen_model_mode not in FROZEN_MODEL_MODES:
+        raise ValueError(
+            f"frozen_model_mode={frozen_model_mode!r}: one of {FROZEN_MODEL_MODES}"
+        )
+    if frozen_model_mode == "eval":
         if not freeze_transformer:
             raise ValueError(
-                "frozen_eval_mode=True needs freeze_transformer=True: turning dropout "
-                "off while the transformer trains would change TG's training (§3.1)"
+                "frozen_model_mode='eval' needs freeze_transformer=True: it would "
+                "silently remove dropout from an optimised L_NTP (PREREG rsr-run1 "
+                "Amendment 1 A1.3 item 1; correction 20)"
             )
-        # Run-1 PREREG review item 7: the frozen substrate runs in eval mode, so
-        # the training forward, the memory writes and the eval forward (L1(a))
-        # see one dropout-free model -- no train/eval memory shift for psi-hat.
+        # C-1 (A1.3 item 2): after requires_grad_(False), the warm-start load and
+        # the decoy copy. Nothing in train(), run_policy_loop or the model calls
+        # `.train(`; eval_forward restores the PRIOR mode (policy_loop
+        # eval_forward's finally), so the model stays in eval for every step --
+        # tests/test_run1_ready.py checks that rather than trusting this line.
         model.eval()
 
     # muP groups, NOT a flat AdamW: the value head lands in its OWN `value_head`
@@ -1120,7 +1138,7 @@ def train(
         policy_overrides,
         freeze_transformer=freeze_transformer,
         warm_start=ws_record,
-        frozen_eval_mode=frozen_eval_mode,
+        frozen_model_mode=frozen_model_mode,
     )
 
     frozen = {
@@ -1160,10 +1178,8 @@ def train(
     if freeze_transformer:
         # m-4: freezing removes the UPDATE only. The model stays in train mode, so
         # dropout is live in the training forward and in the memory writes --
-        # unless frozen_eval_mode turns it off, which is then what this says.
-        frozen["frozen_model_mode"] = (
-            "eval (dropout off)" if frozen_eval_mode else "train (dropout live)"
-        )
+        # unless frozen_model_mode="eval" turns it off (C-1), which this then says.
+        frozen["frozen_model_mode"] = FROZEN_MODEL_MODE_RECORD[frozen_model_mode]
     if policy_name == "rsr":
         t_warm = float(policy.config.t_warm)
         frozen["policy_overrides"] = {
@@ -1245,6 +1261,14 @@ def train(
     # today's with-replacement draw byte for byte (its hash and its runs are pinned).
     pool_order = None
     if pool is not None:
+        if pool.length % batch:
+            # PREREG Amendment 1 A1.7 item 1: an epoch is a whole number of steps,
+            # so step k reads positions pi_e[batch*(k mod E) : ... + batch].
+            raise ValueError(
+                f"pool of {pool.length} documents at batch {batch}: the permutation "
+                "pass needs pool.length % batch == 0 (one epoch = a whole number "
+                "of optimizer steps, PREREG rsr-run1 Amendment 1 A1.7)"
+            )
         pool_order = PermutationEpochs(all_ids.shape[0], gen, device)
         if resume_pool_order is not None:
             pool_order.load_state(resume_pool_order)
@@ -1329,6 +1353,8 @@ def train(
             if stream is None:
                 if pool_order is not None:
                     sel = pool_order.take(batch)  # R-2: permutation epochs
+                    # A1.7 item 3: the documents this step reads, logged per step.
+                    step_pool_ids = (sel + pool.offset).tolist()
                 else:
                     sel = torch.randint(
                         0, all_ids.shape[0], (batch,), generator=gen, device=device
@@ -1416,6 +1442,12 @@ def train(
                 "step": it,
             }
             rsr_beat: dict[str, Any] = {}
+            step_record: dict[str, Any] = {
+                "run_id": run_id,
+                "arm_label": label,
+                "step": it,
+                "train_step": it,
+            }
             if policy_name == "rsr":
                 # ADR-0009 §4: L_MC tagged with k and warm, so it splits at §3.4's
                 # on/off-policy boundary; mean G by t (the truncation profile);
@@ -1440,19 +1472,14 @@ def train(
                     eval_forward_s=rsr_beat["eval_forward_s"],
                     step_s=dt,
                 )
-                # Review MINOR-3: the diagnostics are computed EVERY step, so they
-                # are written every step -- to their own file -- whatever
-                # beat_every is. The beat carries the same dict on beat steps.
-                _write_step_diagnostics(
-                    out / DIAGNOSTICS_FILE,
-                    {
-                        "run_id": run_id,
-                        "arm_label": label,
-                        "step": it,
-                        "train_step": it,
-                        "diag": rsr_beat["diag"],
-                    },
-                )
+                step_record["diag"] = rsr_beat["diag"]
+            if pool_order is not None:
+                step_record["pool_doc_ids"] = step_pool_ids  # A1.7 item 3 (C-2)
+            if len(step_record) > len(_STEP_RECORD_KEYS):
+                # Review MINOR-3: computed EVERY step, so written every step -- to
+                # its own file -- whatever beat_every is (the beat carries `diag`
+                # too on beat steps). Every arm in pool mode writes its ids.
+                _write_step_diagnostics(out / DIAGNOSTICS_FILE, step_record)
             if it % beat_every == 0:
                 attr = policy.attribution() if hasattr(policy, "attribution") else None
                 hb.beat(
@@ -1792,10 +1819,12 @@ def main(argv: list[str] | None = None) -> Exit:
         "D2(b)); recorded in the frozen config and the label",
     )
     p.add_argument(
-        "--frozen-eval-mode",
-        action="store_true",
-        help="with --freeze-transformer: run the frozen transformer in eval mode "
-        "(dropout off) during training; recorded in the frozen config and label",
+        "--frozen-model-mode",
+        choices=FROZEN_MODEL_MODES,
+        default="train",
+        help="C-1: the frozen transformer's mode during training (eval = dropout "
+        "off); 'eval' needs --freeze-transformer. Recorded in the frozen config, "
+        "the hash and the label (+frozen[eval])",
     )
     p.add_argument("--device", default="mps")
     p.add_argument("--out-dir", default="runs/dev")
@@ -1846,7 +1875,7 @@ def main(argv: list[str] | None = None) -> Exit:
         policy_overrides=parse_overrides(a.policy_override) or None,
         no_warmup_ablation=a.no_warmup_ablation,
         freeze_transformer=a.freeze_transformer,
-        frozen_eval_mode=a.frozen_eval_mode,
+        frozen_model_mode=a.frozen_model_mode,
         pool=pool,
         warm_start=warm,
         srep_norm_reg_weight=a.srep_norm_reg_weight,
