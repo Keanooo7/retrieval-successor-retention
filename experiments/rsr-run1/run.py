@@ -81,7 +81,7 @@ from rsr.data.synthetic import (  # noqa: E402
     _generate_document,
     discounted_demand,
 )
-from rsr.exit_codes import ArgumentParser, Exit, run_main  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, run_main, status  # noqa: E402
 from rsr.metrics.headroom import simulate  # noqa: E402
 from rsr.model.tg import TGConfig, TGModel  # noqa: E402
 from rsr.model.tg.policy_loop import run_policy_loop  # noqa: E402
@@ -4051,7 +4051,7 @@ def main(argv: list[str] | None = None) -> Exit:
                 threads=a.threads,
                 dry_run=a.dry_run,
             )
-            return Exit(doc["exit"])
+            return status(doc["exit"])
         if a.cmd == "finalize":
             ow = _owner(a)
             docs = []
@@ -4060,7 +4060,9 @@ def main(argv: list[str] | None = None) -> Exit:
                 if not f.exists():
                     raise Refused(f"{f} is missing: run measure-seed --seed {s} first")
                 docs.append(json.loads(f.read_text()))
-            return finalize(docs, ow, Path(a.out_root), results_path=Path(a.results))
+            return status(
+                finalize(docs, ow, Path(a.out_root), results_path=Path(a.results))
+            )
         if a.cmd == "time-batch":
             torch.set_num_threads(a.threads)
             cfg = prereg_config(0, 3000)
