@@ -1,0 +1,78 @@
+{
+  "run_id": "rsr-run1",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "exit": 0,
+  "status": "ok",
+  "owner_values": {
+    "gamma": 0.9,
+    "phi_weight_decay": 0.01,
+    "iters": 3000,
+    "o5": "eval",
+    "seeds": [
+      0,
+      1,
+      2
+    ]
+  },
+  "headline": {
+    "contrast": "acc.all.psiC_minus_fifo",
+    "per_seed": {
+      "0": {
+        "lo": -0.2096312232893402,
+        "hi": -0.20068681773304484,
+        "sd": 0.0023175913618380278,
+        "dropped": 0,
+        "point": -0.20529416426703295,
+        "reading": "CI below 0",
+        "sd_exactly_zero": false,
+        "ci_scope": "within-seed only"
+      },
+      "1": {
+        "lo": -0.23226013567769954,
+        "hi": -0.22355025723183017,
+        "sd": 0.0022184887798883113,
+        "dropped": 0,
+        "point": -0.2279112754158965,
+        "reading": "CI below 0",
+        "sd_exactly_zero": false,
+        "ci_scope": "within-seed only"
+      },
+      "2": {
+        "lo": -0.17260170742366177,
+        "hi": -0.16391614441375604,
+        "sd": 0.0022025630175940545,
+        "dropped": 0,
+        "point": -0.1683317475420234,
+        "reading": "CI below 0",
+        "sd_exactly_zero": false,
+        "ci_scope": "within-seed only"
+      }
+    },
+    "across_seeds": {
+      "n_seeds": 3,
+      "points": [
+        -0.20529416426703295,
+        -0.2279112754158965,
+        -0.1683317475420234
+      ],
+      "mean": -0.20051239574165095,
+      "sd": 0.030076220143015912,
+      "sd_exactly_zero": false,
+      "sign_count": {
+        "above_0": 0,
+        "below_0": 3,
+        "exactly_0": 0
+      }
+    }
+  },
+  "tree": {
+    "sha": "ed6302aae37a2831c9b8567b9f80a093b4c00f70",
+    "dirty": true,
+    "porcelain": "?? runs/rsr-run1/\n"
+  },
+  "prereg_strict": true
+}
