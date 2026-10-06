@@ -54,6 +54,12 @@ def _sent_loss(logits, ids_t, mask_t) -> torch.Tensor:
     return torch.where(n > 0, mean, float("nan")).cpu()
 
 
+def _repeat_rows(x: torch.Tensor, P: int) -> torch.Tensor:
+    """``[B, ...] -> [B * P, ...]``, each row repeated ``P`` times consecutively."""
+    B = x.shape[0]
+    return x.unsqueeze(1).expand(B, P, *x.shape[1:]).reshape(B * P, *x.shape[1:])
+
+
 @torch.no_grad()
 def fifo_probe_losses(model, ids, mask, *, timing: dict | None = None) -> dict:
     """The FIFO live rollout (loo_delta_loss's own loop, re-run to keep the gestalts)
@@ -66,7 +72,7 @@ def fifo_probe_losses(model, ids, mask, *, timing: dict | None = None) -> dict:
     cfg = model.cfg
     was = model.training
     model.eval()
-    B, S, L = ids.shape
+    B, S, _L = ids.shape
     M = cfg.M
     dev = ids.device
     dtype = model.embed.weight.dtype
@@ -94,10 +100,8 @@ def fifo_probe_losses(model, ids, mask, *, timing: dict | None = None) -> dict:
                 kv[:, :, 0] = gest[:, cand]
                 rows = B * P
 
-                def rep(x):
-                    return x.unsqueeze(1).expand(B, P, *x.shape[1:]).reshape(
-                        rows, *x.shape[1:]
-                    )
+                def rep(x, P=P):
+                    return _repeat_rows(x, P)
 
                 o = model(
                     rep(ids_t),
@@ -137,7 +141,7 @@ def assemble(
     ``probe`` ``t -> [B, P]`` -> ``Delta`` / ``delta_shift`` ``[B, S, S]`` step-major,
     NaN at ``i >= t``; ``missing`` / ``evicted`` ``[B, S, S]`` bool."""
     B, S, M = delta_res.shape
-    if M != m:
+    if m != M:
         raise ValueError(f"delta_res has {M} ranks, M = {m}")
     nan = float("nan")
     Delta = torch.full((B, S, S), nan, dtype=torch.float64)
