@@ -6,6 +6,7 @@ Regenerate with `PYTHONPATH=scripts .venv/bin/python -m orchestrator.outbox inde
 
 | updated | run_id | status | report |
 |---|---|---|---|
+| 2026-10-06T12:50:00Z | cf-ceiling | RETURNED | [cf-ceiling.md](cf-ceiling.md) |
 | 2026-10-06T07:00:00Z | gamma-ceiling | RETURNED | [gamma-ceiling.md](gamma-ceiling.md) |
 | 2026-09-30T08:45:00Z | b1-beta-inertness | RETURNED | [b1-beta-inertness.md](b1-beta-inertness.md) |
 | 2026-09-30T08:31:00-07:00 | b5-convergence | RETURNED | [b5-convergence.md](b5-convergence.md) |
