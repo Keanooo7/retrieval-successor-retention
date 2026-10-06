@@ -1,0 +1,35 @@
+{
+ "status": "ok",
+ "seed": "36c93f3becedb37c1f0aacb60259c1eecdb0daf2f4031651a29b40ba678c8677",
+ "claims": [
+  {
+   "claim": "run status ok, seeds 0-2, no control failed, C1 ok at start and end, exit 0",
+   "command": "uv run python -c \"import json; d=json.load(open('runs/gamma-ceiling/ledger.json')); r={x['key']:x for x in d['rows']}; print(d['status'], d['seeds_actually_run'], r['controls_failed']['value'], r['C1.start']['value']['ok'], r['C1.end']['value']['ok'], d['commands'][0]['exit_code'])\"",
+   "expected": "ok [0, 1, 2] [] True True 0",
+   "observed": "ok [0, 1, 2] [] True True 0",
+   "match": true
+  },
+  {
+   "claim": "ckpt3000 cap point per gamma (0,0.5,0.8,0.9,0.95,0.99,1.0) x seed",
+   "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt3000.'+g+'.cap.point']['samples']] for g in ['g0', 'g05', 'g08', 'g09', 'g095', 'g099', 'g1']])\"",
+   "expected": "[[-0.039, -0.136, 0.234], [0.331, 0.116, 0.512], [0.406, 0.21, 0.609], [0.184, 0.134, 0.537], [-0.077, -0.032, 0.433], [-0.308, -0.265, 0.322], [-0.359, -0.329, 0.3]]",
+   "observed": "[[-0.039, -0.136, 0.234], [0.331, 0.116, 0.512], [0.406, 0.21, 0.609], [0.184, 0.134, 0.537], [-0.077, -0.032, 0.433], [-0.308, -0.265, 0.322], [-0.359, -0.329, 0.3]]",
+   "match": true
+  },
+  {
+   "claim": "FIFO and factfiller all-query hit equal B0's",
+   "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling/ledger.json'))['rows']}; print([round(x,4) for x in r['U.hit.fifo.all']['samples']], [round(x,4) for x in r['U.hit.factfiller.all']['samples']])\"",
+   "expected": "[0.8059, 0.8093, 0.8088] [0.9655, 0.9653, 0.9666]",
+   "observed": "[0.8059, 0.8093, 0.8088] [0.9655, 0.9653, 0.9666]",
+   "match": true
+  }
+ ],
+ "verifier_sha": "f31cb8b9aff30deb2ee90cbacd3946573d201129",
+ "draw_note": "orchestrator.verify draw gamma-ceiling (--root the run tree; claims.json lives only on run/gamma-ceiling): n_claims 8, k 3, indices [0, 2, 5]. Claim 2 covers gamma not in {0, 0.9} at ckpt3000 (g05, g08, g095, g099, g1).",
+ "paths": {
+  "claim0": "Re-ran experiments/gamma-ceiling/run.py --runs-root <scratch> at f31cb8b under orchestrator.slot --lane cpu-det --slots 1; wrapper rc 0; observed printed from the FRESH ledger. Every non-timing row of the rerun (hit, cap point/lo/hi, diff_fifo, labels, sweep_class SIGNAL) equals the committed ledger exactly.",
+  "claim2_claim5": "Independent re-implementation (scratch indep.py, cpu-det x1, rc 0): own float64 discounted-return matrix, own oldest-first residency loop with pre-write query read, own argmin-ties-oldest target rule, own FIFO and fact/filler (random.Random('ff:{seed}:{doc_id}')), own pooling and cap. Shared with the run: only LR.documents(seed) and torch.load of the manifest-checked D.pt. Full-precision values equal the ledger bit-for-bit (21 cap points, 6 reference hit rates)."
+ },
+ "sha_note": "ledger provenance git_sha 02a7eeb (code at run time) vs run head f31cb8b: 02a7eeb is an ancestor and diff 02a7eeb..f31cb8b touches only runs/, RESULTS/PREREG, outbox, ageshape.py and a new test; run.py, b0-ceilings, lookahead-room and src/ are unchanged. Not treated as a disagreement.",
+ "report_read": false
+}
