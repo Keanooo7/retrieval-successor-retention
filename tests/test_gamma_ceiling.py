@@ -235,3 +235,71 @@ def test_defects_flags_a_nan_hit(gc):
     res = {"ckpt": {3000: {"g0": {"by_bucket": {"all": 0.8, "gap_gt_M": NAN}}}}}
     assert gc.defects(res) == ["ckpt3000.g0.hit.gap_gt_M = nan"]
     assert math.isnan(NAN)
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 1: age-shape of the target (DIAGNOSTIC), experiments/.../ageshape.py
+# --------------------------------------------------------------------------- #
+
+AGESHAPE = ROOT / "experiments" / "gamma-ceiling" / "ageshape.py"
+
+
+@pytest.fixture(scope="module")
+def ag():
+    spec = importlib.util.spec_from_file_location("gamma_ceiling_ageshape", AGESHAPE)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["gamma_ceiling_ageshape"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_spearman_perfect_reversed_tied_and_constant(ag):
+    a = torch.arange(1.0, 17.0).unsqueeze(0)
+    G = torch.cat([a, -a, torch.ones(1, 16), (a > 8).double()])
+    A = a.expand(4, 16)
+    rho = ag.spearman_rows(G, A)
+    assert rho[0] == pytest.approx(1.0) and rho[1] == pytest.approx(-1.0)
+    assert math.isnan(rho[2])
+    # a step function of age: Pearson of average ranks, by hand
+    rg = torch.where(a[0] > 8, 12.5, 4.5).double()
+    ra = a[0].double()
+    want = float(
+        ((rg - rg.mean()) * (ra - ra.mean())).sum()
+        / torch.sqrt(((rg - rg.mean()) ** 2).sum() * ((ra - ra.mean()) ** 2).sum())
+    )
+    assert float(rho[3]) == pytest.approx(want, abs=1e-12)
+
+
+def test_avg_ranks_share_ties(ag):
+    r = ag.avg_ranks(torch.tensor([[3.0, 1.0, 3.0, 2.0]]))
+    assert r.tolist() == [[3.5, 1.0, 3.5, 2.0]]
+
+
+def test_weighted_lower_median(ag):
+    v = torch.tensor([0.1, 0.2, 0.3, 0.4], dtype=torch.float64)
+    ones = torch.ones(1, 4, dtype=torch.float64)
+    assert float(ag.weighted_lower_median(v, ones)) == 0.2  # lower median of even n
+    assert float(ag.weighted_lower_median(v[:3], ones[:, :3])) == 0.2
+    w = torch.tensor([[0.0, 0.0, 3.0, 1.0], [5.0, 0.0, 0.0, 1.0]], dtype=torch.float64)
+    assert ag.weighted_lower_median(v, w).tolist() == [0.3, 0.1]
+
+
+def test_pooled_median_ci_drops_undefined_steps_and_counts_them(ag):
+    rho = torch.tensor([0.5, float("nan"), -0.5, 0.1], dtype=torch.float64)
+    d = torch.tensor([0, 0, 1, 1])
+    W = torch.ones(10, 2, dtype=torch.float64)
+    out = ag.pooled_median_ci(rho, d, W)
+    assert out["median"] == 0.1 and out["n_steps"] == 3 and out["n_steps_undefined"] == 1
+    assert out["lo"] == out["hi"] == 0.1
+
+
+def test_recorder_is_pass_through_and_records_the_rules_own_memory(ag, doc):
+    D = _rand_D(seed=4)
+    G = ag.GC.hindsight_target(D, 0.9)
+    pol = ag.AgeShapeRecorder(G)
+    got = ag.B0.pairs_of(doc, pol)
+    assert got == ag.B0.pairs_of(doc, ag.LR.TargetPolicy(G))
+    assert len(pol.rows) == 48 - 16
+    for t, (g, a) in enumerate(pol.rows, start=16):
+        assert len(g) == len(a) == 16 and all(1 <= x <= t for x in a)
+        assert g == [G[t, t - x].item() for x in a]
