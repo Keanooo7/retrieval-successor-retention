@@ -422,3 +422,144 @@ classified becomes defined.
 | 0 | 0.038022 |
 | 1 | 0.036757 |
 | 2 | 0.031858 |
+
+## AMENDMENT 2 (2026-10-06): a NaN in Expire-Span's backward pass; a full re-run
+
+Written by a model (Claude Opus 5.5): an implementation session drafted it, and the PM (session
+a3d27993) set the re-run scope in A2.4 under delegation. It is appended below Amendment 1 and
+committed **alone**, before any re-run step it governs. The text above it is not edited.
+
+**Prompted by** control E5 (§8) failing at seed 1: `run.py validate --seed 1` exited 3 ("every
+logged loss and loss_lm is finite"). By §8, seed 1 is **inconclusive**. `run.py select` refused
+(rc 3), and **EVAL has not been read**.
+
+**What this amendment changes.** Only the code that produced the seed-1 numbers, and which jobs
+run again. *What* is measured and *how* it is classified (§6, §7, A1) do not change. It is an
+amendment because a reported number (seed 1's VAL accuracy, and through it §6.3's selection) will
+come from a different code path than the one the launch head ran.
+
+### A2.1 The defect
+
+- **Where:** `src/rsr/model/tg/model.py:286` at `c59d1af`, in `_reweight_attention`
+  (Expire-Span's Eq. 4 reweighting, P7:L272-279):
+  `return (a / total.clamp(min=torch.finfo(torch.float32).tiny)).to(att.dtype)`.
+- **When it triggers:** a cross-attention row in which *every* weight is exactly 0. In this run
+  that happens when structured dropout's cutoff `l ~ U(0, L)` falls below 1. Every memory then has
+  age ≥ 1 and is dropped (P7:L387-392). This hits about 1/L of training sentence steps (seed 0,
+  `L = 16`: 601 of the first 9,400 sentence steps with memory).
+- **Mechanism:** the forward is correct: `a = 0`, so the output is 0. But the backward of the
+  division is `grad / tiny = grad · 2**126`. That overflows float32 to `inf` once the upstream
+  gradient on the attention probability exceeds about 3.97 in magnitude. `MulBackward0` of
+  `a = att · weight` then computes `inf · 0 = NaN`, which reaches the span predictor's `w, b`
+  through the mask. One Adam step makes `w, b` NaN, and every later forward is NaN.
+- **Measured, seed 1, `L16-k1e-4`:**
+  - A deterministic CPU replay of the launcher's exact command at `c59d1af` (orchestrator
+    `cpu-det`, 1 slot) matches the original heartbeat **bit for bit**, NaNs included, through
+    step 131. Fields compared: `loss`, `loss_lm`, `es_grad_norm`, `es_weight_norm`, `es_bias`.
+  - Gradient hooks put the first non-finite gradient at **train step 130, sentence step 19**. At
+    that step the dropout cutoff was 0.7067, every weight in the row was 0, and 2 entries of
+    `∂/∂a` were `+inf`. The largest finite entry was `3.38e38`, which corresponds to an upstream
+    `|grad| ≈ 3.97`.
+  - `torch.autograd.set_detect_anomaly(True)` independently names `MulBackward0` at
+    `a = att * weight` as the first op to return NaN.
+  - `es_grad_norm` is NaN at step 130 while `loss` is finite; `loss` is NaN from step 131. This is
+    the same signature the PM measured in 5 of the 9 seed-1 configs.
+- **Why seed 1 and not seeds 0 and 2:** the empty-row path runs on every seed about once per L
+  sentence steps. It overflows only when an empty row coincides with a large upstream attention
+  gradient. Seed 1's data order and dropout stream, which every config at a seed shares, reached
+  that coincidence near steps 122–136. Seeds 0 and 2 passed E5 in all 9 configs, so their
+  empty-row gradients never overflowed.
+
+### A2.2 The fix
+
+- **Fix commit:** `35eb103` on `fix/expire-span-nan-backward` (parent `c59d1af`). One commit:
+  `src/rsr/model/tg/model.py` and `tests/test_expire_span.py`.
+- **The change:** `torch.where(total > 0, a / total.clamp(min=tiny), 0)`. An empty row's output
+  stays the constant 0, and its gradient is now 0 instead of `grad · 2**126`. A row with
+  `total > 0` is unchanged, forward and backward.
+- **Tests (red without the fix):**
+  - `test_an_all_zero_weight_row_has_a_finite_zero_gradient` uses an empty row with upstream
+    gradient ×10. It **fails at `c59d1af`** (`assert torch.isfinite(att.grad).all()`) and
+    passes at `35eb103`.
+  - `test_a_row_with_any_weight_is_bit_identical_to_the_plain_quotient` checks forward and
+    backward against `a / sum(a)` with `torch.equal`.
+- **Suite at `35eb103`:**
+  - Targeted files (`test_reduction`, `test_fidelity`, `test_expire_span`,
+    `test_expire_span_arm`, `test_expire_span_referendum`): `passed=143 failed=0 skipped=0
+    errors=0`, rc 0.
+  - Full suite, serial, `RSR_ORCH_ROOT` unset: `passed=2154 failed=7 skipped=0 errors=0`. The 7
+    failures are the known environmental failures in `test_rsr_run1_harness.py`.
+
+### A2.3 Evidence that clean seeds are unchanged (bit-identity)
+
+Each run uses the launcher's exact command, CPU, orchestrator `cpu-det` 1 slot, 200 steps, run
+before the fix (`c59d1af`) and after it (`35eb103`). Exact equality was checked on `loss`,
+`loss_lm`, `es_grad_norm`, `es_weight_norm` and `es_bias` at every step 0–199:
+
+| job | pre vs post | original referendum heartbeat vs post |
+|---|---|---|
+| seed 0, `L16-k1e-4` | **BIT-IDENTICAL** (200 beats) | **BIT-IDENTICAL** (200 beats) |
+| seed 2, `L32-k1e-3` | **BIT-IDENTICAL** (200 beats) | **BIT-IDENTICAL** (200 beats) |
+
+The changed path was exercised in these 200 steps: 601 (seed 0) and 298 (seed 2) sentence steps
+had every memory dropped. The old finite `grad · 2**126` on those rows was always multiplied by
+the dropout mask's 0 before reaching `w, b`. That is why removing it changes no bit.
+
+**Scope of the evidence:** the measurement covers 200 of 3,000 steps. Extending it to step 3000
+is an argument, not a measurement. The fix changes `w, b` only when an empty row's gradient was
+non-finite, which E5 rules out on seeds 0 and 2. The one exception would be a memory whose pre-clamp
+mask is exactly `0.0` while it is live and undropped in an otherwise empty row. If the PM wants it
+measured, the verifier can replay one clean job to step 3000 at `35eb103` and compare the step-3000
+checkpoint's `w, b` with the original's.
+
+Seed 1, `L16-k1e-4`, at `35eb103`, 200 steps:
+- bit-identical to the original through step 129;
+- step 130 is `es_grad_norm = 5.38` (was NaN);
+- no non-finite `loss`, `loss_lm`, `es_grad_norm` or `es_bias` at any step 0–199.
+
+### A2.4 Re-run scope (PM decision under delegation)
+
+- **All 27 jobs re-run** at a run head that contains `35eb103`. Everything else is unchanged:
+  §2, §4.1, §4.2, §6.1, 3000 steps, and run 1's sha pins.
+- **Where:** a fresh dedicated run worktree, so the output root `runs/expire-span-referendum/` in
+  that worktree starts empty. The original outputs, in `.worktrees/es-referendum-run`, are
+  untouched (A2.5).
+- **Job ids** carry an attempt tag, `es-ref-a2-<cfg>-s<seed>`. This is the only launcher change.
+  The orchestrator refuses a reused job id, and the original job records are kept, not deleted.
+- **Why all 27 and not seed 1 only:**
+  - A2.3 measured bit-identity on clean seeds over 200 of 3000 steps, and extended it to 3000 by
+    argument. A full re-run turns that argument into a measurement.
+  - A seed-1-only re-run would need harness changes to read two output roots.
+  - Cost: about 6.5 h of otherwise idle CPU.
+- **Control A2-C (DIAGNOSTIC, reported, never gating):** for the 18 seed-0 and seed-2 jobs,
+  compare the new heartbeats against the original ones at every one of steps 0–2999, on the A2.3
+  fields, and compare the step-3000 checkpoints' `w, b`.
+  - Expected: bit-identical.
+  - Any difference is reported in RESULTS, with the first differing step. It does not change which
+    outputs are read: §6 reads **only** the re-run's outputs, for all three seeds.
+
+### A2.5 The original outputs are kept
+
+- All original outputs of the 27-job launch at `c59d1af` are **kept, not deleted**. Seed 1 is
+  marked inconclusive per §8. Seeds 0 and 2 are superseded by the re-run, and serve only as
+  control A2-C's reference. This covers checkpoints, heartbeats, logs, rc files, and whatever
+  `validate --seed 1` wrote.
+- **None of their VAL numbers are read**, and they never enter §6.3's selection or §7.
+
+### A2.6 EVAL is still unread
+
+- **EVAL `[995000, 997048)` has not been read** by any config, and no `EVAL_READ` marker exists.
+  The §6.4 single read stands for the selected config only, after the re-run, validation and
+  selection.
+- This session read no VAL accuracy and no EVAL data. It read only the training heartbeats of the
+  jobs named above, on the fields listed in A2.3.
+
+### A2.7 Unchanged
+
+**No selection rule, grid or threshold changes:**
+- §4.1's 9 configs and §4.2's fixed fields;
+- §6.3's selection (highest three-seed mean VAL all-query accuracy, exact rationals, lowest-row
+  tie rule);
+- the controls E0–E8 (§8);
+- the §7.2 classification and its precedence;
+- the δ table (A1.1).
