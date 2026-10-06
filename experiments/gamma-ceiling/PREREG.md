@@ -188,3 +188,52 @@ Exit 2 and 5 are not used.
 - `runs/gamma-ceiling/{manifest.json, ledger.json, claims.json}` via `scripts/ledger.py`.
 - `experiments/gamma-ceiling/RESULTS.md` — command, git SHA, hardware, wall time, every number
   including any that came out wrong, the control outcomes, the labels and the class.
+
+---
+
+## Amendment 1 (2026-10-06): age-shape of the target (DIAGNOSTIC)
+
+**Requested by the PM (session a3d27993) after the main run, and written after it.** The PM's
+message asked for this amendment "BEFORE any data run". **That was not possible: it arrived after
+the main run had completed (`runs/gamma-ceiling/ledger.json`, committed in c186ac6), and after its
+cap numbers, labels and class had been seen by this session.** This amendment is therefore **not a
+pre-registration of the main result**, and it changes nothing in §§1–9: not the arms, not the
+reading rule, not a label, not the class (SIGNAL stands as computed). What it does precede is the
+diagnostic itself: **at this commit no age-shape number below has been computed by anyone.**
+
+**The PM's text (verbatim):** "Secondary, descriptive, never gating: for each γ × ckpt × seed,
+report the within-step Spearman correlation between G_γ and slot age (t − written_at) across the
+resident slots at full-memory eviction steps, pooled across steps as the median of per-step ρ with
+a per-document bootstrap 95% CI. Reason: a long-horizon target can become age-shaped (spec
+falsifier 1, vacuity). A γ that POINTS at the headroom but whose target is strongly age-ranked is a
+different finding from one that is not. Label the column "age-shape of the target (DIAGNOSTIC)". It
+does not change the class rule. Age is used here only as an analysis variable, never as a scorer
+input."
+
+**Operational definitions (mine, fixed now, before any value):**
+
+- **Resident slots** = the 16 live slots of the hindsight rule's **own** memory at each of its
+  eviction decisions in `simulate` (steps `t ∈ [M, S)`, memory full) — the exact set its argmin is
+  taken over. Recorded by a pass-through wrapper around lookahead-room's `TargetPolicy` that reads
+  `slots.written_at` and returns the wrapped policy's choice unchanged. Age and `G` are read; age is
+  never passed to the rule.
+- **Per-step ρ** = Spearman's ρ between `G_γ[t][written_at]` and `age = t − written_at` over those
+  16 slots: Pearson correlation of average ranks (ties in `G` get the mean of their ranks). A step
+  whose 16 `G` values are all equal has undefined ρ; it is dropped and counted (`n_steps_undefined`).
+- **Sign:** ρ > 0 means older slots carry a larger `G` (the target ranks old slots as worth
+  keeping); ρ < 0 means newer slots carry a larger `G` (recency-shaped, FIFO-like ranking). No
+  threshold is set on ρ (none exists in the rulings; none is invented).
+- **Pooling:** the **lower median** of the per-step ρ over every defined step of the 1088 documents
+  (the smallest value whose cumulative count reaches half the total).
+- **CI:** per-document bootstrap, 2000 replicates, B0's `boot_weights(1088, seed)` (the same
+  replicate matrix as the cap CIs); in a replicate each step carries its document's multiplicity,
+  and the statistic is the weighted lower median; percentile 95%.
+- **Control A1-C (pass-through):** the wrapped rule's pooled all-query hit rate equals the main
+  ledger's `B.ckpt{c}.<g>.hit.all` for that seed **exactly**; any difference is exit 3. Plus C1
+  (T0 manifest sha256 at start and end) as in §7.
+- **Output:** a separate run, `runs/gamma-ceiling-ageshape/` (script
+  `experiments/gamma-ceiling/ageshape.py`), so the main ledger is not rewritten. Reported in
+  `RESULTS.md` in a column labelled **"age-shape of the target (DIAGNOSTIC)"**, beside the caps, for
+  every γ × ckpt × seed. It is never gating and does not enter the class rule.
+- **No expectation is registered for the values** (the cap numbers were already seen, so any
+  expectation written now would not be blind).
