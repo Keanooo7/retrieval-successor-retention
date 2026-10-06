@@ -1,0 +1,65 @@
+{
+  "M": 16,
+  "S": 48,
+  "already_inspected": true,
+  "already_seen": [
+    "g0",
+    "g09"
+  ],
+  "b0_ledger": "runs/b0-ceilings/ledger.json",
+  "b0_ledger_sha256": "39b628326e247bd431570b9733be9441b816e5f44ffa842a7a52630eca6ac2e3",
+  "bootstrap": {
+    "n": 2000,
+    "paired": true,
+    "seed_base": 20260927,
+    "weights": "B0.boot_weights (identical replicates to B0)"
+  },
+  "checkpoints": [
+    "B.ckpt3000",
+    "B.ckpt2500"
+  ],
+  "device": "cpu",
+  "documents": "U = [64, 1088) then [4096, 4160), lookahead-room documents(seed)",
+  "expected": "PREREG \u00a79: cap rises with gamma to 0.95-0.99, flat or lower at 1.0; no gamma POINTS; seed 1 lowest; predicted class SIGNAL (low confidence; MIXED next); C3 exact.",
+  "falsifier": "NONE: descriptive (PREREG \u00a71); the PM's pre-registered reading rule (PREREG \u00a76) classifies each gamma POINTS / PARTIAL / MISSES and the sweep HORIZON / SIGNAL / MIXED, as an input to an owner decision only",
+  "gammas": {
+    "g0": 0.0,
+    "g05": 0.5,
+    "g08": 0.8,
+    "g09": 0.9,
+    "g095": 0.95,
+    "g099": 0.99,
+    "g1": 1.0
+  },
+  "headline_checkpoint": "B.ckpt3000",
+  "inputs": {
+    "B.ckpt2500.seed0": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed0.D.pt",
+    "B.ckpt2500.seed1": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed1.D.pt",
+    "B.ckpt2500.seed2": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed2.D.pt",
+    "B.ckpt3000.seed0": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed0.D.pt",
+    "B.ckpt3000.seed1": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed1.D.pt",
+    "B.ckpt3000.seed2": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed2.D.pt"
+  },
+  "prereg": "experiments/gamma-ceiling/PREREG.md",
+  "prereg_commit": "daabdb2",
+  "question": "Is the hindsight rule's shortfall from the fact/filler headroom (B0: cap +0.184 / +0.134 / +0.537 at gamma 0.9, ckpt3000) a discount-horizon problem (some gamma in {0, 0.5, 0.8, 0.9, 0.95, 0.99, 1.0} points at the headroom) or a signal problem (none does)?",
+  "reading_rule": {
+    "MISSES": "otherwise",
+    "PARTIAL": "not POINTS and cap point >= 0.5 on all 3 seeds",
+    "POINTS": "cap CI lower >= 0.8 on all 3 seeds (ckpt3000)",
+    "class": "HORIZON if any POINTS; SIGNAL if every MISSES; MIXED otherwise"
+  },
+  "refs": [
+    "fifo",
+    "factfiller"
+  ],
+  "rule": "lookahead-room TargetPolicy on discounted_returns(D, gamma); ties oldest",
+  "run_id": "gamma-ceiling",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "t0_manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+  "t0_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f"
+}
