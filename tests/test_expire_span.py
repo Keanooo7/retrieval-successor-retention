@@ -30,7 +30,7 @@ import torch
 from rsr.baselines.expire_span import GRAD_PATHS, ExpireSpanConfig, ExpireSpanPolicy
 from rsr.baselines.fifo import FIFOPolicy
 from rsr.model.tg import TGConfig, TGModel
-from rsr.model.tg.model import init_memory
+from rsr.model.tg.model import _reweight_attention, init_memory
 from rsr.model.tg.policy_loop import run_policy_loop
 from rsr.retention.policy import MemoryState, RetentionPolicy
 from rsr.train.checkpoint import load_policy_state, policy_state_dict
@@ -774,3 +774,52 @@ def test_the_memory_helper_matches_init_memory_layout():
     assert mem.kv.dtype == ref.kv.dtype
     assert mem.valid.dtype == ref.valid.dtype
     assert mem.step.dtype == ref.step.dtype
+
+
+# --------------------------------------------------------------------------- #
+# The empty-row backward (referendum seed 1: es_grad_norm NaN with a finite loss)
+# --------------------------------------------------------------------------- #
+
+
+def _empty_row_case(gscale: float):
+    """Row 0 attends to nothing (every weight 0: e.g. structured dropout's cutoff
+    below every age); row 1 is ordinary. Returns the reweighted attention, the
+    upstream gradient, and the leaves `att`, `m`."""
+    g = torch.Generator().manual_seed(0)
+    att = torch.softmax(torch.randn(2, 2, 3, 4, generator=g), -1).requires_grad_()
+    m = torch.tensor([[0.5, 0.7, 1.0, 0.3], [0.5, 0.7, 1.0, 0.3]], requires_grad=True)
+    keep = torch.tensor([[0.0, 0.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0]])
+    out = _reweight_attention(att, m * keep)
+    upstream = torch.randn(out.shape, generator=g) * gscale
+    return out, upstream, att, m
+
+
+def test_an_all_zero_weight_row_has_a_finite_zero_gradient():
+    """Measured on the referendum, seed 1 (5 of 9 configs): a row whose every
+    weight is 0 used to divide by `finfo.tiny`, so its backward scaled the upstream
+    gradient by 2**126 and overflowed to inf once |grad| > ~4; `inf * 0` then put
+    NaN into `w, b`. The row's output is the constant 0, so its gradient is 0."""
+    out, upstream, att, m = _empty_row_case(gscale=10.0)
+    assert float(out[0].abs().max()) == 0.0
+    out.backward(upstream)
+    assert torch.isfinite(att.grad).all()
+    assert torch.isfinite(m.grad).all()
+    assert torch.equal(att.grad[0], torch.zeros_like(att.grad[0]))
+    assert torch.equal(m.grad[0], torch.zeros_like(m.grad[0]))
+
+
+def test_a_row_with_any_weight_is_bit_identical_to_the_plain_quotient():
+    """The fix touches only rows whose total is exactly 0: every other row's
+    forward AND backward are bit-equal to `a / sum(a)`'s, so the referendum's
+    clean seeds replay unchanged."""
+    out, upstream, att, m = _empty_row_case(gscale=10.0)
+    out.backward(upstream)
+    att2 = att.detach().clone().requires_grad_()
+    m2 = m.detach().clone().requires_grad_()
+    keep = torch.tensor([[0.0, 0.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0]])
+    a = att2 * (m2 * keep)[:, None, None, :]
+    ref = a[1:] / a[1:].sum(dim=-1, keepdim=True)
+    ref.backward(upstream[1:])
+    assert torch.equal(out[1].detach(), ref[0].detach())
+    assert torch.equal(att.grad[1], att2.grad[1])
+    assert torch.equal(m.grad[1], m2.grad[1])

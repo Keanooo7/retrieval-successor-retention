@@ -278,12 +278,22 @@ def _reweight_attention(att: Tensor, weight: Tensor) -> Tensor:
     `p = softmax(s)` -- algebraically `m_i exp(s_i) / sum_j m_j exp(s_j)`.
 
     float32 like `_masked_softmax`. A row whose every weight is 0 (all memories
-    expired) attends to nothing and contributes exactly zero, rather than dividing
-    by zero. `weight` is `[B, M]`, broadcast over heads and query positions.
+    expired, or structured dropout's cutoff below every age) attends to nothing and
+    contributes exactly zero, rather than dividing by zero. `weight` is `[B, M]`,
+    broadcast over heads and query positions.
+
+    🔴 The empty row is selected out with `where`, not left to the clamp alone. The
+    clamp keeps its *forward* at 0, but its *backward* is `grad / tiny = grad·2**126`,
+    which overflows to inf once |grad| > ~4; `inf · 0` then puts NaN into `w, b`.
+    Measured: the Expire-Span referendum, seed 1, 5 of 9 configs, train step ~130
+    (`tests/test_expire_span.py`, the empty-row tests). The row's output is the
+    constant 0, so its gradient is 0. Every row with `total > 0` is untouched,
+    forward and backward, bit for bit.
     """
     a = att.to(torch.float32) * weight.to(torch.float32)[:, None, None, :]
     total = a.sum(dim=-1, keepdim=True)
-    return (a / total.clamp(min=torch.finfo(torch.float32).tiny)).to(att.dtype)
+    out = a / total.clamp(min=torch.finfo(torch.float32).tiny)
+    return torch.where(total > 0, out, torch.zeros_like(out)).to(att.dtype)
 
 
 class SelfAttention(nn.Module):
