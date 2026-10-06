@@ -233,6 +233,25 @@ def instrument_failures(checks: dict, tol: float = NLL_TOL) -> list[str]:
     return bad
 
 
+def delta_sums(out: dict) -> dict:
+    """Exact float sums of one batch's Delta and Delta-shift (NaN as 0): a cheap,
+    re-executable fingerprint of the measurement (claims.json)."""
+    return {
+        "delta_sum": float(torch.nan_to_num(out["Delta"], nan=0.0).sum()),
+        "shift_sum": float(torch.nan_to_num(out["delta_shift"], nan=0.0).sum()),
+    }
+
+
+def recheck_batch0(c: int, s: int, base: Path) -> dict:
+    """Re-measure batch 0 (the first 32 U documents) of (checkpoint c, seed s) from
+    scratch and return its ``delta_sums``; the run records the same in the ledger."""
+    docs, vmap, V, _ = LR.documents(s)
+    chunk = batches(list(docs))[0]
+    model = LR.load_model(base / CKPT_REL.format(c=c, s=s), V)
+    ids, mask = encode(chunk, vmap, max_tokens=LR.L, steps=S)
+    return delta_sums(CF.cf_delta(model, chunk, ids, mask, seed=s))
+
+
 def file_sha(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
@@ -289,6 +308,8 @@ def measure_delta(c: int, s: int, base: Path, raw_dir: Path, limit: int | None) 
     for bi, chunk in enumerate(batches(docs)):
         ids, mask = encode(chunk, vmap, max_tokens=LR.L, steps=S)
         out = CF.cf_delta(model, chunk, ids, mask, seed=s)
+        if bi == 0:
+            res["batch0"] = delta_sums(out)
         failures += [
             f"ckpt{c} seed{s} batch{bi}: {x}" for x in instrument_failures(out["checks"])
         ]
@@ -496,6 +517,12 @@ def write_rows(led, res: dict[int, dict], meas: dict) -> None:
                 [x["coverage"].get(k, {}).get("missing", 0) for x in m],
                 how="run.py::coverage over every batch",
             )
+        for k in ("delta_sum", "shift_sum"):
+            led.stat(
+                f"B.ckpt{c}.batch0.{k}",
+                [x["batch0"][k] for x in m],
+                how="run.py::delta_sums of batch 0 (first 32 U docs); --recheck-batch0",
+            )
         led.stat(
             f"B.ckpt{c}.identity_worst",
             [x["checks"]["identity_worst"] for x in m],
@@ -693,9 +720,16 @@ def main(argv: list[str] | None = None) -> Exit:
         help="smoke only: first N docs per seed, skips C3, saves no raw",
     )
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--recheck-batch0", type=int, nargs=2, metavar=("CKPT", "SEED"), default=None
+    )
     a = ap.parse_args(argv)
     torch.set_num_threads(1)
     base = a.base or B0.main_checkout()
+    if a.recheck_batch0 is not None:
+        c, s = a.recheck_batch0
+        print(json.dumps(recheck_batch0(c, s, base)), flush=True)
+        return Exit.OK
     if a.dry_run:
         v = B0.verify_manifest(a.manifest, all_rels(), base)
         print(json.dumps(v, indent=1))

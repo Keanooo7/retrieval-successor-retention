@@ -386,3 +386,14 @@ def test_c1_is_checked_again_at_the_end(run, tmp_path, monkeypatch):
     assert rc == run.Exit.DID_NOT_RUN
     assert "C1 at end: manifest mismatch" in led.notes["controls_failed"]
     assert loo.KIND  # the instrument module imported, not copied
+
+
+def test_delta_sums_are_deterministic_on_a_rerun(run, cf, world, measured):
+    """The recheck claim relies on cf_delta being bit-reproducible on one thread."""
+    model, docs, ids, mask = world
+    again = cf.cf_delta(model, docs, ids, mask, seed=0)
+    assert run.delta_sums(again) == run.delta_sums(measured)
+    assert torch.equal(
+        torch.nan_to_num(again["Delta"], nan=-9.0),
+        torch.nan_to_num(measured["Delta"], nan=-9.0),
+    )
