@@ -101,6 +101,10 @@ DEFAULT_OUT = Path("runs/expire-span-referendum")
 GRID_HEADING = "### 4.1 The grid (machine-read)"
 FIXED_HEADING = "### 4.2 Fixed fields (machine-read)"
 DELTA_HEADING = "### 7.3 δ per seed (machine-read; PM-OPEN)"
+#: Amendment 1's table (review r1 B-2): δ arrives in an APPENDED amendment, never by
+#: editing §7.3 in place (the PREREG is append-only).
+DELTA_AMENDMENT_HEADING = "### A1.1 δ per seed (machine-read)"
+AMENDMENT_PREFIX = "## AMENDMENT"
 GRID_HEADER = (
     "| config | L (max_span) | R (ramp) | κ | \u03b1 (loss_coef) |",  # alpha, as §4.1
     "|---|---|---|---|---|",
@@ -233,16 +237,43 @@ def parsed_overrides(c: dict[str, Any]) -> dict[str, Any]:
     return loop.parse_overrides([f"{k}={v}" for k, v in c["overrides"].items()])
 
 
-def delta_per_seed(text: str | None = None) -> dict[int, float] | None:
-    """§7.3: δ per seed, or None while any cell reads OPEN (then `evaluate` refuses)."""
-    text = PREREG.read_text() if text is None else text
-    rows = _table(text, DELTA_HEADING, DELTA_HEADER)
+def _delta_rows(text: str, heading: str, where: str) -> list[list[str]]:
+    rows = _table(text, heading, DELTA_HEADER)
     seeds = [int(r[0]) for r in rows]
     if tuple(seeds) != SEEDS:
-        raise Refused(f"§7.3 rows are seeds {seeds}, not {SEEDS}")
+        raise Refused(f"{where} rows are seeds {seeds}, not {SEEDS}")
+    return rows
+
+
+def delta_per_seed(text: str | None = None) -> dict[int, float] | None:
+    """δ per seed (§7.3, filled by Amendment 1's A1.1), or None while no amendment has
+    supplied it (then `evaluate` refuses).
+
+    Review r1 B-2: the PREREG is append-only, so
+    * §7.3's own table must still read OPEN on every row -- an in-place edit is refused;
+    * the values are read from `### A1.1 δ per seed (machine-read)`, which must occur
+      exactly once and after an `## AMENDMENT` heading; absent, δ is still OPEN."""
+    text = PREREG.read_text() if text is None else text
+    if any(r[1] != "OPEN" for r in _delta_rows(text, DELTA_HEADING, "§7.3")):
+        raise Refused(
+            "§7.3's δ table no longer reads OPEN: it was edited in place. The PREREG "
+            "is append-only; δ comes from an amendment's A1.1 table (review r1 B-2)"
+        )
+    lines = text.splitlines()
+    at = [i for i, x in enumerate(lines) if x == DELTA_AMENDMENT_HEADING]
+    if not at:
+        return None
+    if len(at) > 1:
+        raise Refused(f"{DELTA_AMENDMENT_HEADING!r} occurs {len(at)} times, not once")
+    if not any(x.startswith(AMENDMENT_PREFIX) for x in lines[: at[0]]):
+        raise Refused(f"{DELTA_AMENDMENT_HEADING!r} is not under an amendment heading")
+    rows = _delta_rows(text, DELTA_AMENDMENT_HEADING, "A1.1")
     if any(r[1] == "OPEN" for r in rows):
         return None
-    return {int(r[0]): _num(r[1]) for r in rows}
+    out = {int(r[0]): _num(r[1]) for r in rows}
+    if any(v <= 0 for v in out.values()):
+        raise Refused(f"A1.1 δ must be > 0 at every seed, got {out}")
+    return out
 
 
 # --------------------------------------------------------------------------- #

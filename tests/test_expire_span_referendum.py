@@ -125,34 +125,75 @@ def test_val_is_disjoint_and_closed(esr):
     assert esr.VAL == (994000, 994512)
 
 
-def test_delta_is_open_in_the_committed_prereg(esr):
-    assert esr.delta_per_seed() is None
-
-
-def _delta_text(esr, vals=("0.01", "0.01", "0.01")):
+def _pre_amendment(esr):
+    """The PREREG as committed at 3d5ed87: everything before Amendment 1."""
     t = esr.PREREG.read_text()
+    return t[: t.index("\n## AMENDMENT 1 ")] + "\n"
+
+
+def _appended(esr, vals=("0.01", "0.02", "0.03"), base=None):
+    """A real appended amendment, after the pre-amendment text (review r1 B-2)."""
+    rows = "".join(f"| {s} | {v} |\n" for s, v in zip((0, 1, 2), vals, strict=True))
+    return (
+        (base if base is not None else _pre_amendment(esr))
+        + "\n## AMENDMENT 9 (test): δ\n\n"
+        + "### A1.1 δ per seed (machine-read)\n\n| seed | δ |\n|---|---|\n"
+        + rows
+    )
+
+
+def _in_place(esr, text, vals=("0.01", "0.01", "0.01")):
     for s, v in zip((0, 1, 2), vals, strict=True):
-        t = t.replace(f"| {s} | OPEN |", f"| {s} | {v} |")
-    return t
+        assert text.count(f"| {s} | OPEN |") == 1
+        text = text.replace(f"| {s} | OPEN |", f"| {s} | {v} |")
+    return text
 
 
-def test_a_filled_delta_table_is_read_per_seed(esr):
-    assert esr.delta_per_seed(_delta_text(esr, ("0.01", "0.02", "0.03"))) == {
-        0: 0.01,
-        1: 0.02,
-        2: 0.03,
-    }
+def test_delta_was_open_before_the_amendment(esr):
+    assert esr.delta_per_seed(_pre_amendment(esr)) is None
+
+
+def test_the_committed_amendment_1_supplies_b2s_delta(esr):
+    """Amendment 1 (8ed8cbb): B2's FIT_VAL δ, copied, never recomputed on EVAL."""
+    assert esr.delta_per_seed() == {0: 0.038022, 1: 0.036757, 2: 0.031858}
+
+
+def test_an_appended_amendment_table_is_read_per_seed(esr):
+    assert esr.delta_per_seed(_appended(esr)) == {0: 0.01, 1: 0.02, 2: 0.03}
+
+
+def test_an_in_place_edit_of_section_7_3_is_refused(esr):
+    with pytest.raises(esr.Refused, match="in place"):
+        esr.delta_per_seed(_in_place(esr, _pre_amendment(esr)))
+    with pytest.raises(esr.Refused, match="in place"):  # even beside an amendment
+        esr.delta_per_seed(_in_place(esr, _pre_amendment(esr)) + _appended(esr, base=""))
+
+
+def test_a_duplicate_or_unamended_a1_1_table_is_refused(esr):
+    twice = _appended(esr) + _appended(esr, base="")
+    with pytest.raises(esr.Refused, match="2 times"):
+        esr.delta_per_seed(twice)
+    bare = _pre_amendment(esr) + (
+        "\n### A1.1 δ per seed (machine-read)\n\n| seed | δ |\n|---|---|\n"
+        "| 0 | 0.01 |\n| 1 | 0.01 |\n| 2 | 0.01 |\n"
+    )
+    with pytest.raises(esr.Refused, match="amendment heading"):
+        esr.delta_per_seed(bare)
 
 
 def test_evaluate_refuses_eval_while_delta_is_open(esr, tmp_path):
     with pytest.raises(esr.Refused, match="OPEN"):
-        esr.evaluate(0, tmp_path)
+        esr.evaluate(0, tmp_path, delta_text=_pre_amendment(esr))
     assert not (tmp_path / "eval").exists()
 
 
-def test_evaluate_refuses_eval_before_selection(esr, tmp_path):
+def test_a_real_appended_amendment_unblocks_eval(esr, tmp_path):
+    """With the committed PREREG (Amendment 1 appended), `evaluate` passes the δ gate
+    and stops at the next precondition -- selection -- before touching EVAL."""
     with pytest.raises(esr.Refused, match="selection"):
-        esr.evaluate(0, tmp_path, delta_text=_delta_text(esr))
+        esr.evaluate(0, tmp_path)
+    with pytest.raises(esr.Refused, match="selection"):
+        esr.evaluate(0, tmp_path, delta_text=_appended(esr))
     assert not (tmp_path / "eval").exists()
 
 
@@ -162,7 +203,7 @@ def test_evaluate_refuses_a_second_eval_read(esr, tmp_path):
     m.parent.mkdir(parents=True)
     m.write_text("{}")
     with pytest.raises(esr.Refused, match="read once"):
-        esr.evaluate(0, tmp_path, delta_text=_delta_text(esr))
+        esr.evaluate(0, tmp_path)
 
 
 # --------------------------------------------------------------------------- #
