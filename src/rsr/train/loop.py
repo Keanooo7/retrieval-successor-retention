@@ -47,6 +47,7 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
+from rsr.baselines.expire_span import ExpireSpanConfig, ExpireSpanPolicy
 from rsr.baselines.fifo import FIFOPolicy
 from rsr.data.synthetic import (
     SyntheticConfig,
@@ -585,10 +586,22 @@ def lm_loss_unmasked(logits, ids_t, mask_t):
     return lm_token_losses(logits, ids_t).mean()
 
 
-POLICIES = ("fifo", "rsr")
+POLICIES = ("fifo", "rsr", "expire_span")
 """The names `--policy` accepts. H2O and LRU (section 10.1's real E7 controls) are
 not here because they are not implemented; listing a name that silently fell through
-to FIFO is the defect this tuple exists to prevent."""
+to FIFO is the defect this tuple exists to prevent. `expire_span` is [P7]'s learned
+soft expiry (spec §5.4, falsifier 6's referendum), wired under ADR-0010 q1/q2/q9 as
+ruled in R-2026-10-06-expire-span-q1-q2-q9: every field of its config comes in as a
+labelled override, `grad_path` included -- nothing here supplies a value."""
+
+#: Every `ExpireSpanConfig` field an `expire_span` arm must pass as a labelled
+#: override (ADR-0010; R-2026-10-06 q1/q2). `seed` is the run's own `--seed`, not
+#: an override. None has a default: the values are the referendum PREREG's grid,
+#: CONDITIONAL on that PREREG and never registered or typed here (ADR-0010 q10 is
+#: open, so nothing enters `rsr.constants`).
+ES_OVERRIDE_FIELDS: tuple[str, ...] = tuple(
+    f.name for f in fields(ExpireSpanConfig) if f.name != "seed"
+)
 
 #: The AdamW `eps` every run uses: **pinned at 1e-8** (P-2 of the feat/rsr-slice1
 #: review). B1 measured beta LIVE at eps = 1e-8 and inert only at 1e-12
@@ -885,6 +898,8 @@ def build_policy(
     generator: torch.Generator | None = None,
     overrides: Mapping[str, Any] | None = None,
     no_warmup_ablation: bool = False,
+    seed: int | None = None,
+    n_cross_layers: int | None = None,
 ):
     """Map `policy_name` to the policy that will actually run (S0-01 defect (b)).
 
@@ -920,6 +935,14 @@ def build_policy(
     `b_enabled=False` is required (no `ProtectionBias` exists, §12 item 3);
     `shadow_enabled=False` must be passed explicitly (L6(a)); a `t_warm` override
     needs `no_warmup_ablation=True` and must be 0.
+
+    **`"expire_span"`** ([P7], spec §5.4; ADR-0010, ruled q1/q2/q9 in
+    R-2026-10-06-expire-span-q1-q2-q9): every field in `ES_OVERRIDE_FIELDS` must be
+    an override -- `grad_path` included, with **no default** (q1 is the owner's) --
+    and nothing else may be. `seed` (the run's) seeds the private structured-dropout
+    generator; `n_cross_layers` is the model's count of C blocks, one span predictor
+    each (P7:L81-82). Construction draws nothing from the global RNG (`w = 0`,
+    `b = logit(init)`), so building it moves no other arm's draws (the E0b trap).
     """
     if name == "fifo":
         if overrides:
@@ -962,6 +985,29 @@ def build_policy(
         # diagnostics are on for every RSR arm built here (they never change a
         # decision; `RSRPolicy`'s default keeps them off on E0b's direct path).
         return RSRPolicy(cfg, d_model, generator=generator, diagnostics=True)
+    if name == "expire_span":
+        if no_warmup_ablation:
+            raise ValueError(
+                "no_warmup_ablation=True on the expire_span arm: Expire-Span has no "
+                "warmup, so the declaration would change nothing (ADR-0009 L12)"
+            )
+        ov = dict(overrides or {})
+        missing = [k for k in ES_OVERRIDE_FIELDS if k not in ov]
+        unknown = sorted(set(ov) - set(ES_OVERRIDE_FIELDS))
+        if missing or unknown:
+            raise ValueError(
+                f"policy 'expire_span' needs every one of {list(ES_OVERRIDE_FIELDS)} as "
+                f"a labelled override and nothing else; missing {missing}, unknown "
+                f"{unknown}. None has a default (ADR-0010): grad_path is the owner's "
+                "q1, and the rest are the referendum PREREG's grid (q2)"
+            )
+        if seed is None or n_cross_layers is None:
+            raise ValueError(
+                "policy 'expire_span' needs seed (its dropout generator) and "
+                "n_cross_layers (one span predictor per C block, P7:L81-82)"
+            )
+        es_cfg = ExpireSpanConfig(**ov, seed=int(seed))
+        return ExpireSpanPolicy(es_cfg, d_model=d_model, n_layers=int(n_cross_layers))
     raise ValueError(
         f"unknown policy_name {name!r}; known policies are {POLICIES}. "
         f"Falling back to FIFO here would stamp {name!r} into the run_id of a FIFO "
@@ -1138,11 +1184,22 @@ def train(
         generator=phi_gen,
         overrides=policy_overrides,
         no_warmup_ablation=no_warmup_ablation,
+        seed=seed,
+        n_cross_layers=sum(b == "C" for b in cfg.block_config),
     )
     head = getattr(policy, "head", None)
     if head is not None:
         head.to(device)  # built on CPU (L11), then moved -- before the optimizer
-    phi_params = [] if head is None else list(head.parameters())
+    # Expire-Span ([P7]; ADR-0010 q9, ruled R-2026-10-06): its `w, b` take EXACTLY
+    # phi's optimizer -- the same `value_head` muP group (lr = base_lr / m), the
+    # same AdamW, decoupled decay and eps, no clip (L8) -- so it is passed to
+    # `build_param_groups` where phi's head is.
+    es = isinstance(policy, ExpireSpanPolicy)
+    retention_params = head
+    if es:
+        policy.to(device)  # before the optimizer, like phi
+        retention_params = policy
+    phi_params = [] if retention_params is None else list(retention_params.parameters())
     learns = bool(getattr(policy, "learns", False))  # ADR-0009 L13(a): beta != 0
     eval_ctx = bool(getattr(policy, "needs_eval_context", False))  # L1(a), L2
     if freeze_transformer:
@@ -1172,7 +1229,9 @@ def train(
     # optimizer rather than an empty one.
     opt = None
     if any(p.requires_grad for p in model.parameters()) or phi_params:
-        groups = build_param_groups(model, head, base_lr=lr, d_model=d, base_width=128)
+        groups = build_param_groups(
+            model, retention_params, base_lr=lr, d_model=d, base_width=128
+        )
         opt = torch.optim.AdamW(
             groups, betas=ADAMW_BETAS, weight_decay=ADAMW_WEIGHT_DECAY, eps=ADAMW_EPS
         )
@@ -1216,7 +1275,17 @@ def train(
     if ws_record is not None:
         # m-1: the source's path, manifest entry and sha256, in the hash.
         frozen["warm_start"] = ws_record
-    if policy_name == "rsr" or freeze_transformer or ws_record is not None:
+    if es:
+        # Stamped only for this arm, so no other arm's hash moves: the labelled
+        # overrides (the PREREG grid's config) and the config actually built.
+        frozen["policy_overrides"] = dict(sorted((policy_overrides or {}).items()))
+        frozen["expire_span"] = asdict(policy.cfg)
+        frozen["expire_span_n_layers"] = policy.n_layers
+    if (
+        policy_name in ("rsr", "expire_span")
+        or freeze_transformer
+        or ws_record is not None
+    ):
         # Stamped only off the default path (its hash is S0-03's, pinned by
         # test_corpus_size_curve / test_fresh_stream). ADR-0009 L12: the label and
         # every override are in the hash, so two arms cannot share one.
@@ -1440,11 +1509,20 @@ def train(
                 observe=learns,
                 eval_capture=eval_ctx,
                 timings=timings,
+                # Every step here is a TRAINING step for the policy, whatever the
+                # frozen model's mode (C-1): Expire-Span's span loss and structured
+                # dropout are training-only [P7]. No other policy reads it.
+                policy_training=True,
             )
             # §3.3, read per correction 2: L = L_NTP + beta * L_MC. ADR-0009 L13(a):
             # beta = 0 means L_MC is NOT computed (`learns` is False), never x0.
             l_mc = policy.retention_loss() if learns else None
             objective = None if freeze_transformer else loss
+            if es and freeze_transformer and policy.cfg.grad_path != "none":
+                # [P7] Eq. 7: Expire-Span trains by the task loss through the mask,
+                # plus its span loss -- `loss` holds both (run_policy_loop adds the
+                # span loss). With the model frozen only `w, b` receive gradient.
+                objective = loss
             if l_mc is not None:
                 weighted = policy.config.beta * l_mc
                 objective = weighted if objective is None else objective + weighted
@@ -1522,6 +1600,18 @@ def train(
                     step_s=dt,
                 )
                 step_record["diag"] = rsr_beat["diag"]
+            if es:
+                # Logged, never gated: what the span predictor did this step.
+                with torch.no_grad():
+                    rsr_beat = {
+                        "arm_label": label,
+                        "train_step": it,
+                        "es_grad_norm": phi_gnorm,
+                        "es_bias": [float(x) for x in policy.bias.detach().cpu()],
+                        "es_weight_norm": float(policy.weight.detach().norm()),
+                        "step_s": dt,
+                    }
+                last.update(es_grad_norm=phi_gnorm, step_s=dt)
             if pool_order is not None:
                 step_record["pool_doc_ids"] = step_pool_ids  # A1.7 item 3 (C-2)
             if len(step_record) > len(_STEP_RECORD_KEYS):
@@ -1853,7 +1943,9 @@ def main(argv: list[str] | None = None) -> Exit:
         default=[],
         metavar="KEY=VALUE",
         help="an RSRConfig field override (repeatable); b_enabled=false and "
-        "shadow_enabled=false are required for --policy rsr in slice 1",
+        "shadow_enabled=false are required for --policy rsr in slice 1. For "
+        "--policy expire_span: every ExpireSpanConfig field but seed, grad_path "
+        "included (no defaults; ADR-0010)",
     )
     p.add_argument(
         "--no-warmup-ablation",

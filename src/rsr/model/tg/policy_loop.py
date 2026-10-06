@@ -388,8 +388,18 @@ def run_policy_loop(
     observe: bool = False,
     eval_capture: bool = False,
     timings: dict | None = None,
+    policy_training: bool | None = None,
 ):
     """`run_sentence_loop`, with the eviction rule supplied by `policy`.
+
+    `policy_training` is what a policy that shapes the forward pass (Expire-Span's
+    `memory_weight`) is told about the step: its span loss and structured dropout
+    are training-only [P7] (P7:L330-335, L387-392). **None (the default) means the
+    model's mode**, which is every evaluation caller's path. `train()` passes True:
+    under the frozen arm's `frozen_model_mode="eval"` (C-1, run 1's O5) the model is
+    in eval mode for every TRAINING step, and reading the model's mode there would
+    run Expire-Span with `alpha = 0` and no structured dropout under a config that
+    says otherwise. A policy without `memory_weight` never reads it.
 
     `eval_capture=True` is ADR-0009 L1(a) + L2: every step runs a second,
     `no_grad`, eval-mode forward over the same pre-write memory (`eval_forward`).
@@ -456,13 +466,14 @@ def run_policy_loop(
         extra, span_loss = {}, None
         if weight_fn is not None:
             # Pre-write memory, like `observe`: the mask is for what this step's
-            # forward attends over. The MODEL's mode gates structured dropout.
+            # forward attends over. The caller's `policy_training`, else the
+            # MODEL's mode, gates the span loss and structured dropout.
             extra["mem_weight"], span_loss = weight_fn(
                 mem.kv,
                 mem.valid,
                 mem.step,
                 t,
-                training=model.training,
+                training=model.training if policy_training is None else policy_training,
                 row_valid=row_valid,
             )
         out = model(
