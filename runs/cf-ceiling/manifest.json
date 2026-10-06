@@ -1,0 +1,76 @@
+{
+  "M": 16,
+  "S": 48,
+  "arms": {
+    "cf": "primary, TargetPolicy(discounted_returns(Delta, gamma))",
+    "cfshift": "DIAGNOSTIC sensitivity: evicted cells + Delta_res[t][0]",
+    "ri": "C3 control, the gamma sweep's hindsight_target on D.pt"
+  },
+  "batch": 32,
+  "bootstrap": {
+    "n": 2000,
+    "paired": true,
+    "seed_base": 20260927
+  },
+  "cfdelta_sha256": "d7d1ad4793422a081e90e113c0499aab54d5d331c59f4be773c639313f8fc61e",
+  "checkpoints": [
+    "B.ckpt3000",
+    "B.ckpt2500"
+  ],
+  "checkpoints_files": {
+    "B.ckpt2500.seed0": ".worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-002500.pt",
+    "B.ckpt2500.seed1": ".worktrees/fresh-stream/runs/fresh-stream/B/seed1/ckpt-002500.pt",
+    "B.ckpt2500.seed2": ".worktrees/fresh-stream/runs/fresh-stream/B/seed2/ckpt-002500.pt",
+    "B.ckpt3000.seed0": ".worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+    "B.ckpt3000.seed1": ".worktrees/fresh-stream/runs/fresh-stream/B/seed1/ckpt-003000.pt",
+    "B.ckpt3000.seed2": ".worktrees/fresh-stream/runs/fresh-stream/B/seed2/ckpt-003000.pt"
+  },
+  "d_pt": {
+    "B.ckpt2500.seed0": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed0.D.pt",
+    "B.ckpt2500.seed1": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed1.D.pt",
+    "B.ckpt2500.seed2": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed2.D.pt",
+    "B.ckpt3000.seed0": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed0.D.pt",
+    "B.ckpt3000.seed1": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed1.D.pt",
+    "B.ckpt3000.seed2": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed2.D.pt"
+  },
+  "delta": {
+    "evicted": "L(FIFO memory) - L(slot 0 := gest_i), one batched forward",
+    "min_coverage": 0.8,
+    "missing_donor": "imputed 0, counted",
+    "nll_tol": 0.0001,
+    "resident": "rsr.metrics.loo.loo_delta_loss(mode='resample', seed=seed)"
+  },
+  "device": "cpu",
+  "documents": "U = [64, 1088) then [4096, 4160), lookahead-room documents(seed)",
+  "expected": "PREREG \u00a79: Delta caps above the r_i caps at gamma >= 0.5 on every seed; gamma 0 MISSES; cap rises to 0.8-0.9; no POINTS on all seeds; predicted CF-MIXED (low confidence; CF-POINTS next); C3 exact.",
+  "falsifier": "NONE: descriptive (PREREG \u00a71); the PM's pre-registered reading rule (PREREG \u00a77) labels each gamma POINTS / PARTIAL / MISSES and the run CF-POINTS / CF-MIXED / CF-MISSES, as an input to an owner decision only",
+  "gammas": {
+    "g0": 0.0,
+    "g05": 0.5,
+    "g08": 0.8,
+    "g09": 0.9
+  },
+  "gc_ledger": "runs/gamma-ceiling/ledger.json",
+  "gc_ledger_sha256": "dcf1c4a737ce21993cd869adf5114e07744628400da3bad80d8d134ff7039120",
+  "headline_checkpoint": "B.ckpt3000",
+  "loo_sha256": "ba8fae2317da68d1c16ffd2bfeb344b74ddfb9cf8f52e8210c22f74fc7bae41c",
+  "prereg": "experiments/cf-ceiling/PREREG.md",
+  "prereg_commit": "0c5320e",
+  "probe_commit": "2767496",
+  "question": "Does a hindsight rule on the counterfactual return G^Delta_gamma = sum_k gamma^k Delta_i(t+k) (Delta = resample-knockout LOO Delta-loss in D.pt's FIFO world) point at the fact/filler headroom where the r_i return does not (gamma sweep: SIGNAL)?",
+  "reading_rule": {
+    "MISSES": "otherwise",
+    "PARTIAL": "not POINTS and cap point >= 0.5 on all 3 seeds",
+    "POINTS": "cap CI lower >= 0.8 on all 3 seeds (ckpt3000)",
+    "class": "CF-POINTS if any POINTS; CF-MISSES if every MISSES; CF-MIXED otherwise"
+  },
+  "run_id": "cf-ceiling",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "t0_manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+  "t0_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+  "threads": 1
+}
