@@ -1,0 +1,1734 @@
+{
+  "run_id": "gamma-ceiling-ageshape",
+  "cycle": null,
+  "question": "Amendment 1 (DIAGNOSTIC): how age-ranked is each hindsight target G_gamma across the rule's own resident slots at its eviction steps (median per-step Spearman rho with slot age)?",
+  "started_utc": "2026-10-06T06:53:50Z",
+  "provenance": {
+    "git_sha": "a0547a61be4d445b8f42e93a7e32b01176e4dc6f",
+    "dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "ok",
+  "config_hash": "78138ff9154254e75c45d090d802df50b564a8191f186920f84cf1ec1280f4fa",
+  "manifest_written_utc": "2026-10-06T06:53:50Z",
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/gamma-ceiling/.venv/bin/python experiments/gamma-ceiling/ageshape.py",
+      "entry_point": "experiments/gamma-ceiling/ageshape.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "its exit code is the run's",
+      "at_utc": "2026-10-06T06:56:41Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "C1.start",
+      "kind": "observation",
+      "value": {
+        "ok": true,
+        "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "files": {
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed0.D.pt": {
+            "want": "9aadab236221b384377a3d436bdd1703a215bdf4cebc8b1b04f10e964db6073c",
+            "got": "9aadab236221b384377a3d436bdd1703a215bdf4cebc8b1b04f10e964db6073c"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed1.D.pt": {
+            "want": "001ce61c14715e60ba0455fe2690661d58d8a8dd88e708283d0baa709a32615a",
+            "got": "001ce61c14715e60ba0455fe2690661d58d8a8dd88e708283d0baa709a32615a"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed2.D.pt": {
+            "want": "20813d0a084417bd0f49ecd7ab283e68a5de5c7572f876e9db45936f4578dfd3",
+            "got": "20813d0a084417bd0f49ecd7ab283e68a5de5c7572f876e9db45936f4578dfd3"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed0.D.pt": {
+            "want": "3bc5c3d52b1c3b393c3cf0fea19610682389f2212be72daa4051768de787b1d7",
+            "got": "3bc5c3d52b1c3b393c3cf0fea19610682389f2212be72daa4051768de787b1d7"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed1.D.pt": {
+            "want": "ee3cf9f5e50c8157977a6684199bb5dabb417ee8e6596fa1c18ad5713d9c6d49",
+            "got": "ee3cf9f5e50c8157977a6684199bb5dabb417ee8e6596fa1c18ad5713d9c6d49"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed2.D.pt": {
+            "want": "491acf02f884d4ccdb3e8f4d4c342a5dec57373acc6ce1cbbb5e15c57c05901a",
+            "got": "491acf02f884d4ccdb3e8f4d4c342a5dec57373acc6ce1cbbb5e15c57c05901a"
+          }
+        }
+      },
+      "how": "B0.verify_manifest before the first read"
+    },
+    {
+      "key": "C1.end",
+      "kind": "observation",
+      "value": {
+        "ok": true,
+        "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "files": {
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed0.D.pt": {
+            "want": "9aadab236221b384377a3d436bdd1703a215bdf4cebc8b1b04f10e964db6073c",
+            "got": "9aadab236221b384377a3d436bdd1703a215bdf4cebc8b1b04f10e964db6073c"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed1.D.pt": {
+            "want": "001ce61c14715e60ba0455fe2690661d58d8a8dd88e708283d0baa709a32615a",
+            "got": "001ce61c14715e60ba0455fe2690661d58d8a8dd88e708283d0baa709a32615a"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed2.D.pt": {
+            "want": "20813d0a084417bd0f49ecd7ab283e68a5de5c7572f876e9db45936f4578dfd3",
+            "got": "20813d0a084417bd0f49ecd7ab283e68a5de5c7572f876e9db45936f4578dfd3"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed0.D.pt": {
+            "want": "3bc5c3d52b1c3b393c3cf0fea19610682389f2212be72daa4051768de787b1d7",
+            "got": "3bc5c3d52b1c3b393c3cf0fea19610682389f2212be72daa4051768de787b1d7"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed1.D.pt": {
+            "want": "ee3cf9f5e50c8157977a6684199bb5dabb417ee8e6596fa1c18ad5713d9c6d49",
+            "got": "ee3cf9f5e50c8157977a6684199bb5dabb417ee8e6596fa1c18ad5713d9c6d49"
+          },
+          ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed2.D.pt": {
+            "want": "491acf02f884d4ccdb3e8f4d4c342a5dec57373acc6ce1cbbb5e15c57c05901a",
+            "got": "491acf02f884d4ccdb3e8f4d4c342a5dec57373acc6ce1cbbb5e15c57c05901a"
+          }
+        }
+      },
+      "how": "B0.verify_manifest after the last computation"
+    },
+    {
+      "key": "controls_failed",
+      "kind": "observation",
+      "value": [],
+      "how": "ageshape.py::execute"
+    },
+    {
+      "key": "seed0.raw",
+      "kind": "observation",
+      "value": {
+        "n_documents": 1088,
+        "ckpt": {
+          "3000": {
+            "g0": {
+              "median": 0.3176470588235294,
+              "lo": 0.31176470588235294,
+              "hi": 0.3264705882352941,
+              "mean": 0.2799812290495242,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7997017892644135
+            },
+            "g05": {
+              "median": 0.3382352941176471,
+              "lo": 0.32941176470588235,
+              "hi": 0.34411764705882353,
+              "mean": 0.31105661359212805,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8587972166998012
+            },
+            "g08": {
+              "median": 0.3382352941176471,
+              "lo": 0.32941176470588235,
+              "hi": 0.34705882352941175,
+              "mean": 0.31918607401600346,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8706262425447316
+            },
+            "g09": {
+              "median": 0.3205882352941177,
+              "lo": 0.31176470588235294,
+              "hi": 0.3323529411764706,
+              "mean": 0.30326286764705884,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8352385685884692
+            },
+            "g095": {
+              "median": 0.29411764705882354,
+              "lo": 0.2823529411764706,
+              "hi": 0.3058823529411765,
+              "mean": 0.2774935290062716,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7936381709741551
+            },
+            "g099": {
+              "median": 0.2676470588235294,
+              "lo": 0.2529411764705882,
+              "hi": 0.27941176470588236,
+              "mean": 0.2508860023788927,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7567097415506958
+            },
+            "g1": {
+              "median": 0.26176470588235295,
+              "lo": 0.24705882352941178,
+              "hi": 0.2735294117647059,
+              "mean": 0.24596745580125431,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7487077534791252
+            }
+          },
+          "2500": {
+            "g0": {
+              "median": 0.36176470588235293,
+              "lo": 0.3558823529411765,
+              "hi": 0.37058823529411766,
+              "mean": 0.31877821556012115,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8027833001988072
+            },
+            "g05": {
+              "median": 0.38235294117647056,
+              "lo": 0.3735294117647059,
+              "hi": 0.38823529411764707,
+              "mean": 0.34890407047469724,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8565606361829026
+            },
+            "g08": {
+              "median": 0.3911764705882353,
+              "lo": 0.38529411764705884,
+              "hi": 0.4,
+              "mean": 0.3674428761624135,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8618290258449304
+            },
+            "g09": {
+              "median": 0.37058823529411766,
+              "lo": 0.36176470588235293,
+              "hi": 0.37941176470588234,
+              "mean": 0.35203118241782017,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.82331013916501
+            },
+            "g095": {
+              "median": 0.3411764705882353,
+              "lo": 0.32941176470588235,
+              "hi": 0.35294117647058826,
+              "mean": 0.32246811810661763,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7824055666003976
+            },
+            "g099": {
+              "median": 0.3176470588235294,
+              "lo": 0.3058823529411765,
+              "hi": 0.32941176470588235,
+              "mean": 0.2994775897491349,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7502982107355864
+            },
+            "g1": {
+              "median": 0.31176470588235294,
+              "lo": 0.3,
+              "hi": 0.3235294117647059,
+              "mean": 0.29460128203395325,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7417992047713717
+            }
+          }
+        },
+        "seconds": 60.51371502876282
+      },
+      "how": "ageshape.py::measure_seed payload"
+    },
+    {
+      "key": "seed1.raw",
+      "kind": "observation",
+      "value": {
+        "n_documents": 1088,
+        "ckpt": {
+          "3000": {
+            "g0": {
+              "median": -0.07647058823529412,
+              "lo": -0.08823529411764706,
+              "hi": -0.06764705882352941,
+              "mean": -0.06154954111699828,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7881057487227816
+            },
+            "g05": {
+              "median": 0.008823529411764706,
+              "lo": -0.0029411764705882353,
+              "hi": 0.01764705882352941,
+              "mean": 0.0024506987997404955,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8273895144090075
+            },
+            "g08": {
+              "median": 0.16470588235294117,
+              "lo": 0.15588235294117647,
+              "hi": 0.17352941176470588,
+              "mean": 0.12511370701773358,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8419721243985914
+            },
+            "g09": {
+              "median": 0.2235294117647059,
+              "lo": 0.21470588235294116,
+              "hi": 0.2323529411764706,
+              "mean": 0.1909831010759083,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8301175536927732
+            },
+            "g095": {
+              "median": 0.24705882352941178,
+              "lo": 0.23823529411764705,
+              "hi": 0.25588235294117645,
+              "mean": 0.21811075705557958,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8042755815683745
+            },
+            "g099": {
+              "median": 0.24705882352941178,
+              "lo": 0.23823529411764705,
+              "hi": 0.25588235294117645,
+              "mean": 0.2287317190203287,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7679678587371658
+            },
+            "g1": {
+              "median": 0.24705882352941178,
+              "lo": 0.23823529411764705,
+              "hi": 0.25588235294117645,
+              "mean": 0.22908551173226646,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7579485144586082
+            }
+          },
+          "2500": {
+            "g0": {
+              "median": 0.01764705882352941,
+              "lo": 0.01169117647058824,
+              "hi": 0.026470588235294117,
+              "mean": 0.014499925659602057,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7768463865879669
+            },
+            "g05": {
+              "median": 0.07352941176470588,
+              "lo": 0.06470588235294118,
+              "hi": 0.08235294117647059,
+              "mean": 0.05521362727076124,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8208918208422201
+            },
+            "g08": {
+              "median": 0.20294117647058824,
+              "lo": 0.19705882352941176,
+              "hi": 0.21176470588235294,
+              "mean": 0.16707919955666092,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8320519815485343
+            },
+            "g09": {
+              "median": 0.25588235294117645,
+              "lo": 0.25,
+              "hi": 0.2647058823529412,
+              "mean": 0.22035845588235298,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8135509151331779
+            },
+            "g095": {
+              "median": 0.2676470588235294,
+              "lo": 0.25882352941176473,
+              "hi": 0.27647058823529413,
+              "mean": 0.23765315811526816,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7871137344377759
+            },
+            "g099": {
+              "median": 0.2647058823529412,
+              "lo": 0.25588235294117645,
+              "hi": 0.2735294117647059,
+              "mean": 0.24460398532115052,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7587421258866127
+            },
+            "g1": {
+              "median": 0.2647058823529412,
+              "lo": 0.25588235294117645,
+              "hi": 0.27058823529411763,
+              "mean": 0.24455743809472322,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.7507068101780666
+            }
+          }
+        },
+        "seconds": 55.740538120269775
+      },
+      "how": "ageshape.py::measure_seed payload"
+    },
+    {
+      "key": "seed2.raw",
+      "kind": "observation",
+      "value": {
+        "n_documents": 1088,
+        "ckpt": {
+          "3000": {
+            "g0": {
+              "median": 0.1,
+              "lo": 0.09411764705882353,
+              "hi": 0.10882352941176471,
+              "mean": 0.09630680282223182,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.84570915977275
+            },
+            "g05": {
+              "median": 0.1264705882352941,
+              "lo": 0.11764705882352941,
+              "hi": 0.13529411764705881,
+              "mean": 0.11876799375540659,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8896641084421409
+            },
+            "g08": {
+              "median": 0.1676470588235294,
+              "lo": 0.1588235294117647,
+              "hi": 0.17647058823529413,
+              "mean": 0.1535358151762543,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.9049137845111134
+            },
+            "g09": {
+              "median": 0.17647058823529413,
+              "lo": 0.1676470588235294,
+              "hi": 0.18823529411764706,
+              "mean": 0.16718978089857267,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8935014452307386
+            },
+            "g095": {
+              "median": 0.17352941176470588,
+              "lo": 0.16470588235294117,
+              "hi": 0.18529411764705883,
+              "mean": 0.16394245715289793,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8771055516794578
+            },
+            "g099": {
+              "median": 0.17058823529411765,
+              "lo": 0.1588235294117647,
+              "hi": 0.18235294117647058,
+              "mean": 0.16042953544009517,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8596631117312867
+            },
+            "g1": {
+              "median": 0.17058823529411765,
+              "lo": 0.1588235294117647,
+              "hi": 0.18235294117647058,
+              "mean": 0.1618497749513408,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8562244592843616
+            }
+          },
+          "2500": {
+            "g0": {
+              "median": 0.08823529411764706,
+              "lo": 0.07941176470588235,
+              "hi": 0.09411764705882353,
+              "mean": 0.08365617903871107,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.843317053722715
+            },
+            "g05": {
+              "median": 0.10588235294117647,
+              "lo": 0.1,
+              "hi": 0.11470588235294117,
+              "mean": 0.09808260907763844,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.886424798166052
+            },
+            "g08": {
+              "median": 0.16176470588235295,
+              "lo": 0.15,
+              "hi": 0.17058823529411765,
+              "mean": 0.14938981739294982,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8884182198744144
+            },
+            "g09": {
+              "median": 0.17647058823529413,
+              "lo": 0.1676470588235294,
+              "hi": 0.18823529411764706,
+              "mean": 0.16446419158196365,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.864846008173029
+            },
+            "g095": {
+              "median": 0.17647058823529413,
+              "lo": 0.16470588235294117,
+              "hi": 0.18823529411764706,
+              "mean": 0.16390554038711075,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8364895843715738
+            },
+            "g099": {
+              "median": 0.17352941176470588,
+              "lo": 0.16176470588235295,
+              "hi": 0.18529411764705883,
+              "mean": 0.16239786643057957,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8119206618160072
+            },
+            "g1": {
+              "median": 0.1676470588235294,
+              "lo": 0.15588235294117647,
+              "hi": 0.18235294117647058,
+              "mean": 0.16019544766435986,
+              "n_steps": 34816,
+              "n_steps_undefined": 0,
+              "hit_all": 0.8066380942888468
+            }
+          }
+        },
+        "seconds": 54.595921754837036
+      },
+      "how": "ageshape.py::measure_seed payload"
+    },
+    {
+      "key": "B.ckpt3000.g0.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3176470588235294,
+        -0.07647058823529412,
+        0.1
+      ],
+      "mean": 0.11372549019607843,
+      "sd": 0.19741699962677436,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g0.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.31176470588235294,
+        -0.08823529411764706,
+        0.09411764705882353
+      ],
+      "mean": 0.10588235294117647,
+      "sd": 0.2002593474182259,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g0.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3264705882352941,
+        -0.06764705882352941,
+        0.10882352941176471
+      ],
+      "mean": 0.12254901960784315,
+      "sd": 0.19741699962677436,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g0.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2799812290495242,
+        -0.06154954111699828,
+        0.09630680282223182
+      ],
+      "mean": 0.10491283025158592,
+      "sd": 0.17092795126520588,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g0.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g0.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g05.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3382352941176471,
+        0.008823529411764706,
+        0.1264705882352941
+      ],
+      "mean": 0.15784313725490198,
+      "sd": 0.16693173846111972,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g05.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32941176470588235,
+        -0.0029411764705882353,
+        0.11764705882352941
+      ],
+      "mean": 0.1480392156862745,
+      "sd": 0.16824797703461372,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g05.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.34411764705882353,
+        0.01764705882352941,
+        0.13529411764705881
+      ],
+      "mean": 0.16568627450980392,
+      "sd": 0.16534365317347993,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g05.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.31105661359212805,
+        0.0024506987997404955,
+        0.11876799375540659
+      ],
+      "mean": 0.14409176871575838,
+      "sd": 0.1558536905077756,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g05.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g05.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g08.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3382352941176471,
+        0.16470588235294117,
+        0.1676470588235294
+      ],
+      "mean": 0.2235294117647059,
+      "sd": 0.09934909267090905,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g08.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32941176470588235,
+        0.15588235294117647,
+        0.1588235294117647
+      ],
+      "mean": 0.21470588235294116,
+      "sd": 0.09934909267090904,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g08.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.34705882352941175,
+        0.17352941176470588,
+        0.17647058823529413
+      ],
+      "mean": 0.23235294117647057,
+      "sd": 0.09934909267090902,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g08.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.31918607401600346,
+        0.12511370701773358,
+        0.1535358151762543
+      ],
+      "mean": 0.19927853206999713,
+      "sd": 0.10481086785106598,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g08.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g08.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g09.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3205882352941177,
+        0.2235294117647059,
+        0.17647058823529413
+      ],
+      "mean": 0.24019607843137258,
+      "sd": 0.07349018561533398,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g09.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.31176470588235294,
+        0.21470588235294116,
+        0.1676470588235294
+      ],
+      "mean": 0.23137254901960783,
+      "sd": 0.07349018561533398,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g09.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3323529411764706,
+        0.2323529411764706,
+        0.18823529411764706
+      ],
+      "mean": 0.25098039215686274,
+      "sd": 0.07384247081431586,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g09.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.30326286764705884,
+        0.1909831010759083,
+        0.16718978089857267
+      ],
+      "mean": 0.22047858320717995,
+      "sd": 0.07267364607567439,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g09.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g09.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g095.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.29411764705882354,
+        0.24705882352941178,
+        0.17352941176470588
+      ],
+      "mean": 0.23823529411764707,
+      "sd": 0.06077640682285832,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g095.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2823529411764706,
+        0.23823529411764705,
+        0.16470588235294117
+      ],
+      "mean": 0.2284313725490196,
+      "sd": 0.059433115945990884,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g095.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3058823529411765,
+        0.25588235294117645,
+        0.18529411764705883
+      ],
+      "mean": 0.24901960784313726,
+      "sd": 0.06058633159011913,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g095.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2774935290062716,
+        0.21811075705557958,
+        0.16394245715289793
+      ],
+      "mean": 0.21984891440491638,
+      "sd": 0.0567954872590314,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g095.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g095.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g099.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2676470588235294,
+        0.24705882352941178,
+        0.17058823529411765
+      ],
+      "mean": 0.2284313725490196,
+      "sd": 0.05114039747350971,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g099.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2529411764705882,
+        0.23823529411764705,
+        0.1588235294117647
+      ],
+      "mean": 0.21666666666666665,
+      "sd": 0.05063039738696218,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g099.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.27941176470588236,
+        0.25588235294117645,
+        0.18235294117647058
+      ],
+      "mean": 0.23921568627450981,
+      "sd": 0.05063039738696219,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g099.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2508860023788927,
+        0.2287317190203287,
+        0.16042953544009517
+      ],
+      "mean": 0.2133490856131055,
+      "sd": 0.04714936012999759,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g099.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g099.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g1.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.26176470588235295,
+        0.24705882352941178,
+        0.17058823529411765
+      ],
+      "mean": 0.22647058823529412,
+      "sd": 0.04895093228556835,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g1.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.24705882352941178,
+        0.23823529411764705,
+        0.1588235294117647
+      ],
+      "mean": 0.21470588235294116,
+      "sd": 0.04859621071134796,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g1.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2735294117647059,
+        0.25588235294117645,
+        0.18235294117647058
+      ],
+      "mean": 0.23725490196078433,
+      "sd": 0.04835828413779814,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g1.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.24596745580125431,
+        0.22908551173226646,
+        0.1618497749513408
+      ],
+      "mean": 0.21230091416162053,
+      "sd": 0.04449986623124137,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt3000.g1.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt3000.g1.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g0.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.36176470588235293,
+        0.01764705882352941,
+        0.08823529411764706
+      ],
+      "mean": 0.15588235294117647,
+      "sd": 0.18175899477035737,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g0.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3558823529411765,
+        0.01169117647058824,
+        0.07941176470588235
+      ],
+      "mean": 0.1489950980392157,
+      "sd": 0.1823410861500645,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g0.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.37058823529411766,
+        0.026470588235294117,
+        0.09411764705882353
+      ],
+      "mean": 0.16372549019607843,
+      "sd": 0.18231340494870577,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g0.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.31877821556012115,
+        0.014499925659602057,
+        0.08365617903871107
+      ],
+      "mean": 0.13897810675281144,
+      "sd": 0.1595045647958051,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g0.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g0.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g05.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.38235294117647056,
+        0.07352941176470588,
+        0.10588235294117647
+      ],
+      "mean": 0.18725490196078431,
+      "sd": 0.16973247149572215,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g05.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3735294117647059,
+        0.06470588235294118,
+        0.1
+      ],
+      "mean": 0.17941176470588235,
+      "sd": 0.16903450641765896,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g05.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.38823529411764707,
+        0.08235294117647059,
+        0.11470588235294117
+      ],
+      "mean": 0.19509803921568628,
+      "sd": 0.16804219001188592,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g05.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.34890407047469724,
+        0.05521362727076124,
+        0.09808260907763844
+      ],
+      "mean": 0.16740010227436564,
+      "sd": 0.1586417512971911,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g05.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g05.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g08.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3911764705882353,
+        0.20294117647058824,
+        0.16176470588235295
+      ],
+      "mean": 0.2519607843137255,
+      "sd": 0.12230956999020152,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g08.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.38529411764705884,
+        0.19705882352941176,
+        0.15
+      ],
+      "mean": 0.24411764705882355,
+      "sd": 0.12450594405009839,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g08.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.4,
+        0.21176470588235294,
+        0.17058823529411765
+      ],
+      "mean": 0.2607843137254902,
+      "sd": 0.12230956999020154,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g08.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3674428761624135,
+        0.16707919955666092,
+        0.14938981739294982
+      ],
+      "mean": 0.22797063103734141,
+      "sd": 0.12110990434520456,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g08.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g08.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g09.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.37058823529411766,
+        0.25588235294117645,
+        0.17647058823529413
+      ],
+      "mean": 0.2676470588235294,
+      "sd": 0.09759211778257094,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g09.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.36176470588235293,
+        0.25,
+        0.1676470588235294
+      ],
+      "mean": 0.25980392156862747,
+      "sd": 0.09742947646121447,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g09.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.37941176470588234,
+        0.2647058823529412,
+        0.18823529411764706
+      ],
+      "mean": 0.2774509803921568,
+      "sd": 0.0962233800573723,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g09.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.35203118241782017,
+        0.22035845588235298,
+        0.16446419158196365
+      ],
+      "mean": 0.2456179432940456,
+      "sd": 0.0963009620462364,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g09.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g09.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g095.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3411764705882353,
+        0.2676470588235294,
+        0.17647058823529413
+      ],
+      "mean": 0.26176470588235295,
+      "sd": 0.08251035375944434,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g095.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32941176470588235,
+        0.25882352941176473,
+        0.16470588235294117
+      ],
+      "mean": 0.25098039215686274,
+      "sd": 0.08263257845374697,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g095.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.35294117647058826,
+        0.27647058823529413,
+        0.18823529411764706
+      ],
+      "mean": 0.2725490196078431,
+      "sd": 0.08242293943915179,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g095.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32246811810661763,
+        0.23765315811526816,
+        0.16390554038711075
+      ],
+      "mean": 0.24134227220299884,
+      "sd": 0.07934563589339923,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g095.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g095.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g099.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3176470588235294,
+        0.2647058823529412,
+        0.17352941176470588
+      ],
+      "mean": 0.2519607843137255,
+      "sd": 0.07289926056871099,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g099.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3058823529411765,
+        0.25588235294117645,
+        0.16176470588235295
+      ],
+      "mean": 0.2411764705882353,
+      "sd": 0.073175619438969,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g099.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.32941176470588235,
+        0.2735294117647059,
+        0.18529411764705883
+      ],
+      "mean": 0.2627450980392157,
+      "sd": 0.07266154495563835,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g099.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2994775897491349,
+        0.24460398532115052,
+        0.16239786643057957
+      ],
+      "mean": 0.23549314716695502,
+      "sd": 0.06899252253090098,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g099.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g099.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g1.age_rho.median",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.31176470588235294,
+        0.2647058823529412,
+        0.1676470588235294
+      ],
+      "mean": 0.24803921568627452,
+      "sd": 0.07349018561533398,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g1.age_rho.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3,
+        0.25588235294117645,
+        0.15588235294117647
+      ],
+      "mean": 0.23725490196078428,
+      "sd": 0.07384247081431586,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g1.age_rho.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3235294117647059,
+        0.27058823529411763,
+        0.18235294117647058
+      ],
+      "mean": 0.25882352941176473,
+      "sd": 0.07131973913518908,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g1.age_rho.mean",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.29460128203395325,
+        0.24455743809472322,
+        0.16019544766435986
+      ],
+      "mean": 0.23311805593101212,
+      "sd": 0.06792920341327592,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "B.ckpt2500.g1.age_rho.n_steps",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34816.0,
+        34816.0,
+        34816.0
+      ],
+      "mean": 34816.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "B.ckpt2500.g1.age_rho.n_steps_undefined",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "ageshape.py::measure_seed -> pooled_median_ci (per document, 2000, paired)",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "seconds_per_seed",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        60.51371502876282,
+        55.740538120269775,
+        54.595921754837036
+      ],
+      "mean": 56.95005830128988,
+      "sd": 3.1388331604995314,
+      "how": "wall clock",
+      "sd_exactly_zero": false
+    }
+  ],
+  "verdict": {
+    "falsifier": "NONE: diagnostic only (PREREG Amendment 1); never gating, no threshold on rho, does not change the class rule",
+    "outcome": "inconclusive",
+    "detail": "diagnostic (Amendment 1): controls C1 and A1-C passed; no threshold",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-10-06T06:56:41Z"
+}

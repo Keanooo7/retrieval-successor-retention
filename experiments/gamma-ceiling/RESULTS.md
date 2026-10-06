@@ -113,3 +113,57 @@ Keys: `B.ckpt2500.<g>.cap.{point,lo,hi}`. Hit rates by bucket are in the ledger 
 in the hindsight rule's own memory. Large-γ rows therefore sum FIFO-world counterfactuals furthest
 from the decision, and mix resident-type and probe-type readings in an age-correlated proportion.
 This file does not go beyond the reading rule.
+
+## Amendment 1: age-shape of the target (DIAGNOSTIC)
+
+**Never gating; does not change any label or the class.** Amendment 1 (c4c1a25) was requested by
+the PM and committed **after** the main run above had been seen, and **before** any age-shape
+number was computed. No expectation was registered for these values.
+
+| | |
+|---|---|
+| Command | `PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/gamma-ceiling/ageshape.py > <log> 2>&1; rc=$?` |
+| Exit code | `rc=0` (ledger `commands[0].exit_code = 0`) |
+| Git SHA | `a0547a61be4d445b8f42e93a7e32b01176e4dc6f`, `dirty: False` |
+| Config hash | `78138ff9154254e75c45d090d802df50b564a8191f186920f84cf1ec1280f4fa` |
+| Wall time | 2026-10-06T06:53:50Z → 06:56:41Z; 61 / 56 / 55 s per seed |
+| Ledger | `runs/gamma-ceiling-ageshape/ledger.json` (claims beside it) |
+| Controls | C1 ok at start and end; **A1-C pass-through exact**: the recorded rule's all-query hit equals the main ledger's `B.ckpt{c}.<g>.hit.all` for every γ × ckpt × seed (`controls_failed = []`) |
+
+Statistic: per eviction step of the hindsight rule's own memory (16 slots), Spearman ρ of `G_γ`
+with slot age `t − written_at`; lower median over the 34 816 steps (1088 documents × 32 steps) per
+seed; per-document bootstrap 95% CI (B0's replicates). **ρ > 0: older slots carry larger `G`;
+ρ < 0: newer slots do.** `n_steps_undefined = 0` in every cell. No threshold exists on ρ.
+
+### ckpt3000 — cap (from above) beside the age-shape of the target (DIAGNOSTIC)
+
+| γ | label | age-shape of the target (DIAGNOSTIC), median ρ [95% CI]: seed 0 · seed 1 · seed 2 |
+|---|---|---|
+| 0    | MISSES | +0.318 [+0.312, +0.326] · −0.076 [−0.088, −0.068] · +0.100 [+0.094, +0.109] |
+| 0.5  | MISSES | +0.338 [+0.329, +0.344] · +0.009 [−0.003, +0.018] · +0.126 [+0.118, +0.135] |
+| 0.8  | MISSES | +0.338 [+0.329, +0.347] · +0.165 [+0.156, +0.174] · +0.168 [+0.159, +0.176] |
+| 0.9  | MISSES | +0.321 [+0.312, +0.332] · +0.224 [+0.215, +0.232] · +0.176 [+0.168, +0.188] |
+| 0.95 | MISSES | +0.294 [+0.282, +0.306] · +0.247 [+0.238, +0.256] · +0.174 [+0.165, +0.185] |
+| 0.99 | MISSES | +0.268 [+0.253, +0.279] · +0.247 [+0.238, +0.256] · +0.171 [+0.159, +0.182] |
+| 1.0  | MISSES | +0.262 [+0.247, +0.274] · +0.247 [+0.238, +0.256] · +0.171 [+0.159, +0.182] |
+
+### ckpt2500 (secondary)
+
+| γ | median ρ [95% CI]: seed 0 · seed 1 · seed 2 |
+|---|---|
+| 0    | +0.362 [+0.356, +0.371] · +0.018 [+0.012, +0.026] · +0.088 [+0.079, +0.094] |
+| 0.5  | +0.382 [+0.374, +0.388] · +0.074 [+0.065, +0.082] · +0.106 [+0.100, +0.115] |
+| 0.8  | +0.391 [+0.385, +0.400] · +0.203 [+0.197, +0.212] · +0.162 [+0.150, +0.171] |
+| 0.9  | +0.371 [+0.362, +0.379] · +0.256 [+0.250, +0.265] · +0.176 [+0.168, +0.188] |
+| 0.95 | +0.341 [+0.329, +0.353] · +0.268 [+0.259, +0.276] · +0.176 [+0.165, +0.188] |
+| 0.99 | +0.318 [+0.306, +0.329] · +0.265 [+0.256, +0.274] · +0.174 [+0.162, +0.185] |
+| 1.0  | +0.312 [+0.300, +0.324] · +0.265 [+0.256, +0.271] · +0.168 [+0.156, +0.182] |
+
+Keys: `B.ckpt{c}.<g>.age_rho.{median,lo,hi,mean,n_steps,n_steps_undefined}`.
+
+**Looks wrong, is not (checked):** several cells repeat exactly (ckpt3000 seed 1 at γ = 0.95,
+0.99 and 1.0 all +0.247 [+0.238, +0.256]; seed 2 at 0.99 and 1.0). Spearman ρ over 16 slots takes a
+discrete set of values, so a median and its bootstrap quantiles land on the same lattice point; the
+per-cell **means** differ (`age_rho.mean`, e.g. seed 1: 0.218 / 0.229 / 0.229 — the last two
+also equal to three decimals; seed 0: 0.277 / 0.251 / 0.246). Recorded, not interpreted: the
+residents are the rule's own survivors, so ρ is measured on a set the rule selected by `G`.
