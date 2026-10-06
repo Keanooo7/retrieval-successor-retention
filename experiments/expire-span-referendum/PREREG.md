@@ -386,3 +386,39 @@ commit lands (no EVAL or VAL document touched):
   psiC seed 0's heartbeat (one step's §7.1 diagnostics, including a partial ρ of −0.415).
 - The bit-equality measurement on a tiny CPU model (d = 32, 8 documents, 5 steps): `predictor`
   and `through_gestalt` gave **different** `w, b` (max |Δw| 8.75e-05, max |Δb| 3.10e-06).
+
+## AMENDMENT 1 (2026-10-06): δ per seed
+
+**PM decision under delegation**, prompted by the Tier-G review of `087a486`, findings B-1 and
+B-2 (`docs/reviews/feat-expire-span-arm/087a486cdff8.md` at `59b57cf`, branch
+`review/expire-span-arm-087a486`). Committed alone, before any VAL or EVAL read. §7.3 stays as
+written (OPEN); this amendment supplies its values. What is measured is unchanged; how TIES is
+classified becomes defined.
+
+- **δ_s is B2's pre-registered δ** (`experiments/b2-psi-probe/PREREG.md` §9.3, "Reference and
+  minimum effect (on `FIT_VAL`, never on `EVAL`)", as amended by A1.11; on `night/2026-09-30` at
+  `94a7ceb`): `δ_s = 0.25 × (acc_oracle(all) − acc_FIFO(all))`, γ_o = 0.9, all-query answer
+  accuracy read through the model, on B2's FIT_VAL `[936000, 937024)`, frozen arm B
+  `ckpt-003000.pt` seed s with the same sha256 pins as §2, M = 16, S = 48.
+- **The values are copied from B2 phase A, not recomputed** on this run's VAL, on run 1's EVAL,
+  or on any referendum or run-1 data. Read by this session from
+  `runs/b2-psi-probe-fit/ledger.json` on `night/2026-09-30` (blob `510afff`, written by commit
+  `280a2ad` "run(b2-psi-probe-fit): phase A record…", ledger status `ok`), rows
+  `seed0.decisions`, `seed1.decisions`, `seed2.decisions`, field `value.delta["0.9"]`:
+  `0.03802185560447721`, `0.03675691427360389`, `0.03185756551141167`. They equal
+  `experiments/b2-psi-probe/RESULTS-phaseA.md` "ref and δ (§9.3, A1.11), FIT_VAL, ckpt3000":
+  0.038022 / 0.036757 / 0.031858. **The registered values are those six-decimal figures**
+  (the table below), the PM's set.
+- δ_s is applied per seed to §7.1's headline: the ES − ψC all-query contrast on run 1's EVAL
+  `[995000, 997048)` and its paired percentile 95% CI `[lo_s, hi_s]`.
+- **TIES** holds iff `−δ_s ≤ lo_s` and `hi_s ≤ δ_s` at every seed s ∈ {0, 1, 2}. The
+  precedence is unchanged: SUPERSEDES, LOSES, TIES, MIXED; first match wins.
+- δ is **not** recomputed on EVAL, because B2 §9.3 says "never on `EVAL`".
+
+### A1.1 δ per seed (machine-read)
+
+| seed | δ |
+|---|---|
+| 0 | 0.038022 |
+| 1 | 0.036757 |
+| 2 | 0.031858 |
