@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from rsr.exit_codes import Exit, run_main  # noqa: E402
 from rsr.metrics import loo  # noqa: E402
 from rsr.train.loop import encode  # noqa: E402
 
@@ -50,14 +51,14 @@ SEED = 0
 CKPT = 3000
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> Exit:
     torch.set_num_threads(1)
     src = LR.default_source()
     ck = LR.ckpt_path(src, CKPT, SEED)
     got = LR.sha256(ck)
     if got != LR.CKPT_SHA256[(CKPT, SEED)]:
         print(f"sha256 mismatch {ck}: {got}", flush=True)
-        return 3
+        return Exit.DID_NOT_RUN
     _sets, vmap, V = LR.CSC.doc_sets(SEED, LR.VOCAB_DOCUMENTS)
     docs = LR.CSC._generate(SEED, N_DOCS)[:N_DOCS]
     assert all(d.doc_id < LR.E_SET[0] for d in docs), "probe docs must be outside U"
@@ -111,8 +112,8 @@ def main() -> int:
         "pid": os.getpid(),
     }
     print(json.dumps(report, indent=1), flush=True)
-    return 0
+    return Exit.OK
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run_main(main)
