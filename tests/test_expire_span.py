@@ -808,6 +808,17 @@ def test_an_all_zero_weight_row_has_a_finite_zero_gradient():
     assert torch.equal(m.grad[0], torch.zeros_like(m.grad[0]))
 
 
+def test_a_nan_weight_row_stays_nan_not_a_finite_empty_row():
+    """Review a992d7c F-1: a NaN mask (NaN `w, b` after a poisoned step) must stay
+    visible as NaN in the forward. A `total > 0` guard would map NaN to the empty
+    row's 0 and let a corrupted checkpoint report finite VAL/EVAL numbers."""
+    att = torch.softmax(torch.randn(2, 1, 1, 4), dim=-1)
+    weight = torch.tensor([[float("nan"), 1.0, 1.0, 1.0], [1.0, 0.5, 1.0, 1.0]])
+    out = _reweight_attention(att, weight)
+    assert torch.isnan(out[0]).all()
+    assert torch.isfinite(out[1]).all()
+
+
 def test_a_row_with_any_weight_is_bit_identical_to_the_plain_quotient():
     """The fix touches only rows whose total is exactly 0: every other row's
     forward AND backward are bit-equal to `a / sum(a)`'s, so the referendum's

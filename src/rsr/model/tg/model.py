@@ -289,11 +289,16 @@ def _reweight_attention(att: Tensor, weight: Tensor) -> Tensor:
     (`tests/test_expire_span.py`, the empty-row tests). The row's output is the
     constant 0, so its gradient is 0. Every row with `total > 0` is untouched,
     forward and backward, bit for bit.
+
+    The guard is `total == 0`, not `total > 0`, so a NaN total (NaN `w, b` from a
+    poisoned step) still propagates NaN instead of reading as a finite empty row:
+    a corrupted checkpoint must not yield finite VAL/EVAL numbers (review
+    a992d7c F-1).
     """
     a = att.to(torch.float32) * weight.to(torch.float32)[:, None, None, :]
     total = a.sum(dim=-1, keepdim=True)
     out = a / total.clamp(min=torch.finfo(torch.float32).tiny)
-    return torch.where(total > 0, out, torch.zeros_like(out)).to(att.dtype)
+    return torch.where(total == 0, torch.zeros_like(out), out).to(att.dtype)
 
 
 class SelfAttention(nn.Module):
