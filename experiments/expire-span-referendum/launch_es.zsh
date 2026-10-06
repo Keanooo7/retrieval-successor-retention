@@ -67,7 +67,7 @@ for s in 0 1 2; do
     parts=(${=line}); cid=$parts[1]; OV=()
     for kv in "${(@)parts[2,-1]}"; do OV+=(--policy-override $kv); done
     k=$cid-s$s
-    "${SLOT[@]}" --job-id es-ref-$k${JOB_SUFFIX:-} -- \
+    "${SLOT[@]}" --job-id es-ref-a2-$k${JOB_SUFFIX:-} -- \
       .venv/bin/python -m rsr.train.loop \
         --d 128 --batch 16 --iters $STEPS --steps-per-stream 48 --memory-slots 16 \
         --lr 0.001 --seed $s --beat-every 1 --ckpt-every $STEPS --device cpu \
