@@ -107,7 +107,22 @@ CLASS_ROUTE = {
     "MIXED": "owner",
 }
 NEWCOMER_RESOLVED, NEWCOMER_PERSISTS = 0.05, 0.20  # PREREG §5
-AGE_BUCKETS = {"1": (1, 1), "2..4": (2, 4), "5..M": (5, M)}  # PREREG §5 probe item 2
+
+
+def a_max_from_registry() -> int:
+    """PREREG Amendment 1 (d8dfd14): ``A_max`` read from the registry, as in run 1 §6
+    (CONDITIONAL, synthetic scope, ``A_max = S``; correction 9)."""
+    from rsr import constants as C
+
+    return int(C.REGISTRY.get("A_max", "synthetic", S=C.REGISTRY.get("S", "synthetic")))
+
+
+def age_buckets(m: int, a_max: int) -> dict[str, tuple[int, int]]:
+    """PREREG §5 probe item 2 as amended (Amendment 1, d8dfd14):
+    {1, 2..4, 5..M, M+1..A_max}."""
+    return {"1": (1, 1), "2..4": (2, 4), "5..M": (5, m), "M+1..A_max": (m + 1, a_max)}
+
+
 ES_CONFIG = "L48-k1e-2"
 #: PREREG §4 item 4: each referendum vector's sha256 (C14 checks them; preflight checks
 #: that every one appears verbatim in the committed PREREG).
@@ -370,16 +385,23 @@ def _q(rep: torch.Tensor) -> dict:
     return R1._ci(rep)
 
 
-def probe_stats(decisions: list[tuple], n_docs: int, W: torch.Tensor, m: int = M) -> dict:
+def probe_stats(
+    decisions: list[tuple],
+    n_docs: int,
+    W: torch.Tensor,
+    m: int = M,
+    a_max: int | None = None,
+) -> dict:
     """PREREG §5's three probe statistics from ``probe_pass`` decisions.
 
     1. within-step Spearman rho(psi_hat, cos) over the live slots of each decision;
        the LOWER median over decisions, with the per-document bootstrap CI;
-    2. by age bucket {1, 2..4, 5..M}: within-step percentile ranks ``(rank - 1)/(K - 1)``
-       of psi_hat and of cos; per bucket, the Pearson correlation of the two over the
+    2. by age bucket {1, 2..4, 5..M, M+1..A_max} (Amendment 1; ``A_max`` from the
+       registry unless given): within-step percentile ranks ``(rank - 1)/(K - 1)`` of
+       psi_hat and of cos; per bucket, the Pearson correlation of the two over the
        pooled (decision, slot) cells, with the same bootstrap, beside each bucket's mean
-       percentiles. Cells older than M fall in no bucket and are COUNTED, not dropped
-       silently;
+       percentiles. ``cells_older_than_M`` is still reported and is CHECKED equal to the
+       M+1..A_max bucket's count (``older_than_M_equals_bucket``);
     3. the share of victims whose cos(s_i, c_t) is the step's maximum."""
     if not decisions:
         return {"n_decisions": 0}
@@ -406,7 +428,8 @@ def probe_stats(decisions: list[tuple], n_docs: int, W: torch.Tensor, m: int = M
     out["rho_lower_median"] = {**_q(rep), "point": lower_median(rho[ok])}
     xp, yc = (rp - 1) / (K - 1), (rc - 1) / (K - 1)
     buckets: dict[str, Any] = {}
-    for name, (lo, hi) in AGE_BUCKETS.items():
+    a_max = a_max_from_registry() if a_max is None else int(a_max)
+    for name, (lo, hi) in age_buckets(m, a_max).items():
         sel = (lo <= A) & (hi >= A)
         doc_of = D.unsqueeze(1).expand_as(A)[sel]
         x, y = xp[sel], yc[sel]
@@ -432,6 +455,10 @@ def probe_stats(decisions: list[tuple], n_docs: int, W: torch.Tensor, m: int = M
         }
     out["by_age_bucket"] = buckets
     out["cells_older_than_M"] = int((m < A).sum())
+    out["a_max"] = a_max
+    out["older_than_M_equals_bucket"] = (
+        out["cells_older_than_M"] == buckets["M+1..A_max"]["n_cells"]
+    )
     is_max = C.gather(1, V.unsqueeze(1)).squeeze(1) == C.max(1).values
     per = torch.zeros(n_docs, 2, dtype=torch.float64)
     per[:, 0].index_add_(0, D, torch.ones_like(is_max, dtype=torch.float64))
@@ -1190,7 +1217,10 @@ def _seed_lines(d: dict, p) -> None:
         p(f"- probe {name}: {st['n_decisions']} decisions")
         p(f"  - rho(psi_hat, cos) lower median: {_ci(st['rho_lower_median'])}")
         p(f"  - victim cos is the step max: {_ci(st['victim_cos_is_max_share'])}")
-        p(f"  - cells older than M (in no bucket): {st['cells_older_than_M']}")
+        p(
+            f"  - cells older than M: {st['cells_older_than_M']} (equals the M+1..A_max "
+            f"bucket's count: {st['older_than_M_equals_bucket']}; A_max {st['a_max']})"
+        )
         for b, v in st["by_age_bucket"].items():
             p(
                 f"  - age {b}: r(pct) {_ci(v['pearson_pct'])}; mean psi_hat pct "

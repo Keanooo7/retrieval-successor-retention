@@ -217,13 +217,58 @@ def test_probe_stats_by_hand(r2):
     assert st["rho_lower_median"]["lo"] == pytest.approx(1.0)
     assert st["victim_cos_is_max_share"]["point"] == 1.0
     for b in st["by_age_bucket"].values():
-        assert b["pearson_pct"]["point"] == pytest.approx(1.0)
+        if b["n_cells"]:  # M+1..A_max is empty at m = K = 6: undefined, not 1
+            assert b["pearson_pct"]["point"] == pytest.approx(1.0)
+    assert st["by_age_bucket"]["M+1..A_max"]["n_cells"] == 0
     st = r2.probe_stats(_decisions(sign=-1.0), 4, W, m=6)
     assert st["rho_lower_median"]["point"] == pytest.approx(-1.0)
     assert st["by_age_bucket"]["5..M"]["n_cells"] == 4 * 5 * 2  # ages 5, 6 of 6
     assert st["cells_older_than_M"] == 0
     st = r2.probe_stats(_decisions(K=6), 4, W, m=4)  # ages 5, 6 > M = 4: counted
     assert st["cells_older_than_M"] == 4 * 5 * 2
+
+
+def test_amendment_1_bucket_m_plus_1_to_a_max_by_hand(r2):
+    """PREREG Amendment 1 (d8dfd14): the M+1..A_max bucket holds exactly the cells
+    older than M (the count is checked equal), and its Pearson of within-step
+    percentile ranks and its mean percentiles match a plain-Python computation."""
+    g = torch.Generator().manual_seed(11)
+    K, m = 6, 4
+    dec = []
+    for d in range(3):
+        for j in range(4):
+            psi = torch.rand(K, generator=g, dtype=torch.float64)  # independent of cos
+            cos = torch.rand(K, generator=g, dtype=torch.float64)
+            dec.append((d, 20 + j, psi, cos, torch.arange(K, 0, -1), int(cos.argmax())))
+    W = torch.ones(5, 3, dtype=torch.float64)
+    st = r2.probe_stats(dec, 3, W, m=m, a_max=48)
+    b = st["by_age_bucket"]["M+1..A_max"]
+    assert list(st["by_age_bucket"]) == ["1", "2..4", "5..M", "M+1..A_max"]
+    assert st["a_max"] == 48 and st["older_than_M_equals_bucket"] is True
+    assert b["n_cells"] == st["cells_older_than_M"] == 3 * 4 * 2  # ages 5 and 6
+
+    def pct(v):
+        order = sorted(range(K), key=lambda i: float(v[i]))
+        return {i: r / (K - 1) for r, i in enumerate(order)}
+
+    xs, ys = [], []
+    for _d, _t, psi, cos, age, _v in dec:
+        px, py = pct(psi), pct(cos)
+        for i in range(K):
+            if m < int(age[i]) <= 48:
+                xs.append(px[i])
+                ys.append(py[i])
+    n = len(xs)
+    mx, my = sum(xs) / n, sum(ys) / n
+    cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True))
+    vx = sum((x - mx) ** 2 for x in xs)
+    vy = sum((y - my) ** 2 for y in ys)
+    r = cov / math.sqrt(vx * vy)
+    assert b["pearson_pct"]["point"] == pytest.approx(r, abs=1e-12)
+    assert b["pearson_pct"]["lo"] == pytest.approx(r, abs=1e-12)  # W = the sample
+    assert b["mean_psi_pct"]["point"] == pytest.approx(mx, abs=1e-12)
+    assert b["mean_cos_pct"]["point"] == pytest.approx(my, abs=1e-12)
+    assert r2.a_max_from_registry() == 48
 
 
 def test_weighted_lower_median_equals_brute_force(r2):
