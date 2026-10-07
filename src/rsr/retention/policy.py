@@ -208,6 +208,13 @@ class AttentionTrace:
     construction. Detached: it is an input to `psi_hat`, never a path back into
     the transformer (§3.3). `RSRPolicy.observe` refuses a trace without it."""
 
+    loo: dict[str, Tensor] | None = None
+    """Owner ruling C3 (2026-10-07): this row's on-policy resample-knockout LOO,
+    `{"delta", "status", "kind", "donor_age_gap"}`, each `[M]`
+    (`rsr.retention.loo_target.LooStep`), or None. Additive with a default, like
+    `context`: set only by `run_policy_loop(..., loo=...)`. Formed under `no_grad`
+    in eval mode -- data, never a differentiable path (§3.3)."""
+
 
 @runtime_checkable
 class RetentionPolicy(Protocol):

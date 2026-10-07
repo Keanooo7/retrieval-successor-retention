@@ -287,12 +287,14 @@ def trace_for_row(
     row: int,
     step: int,
     context: Tensor | None = None,
+    loo=None,
 ) -> AttentionTrace:
     """One row of a `CrossCapture` as the protocol's `AttentionTrace`.
 
     `mem_valid` is the **pre-write** validity mask, matching `cap`. `context` is
     the batch's `[B, D]` `c_t` from the forward that produced `cap` (ADR-0009
-    L10(a)); its row is attached detached.
+    L10(a)); its row is attached detached. `loo` is the step's on-policy LOO
+    (`rsr.retention.loo_target.LooStep`, C3) or None; its row is attached.
     """
     return AttentionTrace(
         alpha=cap.alpha[:, row],
@@ -302,6 +304,14 @@ def trace_for_row(
         eval_mode=cap.eval_mode,
         gate=cap.gate,
         context=None if context is None else context[row].detach(),
+        loo=None
+        if loo is None
+        else {
+            "delta": loo.delta[row],
+            "status": loo.status[row],
+            "kind": loo.kind[row],
+            "donor_age_gap": loo.donor_age_gap[row],
+        },
     )
 
 
@@ -334,6 +344,10 @@ class EvalForward:
     srep: Tensor
     cap: CrossCapture | None
     seconds: float
+    logits: Tensor | None = None
+    """The eval forward's logits (detached). C3 (R-2026-10-07): the live loss the
+    on-policy LOO `Delta` is measured against comes from THIS forward, the one whose
+    gestalt is `c_t`, so no second live pass is made."""
 
 
 def eval_forward(
@@ -373,7 +387,12 @@ def eval_forward(
         finally:
             model.train(was_training)
     synchronize(out.srep.device)  # m-7: MPS and CUDA alike
-    return EvalForward(srep=out.srep.detach(), cap=cap, seconds=time.perf_counter() - t0)
+    return EvalForward(
+        srep=out.srep.detach(),
+        cap=cap,
+        seconds=time.perf_counter() - t0,
+        logits=out.logits.detach(),
+    )
 
 
 def run_policy_loop(
@@ -388,6 +407,7 @@ def run_policy_loop(
     observe: bool = False,
     eval_capture: bool = False,
     timings: dict | None = None,
+    loo=None,
 ):
     """`run_sentence_loop`, with the eviction rule supplied by `policy`.
 
@@ -400,6 +420,14 @@ def run_policy_loop(
     unchanged -- the eval forward only feeds the policy. **Off by default**, and
     off it forms nothing: E0b's path (`test_reduction.py`) does not reach it.
     `timings`, if given, accumulates `eval_forward_s` (L1's cost, measured).
+
+    `loo` (owner ruling C3, 2026-10-07) is a callable -- in practice
+    `rsr.retention.loo_target.LooTarget` -- that forms the on-policy
+    resample-knockout `Delta` for every row at every step, over the PRE-write
+    memory, against the eval forward's own logits; each row's slice rides on the
+    trace `observe` receives. It needs `eval_capture` and `observe`. **Off by
+    default**: it draws no global RNG and changes no decision, the write or the
+    loss; it only costs forwards (`timings["loo_s"]`).
 
     `policy.select_eviction(slots, context, step)` is consulted **only when the
     row's memory is full**, which is the same condition under which the
@@ -449,6 +477,12 @@ def run_policy_loop(
             "eval_capture is not wired for a policy that shapes the forward pass "
             "(Expire-Span's memory_weight); ADR-0009 slice 1 is RSR only"
         )
+    if loo is not None and not (eval_capture and observe):
+        raise ValueError(
+            "loo (C3) needs eval_capture=True and observe=True: Delta is measured "
+            "against the eval forward whose gestalt is c_t (ADR-0009 L2) and is a "
+            "regression target, so with no observe it would go nowhere"
+        )
 
     for t in range(steps):
         ids_t, mask_t = sentences[:, t], masks[:, t]
@@ -488,6 +522,14 @@ def run_policy_loop(
             if timings is not None:
                 spent = timings.get("eval_forward_s", 0.0)
                 timings["eval_forward_s"] = spent + ev.seconds
+        lstep = None
+        if loo is not None:
+            # C3: the knockouts read the same PRE-write memory and bos context the
+            # eval forward did; `step_delta` returns CPU tensors (synchronised).
+            t1 = time.perf_counter()
+            lstep = loo(model, ids_t, mask_t, mem, bos_ctx, bos_valid, ev.logits, t)
+            if timings is not None:
+                timings["loo_s"] = timings.get("loo_s", 0.0) + (time.perf_counter() - t1)
         if observe:
             # Pre-write memory, deliberately: this is what the forward attended to.
             if ev is not None:
@@ -498,7 +540,7 @@ def run_policy_loop(
                 if bool(row_valid[row]):
                     policy.observe(
                         memory_state(mem, t, row),
-                        trace_for_row(cap, mem.valid, row, t, ctx),
+                        trace_for_row(cap, mem.valid, row, t, ctx, lstep),
                         t,
                     )
         contrib = step_fn(t, out, ids_t, mask_t, row_valid)

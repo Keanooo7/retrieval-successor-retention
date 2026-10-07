@@ -1145,6 +1145,13 @@ def train(
     phi_params = [] if head is None else list(head.parameters())
     learns = bool(getattr(policy, "learns", False))  # ADR-0009 L13(a): beta != 0
     eval_ctx = bool(getattr(policy, "needs_eval_context", False))  # L1(a), L2
+    # Owner ruling C3 (R-2026-10-07): an arm on the LOO target forms the on-policy
+    # resample-knockout Delta in the loop. Imported here, not at module top:
+    # rsr.retention.loo_target -> rsr.metrics.loo -> this module.
+    needs_loo = bool(getattr(policy, "needs_loo", False))
+    if needs_loo:
+        from rsr.metrics.loo import stream_annotations
+        from rsr.retention.loo_target import LooTarget, loo_seed
     if freeze_transformer:
         model.requires_grad_(False)  # D2(b): no L_NTP update to transformer, W_sent
     if frozen_model_mode not in FROZEN_MODEL_MODES:
@@ -1410,6 +1417,9 @@ def train(
                     )
                 ids, mask = all_ids[sel], all_mask[sel]
                 cur["tmask"] = all_tmask[sel]
+                step_docs = None
+                if needs_loo:
+                    step_docs = [docs[i] for i in sel.tolist()]
             else:
                 # Step `it` reads its own window, so a resumed run continues the
                 # stream at the resumed step.
@@ -1422,6 +1432,7 @@ def train(
                     sdocs, vocab_map, max_tokens=max_tokens, steps=steps_per_stream
                 )
                 ids, mask, cur["tmask"] = ids.to(device), mask.to(device), tm.to(device)
+                step_docs = list(sdocs)
             lengths = torch.full((batch,), steps_per_stream, device=device)
             # Correction 31: §3.4's warmup counts optimizer steps. `it` counts THIS
             # run's steps, so a resumed run keeps its place, and a warm start (m-1)
@@ -1430,6 +1441,14 @@ def train(
             if hasattr(policy, "set_train_step"):
                 policy.set_train_step(it)
             timings: dict[str, float] = {}
+            loo = None
+            if needs_loo:
+                # C3: the batch's kinds and fact keys for donor choice, and a donor
+                # seed fresh at every optimizer step (choice (a)).
+                loo = LooTarget(
+                    ann=stream_annotations(step_docs, steps=steps_per_stream),
+                    seed=loo_seed(seed, it),
+                )
             loss = run_policy_loop(
                 model,
                 ids,
@@ -1440,6 +1459,7 @@ def train(
                 observe=learns,
                 eval_capture=eval_ctx,
                 timings=timings,
+                loo=loo,
             )
             # §3.3, read per correction 2: L = L_NTP + beta * L_MC. ADR-0009 L13(a):
             # beta = 0 means L_MC is NOT computed (`learns` is False), never x0.
@@ -1509,6 +1529,8 @@ def train(
                     "mc": stats or None,
                     "phi_grad_norm": phi_gnorm,
                     "eval_forward_s": timings.get("eval_forward_s"),
+                    # C3: the on-policy LOO's cost, measured (absent off the target).
+                    **({"loo_s": timings.get("loo_s")} if needs_loo else {}),
                     "step_s": dt,
                     # Spec §7.1 / ADR-0009 L6 (m-8): this step's displacement
                     # distribution, victim rank and age histograms, partial
