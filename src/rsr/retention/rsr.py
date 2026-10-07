@@ -740,7 +740,7 @@ class RSRPolicy:
         gaps = (
             torch.cat(self._loo_age_gap).double()
             if self._loo_age_gap
-            else torch.zeros(0, dtype=torch.float64)
+            else torch.zeros(0, dtype=torch.float64, device="cpu")
         )
         return {
             "counts": c,
@@ -841,7 +841,7 @@ class RSRPolicy:
                 rhos.append(rho)
         rho_stats: dict[str, Any] = {"n": len(rhos)}
         if rhos:
-            v = torch.tensor(sorted(rhos), dtype=torch.float64)
+            v = torch.tensor(sorted(rhos), dtype=torch.float64, device="cpu")
             n = v.numel()
             rho_stats.update(
                 median=float(v.median()),  # torch's median is the lower median

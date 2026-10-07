@@ -123,13 +123,17 @@ def pick_donor_fast(
         cands.append((b, s))
     if not cands:
         return None
-    i = int(torch.randint(len(cands), (1,), generator=_gen(seed, me, t, role)))
+    i = int(
+        torch.randint(len(cands), (1,), generator=_gen(seed, me, t, role), device="cpu")
+    )
     return cands[i]
 
 
 @dataclass
 class LooStep:
-    """One sentence step's on-policy LOO, for the whole batch (CPU tensors).
+    """One sentence step's on-policy LOO, for the whole batch. **CPU tensors on
+    purpose** (`device="cpu"` explicit): they are target data and bookkeeping read by
+    Python loops, like `loo_delta_loss`'s outputs, never inputs to a forward pass.
 
     `delta` `[B, M]` float64: knockout minus live mean real-target NLL of sentence
     `t`; NaN where the slot is empty, has no donor, or the sentence has no target.
@@ -184,12 +188,12 @@ def step_delta(
     step_l, valid_l = step_c.tolist(), valid_c.tolist()
     kind_l, key_l = ann["kind"].tolist(), ann["fact_key"].tolist()
     doc_l = ann["doc_id"].tolist()
-    delta = torch.full((B, M), nan, dtype=torch.float64)
-    status = torch.full((B, M), STATUS_EMPTY, dtype=torch.long)
-    kind = torch.full((B, M), -1, dtype=torch.long)
-    donor_row = torch.full((B, M), -1, dtype=torch.long)
-    donor_sentence = torch.full((B, M), -1, dtype=torch.long)
-    donor_age_gap = torch.full((B, M), -1, dtype=torch.long)
+    delta = torch.full((B, M), nan, dtype=torch.float64, device="cpu")
+    status = torch.full((B, M), STATUS_EMPTY, dtype=torch.long, device="cpu")
+    kind = torch.full((B, M), -1, dtype=torch.long, device="cpu")
+    donor_row = torch.full((B, M), -1, dtype=torch.long, device="cpu")
+    donor_sentence = torch.full((B, M), -1, dtype=torch.long, device="cpu")
+    donor_age_gap = torch.full((B, M), -1, dtype=torch.long, device="cpu")
     was = model.training
     model.eval()
     try:
