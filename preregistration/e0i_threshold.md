@@ -1,6 +1,6 @@
 # Pre-registration — E0i reintroduction-gap threshold
 
-> **AWAITING SIGNATURE (§6). NOT IN FORCE UNTIL SIGNED.**
+> **SIGNED 2026-10-07 by Brendan Keane (§6). IN FORCE AS OF THE SIGNING COMMIT.**
 >
 > **No histogram has been computed, and none may be before the signed version is
 > committed.** A threshold registered after seeing the data is not a threshold, and
@@ -288,7 +288,7 @@ cannot be evaluated at all — exit 3, not exit 0.
 Everything above is final and reconciled (D-G, plus the two corrections in §1.2 and
 §1.3, both of which make the gate stricter). This is a signature, not a decision.
 
-🔴 **Unsigned. It must be signed by a person, and that person is not a model.**
+✅ **Signed by Brendan Keane, 2026-10-07. Supersedes the 2026-09-17 block of fcd79d4.**
 
 The only thing this signature does is record that *someone committed to a number
 before seeing the data*. A name written here by an agent would make the document
@@ -297,9 +297,9 @@ read it as Brendan's commitment. That is the failure, and it is the same one as
 writing an advisor review in an advisor's voice. The blank is the point.
 
 ```
-Threshold set by:  Brendan Keane                Date: 2026-09-17
+Threshold set by:  Brendan Keane                Date: 2026-10-07
 
-Histogram not computed before this commit:   git SHA 990f6792fe912a800e6ce79220e728c05879fd94
+Histogram not computed before this commit:   git SHA 475a409bcbeb470d7f0947527d8cfc55028368fb
 ```
 
 ### To sign
