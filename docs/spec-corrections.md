@@ -780,3 +780,25 @@ which presumes few epochs. **An agent does not pick this.** Until it is ruled,
 `build_policy("rsr", steps_per_epoch=None)` raises naming this correction, and
 `train()` passes `None`. No run was affected: `"rsr"` already raised
 `UnmeasuredConstant` (E1 has not logged `ν`, `β`, `γ`).
+
+---
+
+## 32 — §5's fill-fraction paragraph still calls the rescaled target "unbiased"
+
+**Supersedes:** spec :493, *"Under the target rescaling every step contributes **unbiased** signal."*
+
+D-7 narrowed §3.2.1's claim. The rescale `r_i(t) = share_i(t) · |memory_t| / M` removes the
+*mechanical* fill-level bias, and only under a uniform-competitor assumption. It still credits
+absent competitors, and it biases genuinely important stream-initial slots downward. CLAUDE.md
+forbids calling the rescaled target "unbiased". §5's paragraph was never rewritten after D-7.
+
+Read it as: *"Under the target rescaling, every step contributes signal whose **mechanical**
+fill-level bias is removed. The fill fraction is therefore a descriptive statistic, not a discount
+on the usable data."* The reporting instruction (report `mean(|memory_t|/M)`) is unchanged.
+
+Found 2026-10-07 by an `rsr-researcher` session while it drafted RSR run 2's PREREG. Added by the PM
+session under CLAUDE.md's instruction to add a superseded passage here and tell Brendan.
+
+**Scope:** RSR run 2's target is the LOO return (R-2026-10-07-c3-loo-target). It is a loss
+difference, not a share, and is not rescaled (run 2 PREREG §10 item 2). This correction concerns
+`r_i` only.
