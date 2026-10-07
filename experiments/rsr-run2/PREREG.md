@@ -260,3 +260,22 @@ Run 1's RESULTS (headline, victim-age histograms, the age arm ≡ FIFO on held-o
 RESULTS, the newcomer bake-off's RESULTS, the Expire-Span referendum's RESULTS (headline and
 levels) and the first record of its seed-0 `es.jsonl.gz` (format check), and the cost runs of §8 (their `loss_mc`, coverage and timing; no held-out
 number of run 2 exists).
+
+## AMENDMENT 1 (2026-10-07): a fourth age bucket in the self-alignment probe
+
+Written by the PM session (Claude Opus 5.5) under Brendan's delegation of technical rulings, and
+committed **alone**, before any run-2 training. The text above is not edited. **No run-2 data
+exists at this commit.** The only run-2 numbers anyone has seen are the build's 30-step,
+32-document smoke run in a scratch directory, and it is not a result.
+
+**Found by** the harness build at `9c053f6`. §5 probe item 2's age buckets are {1, 2..4, 5..M}.
+On-policy slots can be older than `M` (FIFO never keeps one, but a learned rule can), and the
+buckets leave those slots out. In the smoke, 5468 of 16384 run-2 cells and 7001 of 16384 run-1
+retroactive cells fell outside every bucket. So the split, as written, ignores about a third of the
+cells, and it ignores exactly the old slots that a non-recency rule keeps.
+
+**Change.** Probe item 2's buckets become **{1, 2..4, 5..M, M+1..A_max}**, with `A_max = 48`, read
+from the registry as in run 1 §6. The statistic, the bootstrap and the reporting for the new bucket
+are those of the other three. `cells_older_than_M` is still reported, and it now equals the new
+bucket's count, which is checked. Nothing else changes. The probe remains a diagnostic and never a
+gate.
