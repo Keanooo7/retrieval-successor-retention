@@ -1,0 +1,182 @@
+{
+ "L16-k1e-2/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L16-k1e-2/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L16-k1e-3/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L16-k1e-3/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L16-k1e-4/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L16-k1e-4/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L32-k1e-2/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L32-k1e-2/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L32-k1e-3/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L32-k1e-3/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L32-k1e-4/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L32-k1e-4/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L48-k1e-2/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L48-k1e-2/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L48-k1e-3/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L48-k1e-3/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L48-k1e-4/seed0": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ },
+ "L48-k1e-4/seed2": {
+  "beats_new": 3000,
+  "beats_old": 3000,
+  "first_differing_step": null,
+  "differing_beat_fields": [],
+  "ckpt_sections_differing_excluding_unseeded_global_rng": [],
+  "unseeded_global_rng_paths_differing": 624,
+  "policy_w_equal": true,
+  "policy_b_equal": true
+ }
+}
