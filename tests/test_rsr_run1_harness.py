@@ -56,11 +56,24 @@ DIAG = 2  # A4.2's DIAGNOSTIC step, shrunk with the run (160 of 3000 in the run)
 
 
 @pytest.fixture(scope="session")
-def r1():
+def r1(tmp_path_factory):
+    """run.py, loaded once, with its **shared orchestrator root injected**: an empty,
+    session-private root, never the live checkout's `.orchestrator/jobs`.
+
+    Root cause of 7 failures (2026-10-07, PREREG rsr-run2 §10 item 7): C10 reads each
+    arm's slot job record `rsr-run1-<arm>-s<seed>.json` from `SHARED_ORCH_ROOT`, which is
+    the real checkout. Once run 1 had launched, the e2e fixture -- launched directly,
+    with no slot and so no job record of its own -- read run 1's REAL records
+    (iters 3000, pinned ed6302a) and C10 failed on them. A test must never depend on
+    what has been launched on this machine. Injecting the root here leaves run.py, and
+    so every real run's output, unchanged; `tiny_cfg` passes the same root."""
     spec = importlib.util.spec_from_file_location("rsr_run1_run", RUN)
     mod = importlib.util.module_from_spec(spec)
     sys.modules["rsr_run1_run"] = mod
     spec.loader.exec_module(mod)
+    iso = tmp_path_factory.mktemp("orch-root")
+    (iso / ".orchestrator" / "jobs").mkdir(parents=True)
+    mod.SHARED_ORCH_ROOT = str(iso)
     return mod
 
 
@@ -201,6 +214,7 @@ def tiny_cfg(r1, sub: dict, **kw):
         owner_prereg=str(sub["owner_prereg"]),
         diag_step=DIAG,
         prereg_strict=False,
+        orch_root=r1.SHARED_ORCH_ROOT,  # the injected, isolated root (see `r1`)
     )
     base.update(kw)
     return r1.Run1Config(**base)
