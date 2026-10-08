@@ -271,3 +271,30 @@ approved as drafted. Nothing below was changed after his reply.
 - Seed 0, document 64 of B0-CF's Δ: a structure check, 0 NaN below the diagonal and 496 evicted
   cells; no statistic.
 - No ψ̂ has been fitted to Δ, and no number in §4–§6 exists.
+
+## Amendment 1 (2026-10-08): §10's compute, measured before launch
+
+**Drafted by a model** (the builder session, Claude Opus 5.5), not by Brendan. It adds
+measurements only; nothing above it changes. No EVAL document has been generated or
+read. The build's tests and smokes fitted heads for 20-50 steps on at most 40 U documents
+(scratch out-roots, U-val documents standing in for EVAL, labelled SMOKE, never read);
+no fit at §3's schedule and no U-val cap over the 156 U-val documents exists.
+
+- **Command:** `PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det
+  --slots 1 -- .venv/bin/python experiments/offline-psi/run.py time --seed 0 --threads 1`,
+  exit 0, at `9dfa85e` (clean tree), Apple M4 Max, 64 GB, macOS 26.6.2, python 3.12.13,
+  torch 2.14.0, CPU, 1 thread. Load average 1.4-1.6 from another session throughout.
+- **EVAL was not read.** The "64-document EVAL block" was timed on 64 U documents (ids
+  96..159) through the same deploy code path (`deploy_pass`: run 1's `run_batch`, blocks
+  of 16, `eval_forward` context, run 2's `ProbePolicy`), with S = 48 and the same batch.
+  Its cost does not depend on which synthetic documents it reads. Nothing was written.
+- **Measured (seed 0):**
+  - gestalt forward, 32 U documents: 2.657 s (C5 held on the sample);
+  - 50 fit steps (cf_all, batch 16, including one U-val evaluation): 0.107 s;
+  - one U-val L_MC evaluation over 32 documents: 0.0021 s;
+  - C2 on the full U (model-free): 6.854 s;
+  - one 64-document deploy block: 5.786 s (run 1's residency check held).
+- **Projection per seed:** gestalt forward 1088 documents 90 s; two fits (cf_all, cf_live)
+  of 3000 steps with 61 U-val evaluations each 14 s; C2 7 s; EVAL 2048 documents 185 s;
+  total 296 s. **Three seeds, sequential: 0.25 h**, before loading, the fit reading and
+  scoring (each model-free or a few seconds in the smoke). Far under the 8 h stop line.
