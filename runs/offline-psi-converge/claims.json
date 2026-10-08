@@ -1,0 +1,35 @@
+{
+ "run_id": "offline-psi-converge",
+ "claims": [
+  {
+   "claim": "seed 0 cf_all cap at the selected phi",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute cap --seed 0",
+   "expected": "95500 0.27385892116182575"
+  },
+  {
+   "claim": "seed 0 C2 trajectory reproduction (cf_all, step 3000)",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute c2 --seed 0",
+   "expected": "1.6307810744736677"
+  },
+  {
+   "claim": "seed 1 cf_all cap at the selected phi",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute cap --seed 1",
+   "expected": "117000 0.40563991323210424"
+  },
+  {
+   "claim": "seed 1 C2 trajectory reproduction (cf_all, step 3000)",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute c2 --seed 1",
+   "expected": "1.5766100367590767"
+  },
+  {
+   "claim": "seed 2 cf_all cap at the selected phi",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute cap --seed 2",
+   "expected": "103500 0.1482300884955749"
+  },
+  {
+   "claim": "seed 2 C2 trajectory reproduction (cf_all, step 3000)",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute c2 --seed 2",
+   "expected": "1.790370677418465"
+  }
+ ]
+}
