@@ -1,0 +1,102 @@
+{
+  "status": "ok",
+  "seed": "c3c01fbe837c505677dbd38e2020bdb88bb4c26e5322e8cd2bea5881da824f58",
+  "claims": [
+    {
+      "claim": "seed 0 C14 ES source sha256 and config",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 c14 --seed 0",
+      "expected": "True f6a3d97f25c520c84091562002e719c489d5824ba53b484f2ad892ff12d194e1",
+      "observed": "claim command (run from verify worktree at 728a42f, rc 0) printed 'True f6a3d97f25c520c84091562002e719c489d5824ba53b484f2ad892ff12d194e1'; independent (shasum -a 256 -c MANIFEST.sha256 in /Users/keanooo7/rsr-substrate/2026-10-07-es-pinned rc 0; sha256 of es-referendum-a2-run eval/seed0/es.jsonl.gz f6a3d97f25c520c84091562002e719c489d5824ba53b484f2ad892ff12d194e1; eval.json records_sha256 f6a3d97f25c520c84091562002e719c489d5824ba53b484f2ad892ff12d194e1, config L48-k1e-2, seed 0; registered sha read from git show a406d39 (and d8dfd14, 728a42f) experiments/rsr-run2/PREREG.md line 130): 'True f6a3d97f25c520c84091562002e719c489d5824ba53b484f2ad892ff12d194e1'",
+      "match": true
+    },
+    {
+      "claim": "seed 1 headline psiC - FIFO and label",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 headline --seed 1",
+      "expected": "-0.045260 -0.048777 -0.041772 LOSS",
+      "observed": "claim command (run from verify worktree at 728a42f, rc 0) printed '-0.045260 -0.048777 -0.041772 LOSS'; independent (own gzip/json reader + numpy aggregation, torch index replay seed 20260927+1, 2000 reps; delta read directly from B2 ledger key ckpt3000.seed1.decisions.delta['0.9']=0.03675691427360389, equal to PREREG d8dfd14 \u00a72.1 row 1): '-0.045260 -0.048777 -0.041772 LOSS' (point -0.04526010034327965, lo -0.0487773578322012, hi -0.04177243376785378; acc_psiC 0.7212569316081331, acc_fifo 0.7665170319514127, n_answers 37870, n_docs 2048); own-RNG bootstrap (default_rng(12345), 20000 reps) lo -0.04877273852443848 hi -0.04176161356434447 sd 0.0017879797964786227",
+      "match": true
+    },
+    {
+      "claim": "seed 2 C14 ES source sha256 and config",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 c14 --seed 2",
+      "expected": "True 6ded09f44abdefd90d68c9dfcd2c8d904f7f1e8dc07c6f934078b4425ab5a74a",
+      "observed": "claim command (run from verify worktree at 728a42f, rc 0) printed 'True 6ded09f44abdefd90d68c9dfcd2c8d904f7f1e8dc07c6f934078b4425ab5a74a'; independent (shasum -a 256 -c MANIFEST.sha256 in /Users/keanooo7/rsr-substrate/2026-10-07-es-pinned rc 0; sha256 of es-referendum-a2-run eval/seed2/es.jsonl.gz 6ded09f44abdefd90d68c9dfcd2c8d904f7f1e8dc07c6f934078b4425ab5a74a; eval.json records_sha256 6ded09f44abdefd90d68c9dfcd2c8d904f7f1e8dc07c6f934078b4425ab5a74a, config L48-k1e-2, seed 2; registered sha read from git show a406d39 (and d8dfd14, 728a42f) experiments/rsr-run2/PREREG.md line 132): 'True 6ded09f44abdefd90d68c9dfcd2c8d904f7f1e8dc07c6f934078b4425ab5a74a'",
+      "match": true
+    }
+  ],
+  "verifier_sha": "728a42f8ba50592ae19f818ade7a80d3e5fc09f1",
+  "draw_rule": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.verify draw rsr-run2 (k=3 default): random.Random(int(sha256('rsr-run2'),16)).sample(range(13),3), sorted -> indices [2,4,10]",
+  "supplementary_not_drawn": {
+    "note": "caller-requested extra re-derivations (all seeds' headline, age-1 share); not part of the drawn set; every value equals claims.json's expected and the ledger's rows",
+    "seed0": {
+      "headline_psiC_minus_fifo_all": "-0.072253 -0.076135 -0.068519 LOSS",
+      "point": -0.0722531899717328,
+      "lo": -0.07613515555450473,
+      "hi": -0.06851944701527356,
+      "delta": 0.03802185560447721,
+      "own_rng_bootstrap": {
+        "lo": -0.07594408838579611,
+        "hi": -0.06854561783506796,
+        "sd": 0.0018995835743036177,
+        "n_reps": 20000
+      },
+      "age1_psiC_from_evictions": "10623 65536",
+      "age1_psiC_from_victims_t_minus_index": "10623 65536",
+      "age1_share": 0.1620941162109375
+    },
+    "seed1": {
+      "headline_psiC_minus_fifo_all": "-0.045260 -0.048777 -0.041772 LOSS",
+      "point": -0.04526010034327965,
+      "lo": -0.0487773578322012,
+      "hi": -0.04177243376785378,
+      "delta": 0.03675691427360389,
+      "own_rng_bootstrap": {
+        "lo": -0.04877273852443848,
+        "hi": -0.04176161356434447,
+        "sd": 0.0017879797964786227,
+        "n_reps": 20000
+      },
+      "age1_psiC_from_evictions": "9920 65536",
+      "age1_psiC_from_victims_t_minus_index": "9920 65536",
+      "age1_share": 0.1513671875
+    },
+    "seed2": {
+      "headline_psiC_minus_fifo_all": "-0.083413 -0.087160 -0.079412 LOSS",
+      "point": -0.08341262289882645,
+      "lo": -0.08716015593189091,
+      "hi": -0.0794123214113946,
+      "delta": 0.03185756551141167,
+      "own_rng_bootstrap": {
+        "lo": -0.08731717139387735,
+        "hi": -0.07959489128787114,
+        "sd": 0.0019775354051552465,
+        "n_reps": 20000
+      },
+      "age1_psiC_from_evictions": "12235 65536",
+      "age1_psiC_from_victims_t_minus_index": "12235 65536",
+      "age1_share": 0.1866912841796875
+    }
+  },
+  "provenance": {
+    "launch_git_run_sha": "728a42f8ba50592ae19f818ade7a80d3e5fc09f1",
+    "launch_target": "loo_resample",
+    "launch_steps": "3000",
+    "launch_dirty": false,
+    "launch_rc": 0,
+    "job_rc_files": "all 9 (fifo/age/psiC x s0-2) contain 0",
+    "steps": "every arm x seed heartbeat: 3000 beats (step 0..2999), footer status completed final_step 3000, ckpt-003000.pt present; header provenance.git_sha 728a42f for all 9",
+    "ledger": "git_sha 728a42f, steps_done 3000, status ok; dirty True solely from untracked runs/rsr-run2/ (porcelain '?? runs/rsr-run2/')",
+    "prereg": "a406d39 and d8dfd14 are ancestors of 728a42f, committed 14:53/15:29 PDT 10-07, launch 15:57 PDT"
+  },
+  "finalize_rerun": {
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py finalize --gamma 0.9 --phi-weight-decay 0.01 --iters 3000 --o5 eval --out-root <scratch>/rsr-run2 (inputs: copies of measure-seed{0,1,2}.json, launch-git.json)",
+    "rc": 0,
+    "result": "run.json identical except tree block (dirty false/porcelain '' in clean verify worktree vs dirty true/'?? runs/rsr-run2/'); summary block byte-equal (sorted-key JSON); headline_run1_form equal; ledger 3785 rows, 0 differing; ledger header differs only in started/finished_utc, provenance.dirty, commands[].at_utc; claims.json claim+expected identical for all 13 (commands differ only by --out-root path)"
+  },
+  "scripts": {
+    "indep.py_sha256": "a243ddbc06b224b0cdccce5065be26d997f8e60fab0ec4d1e157c1f8f0fc62fc",
+    "indep.py": "\"\"\"Independent re-derivation (no harness imports). Reads per-document held-out records.\"\"\"\nimport gzip, json, hashlib, subprocess, sys\nfrom pathlib import Path\nimport numpy as np\nimport torch\n\nRUN = Path(\"/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2\")\nB2 = Path(\"/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/ledger.json\")\nESO = Path(\"/Users/keanooo7/retrieval-successor-retention/.worktrees/es-referendum-a2-run/runs/expire-span-referendum/eval\")\nPIN = Path(\"/Users/keanooo7/rsr-substrate/2026-10-07-es-pinned\")\nPREREG_SHA = {0: \"f6a3d97f25c520c84091562002e719c489d5824ba53b484f2ad892ff12d194e1\",\n              1: \"d647767927b7c3655a8d473fdef990c534315ed461271c1a109d466dcd3f8db2\",\n              2: \"6ded09f44abdefd90d68c9dfcd2c8d904f7f1e8dc07c6f934078b4425ab5a74a\"}  # copied from git show a406d39 PREREG lines 130-132\n\ndef recs(p):\n    with gzip.open(p, \"rt\") as fh:\n        return [json.loads(l) for l in fh if l.strip()]\n\nb2rows = {r[\"key\"]: r for r in json.load(open(B2))[\"rows\"]}\n\ndef headline(seed, n_boot=2000, base=20260927):\n    hd = RUN / \"heldout\" / f\"seed{seed}\"\n    P, F = recs(hd / \"psiC.jsonl.gz\"), recs(hd / \"fifo.jsonl.gz\")\n    assert [r[\"doc\"] for r in P] == [r[\"doc\"] for r in F]\n    D = len(F)\n    def counts(rs):\n        n = np.array([sum(1 for a in r[\"answers\"] if a[1] >= 1) for r in rs], float)\n        k = np.array([sum(1 for a in r[\"answers\"] if a[1] >= 1 and a[2]) for r in rs], float)\n        # cross-path: hits field (gap, correct)\n        nh = np.array([sum(1 for h in r[\"hits\"] if h[0] >= 1) for r in rs], float)\n        kh = np.array([sum(1 for h in r[\"hits\"] if h[0] >= 1 and h[1]) for r in rs], float)\n        return n, k, nh, kh\n    pn, pk, pnh, pkh = counts(P); fn, fk, fnh, fkh = counts(F)\n    point = pk.sum() / pn.sum() - fk.sum() / fn.sum()\n    point_hits = pkh.sum() / pnh.sum() - fkh.sum() / fnh.sum()\n    g = torch.Generator().manual_seed(base + seed)\n    idx = torch.randint(0, D, (n_boot, D), generator=g).numpy()\n    reps = np.empty(n_boot)\n    for b in range(n_boot):\n        w = np.bincount(idx[b], minlength=D).astype(float)\n        reps[b] = (w @ pk) / (w @ pn) - (w @ fk) / (w @ fn)\n    lo, hi = np.quantile(reps, 0.025), np.quantile(reps, 0.975)\n    delta = float(b2rows[f\"ckpt3000.seed{seed}.decisions.delta\"][\"value\"][\"0.9\"])\n    if lo > 0 and point >= delta: lab = \"WIN\"\n    elif hi < 0 and point <= -delta: lab = \"LOSS\"\n    elif -delta < lo and hi < delta: lab = \"EQUIV\"\n    else: lab = \"UNRESOLVED\"\n    return dict(D=D, n_ans_psiC=int(pn.sum()), n_ans_fifo=int(fn.sum()), acc_psiC=pk.sum()/pn.sum(),\n                acc_fifo=fk.sum()/fn.sum(), point=point, point_from_hits=point_hits, lo=lo, hi=hi,\n                delta=delta, label=lab, line=f\"{point:.6f} {lo:.6f} {hi:.6f} {lab}\")\n\ndef age1(seed):\n    P = recs(RUN / \"heldout\" / f\"seed{seed}\" / \"psiC.jsonl.gz\")\n    n = sum(len(r[\"evictions\"]) for r in P)\n    a1 = sum(1 for r in P for e in r[\"evictions\"] if e[1] == 1)\n    # cross-path: age = t - victim sentence index, from the `victims` field\n    nv = sum(len(r[\"victims\"]) for r in P)\n    a1v = sum(1 for r in P for t, v in r[\"victims\"].items() if int(t) - int(v) == 1)\n    return dict(n=n, n_age1=a1, n_from_victims=nv, n_age1_from_victims=a1v, share=a1 / n,\n                line=f\"{a1} {n}\")\n\ndef c14(seed):\n    p = subprocess.run([\"shasum\", \"-a\", \"256\", \"-c\", \"MANIFEST.sha256\"], cwd=PIN, capture_output=True, text=True)\n    sha = hashlib.sha256((ESO / f\"seed{seed}\" / \"es.jsonl.gz\").read_bytes()).hexdigest()\n    ev = json.load(open(ESO / f\"seed{seed}\" / \"eval.json\"))\n    ok = p.returncode == 0 and sha == PREREG_SHA[seed] and sha == ev.get(\"records_sha256\") and ev.get(\"config\") == \"L48-k1e-2\"\n    return dict(manifest_rc=p.returncode, manifest_out=p.stdout.strip(), sha=sha, eval_records_sha=ev.get(\"records_sha256\"),\n                eval_config=ev.get(\"config\"), eval_seed=ev.get(\"seed\"), ok=ok, line=f\"{ok} {sha}\")\n\nout = {}\nfor s in (0, 1, 2):\n    out[f\"headline{s}\"] = headline(s)\n    out[f\"age1_{s}\"] = age1(s)\n    out[f\"c14_{s}\"] = c14(s)\nprint(json.dumps(out, indent=1, default=float))\n",
+    "ownboot.py_sha256": "f4981c517aad3cc90f5dd8f2e037f81a44461d38d547db9f272426cf5fa5cc94",
+    "ownboot.py": "import gzip, json\nimport numpy as np\nRUN = \"/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2\"\ndef recs(p):\n    with gzip.open(p, \"rt\") as fh: return [json.loads(l) for l in fh if l.strip()]\nout = {}\nfor s in (0, 1, 2):\n    P, F = (recs(f\"{RUN}/heldout/seed{s}/{a}.jsonl.gz\") for a in (\"psiC\", \"fifo\"))\n    c = lambda rs: (np.array([sum(a[1] >= 1 for a in r[\"answers\"]) for r in rs], float),\n                    np.array([sum(a[1] >= 1 and bool(a[2]) for a in r[\"answers\"]) for r in rs], float))\n    pn, pk = c(P); fn, fk = c(F); D = len(F)\n    rng = np.random.default_rng(12345)\n    reps = []\n    for _ in range(20):\n        idx = rng.integers(0, D, (1000, D))\n        W = np.stack([np.bincount(i, minlength=D) for i in idx]).astype(float)\n        reps.append((W @ pk) / (W @ pn) - (W @ fk) / (W @ fn))\n    r = np.concatenate(reps)\n    out[s] = dict(lo=float(np.quantile(r, .025)), hi=float(np.quantile(r, .975)), sd=float(r.std(ddof=1)), n_reps=len(r))\nprint(json.dumps(out, indent=1))\n"
+  }
+}

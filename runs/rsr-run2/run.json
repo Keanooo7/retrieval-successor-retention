@@ -1,0 +1,98 @@
+{
+  "run_id": "rsr-run2",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "exit": 0,
+  "status": "ok",
+  "owner_values": {
+    "gamma": 0.9,
+    "phi_weight_decay": 0.01,
+    "iters": 3000,
+    "o5": "eval",
+    "seeds": [
+      0,
+      1,
+      2
+    ]
+  },
+  "summary": {
+    "labels": {
+      "0": "LOSS",
+      "1": "LOSS",
+      "2": "LOSS"
+    },
+    "class": "FAILS",
+    "route": "ROADMAP step 6 (write-up)",
+    "class_readable": true,
+    "newcomer": "NEWCOMER-REDUCED",
+    "age1_share_psiC": {
+      "0": 0.1620941162109375,
+      "1": 0.1513671875,
+      "2": 0.1866912841796875
+    },
+    "es_labels_secondary": {
+      "0": "LOSS",
+      "1": "EQUIV",
+      "2": "LOSS"
+    }
+  },
+  "headline_run1_form": {
+    "contrast": "acc.all.psiC_minus_fifo",
+    "per_seed": {
+      "0": {
+        "lo": -0.07613515555450473,
+        "hi": -0.06851944701527356,
+        "sd": 0.0019249034511760901,
+        "dropped": 0,
+        "point": -0.0722531899717328,
+        "reading": "CI below 0",
+        "sd_exactly_zero": false,
+        "ci_scope": "within-seed only"
+      },
+      "1": {
+        "lo": -0.0487773578322012,
+        "hi": -0.04177243376785378,
+        "sd": 0.0018122805761083525,
+        "dropped": 0,
+        "point": -0.04526010034327965,
+        "reading": "CI below 0",
+        "sd_exactly_zero": false,
+        "ci_scope": "within-seed only"
+      },
+      "2": {
+        "lo": -0.08716015593189091,
+        "hi": -0.0794123214113946,
+        "sd": 0.00198475457343374,
+        "dropped": 0,
+        "point": -0.08341262289882645,
+        "reading": "CI below 0",
+        "sd_exactly_zero": false,
+        "ci_scope": "within-seed only"
+      }
+    },
+    "across_seeds": {
+      "n_seeds": 3,
+      "points": [
+        -0.0722531899717328,
+        -0.04526010034327965,
+        -0.08341262289882645
+      ],
+      "mean": -0.06697530440461297,
+      "sd": 0.019616212717611565,
+      "sd_exactly_zero": false,
+      "sign_count": {
+        "above_0": 0,
+        "below_0": 3,
+        "exactly_0": 0
+      }
+    }
+  },
+  "tree": {
+    "sha": "728a42f8ba50592ae19f818ade7a80d3e5fc09f1",
+    "dirty": true,
+    "porcelain": "?? runs/rsr-run2/\n"
+  }
+}
