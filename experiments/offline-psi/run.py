@@ -1461,7 +1461,8 @@ def score_seed(
     try:
         es_all = R1.read_pass(Path(refs.es_out) / "eval" / f"seed{seed}", "es")
         order = [r["doc"] for r in cf_recs]
-        es_f = [r for r in es_all if r["doc"] in set(order)]
+        keep = set(order)
+        es_f = [r for r in es_all if r["doc"] in keep]
         sc["pairing"] = pairing(cf_recs, es_f)
         if sc["C14"].get("ok") and sc["pairing"]["ok"]:
             es = es_f
