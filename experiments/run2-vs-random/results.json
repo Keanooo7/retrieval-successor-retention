@@ -1,0 +1,1471 @@
+{
+ "meta": {
+  "command": ".venv/bin/python experiments/run2-vs-random/run.py",
+  "git_sha": "45c2ca0b48a980a5ff383fdf9814bbc6479145ea",
+  "porcelain": "?? experiments/run2-vs-random/run.log",
+  "hardware": "Apple M4 Max, 64 GB, macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0",
+  "run2": "/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2",
+  "run1": "/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run1-run/runs/rsr-run1",
+  "n_boot": 2000,
+  "exit": 0
+ },
+ "seeds": {
+  "0": {
+   "inputs": {
+    "run2/psiC": "d2e25e091f8bf1e64cf2b478c814b7b00baaf9bcad51b7434c310b49eab2a16a",
+    "run2/fifo": "54b1aa233779618894c422eb7ce9b73544ffff3b855d06a708b0f607d0d44ba0",
+    "run2/random0": "da6caa4a65a3c256f08fcfc37b32f74b54c048f8b14ffee66f99a82a825c88cf",
+    "run2/random1": "966a73cc6c45ec8fd0df84e87f448406647da8a268a9a48227f28395ff1adc6f",
+    "run2/random2": "594309c8ee2d8414faf9cc8994f67292ce7a9b80220637f03f7be039bf6cd8b4",
+    "run2/random3": "04ab1cde0161581b5bc06255f9a561d8a81f4321d0a0ba20d234f1133d051921",
+    "run2/random4": "bd5c79cdd635bffaca40fabdd0565734e2f259a62d7899213055a754d2e3b317",
+    "run1/psiC": "abd3a6214a1a7ac9084dfa802c086714cb88bf3309bc4026fc7439dc4ce03c08"
+   },
+   "n_documents": 2048,
+   "accuracy": {
+    "all": {
+     "n_answers": 37853,
+     "run2_psiC_minus_random": {
+      "lo": -0.05038115831465077,
+      "hi": -0.043940854751893875,
+      "sd": 0.0016166923368840774,
+      "dropped": 0,
+      "point": -0.04711383509893541,
+      "arm": 0.7027184106940004,
+      "random": 0.7498322457929358,
+      "vs_each_random_min": -0.04786938948035824,
+      "vs_each_random_max": -0.045782368636567816,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.022582774079421077,
+      "hi": 0.027629980520918168,
+      "sd": 0.0012875878055729217,
+      "dropped": 0,
+      "point": 0.025139354872797393,
+      "arm": 0.7749716006657332,
+      "random": 0.7498322457929358,
+      "vs_each_random_min": 0.024383800491374563,
+      "vs_each_random_max": 0.026470821335164985,
+      "reading": "CI above 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.18395017353097445,
+      "hi": -0.17627815239206343,
+      "sd": 0.001955362163821545,
+      "dropped": 0,
+      "point": -0.18015480939423556,
+      "arm": 0.5696774363987003,
+      "random": 0.7498322457929358,
+      "vs_each_random_min": -0.1809103637756584,
+      "vs_each_random_max": -0.17882334293186797,
+      "reading": "CI below 0"
+     }
+    },
+    "gap_eq_1": {
+     "n_answers": 8054,
+     "run2_psiC_minus_random": {
+      "lo": -0.0010097023651697817,
+      "hi": 0.00034793242285754663,
+      "sd": 0.00034854522665062824,
+      "dropped": 0,
+      "point": -0.00032282095852997905,
+      "arm": 0.9914328284082443,
+      "random": 0.9917556493667743,
+      "vs_each_random_min": -0.0006208095356344812,
+      "vs_each_random_max": -0.00012416190712694064,
+      "reading": "CI includes 0"
+     },
+     "fifo_minus_random": {
+      "lo": -0.0005161829872954605,
+      "hi": 0.0006428094470965061,
+      "sd": 0.0002979953663365721,
+      "dropped": 0,
+      "point": 4.966476285073185e-05,
+      "arm": 0.991805314129625,
+      "random": 0.9917556493667743,
+      "vs_each_random_min": -0.00024832381425377026,
+      "vs_each_random_max": 0.00024832381425377026,
+      "reading": "CI includes 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": 0.00032093616319043005,
+      "hi": 0.0015960900430680236,
+      "sd": 0.00032556690264789367,
+      "dropped": 0,
+      "point": 0.0009187981127389833,
+      "arm": 0.9926744474795133,
+      "random": 0.9917556493667743,
+      "vs_each_random_min": 0.0006208095356344812,
+      "vs_each_random_max": 0.0011174571641420217,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_2_to_M": {
+     "n_answers": 22542,
+     "run2_psiC_minus_random": {
+      "lo": -0.06178131891986945,
+      "hi": -0.053027532937412775,
+      "sd": 0.0022774635951876843,
+      "dropped": 0,
+      "point": -0.05734185076745624,
+      "arm": 0.7478040990151716,
+      "random": 0.8051459497826279,
+      "vs_each_random_min": -0.059755123768964635,
+      "vs_each_random_max": -0.05589566143199365,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.11621326749207755,
+      "hi": 0.12158654644767969,
+      "sd": 0.0013829984242373636,
+      "dropped": 0,
+      "point": 0.1189069292875522,
+      "arm": 0.9240528790701801,
+      "random": 0.8051459497826279,
+      "vs_each_random_min": 0.1164936562860438,
+      "vs_each_random_max": 0.12035311862301479,
+      "reading": "CI above 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.2592544174453754,
+      "hi": -0.24851125851021236,
+      "sd": 0.002749750729437657,
+      "dropped": 0,
+      "point": -0.25404134504480513,
+      "arm": 0.5511046047378227,
+      "random": 0.8051459497826279,
+      "vs_each_random_min": -0.25645461804631353,
+      "vs_each_random_max": -0.25259515570934254,
+      "reading": "CI below 0"
+     }
+    },
+    "gap_gt_M": {
+     "n_answers": 7257,
+     "run2_psiC_minus_random": {
+      "lo": -0.07692376619795972,
+      "hi": -0.05793963771402551,
+      "sd": 0.004907869818152497,
+      "dropped": 0,
+      "point": -0.0672729778145239,
+      "arm": 0.24224886316659777,
+      "random": 0.3095218409811217,
+      "vs_each_random_min": -0.07137935786137523,
+      "vs_each_random_max": -0.06352487253686095,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": -0.2450471971257662,
+      "hi": -0.23161618257468503,
+      "sd": 0.0035316909841304565,
+      "dropped": 0,
+      "point": -0.23828028110789584,
+      "arm": 0.07124155987322585,
+      "random": 0.3095218409811217,
+      "vs_each_random_min": -0.24238666115474716,
+      "vs_each_random_max": -0.2345321758302329,
+      "reading": "CI below 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.16019420253812325,
+      "hi": -0.1427916834552162,
+      "sd": 0.004444831967342321,
+      "dropped": 0,
+      "point": -0.1516053465619402,
+      "arm": 0.15791649441918149,
+      "random": 0.3095218409811217,
+      "vs_each_random_min": -0.1557117266087915,
+      "vs_each_random_max": -0.14785724128427724,
+      "reading": "CI below 0"
+     }
+    }
+   },
+   "residency": {
+    "all": {
+     "run2_psiC_minus_random": {
+      "lo": -0.04758300083840223,
+      "hi": -0.04087815255873729,
+      "sd": 0.0017399004202998218,
+      "dropped": 0,
+      "point": -0.04419728951470159,
+      "arm": 0.7430850923308588,
+      "random": 0.7872823818455604,
+      "vs_each_random_min": -0.04649565424140756,
+      "vs_each_random_max": -0.04168758090508018,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.018384048454975092,
+      "hi": 0.023832984753876546,
+      "sd": 0.0013717390528772732,
+      "dropped": 0,
+      "point": 0.02100229836472678,
+      "arm": 0.8082846802102872,
+      "random": 0.7872823818455604,
+      "vs_each_random_min": 0.01870393363802081,
+      "vs_each_random_max": 0.023512006974348187,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_eq_1": {
+     "run2_psiC_minus_random": {
+      "lo": 0.0,
+      "hi": 0.0,
+      "sd": 0.0,
+      "dropped": 0,
+      "point": 0.0,
+      "arm": 1.0,
+      "random": 1.0,
+      "vs_each_random_min": 0.0,
+      "vs_each_random_max": 0.0,
+      "reading": "CI includes 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.0,
+      "hi": 0.0,
+      "sd": 0.0,
+      "dropped": 0,
+      "point": 0.0,
+      "arm": 1.0,
+      "random": 1.0,
+      "vs_each_random_min": 0.0,
+      "vs_each_random_max": 0.0,
+      "reading": "CI includes 0"
+     }
+    },
+    "gap_2_to_M": {
+     "run2_psiC_minus_random": {
+      "lo": -0.061801243130627063,
+      "hi": -0.052389449872806915,
+      "sd": 0.0023980710142798515,
+      "dropped": 0,
+      "point": -0.057199893532073554,
+      "arm": 0.8004613610149942,
+      "random": 0.8576612545470678,
+      "vs_each_random_min": -0.060509271581935975,
+      "vs_each_random_max": -0.05465353562239372,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.13964597297013298,
+      "hi": 0.14492415276165038,
+      "sd": 0.0013114205790215837,
+      "dropped": 0,
+      "point": 0.14233874545293224,
+      "arm": 1.0,
+      "random": 0.8576612545470678,
+      "vs_each_random_min": 0.13902936740306981,
+      "vs_each_random_max": 0.14488510336261207,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_gt_M": {
+     "run2_psiC_minus_random": {
+      "lo": -0.06395878951259244,
+      "hi": -0.04228012249605342,
+      "sd": 0.005463097314584819,
+      "dropped": 0,
+      "point": -0.05285930825409951,
+      "arm": 0.2797299159432272,
+      "random": 0.3325892241973267,
+      "vs_each_random_min": -0.05553258922419735,
+      "vs_each_random_max": -0.04767810389968308,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": -0.33828235353556846,
+      "hi": -0.32707999732054566,
+      "sd": 0.002862685031061838,
+      "dropped": 0,
+      "point": -0.3325892241973267,
+      "arm": 0.0,
+      "random": 0.3325892241973267,
+      "vs_each_random_min": -0.33526250516742456,
+      "vs_each_random_max": -0.3274080198429103,
+      "reading": "CI below 0"
+     }
+    }
+   },
+   "conditional": {
+    "all": {
+     "psiC": {
+      "resident": 28128,
+      "resident_right": 26014,
+      "missed": 9725,
+      "missed_right": 586
+     },
+     "fifo": {
+      "resident": 30596,
+      "resident_right": 28818,
+      "missed": 7257,
+      "missed_right": 517
+     },
+     "random_mean": {
+      "resident": 29801.0,
+      "resident_right": 27853.6,
+      "missed": 8052.0,
+      "missed_right": 529.8
+     }
+    },
+    "gap_eq_1": {
+     "psiC": {
+      "resident": 8054,
+      "resident_right": 7985
+     },
+     "fifo": {
+      "resident": 8054,
+      "resident_right": 7988
+     },
+     "random_mean": {
+      "resident": 8054.0,
+      "resident_right": 7987.6,
+      "missed": 0.0,
+      "missed_right": 0.0
+     }
+    },
+    "gap_2_to_M": {
+     "psiC": {
+      "resident": 18044,
+      "resident_right": 16606,
+      "missed": 4498,
+      "missed_right": 251
+     },
+     "fifo": {
+      "resident": 22542,
+      "resident_right": 20830
+     },
+     "random_mean": {
+      "resident": 19333.4,
+      "resident_right": 17946.8,
+      "missed": 3208.6,
+      "missed_right": 202.8
+     }
+    },
+    "gap_gt_M": {
+     "psiC": {
+      "resident": 2030,
+      "resident_right": 1423,
+      "missed": 5227,
+      "missed_right": 335
+     },
+     "fifo": {
+      "missed": 7257,
+      "missed_right": 517
+     },
+     "random_mean": {
+      "resident": 2413.6,
+      "resident_right": 1919.2,
+      "missed": 4843.4,
+      "missed_right": 327.0
+     }
+    }
+   },
+   "eviction_cost": {
+    "psiC": {
+     "by_age": {
+      "1": {
+       "evictions": 10623,
+       "misses_caused": 1801,
+       "misses_caused_gap_2_to_M": 1596,
+       "misses_caused_gap_gt_M": 205,
+       "missed_and_answered_wrong": 1716,
+       "misses_per_eviction": 0.1695377953497129
+      },
+      "2..4": {
+       "evictions": 13251,
+       "misses_caused": 2294,
+       "misses_caused_gap_2_to_M": 1741,
+       "misses_caused_gap_gt_M": 553,
+       "missed_and_answered_wrong": 2149,
+       "misses_per_eviction": 0.17311900988604634
+      },
+      "5..M": {
+       "evictions": 24203,
+       "misses_caused": 3985,
+       "misses_caused_gap_2_to_M": 1161,
+       "misses_caused_gap_gt_M": 2824,
+       "missed_and_answered_wrong": 3752,
+       "misses_per_eviction": 0.1646490104532496
+      },
+      "M+1..A_max": {
+       "evictions": 17459,
+       "misses_caused": 1645,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 1645,
+       "missed_and_answered_wrong": 1522,
+       "misses_per_eviction": 0.0942207457471791
+      }
+     },
+     "totals": {
+      "queries": 37853,
+      "hit": 28128,
+      "hit_wrong": 2114,
+      "miss": 9725,
+      "miss_right": 586
+     }
+    },
+    "fifo": {
+     "by_age": {
+      "1": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      },
+      "2..4": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      },
+      "5..M": {
+       "evictions": 65536,
+       "misses_caused": 7257,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 7257,
+       "missed_and_answered_wrong": 6740,
+       "misses_per_eviction": 0.1107330322265625
+      },
+      "M+1..A_max": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      }
+     },
+     "totals": {
+      "queries": 37853,
+      "hit": 30596,
+      "hit_wrong": 1778,
+      "miss": 7257,
+      "miss_right": 517
+     }
+    },
+    "random_mean": {
+     "by_age": {
+      "1": {
+       "evictions": 4071.4,
+       "misses_caused": 912.6,
+       "misses_caused_gap_2_to_M": 802.4,
+       "misses_caused_gap_gt_M": 110.2,
+       "missed_and_answered_wrong": 854.2,
+       "misses_per_eviction": 0.22414894139607996
+      },
+      "2..4": {
+       "evictions": 10912.8,
+       "misses_caused": 1683.0,
+       "misses_caused_gap_2_to_M": 1299.2,
+       "misses_caused_gap_gt_M": 383.8,
+       "missed_and_answered_wrong": 1573.2,
+       "misses_per_eviction": 0.15422256432812845
+      },
+      "5..M": {
+       "evictions": 30750.4,
+       "misses_caused": 3622.8,
+       "misses_caused_gap_2_to_M": 1107.0,
+       "misses_caused_gap_gt_M": 2515.8,
+       "missed_and_answered_wrong": 3393.6,
+       "misses_per_eviction": 0.11781310161819034
+      },
+      "M+1..A_max": {
+       "evictions": 19801.4,
+       "misses_caused": 1833.6,
+       "misses_caused_gap_2_to_M": 0.0,
+       "misses_caused_gap_gt_M": 1833.6,
+       "missed_and_answered_wrong": 1701.2,
+       "misses_per_eviction": 0.09259951316573574
+      }
+     },
+     "totals": {
+      "miss": 8052.0,
+      "queries": 37853.0,
+      "hit": 29801.0,
+      "miss_right": 529.8,
+      "hit_wrong": 1947.4
+     }
+    }
+   },
+   "pairing_failures": [],
+   "anomalies": [],
+   "n_anomalies": 0
+  },
+  "1": {
+   "inputs": {
+    "run2/psiC": "4349923be2a194993e938afe98c82ad51317b70bbb33c9d63eff0df1e52e33ac",
+    "run2/fifo": "bee104db82a92375bcd72622950546d2ea5d86881910b660a5cefe9e4db51586",
+    "run2/random0": "68b7c9b98b274d250671bf14e5fbf68160a6e4524a17bff7d22e27e689e52ebe",
+    "run2/random1": "7c3a68c81b7699cc6e78fc102693d2af92476ec6cd5fffdd3028030b8e7776bc",
+    "run2/random2": "dde81dd0f65a8630a93252c6dff7989acb31fb54bc95f4e906d0cff71025b6c6",
+    "run2/random3": "af6f6536658484726c559326126ec6adbc9b335e0833eccceeebac34ba8a01ba",
+    "run2/random4": "ad502b872b214837677d9a26f1db30ff7e54f3de6972068831bda3a8cf1923fd",
+    "run1/psiC": "8f3accc91c38b211ae30cbf392cd3cae754422642200329bd72f95080997d2c2"
+   },
+   "n_documents": 2048,
+   "accuracy": {
+    "all": {
+     "n_answers": 37870,
+     "run2_psiC_minus_random": {
+      "lo": -0.024720328968803246,
+      "hi": -0.01845496024487392,
+      "sd": 0.0015983226833576193,
+      "dropped": 0,
+      "point": -0.02163189860047532,
+      "arm": 0.7212569316081331,
+      "random": 0.7428888302086084,
+      "vs_each_random_min": -0.02376551359915502,
+      "vs_each_random_max": -0.018352257723791898,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.021085622291942295,
+      "hi": 0.02616739599998946,
+      "sd": 0.001281264521561187,
+      "dropped": 0,
+      "point": 0.023628201742804333,
+      "arm": 0.7665170319514127,
+      "random": 0.7428888302086084,
+      "vs_each_random_min": 0.021494586744124633,
+      "vs_each_random_max": 0.026907842619487754,
+      "reading": "CI above 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.2081184031877921,
+      "hi": -0.2006917905182613,
+      "sd": 0.0018871527199362955,
+      "dropped": 0,
+      "point": -0.20428307367309217,
+      "arm": 0.5386057565355162,
+      "random": 0.7428888302086084,
+      "vs_each_random_min": -0.20641668867177188,
+      "vs_each_random_max": -0.20100343279640875,
+      "reading": "CI below 0"
+     }
+    },
+    "gap_eq_1": {
+     "n_answers": 7980,
+     "run2_psiC_minus_random": {
+      "lo": -0.0010943473981919415,
+      "hi": 0.0006735267628331568,
+      "sd": 0.0004542542591410012,
+      "dropped": 0,
+      "point": -0.000175438596491162,
+      "arm": 0.9852130325814537,
+      "random": 0.9853884711779448,
+      "vs_each_random_min": -0.0007518796992480592,
+      "vs_each_random_max": 0.0005012531328321135,
+      "reading": "CI includes 0"
+     },
+     "fifo_minus_random": {
+      "lo": -9.970338485537911e-05,
+      "hi": 0.0009921313402257155,
+      "sd": 0.0002746836811005847,
+      "dropped": 0,
+      "point": 0.00045112781954892434,
+      "arm": 0.9858395989974937,
+      "random": 0.9853884711779448,
+      "vs_each_random_min": -0.00012531328320797286,
+      "vs_each_random_max": 0.0011278195488721998,
+      "reading": "CI includes 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": 0.0019059350079942278,
+      "hi": 0.0042064549501236465,
+      "sd": 0.0005703530933449395,
+      "dropped": 0,
+      "point": 0.0029573934837092697,
+      "arm": 0.9883458646616541,
+      "random": 0.9853884711779448,
+      "vs_each_random_min": 0.0023809523809523725,
+      "vs_each_random_max": 0.003634085213032545,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_2_to_M": {
+     "n_answers": 22677,
+     "run2_psiC_minus_random": {
+      "lo": -0.030037594896793106,
+      "hi": -0.021398550562552406,
+      "sd": 0.00219754035798422,
+      "dropped": 0,
+      "point": -0.02568240948979139,
+      "arm": 0.7716629183754465,
+      "random": 0.7973453278652379,
+      "vs_each_random_min": -0.028531110817127447,
+      "vs_each_random_max": -0.023371698196410384,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.11452605714387129,
+      "hi": 0.12001395115338646,
+      "sd": 0.0013804212296872167,
+      "dropped": 0,
+      "point": 0.11728182740221371,
+      "arm": 0.9146271552674516,
+      "random": 0.7973453278652379,
+      "vs_each_random_min": 0.11443312607487766,
+      "vs_each_random_max": 0.11959253869559472,
+      "reading": "CI above 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.288948945157976,
+      "hi": -0.27853857454131103,
+      "sd": 0.0026435668058438586,
+      "dropped": 0,
+      "point": -0.2836530405256428,
+      "arm": 0.5136922873395952,
+      "random": 0.7973453278652379,
+      "vs_each_random_min": -0.28650174185297883,
+      "vs_each_random_max": -0.28134232923226177,
+      "reading": "CI below 0"
+     }
+    },
+    "gap_gt_M": {
+     "n_answers": 7213,
+     "run2_psiC_minus_random": {
+      "lo": -0.04302596296603931,
+      "hi": -0.022380906043259104,
+      "sd": 0.005211276953610577,
+      "dropped": 0,
+      "point": -0.032635519201441865,
+      "arm": 0.2707611257451823,
+      "random": 0.30339664494662416,
+      "vs_each_random_min": -0.03895743795924028,
+      "vs_each_random_max": -0.022598086787744387,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": -0.2522563413101121,
+      "hi": -0.23817653213166143,
+      "sd": 0.0037053127426717827,
+      "dropped": 0,
+      "point": -0.24516844586163872,
+      "arm": 0.058228199084985444,
+      "random": 0.30339664494662416,
+      "vs_each_random_min": -0.25149036461943713,
+      "vs_each_random_max": -0.23513101344794124,
+      "reading": "CI below 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.19252588019246294,
+      "hi": -0.1759152438756561,
+      "sd": 0.004269608075959052,
+      "dropped": 0,
+      "point": -0.184028836822404,
+      "arm": 0.11936780812422015,
+      "random": 0.30339664494662416,
+      "vs_each_random_min": -0.19035075558020242,
+      "vs_each_random_max": -0.17399140440870653,
+      "reading": "CI below 0"
+     }
+    }
+   },
+   "residency": {
+    "all": {
+     "run2_psiC_minus_random": {
+      "lo": -0.012619755620421582,
+      "hi": -0.006321142265124517,
+      "sd": 0.0016100620565714838,
+      "dropped": 0,
+      "point": -0.009485080538684909,
+      "arm": 0.7783469764985477,
+      "random": 0.7878320570372326,
+      "vs_each_random_min": -0.010404013731185602,
+      "vs_each_random_max": -0.007393715341959317,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.019051315670624635,
+      "hi": 0.024452903210745718,
+      "sd": 0.001355210319730278,
+      "dropped": 0,
+      "point": 0.021700554528650717,
+      "arm": 0.8095326115658833,
+      "random": 0.7878320570372326,
+      "vs_each_random_min": 0.020781621336150025,
+      "vs_each_random_max": 0.02379191972537631,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_eq_1": {
+     "run2_psiC_minus_random": {
+      "lo": 0.0,
+      "hi": 0.0,
+      "sd": 0.0,
+      "dropped": 0,
+      "point": 0.0,
+      "arm": 1.0,
+      "random": 1.0,
+      "vs_each_random_min": 0.0,
+      "vs_each_random_max": 0.0,
+      "reading": "CI includes 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.0,
+      "hi": 0.0,
+      "sd": 0.0,
+      "dropped": 0,
+      "point": 0.0,
+      "arm": 1.0,
+      "random": 1.0,
+      "vs_each_random_min": 0.0,
+      "vs_each_random_max": 0.0,
+      "reading": "CI includes 0"
+     }
+    },
+    "gap_2_to_M": {
+     "run2_psiC_minus_random": {
+      "lo": -0.02216008199041204,
+      "hi": -0.013245622241723553,
+      "sd": 0.002264636833067305,
+      "dropped": 0,
+      "point": -0.01763901750672492,
+      "arm": 0.8405873792829739,
+      "random": 0.8582263967896988,
+      "vs_each_random_min": -0.02006438241389963,
+      "vs_each_random_max": -0.01521365259955021,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.1392207735953482,
+      "hi": 0.14426338227450075,
+      "sd": 0.0012817533872011321,
+      "dropped": 0,
+      "point": 0.1417736032103012,
+      "arm": 1.0,
+      "random": 0.8582263967896988,
+      "vs_each_random_min": 0.13934823830312648,
+      "vs_each_random_max": 0.1441989681174759,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_gt_M": {
+     "run2_psiC_minus_random": {
+      "lo": -0.005179942714990081,
+      "hi": 0.016733522012931133,
+      "sd": 0.005513279732767106,
+      "dropped": 0,
+      "point": 0.0056564536253986275,
+      "arm": 0.33744627755441564,
+      "random": 0.331789823929017,
+      "vs_each_random_min": 0.00041591570774990316,
+      "vs_each_random_max": 0.010952446970747265,
+      "reading": "CI includes 0"
+     },
+     "fifo_minus_random": {
+      "lo": -0.3376438909570513,
+      "hi": -0.3261533568904593,
+      "sd": 0.00291806406046258,
+      "dropped": 0,
+      "point": -0.331789823929017,
+      "arm": 0.0,
+      "random": 0.331789823929017,
+      "vs_each_random_min": -0.33703036184666574,
+      "vs_each_random_max": -0.3264938305836684,
+      "reading": "CI below 0"
+     }
+    }
+   },
+   "conditional": {
+    "all": {
+     "psiC": {
+      "resident": 29476,
+      "resident_right": 26821,
+      "missed": 8394,
+      "missed_right": 493
+     },
+     "fifo": {
+      "resident": 30657,
+      "resident_right": 28608,
+      "missed": 7213,
+      "missed_right": 420
+     },
+     "random_mean": {
+      "resident": 29835.2,
+      "resident_right": 27656.4,
+      "missed": 8034.8,
+      "missed_right": 476.8
+     }
+    },
+    "gap_eq_1": {
+     "psiC": {
+      "resident": 7980,
+      "resident_right": 7862
+     },
+     "fifo": {
+      "resident": 7980,
+      "resident_right": 7867
+     },
+     "random_mean": {
+      "resident": 7980.0,
+      "resident_right": 7863.4,
+      "missed": 0.0,
+      "missed_right": 0.0
+     }
+    },
+    "gap_2_to_M": {
+     "psiC": {
+      "resident": 19062,
+      "resident_right": 17302,
+      "missed": 3615,
+      "missed_right": 197
+     },
+     "fifo": {
+      "resident": 22677,
+      "resident_right": 20741
+     },
+     "random_mean": {
+      "resident": 19462.0,
+      "resident_right": 17891.6,
+      "missed": 3215.0,
+      "missed_right": 189.8
+     }
+    },
+    "gap_gt_M": {
+     "psiC": {
+      "resident": 2434,
+      "resident_right": 1657,
+      "missed": 4779,
+      "missed_right": 296
+     },
+     "fifo": {
+      "missed": 7213,
+      "missed_right": 420
+     },
+     "random_mean": {
+      "resident": 2393.2,
+      "resident_right": 1901.4,
+      "missed": 4819.8,
+      "missed_right": 287.0
+     }
+    }
+   },
+   "eviction_cost": {
+    "psiC": {
+     "by_age": {
+      "1": {
+       "evictions": 9920,
+       "misses_caused": 1290,
+       "misses_caused_gap_2_to_M": 1141,
+       "misses_caused_gap_gt_M": 149,
+       "missed_and_answered_wrong": 1225,
+       "misses_per_eviction": 0.13004032258064516
+      },
+      "2..4": {
+       "evictions": 11684,
+       "misses_caused": 1899,
+       "misses_caused_gap_2_to_M": 1438,
+       "misses_caused_gap_gt_M": 461,
+       "missed_and_answered_wrong": 1790,
+       "misses_per_eviction": 0.1625299554946936
+      },
+      "5..M": {
+       "evictions": 24914,
+       "misses_caused": 3531,
+       "misses_caused_gap_2_to_M": 1036,
+       "misses_caused_gap_gt_M": 2495,
+       "missed_and_answered_wrong": 3326,
+       "misses_per_eviction": 0.14172754274704985
+      },
+      "M+1..A_max": {
+       "evictions": 19018,
+       "misses_caused": 1674,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 1674,
+       "missed_and_answered_wrong": 1560,
+       "misses_per_eviction": 0.08802187401409191
+      }
+     },
+     "totals": {
+      "queries": 37870,
+      "hit": 29476,
+      "hit_wrong": 2655,
+      "miss": 8394,
+      "miss_right": 493
+     }
+    },
+    "fifo": {
+     "by_age": {
+      "1": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      },
+      "2..4": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      },
+      "5..M": {
+       "evictions": 65536,
+       "misses_caused": 7213,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 7213,
+       "missed_and_answered_wrong": 6793,
+       "misses_per_eviction": 0.1100616455078125
+      },
+      "M+1..A_max": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      }
+     },
+     "totals": {
+      "queries": 37870,
+      "hit": 30657,
+      "hit_wrong": 2049,
+      "miss": 7213,
+      "miss_right": 420
+     }
+    },
+    "random_mean": {
+     "by_age": {
+      "1": {
+       "evictions": 4073.8,
+       "misses_caused": 913.0,
+       "misses_caused_gap_2_to_M": 797.4,
+       "misses_caused_gap_gt_M": 115.6,
+       "missed_and_answered_wrong": 860.2,
+       "misses_per_eviction": 0.22411507683244145
+      },
+      "2..4": {
+       "evictions": 10923.6,
+       "misses_caused": 1700.6,
+       "misses_caused_gap_2_to_M": 1307.4,
+       "misses_caused_gap_gt_M": 393.2,
+       "missed_and_answered_wrong": 1596.2,
+       "misses_per_eviction": 0.15568127723461128
+      },
+      "5..M": {
+       "evictions": 30708.2,
+       "misses_caused": 3622.6,
+       "misses_caused_gap_2_to_M": 1110.2,
+       "misses_caused_gap_gt_M": 2512.4,
+       "missed_and_answered_wrong": 3407.0,
+       "misses_per_eviction": 0.11796849050090855
+      },
+      "M+1..A_max": {
+       "evictions": 19830.4,
+       "misses_caused": 1798.6,
+       "misses_caused_gap_2_to_M": 0.0,
+       "misses_caused_gap_gt_M": 1798.6,
+       "missed_and_answered_wrong": 1694.6,
+       "misses_per_eviction": 0.09069912861061803
+      }
+     },
+     "totals": {
+      "miss": 8034.8,
+      "queries": 37870.0,
+      "hit": 29835.2,
+      "miss_right": 476.8,
+      "hit_wrong": 2178.8
+     }
+    }
+   },
+   "pairing_failures": [],
+   "anomalies": [],
+   "n_anomalies": 0
+  },
+  "2": {
+   "inputs": {
+    "run2/psiC": "a81728e05df756a21ea436008b522d7603ebb04c65f00d882e4599d3d14f60b8",
+    "run2/fifo": "c55745c14d32942c739df274dbfa3b71daae737915c25df71c242ddbb1829537",
+    "run2/random0": "e7f628ba3a8f22ee5921e629b4ebe41d3c3eeb528dbc702ccad065a9573720ef",
+    "run2/random1": "ddb28a0c7f959bf18a4a57d0f16769bfd24695169907eb5c6e85f96b3df729c0",
+    "run2/random2": "3cbf1d00ae8547b3109acd42206c3ca3ae72fd5610b026cdd0f3b3d47399af33",
+    "run2/random3": "59517806ad71df9d53f9f82dfb2623af07092deae880882fee4ea17fe79d1b2a",
+    "run2/random4": "3df208fcf87886baf0e97943f1ec1119aab0ccbdcc21dde172611630ca38f40e",
+    "run1/psiC": "a6bf4b1054a6e49020f3240545a87806bc4e3045ef766875d3d17507dcaf0203"
+   },
+   "n_documents": 2048,
+   "accuracy": {
+    "all": {
+     "n_answers": 37836,
+     "run2_psiC_minus_random": {
+      "lo": -0.041627795037735164,
+      "hi": -0.03520924768880125,
+      "sd": 0.0016637515168808873,
+      "dropped": 0,
+      "point": -0.038439581351094154,
+      "arm": 0.7196849561264405,
+      "random": 0.7581245374775346,
+      "vs_each_random_min": -0.04099270535997457,
+      "vs_each_random_max": -0.0368432180991648,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.04243287010194304,
+      "hi": 0.04750573803603351,
+      "sd": 0.0012972892700150902,
+      "dropped": 0,
+      "point": 0.044973041547732295,
+      "arm": 0.8030975790252669,
+      "random": 0.7581245374775346,
+      "vs_each_random_min": 0.04241991753885188,
+      "vs_each_random_max": 0.04656940479966165,
+      "reading": "CI above 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.1268825686432407,
+      "hi": -0.11951854897814511,
+      "sd": 0.0018758956799341576,
+      "dropped": 0,
+      "point": -0.1233587059942911,
+      "arm": 0.6347658314832435,
+      "random": 0.7581245374775346,
+      "vs_each_random_min": -0.12591183000317152,
+      "vs_each_random_max": -0.12176234274236175,
+      "reading": "CI below 0"
+     }
+    },
+    "gap_eq_1": {
+     "n_answers": 7960,
+     "run2_psiC_minus_random": {
+      "lo": -0.0028821540398408924,
+      "hi": -0.0004815954692102447,
+      "sd": 0.0006180622603341824,
+      "dropped": 0,
+      "point": -0.001633165829145744,
+      "arm": 0.9855527638190955,
+      "random": 0.9871859296482413,
+      "vs_each_random_min": -0.002386934673366814,
+      "vs_each_random_max": -0.0011306532663316604,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": -0.00019942050256539778,
+      "hi": 0.0011716352105746648,
+      "sd": 0.00034698751662807776,
+      "dropped": 0,
+      "point": 0.0005025125628139726,
+      "arm": 0.9876884422110552,
+      "random": 0.9871859296482413,
+      "vs_each_random_min": -0.0002512562814070973,
+      "vs_each_random_max": 0.0010050251256280562,
+      "reading": "CI includes 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": 0.0006497239305306684,
+      "hi": 0.0026400426071163966,
+      "sd": 0.000499998290824083,
+      "dropped": 0,
+      "point": 0.001633165829145633,
+      "arm": 0.9888190954773869,
+      "random": 0.9871859296482413,
+      "vs_each_random_min": 0.0008793969849245631,
+      "vs_each_random_max": 0.0021356783919597166,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_2_to_M": {
+     "n_answers": 22663,
+     "run2_psiC_minus_random": {
+      "lo": -0.054255928861770594,
+      "hi": -0.04516603024600184,
+      "sd": 0.002298215346939721,
+      "dropped": 0,
+      "point": -0.04979040727176465,
+      "arm": 0.7600494197590787,
+      "random": 0.8098398270308433,
+      "vs_each_random_min": -0.05228787009663327,
+      "vs_each_random_max": -0.046772271985174085,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.11534822327969349,
+      "hi": 0.1205845376567224,
+      "sd": 0.0013328354914886893,
+      "dropped": 0,
+      "point": 0.11797202488637859,
+      "arm": 0.9278118519172219,
+      "random": 0.8098398270308433,
+      "vs_each_random_min": 0.11547456206150997,
+      "vs_each_random_max": 0.12099016017296915,
+      "reading": "CI above 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.18588125120316046,
+      "hi": -0.17533855754724342,
+      "sd": 0.0026819196969279737,
+      "dropped": 0,
+      "point": -0.18075276883025204,
+      "arm": 0.6290870582005913,
+      "random": 0.8098398270308433,
+      "vs_each_random_min": -0.18325023165512067,
+      "vs_each_random_max": -0.17773463354366148,
+      "reading": "CI below 0"
+     }
+    },
+    "gap_gt_M": {
+     "n_answers": 7213,
+     "run2_psiC_minus_random": {
+      "lo": -0.05342843161895722,
+      "hi": -0.033370214060675064,
+      "sd": 0.005152483699763784,
+      "dropped": 0,
+      "point": -0.043393872175239157,
+      "arm": 0.2994593095799251,
+      "random": 0.34285318175516427,
+      "vs_each_random_min": -0.048107583529737985,
+      "vs_each_random_max": -0.036323305143490914,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": -0.14440651959221984,
+      "hi": -0.1253847456206608,
+      "sd": 0.004864933701366554,
+      "dropped": 0,
+      "point": -0.13531124358796615,
+      "arm": 0.20754193816719813,
+      "random": 0.34285318175516427,
+      "vs_each_random_min": -0.14002495494246497,
+      "vs_each_random_max": -0.1282406765562179,
+      "reading": "CI below 0"
+     },
+     "run1_psiC_minus_random_SEEN": {
+      "lo": -0.09094314051205107,
+      "hi": -0.07074152201285018,
+      "sd": 0.00518787631560712,
+      "dropped": 0,
+      "point": -0.08096492444197972,
+      "arm": 0.26188825731318455,
+      "random": 0.34285318175516427,
+      "vs_each_random_min": -0.08567863579647855,
+      "vs_each_random_max": -0.07389435741023148,
+      "reading": "CI below 0"
+     }
+    }
+   },
+   "residency": {
+    "all": {
+     "run2_psiC_minus_random": {
+      "lo": -0.03293247599278695,
+      "hi": -0.026186751317351323,
+      "sd": 0.0017220781606347847,
+      "dropped": 0,
+      "point": -0.029691299291680018,
+      "arm": 0.7595676075695105,
+      "random": 0.7892589068611905,
+      "vs_each_random_min": -0.03303731895549222,
+      "vs_each_random_max": -0.027513479226133897,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.017559820446319242,
+      "hi": 0.02248353052272001,
+      "sd": 0.001292079804586836,
+      "dropped": 0,
+      "point": 0.020102547838037776,
+      "arm": 0.8093614546992283,
+      "random": 0.7892589068611905,
+      "vs_each_random_min": 0.01675652817422557,
+      "vs_each_random_max": 0.022280367903583898,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_eq_1": {
+     "run2_psiC_minus_random": {
+      "lo": 0.0,
+      "hi": 0.0,
+      "sd": 0.0,
+      "dropped": 0,
+      "point": 0.0,
+      "arm": 1.0,
+      "random": 1.0,
+      "vs_each_random_min": 0.0,
+      "vs_each_random_max": 0.0,
+      "reading": "CI includes 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.0,
+      "hi": 0.0,
+      "sd": 0.0,
+      "dropped": 0,
+      "point": 0.0,
+      "arm": 1.0,
+      "random": 1.0,
+      "vs_each_random_min": 0.0,
+      "vs_each_random_max": 0.0,
+      "reading": "CI includes 0"
+     }
+    },
+    "gap_2_to_M": {
+     "run2_psiC_minus_random": {
+      "lo": -0.057747043080202086,
+      "hi": -0.048351543957986215,
+      "sd": 0.0023560501990934125,
+      "dropped": 0,
+      "point": -0.05315271588051007,
+      "arm": 0.8074835635176278,
+      "random": 0.8606362793981379,
+      "vs_each_random_min": -0.055817852887967145,
+      "vs_each_random_max": -0.04959625821824121,
+      "reading": "CI below 0"
+     },
+     "fifo_minus_random": {
+      "lo": 0.137018215463366,
+      "hi": 0.14181575846366887,
+      "sd": 0.0012266485081515925,
+      "dropped": 0,
+      "point": 0.13936372060186208,
+      "arm": 1.0,
+      "random": 0.8606362793981379,
+      "vs_each_random_min": 0.136698583594405,
+      "vs_each_random_max": 0.14292017826413095,
+      "reading": "CI above 0"
+     }
+    },
+    "gap_gt_M": {
+     "run2_psiC_minus_random": {
+      "lo": 0.0009079717412832797,
+      "hi": 0.021927774345595657,
+      "sd": 0.00535131300191351,
+      "dropped": 0,
+      "point": 0.011257451823097175,
+      "arm": 0.3436850131706641,
+      "random": 0.3324275613475669,
+      "vs_each_random_min": 0.0020795785387494603,
+      "vs_each_random_max": 0.018993483987245263,
+      "reading": "CI above 0"
+     },
+     "fifo_minus_random": {
+      "lo": -0.3378195218670686,
+      "hi": -0.32706349136211055,
+      "sd": 0.0028348189629533566,
+      "dropped": 0,
+      "point": -0.3324275613475669,
+      "arm": 0.0,
+      "random": 0.3324275613475669,
+      "vs_each_random_min": -0.3416054346319146,
+      "vs_each_random_max": -0.3246915291834188,
+      "reading": "CI below 0"
+     }
+    }
+   },
+   "conditional": {
+    "all": {
+     "psiC": {
+      "resident": 28739,
+      "resident_right": 26554,
+      "missed": 9097,
+      "missed_right": 676
+     },
+     "fifo": {
+      "resident": 30623,
+      "resident_right": 28889,
+      "missed": 7213,
+      "missed_right": 1497
+     },
+     "random_mean": {
+      "resident": 29862.4,
+      "resident_right": 27939.8,
+      "missed": 7973.6,
+      "missed_right": 744.6
+     }
+    },
+    "gap_eq_1": {
+     "psiC": {
+      "resident": 7960,
+      "resident_right": 7845
+     },
+     "fifo": {
+      "resident": 7960,
+      "resident_right": 7862
+     },
+     "random_mean": {
+      "resident": 7960.0,
+      "resident_right": 7858.0,
+      "missed": 0.0,
+      "missed_right": 0.0
+     }
+    },
+    "gap_2_to_M": {
+     "psiC": {
+      "resident": 18300,
+      "resident_right": 16938,
+      "missed": 4363,
+      "missed_right": 287
+     },
+     "fifo": {
+      "resident": 22663,
+      "resident_right": 21027
+     },
+     "random_mean": {
+      "resident": 19504.6,
+      "resident_right": 18127.6,
+      "missed": 3158.4,
+      "missed_right": 225.8
+     }
+    },
+    "gap_gt_M": {
+     "psiC": {
+      "missed": 4734,
+      "missed_right": 389,
+      "resident": 2479,
+      "resident_right": 1771
+     },
+     "fifo": {
+      "missed": 7213,
+      "missed_right": 1497
+     },
+     "random_mean": {
+      "resident": 2397.8,
+      "resident_right": 1954.2,
+      "missed": 4815.2,
+      "missed_right": 518.8
+     }
+    }
+   },
+   "eviction_cost": {
+    "psiC": {
+     "by_age": {
+      "1": {
+       "evictions": 12235,
+       "misses_caused": 1753,
+       "misses_caused_gap_2_to_M": 1561,
+       "misses_caused_gap_gt_M": 192,
+       "missed_and_answered_wrong": 1660,
+       "misses_per_eviction": 0.14327748263179405
+      },
+      "2..4": {
+       "evictions": 15157,
+       "misses_caused": 2236,
+       "misses_caused_gap_2_to_M": 1696,
+       "misses_caused_gap_gt_M": 540,
+       "missed_and_answered_wrong": 2088,
+       "misses_per_eviction": 0.14752259681995117
+      },
+      "5..M": {
+       "evictions": 24983,
+       "misses_caused": 3737,
+       "misses_caused_gap_2_to_M": 1106,
+       "misses_caused_gap_gt_M": 2631,
+       "missed_and_answered_wrong": 3454,
+       "misses_per_eviction": 0.14958171556658528
+      },
+      "M+1..A_max": {
+       "evictions": 13161,
+       "misses_caused": 1371,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 1371,
+       "missed_and_answered_wrong": 1219,
+       "misses_per_eviction": 0.10417141554593116
+      }
+     },
+     "totals": {
+      "queries": 37836,
+      "hit": 28739,
+      "hit_wrong": 2185,
+      "miss": 9097,
+      "miss_right": 676
+     }
+    },
+    "fifo": {
+     "by_age": {
+      "1": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      },
+      "2..4": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      },
+      "5..M": {
+       "evictions": 65536,
+       "misses_caused": 7213,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 7213,
+       "missed_and_answered_wrong": 5716,
+       "misses_per_eviction": 0.1100616455078125
+      },
+      "M+1..A_max": {
+       "evictions": 0,
+       "misses_caused": 0,
+       "misses_caused_gap_2_to_M": 0,
+       "misses_caused_gap_gt_M": 0,
+       "missed_and_answered_wrong": 0,
+       "misses_per_eviction": null
+      }
+     },
+     "totals": {
+      "queries": 37836,
+      "hit": 30623,
+      "hit_wrong": 1734,
+      "miss": 7213,
+      "miss_right": 1497
+     }
+    },
+    "random_mean": {
+     "by_age": {
+      "1": {
+       "evictions": 4116.8,
+       "misses_caused": 911.0,
+       "misses_caused_gap_2_to_M": 807.4,
+       "misses_caused_gap_gt_M": 103.6,
+       "missed_and_answered_wrong": 848.0,
+       "misses_per_eviction": 0.2212883793237466
+      },
+      "2..4": {
+       "evictions": 10804.6,
+       "misses_caused": 1649.8,
+       "misses_caused_gap_2_to_M": 1262.8,
+       "misses_caused_gap_gt_M": 387.0,
+       "missed_and_answered_wrong": 1539.2,
+       "misses_per_eviction": 0.1526942228310164
+      },
+      "5..M": {
+       "evictions": 30857.0,
+       "misses_caused": 3609.4,
+       "misses_caused_gap_2_to_M": 1088.2,
+       "misses_caused_gap_gt_M": 2521.2,
+       "missed_and_answered_wrong": 3328.8,
+       "misses_per_eviction": 0.11697183783258257
+      },
+      "M+1..A_max": {
+       "evictions": 19757.6,
+       "misses_caused": 1803.4,
+       "misses_caused_gap_2_to_M": 0.0,
+       "misses_caused_gap_gt_M": 1803.4,
+       "missed_and_answered_wrong": 1513.0,
+       "misses_per_eviction": 0.09127626837267686
+      }
+     },
+     "totals": {
+      "miss": 7973.6,
+      "queries": 37836.0,
+      "hit": 29862.4,
+      "miss_right": 744.6,
+      "hit_wrong": 1922.6
+     }
+    }
+   },
+   "pairing_failures": [],
+   "anomalies": [],
+   "n_anomalies": 0
+  }
+ }
+}
