@@ -12,8 +12,21 @@ checkpoint, no EVAL document -- so it runs in CI. The load-bearing ones:
 * pairing (C6) is the full ``(doc, [(t, gap)])`` sequence, never a prefix;
 * the fit and deploy labels at their boundaries (§4, §5).
 
-Mutants killed by hand at build time are listed in the build report (offline-psi
-outbox); each named test below reddened under its mutant.
+Mutants applied by hand at build time (2026-10-08, at 30c3763), each run against this
+file alone; every one KILLED (the test that reddened in brackets):
+
+M1 G truncated at FIFO eviction, the censoring put back [target_is_never_cut, c2_...];
+M2 PIPELINE reordered so EVAL is read before selection [pipeline_puts_eval_after_...];
+M3 the deploy guard skips the frozen-phi sha256 check [deploy_guard_refuses_...];
+M4 pairing compares a prefix [pairing_is_the_full_sequence_never_a_prefix];
+M5 selection ties go to the later step [select_step_lowest_ties_earliest_...];
+M6 L_MC averaged over cells, not (doc, t) groups [l_mc_is_run_2s_sum_then_mean_...];
+M7 cf_live one cell too wide [cell_masks_count_cf_all_and_cf_live];
+M8 U-val by p % 7 == 1 [u_split_is_positions_mod_7, c3_disjointness_...];
+M9 the phi-only check accepts extra trainable tensors [fit_gives_gradient_to_phi_...];
+M10 C2 compared with a 1e-9 tolerance instead of == [c2_control_is_float_equality_...].
+They are not in `scripts/mutation_battery.py` (neither run 2's nor step 1's harness
+is); adding them there is the battery owner's call.
 """
 
 from __future__ import annotations
