@@ -989,8 +989,16 @@ def run2_records(refs: Refs, seed: int, names) -> dict[str, list[dict]]:
     return {n: R1.read_pass(hd, n) for n in names}
 
 
-def load_frozen(cfg) -> tuple[Any, dict, str]:
-    """The substrate model, from bytes hashed here (run 1's pin), frozen and in eval."""
+def run2_fifo_path(refs: Refs, seed: int) -> Path:
+    return Path(refs.run2_out) / "fifo" / f"seed{seed}" / f"ckpt-{CKPT:06d}.pt"
+
+
+def load_frozen(cfg, refs: Refs = REFS) -> tuple[Any, dict, str]:
+    """The frozen model run 1's held-out procedure ran (`R1.model_from_payload` on run
+    2's fifo ckpt-003000, the model run 2's FIFO records came from), carrying the
+    substrate's tensors from bytes hashed here against run 1's pin. The substrate file
+    has no frozen config of its own (its meta holds none), so the config is run 2's;
+    C4 checks run 2's tensors are the substrate's, bit for bit."""
     data = Path(cfg.substrate.checkpoint).read_bytes()
     sha = hashlib.sha256(data).hexdigest()
     if sha != cfg.substrate.sha256:
@@ -998,10 +1006,25 @@ def load_frozen(cfg) -> tuple[Any, dict, str]:
     from rsr.train import checkpoint as ck
 
     payload = ck.load_bytes(data, source=cfg.substrate.checkpoint)
-    model = R1.model_from_payload(payload)
+    fifo = R1.read_checkpoint(run2_fifo_path(refs, cfg.seed))
+    model = R1.model_from_payload({"meta": fifo["meta"], "model": payload["model"]})
     model.requires_grad_(False)  # D2(b): nothing reaches the transformer or W_sent
     model.eval()
-    return model, payload, sha
+    return model, {"substrate": payload, "run2_fifo": fifo}, sha
+
+
+def config_vs_b0cf(model, V: int) -> dict:
+    """The TGConfig this run's model carries against the one B0-CF measured Delta with
+    (lookahead-room's `S003._cfg(V)`): every differing field, recorded."""
+    from dataclasses import asdict as _asdict
+
+    mine, theirs = _asdict(model.cfg), _asdict(LR.S003._cfg(V))
+    diff = {
+        k: [mine.get(k), theirs.get(k)]
+        for k in sorted(set(mine) | set(theirs))
+        if mine.get(k) != theirs.get(k)
+    }
+    return {"differ": diff, "identical": not diff}
 
 
 def run2_psic_config(refs: Refs, seed: int) -> dict:
@@ -1117,7 +1140,9 @@ def measure_seed(
         return None
 
     def gestalts(_ctx):
-        model, _payload, sha = load_frozen(cfg)
+        model, payloads, sha = load_frozen(cfg, refs)
+        state["run2_fifo_payload"] = payloads["run2_fifo"]
+        doc["model_config_vs_b0cf"] = config_vs_b0cf(model, int(model.cfg.V))
         state.update(
             model=model,
             substrate_state={k: v.clone() for k, v in model.state_dict().items()},
@@ -1308,10 +1333,7 @@ def measure_seed(
     finally:
         doc["events"] = list(events)
     # Controls assembled after the pipeline (C4, C6, C7, C9).
-    run2p = {"run2_psiC": state["run2_payload"]}
-    fifo_ck = Path(refs.run2_out) / "fifo" / f"seed{seed}" / f"ckpt-{CKPT:06d}.pt"
-    if fifo_ck.exists():
-        run2p["run2_fifo"] = R1.read_checkpoint(fifo_ck)
+    run2p = {"run2_psiC": state["run2_payload"], "run2_fifo": state["run2_fifo_payload"]}
     c4 = c4_frozen(state["model"], state["substrate_state"], cfg, run2p)
     c4["optimizer_only_phi"] = {a: doc["fit"][a]["optimizer"]["ok"] for a in ARMS}
     c4["ok"] = c4["ok"] and all(c4["optimizer_only_phi"].values())
@@ -1855,7 +1877,7 @@ def recompute(what: str, out_root: Path, seed: int | None, threads: int = 1) -> 
         ov, spe = dict(conf["policy_overrides"]), float(conf["epoch"]["steps_per_epoch"])
         if what == "refit":
             cfg = R1.prereg_config(seed, CKPT)
-            model, _p, _sha = load_frozen(cfg)
+            model, _p, _sha = load_frozen(cfg, refs)
             pol, _ = new_policy(seed, ov, spe)
             opt = phi_optimizer(model, pol.head, float(conf["lr"]))
             data = {"s": g["s"], "c": g["c"], **fit_tensors(blob, docs, PRIMARY)}
@@ -2020,7 +2042,7 @@ def time_build(seed: int, threads: int, refs: Refs = REFS) -> dict:
     cfg = R1.prereg_config(seed, CKPT)
     docs, vmap = u_documents(seed)
     blob, _ = load_delta(seed, refs)
-    model, _payload, _sha = load_frozen(cfg)
+    model, _payload, _sha = load_frozen(cfg, refs)
     out: dict[str, Any] = {"seed": seed, "threads": threads}
     g = gestalt_forward(model, docs[:32], vmap)
     out["gestalt_forward_32_s"] = g["seconds"]
@@ -2166,6 +2188,9 @@ def main(argv: list[str] | None = None) -> Exit:
         return Exit.DID_NOT_RUN
     except ControlFailure as e:
         print(f"CONTROL FAILED: {e}", file=sys.stderr)
+        return Exit.DID_NOT_RUN
+    except R1.ledger_mod().DirtyTree as e:
+        print(f"DID NOT RUN (ledger): {e}", file=sys.stderr)
         return Exit.DID_NOT_RUN
     return Exit.DID_NOT_RUN
 
