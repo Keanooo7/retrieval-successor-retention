@@ -63,6 +63,8 @@ LAUNCHER = "experiments/offline-psi/launch.zsh"
 RUN_ID = "offline-psi"
 PREREG = "experiments/offline-psi/PREREG.md"
 PREREG_COMMIT = "c200a08"
+#: Amendments, each committed alone after c200a08 (A1: §10's compute, measured).
+PREREG_AMENDMENTS = {"A1": "66682e5"}
 
 
 def _load(name: str, rel: str):
@@ -1988,6 +1990,7 @@ def manifest_config(refs: Refs = REFS) -> dict:
         "run_id": RUN_ID,
         "prereg": PREREG,
         "prereg_commit": PREREG_COMMIT,
+        "prereg_amendments": PREREG_AMENDMENTS,
         "prereg_sha256": sha256_file(refs.prereg),
         "seeds": list(SEEDS),
         "device": R1.DEVICE,
