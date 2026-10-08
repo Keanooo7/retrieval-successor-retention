@@ -1,0 +1,82 @@
+[
+ {
+  "claim": "seed 0 C2: TargetPolicy on B0-CF's G over full U, cap point",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi c2 --seed 0",
+  "expected": "0.9161993769470408"
+ },
+ {
+  "claim": "seed 0 fit reading: cf_all cap on U-val",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi fitcap --seed 0",
+  "expected": "-0.074689 -0.166684 0.012076"
+ },
+ {
+  "claim": "seed 0 cf_all refit: selected step, U-val L_MC, phi sha",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi refit --seed 0 --threads 1",
+  "expected": "3000 1.630781074e+00 7fb4c1005d982cda939112001899a13b6bd8ff7dc22ad2df72a161a32aa6e978"
+ },
+ {
+  "claim": "seed 0 headline cf_all - FIFO and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi headline --seed 0",
+  "expected": "-0.034079 -0.037578 -0.030646 EQUIV"
+ },
+ {
+  "claim": "seed 0 cf_all age-1 eviction share",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi age1 --seed 0",
+  "expected": "7936 65536"
+ },
+ {
+  "claim": "seed 1 C2: TargetPolicy on B0-CF's G over full U, cap point",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi c2 --seed 1",
+  "expected": "0.9551669316375201"
+ },
+ {
+  "claim": "seed 1 fit reading: cf_all cap on U-val",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi fitcap --seed 1",
+  "expected": "0.082430 -0.016475 0.172136"
+ },
+ {
+  "claim": "seed 1 cf_all refit: selected step, U-val L_MC, phi sha",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi refit --seed 1 --threads 1",
+  "expected": "3000 1.576610037e+00 eb02eb0b38649ac32a9332b81f1484326d2b594e4cbf98f17865880160d0df35"
+ },
+ {
+  "claim": "seed 1 headline cf_all - FIFO and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi headline --seed 1",
+  "expected": "-0.023528 -0.026906 -0.020183 EQUIV"
+ },
+ {
+  "claim": "seed 1 cf_all age-1 eviction share",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi age1 --seed 1",
+  "expected": "3765 65536"
+ },
+ {
+  "claim": "seed 2 C2: TargetPolicy on B0-CF's G over full U, cap point",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi c2 --seed 2",
+  "expected": "0.8736576121288696"
+ },
+ {
+  "claim": "seed 2 fit reading: cf_all cap on U-val",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi fitcap --seed 2",
+  "expected": "-0.203540 -0.298209 -0.114034"
+ },
+ {
+  "claim": "seed 2 cf_all refit: selected step, U-val L_MC, phi sha",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi refit --seed 2 --threads 1",
+  "expected": "3000 1.790370677e+00 140638e0fab8626c73c5cf868bb955197314f6eebec08d1a53ba4cf7b140f39e"
+ },
+ {
+  "claim": "seed 2 headline cf_all - FIFO and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi headline --seed 2",
+  "expected": "-0.059705 -0.063345 -0.055890 LOSS"
+ },
+ {
+  "claim": "seed 2 cf_all age-1 eviction share",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi age1 --seed 2",
+  "expected": "12353 65536"
+ },
+ {
+  "claim": "deploy class, fit label, newcomer label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi class",
+  "expected": "FAILS FIT-MISSES NEWCOMER-REDUCED"
+ }
+]

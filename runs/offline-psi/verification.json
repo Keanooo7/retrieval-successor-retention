@@ -1,0 +1,386 @@
+{
+ "status": "ok",
+ "seed": "5c76c3669dad80e3429f081e32da4426dafeed37f5e853440fb2a9620e8104e3",
+ "draw_rule": "orchestrator.verify draw offline-psi (k=3): random.Random(int(sha256('offline-psi'),16)).sample(range(16),3), sorted -> indices [0, 8, 15]",
+ "claims": [
+  {
+   "claim": "seed 0 C2: TargetPolicy on B0-CF's G over full U, cap point",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi c2 --seed 0",
+   "expected": "0.9161993769470408",
+   "observed": "0.9161993769470408",
+   "match": true,
+   "rc": 0,
+   "draw_index": 0,
+   "independent_rederivation": {
+    "how": "own numpy discounted returns (float32 recursion; float64 sensitivity), own list-based residency replay of TargetPolicy/FIFO/FactFiller over all 1088 U docs, pooled cap formula; only the U document list (kinds, pairs) taken from lookahead-room documents(seed)",
+    "value_f32": "0.9161993769470408",
+    "value_f64_sensitivity": "0.9161993769470408",
+    "b0cf_ledger_samples_B.ckpt3000.cf.g09.cap.point": [
+     0.9161993769470408,
+     0.9551669316375201,
+     0.8736576121288696
+    ],
+    "delta_sha256": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+    "delta_ids_eq_U_order": true,
+    "match": true
+   }
+  },
+  {
+   "claim": "seed 1 headline cf_all - FIFO and label",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi headline --seed 1",
+   "expected": "-0.023528 -0.026906 -0.020183 EQUIV",
+   "observed": "-0.023528 -0.026906 -0.020183 EQUIV",
+   "match": true,
+   "rc": 0,
+   "draw_index": 8,
+   "independent_rederivation": {
+    "how": "own reader over heldout/seed1/cf_all.jsonl.gz and run 2's heldout/seed1/fifo.jsonl.gz; pooled acc over answers with gap>=1; paired bootstrap weights drawn torch.Generator(20260927+1), 2000x2048, counted by numpy bincount; numpy percentile 2.5/97.5; delta machine-read from the B2 ledger; PREREG s4 label rule",
+    "value": "-0.023528 -0.026906 -0.020183 EQUIV",
+    "detail": {
+     "acc_cf_all": 0.7429891734882492,
+     "acc_fifo": 0.7665170319514127,
+     "n_answers": [
+      37870.0,
+      37870.0
+     ],
+     "point": -0.02352785846316352,
+     "lo": -0.026906116286440785,
+     "hi": -0.02018287595925919,
+     "delta": 0.03675691427360389,
+     "label": "EQUIV",
+     "line": "-0.023528 -0.026906 -0.020183 EQUIV"
+    },
+    "paired_same_docs_and_(t,gap)": true,
+    "match": true
+   }
+  },
+  {
+   "claim": "deploy class, fit label, newcomer label",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/offline-psi/run.py recompute --out-root runs/offline-psi class",
+   "expected": "FAILS FIT-MISSES NEWCOMER-REDUCED",
+   "observed": "FAILS FIT-MISSES NEWCOMER-REDUCED",
+   "match": true,
+   "rc": 0,
+   "draw_index": 15,
+   "independent_rederivation": {
+    "how": "labels from the independent headlines (all seeds), independent U-val cf_all fit caps (own float64 bilinear psi from phi-cf_all.pt + gestalts.pt, own replay, B0 bootstrap convention seed 20260927+s over 156 docs), independent age-1 counts; PREREG s4/s5/s6.5 rules",
+    "value": "FAILS FIT-MISSES NEWCOMER-REDUCED",
+    "match": true,
+    "fit_caps_cf_all": {
+     "0": {
+      "point": -0.0746887966804977,
+      "lo": -0.16668388429752054,
+      "hi": 0.012076122724124685,
+      "dropped": 0
+     },
+     "1": {
+      "point": 0.08242950108459907,
+      "lo": -0.016475490196078454,
+      "hi": 0.1721364860869278,
+      "dropped": 0
+     },
+     "2": {
+      "point": -0.20353982300884985,
+      "lo": -0.2982093549664476,
+      "hi": -0.11403367289190697,
+      "dropped": 0
+     }
+    },
+    "labels": {
+     "0": "EQUIV",
+     "1": "EQUIV",
+     "2": "LOSS"
+    },
+    "age1_shares": {
+     "0": 0.12109375,
+     "1": 0.0574493408203125,
+     "2": 0.1884918212890625
+    }
+   }
+  }
+ ],
+ "verifier_sha": "5e8d9ce50d7350b08540585adf55047c7396135a",
+ "execution": {
+  "worktree": ".worktrees/verify-offline-psi (branch verify/offline-psi at 5e8d9ce)",
+  "uv_sync_rc": 0,
+  "out_root": "runs/offline-psi in the verify worktree = rsync copy of the run's runs/offline-psi minus RESULTS.md; all 28 files sha256-identical to the source",
+  "lane": "cpu-det, 1 slot",
+  "claim_rcs": {
+   "0": 0,
+   "8": 0,
+   "15": 0
+  }
+ },
+ "supplementary": {
+  "seed0": {
+   "a_headline": {
+    "acc_cf_all": 0.7408923995456107,
+    "acc_fifo": 0.7749716006657332,
+    "point": -0.034079201120122526,
+    "lo": -0.03757807847242761,
+    "hi": -0.030645668052157935,
+    "delta_from_b2_ledger": 0.03802185560447721,
+    "delta_key": "ckpt3000.seed0.decisions.delta[\"0.9\"]",
+    "label": "EQUIV",
+    "line": "-0.034079 -0.037578 -0.030646 EQUIV",
+    "n_answers_each_arm": 37853.0,
+    "paired_docs_and_answer_targets_identical": true
+   },
+   "b_age1_cf_all": {
+    "n_age1": 7936,
+    "n_evictions": 65536,
+    "share": 0.12109375,
+    "cross_check_t_minus_victim": [
+     7936,
+     65536
+    ]
+   },
+   "c_selection_cf_all": {
+    "selected_step": 3000,
+    "selected_val_l_mc": 1.6307810744736677,
+    "line": "3000 1.630781074e+00",
+    "history_points": 60,
+    "history_range": [
+     50,
+     3000
+    ],
+    "val_l_mc_monotone_nonincreasing": true,
+    "val_last_4": [
+     [
+      2850,
+      1.6339486266278513
+     ],
+     [
+      2900,
+      1.6328347806408712
+     ],
+     [
+      2950,
+      1.6318775231434095
+     ],
+     [
+      3000,
+      1.6307810744736677
+     ]
+    ],
+    "ledger_history_equals_measure_history": true,
+    "uval_l_mc_recomputed_f64_from_saved_phi": 1.6307810753626846,
+    "uval_groups": 7332,
+    "phi_cf_all_state_sha256_recomputed": "7fb4c1005d982cda939112001899a13b6bd8ff7dc22ad2df72a161a32aa6e978",
+    "note": "selected step is the last evaluated step (3000) on every seed; U-val L_MC was still falling at the step cap"
+   },
+   "fit_cap_cf_all_uval": {
+    "point": -0.0746887966804977,
+    "lo": -0.16668388429752054,
+    "hi": 0.012076122724124685,
+    "dropped": 0
+   },
+   "c2_point": {
+    "f32": 0.9161993769470408,
+    "f64_sensitivity": 0.9161993769470408
+   }
+  },
+  "seed1": {
+   "a_headline": {
+    "acc_cf_all": 0.7429891734882492,
+    "acc_fifo": 0.7665170319514127,
+    "point": -0.02352785846316352,
+    "lo": -0.026906116286440785,
+    "hi": -0.02018287595925919,
+    "delta_from_b2_ledger": 0.03675691427360389,
+    "delta_key": "ckpt3000.seed1.decisions.delta[\"0.9\"]",
+    "label": "EQUIV",
+    "line": "-0.023528 -0.026906 -0.020183 EQUIV",
+    "n_answers_each_arm": 37870.0,
+    "paired_docs_and_answer_targets_identical": true
+   },
+   "b_age1_cf_all": {
+    "n_age1": 3765,
+    "n_evictions": 65536,
+    "share": 0.0574493408203125,
+    "cross_check_t_minus_victim": [
+     3765,
+     65536
+    ]
+   },
+   "c_selection_cf_all": {
+    "selected_step": 3000,
+    "selected_val_l_mc": 1.5766100367590767,
+    "line": "3000 1.576610037e+00",
+    "history_points": 60,
+    "history_range": [
+     50,
+     3000
+    ],
+    "val_l_mc_monotone_nonincreasing": true,
+    "val_last_4": [
+     [
+      2850,
+      1.5794100468340142
+     ],
+     [
+      2900,
+      1.5784694155357109
+     ],
+     [
+      2950,
+      1.5774599646942502
+     ],
+     [
+      3000,
+      1.5766100367590767
+     ]
+    ],
+    "ledger_history_equals_measure_history": true,
+    "uval_l_mc_recomputed_f64_from_saved_phi": 1.5766100374904017,
+    "uval_groups": 7332,
+    "phi_cf_all_state_sha256_recomputed": "eb02eb0b38649ac32a9332b81f1484326d2b594e4cbf98f17865880160d0df35",
+    "note": "selected step is the last evaluated step (3000) on every seed; U-val L_MC was still falling at the step cap"
+   },
+   "fit_cap_cf_all_uval": {
+    "point": 0.08242950108459907,
+    "lo": -0.016475490196078454,
+    "hi": 0.1721364860869278,
+    "dropped": 0
+   },
+   "c2_point": {
+    "f32": 0.9551669316375201,
+    "f64_sensitivity": 0.9551669316375201
+   }
+  },
+  "seed2": {
+   "a_headline": {
+    "acc_cf_all": 0.7433925362089016,
+    "acc_fifo": 0.8030975790252669,
+    "point": -0.05970504281636535,
+    "lo": -0.06334474529292668,
+    "hi": -0.05588967927474219,
+    "delta_from_b2_ledger": 0.03185756551141167,
+    "delta_key": "ckpt3000.seed2.decisions.delta[\"0.9\"]",
+    "label": "LOSS",
+    "line": "-0.059705 -0.063345 -0.055890 LOSS",
+    "n_answers_each_arm": 37836.0,
+    "paired_docs_and_answer_targets_identical": true
+   },
+   "b_age1_cf_all": {
+    "n_age1": 12353,
+    "n_evictions": 65536,
+    "share": 0.1884918212890625,
+    "cross_check_t_minus_victim": [
+     12353,
+     65536
+    ]
+   },
+   "c_selection_cf_all": {
+    "selected_step": 3000,
+    "selected_val_l_mc": 1.790370677418465,
+    "line": "3000 1.790370677e+00",
+    "history_points": 60,
+    "history_range": [
+     50,
+     3000
+    ],
+    "val_l_mc_monotone_nonincreasing": true,
+    "val_last_4": [
+     [
+      2850,
+      1.793510750135023
+     ],
+     [
+      2900,
+      1.7924785340634926
+     ],
+     [
+      2950,
+      1.7914456357803843
+     ],
+     [
+      3000,
+      1.790370677418465
+     ]
+    ],
+    "ledger_history_equals_measure_history": true,
+    "uval_l_mc_recomputed_f64_from_saved_phi": 1.7903706763084433,
+    "uval_groups": 7332,
+    "phi_cf_all_state_sha256_recomputed": "140638e0fab8626c73c5cf868bb955197314f6eebec08d1a53ba4cf7b140f39e",
+    "note": "selected step is the last evaluated step (3000) on every seed; U-val L_MC was still falling at the step cap"
+   },
+   "fit_cap_cf_all_uval": {
+    "point": -0.20353982300884985,
+    "lo": -0.2982093549664476,
+    "hi": -0.11403367289190697,
+    "dropped": 0
+   },
+   "c2_point": {
+    "f32": 0.8736576121288696,
+    "f64_sensitivity": 0.8736576121288696
+   }
+  },
+  "derived_class_line": "FAILS FIT-MISSES NEWCOMER-REDUCED"
+ },
+ "provenance": {
+  "launch_head": "5e8d9ce50d7350b08540585adf55047c7396135a (manifest git_sha, git_dirty false; ledger provenance.git_sha; run worktree HEAD now; run.json tree porcelain '?? runs/offline-psi/')",
+  "prereg": {
+   "commit": "c200a08275bb47dd43a57b8062585d58fa14b919",
+   "committed": "2026-10-08T11:15:58-07:00",
+   "ancestor_of_head_rc": 0,
+   "files": [
+    "experiments/offline-psi/PREREG.md"
+   ]
+  },
+  "amendment_1": {
+   "commit": "66682e5897fde852fc8b1a72807c41cd89e18c7e",
+   "committed": "2026-10-08T11:57:23-07:00",
+   "ancestor_of_head_rc": 0,
+   "files": [
+    "experiments/offline-psi/PREREG.md"
+   ]
+  },
+  "run_head_committed": "2026-10-08T12:11:11-07:00",
+  "prereg_sha256_at_head": "a04839b7808a80d80ecc7d23c2fe32a6b4dc8e96a3bf9adb46f97865009db399 (== manifest prereg_sha256)",
+  "no_prereg_change_after_A1": "git log 66682e5..5e8d9ce -- PREREG.md is empty",
+  "manifest_written_utc": "2026-10-08T19:52:24Z",
+  "seed_windows_utc": {
+   "0": [
+    "2026-10-08T19:52:24Z",
+    "2026-10-08T19:57:27Z"
+   ],
+   "1": [
+    "2026-10-08T19:57:27Z",
+    "2026-10-08T20:02:29Z"
+   ],
+   "2": [
+    "2026-10-08T20:02:30Z",
+    "2026-10-08T20:07:32Z"
+   ]
+  },
+  "launch_log": [
+   "seed 0 rc=0",
+   "seed 1 rc=0",
+   "seed 2 rc=0",
+   "finalize rc=0"
+  ],
+  "launch_rc_file": "0",
+  "preflight": "ok true; eval_output_absent true for seeds 0,1,2; C8 delta == registered on all seeds",
+  "measure_seed_exit": {
+   "0": 0,
+   "1": 0,
+   "2": 0
+  },
+  "controls_failed": {
+   "0": [],
+   "1": [],
+   "2": []
+  },
+  "eval_written_once": "heldout/seed{0,1,2}/cf_all.{jsonl.gz,decisions.pt}: birth==mtime to the second (12:57:22-23, 13:02:25, 13:07:27-28 PDT), each after its seed's phi (12:54:16, 12:59:18, 13:04:21) and before its measure json; records_sha256 in measure-seed{s}.json equals the file sha on all seeds; event order controls,gestalts,fit,select,fit_reading,deploy,score (C9 ok); deploy guard phi sha == selected phi sha; no attempt/sibling out-roots exist"
+ },
+ "finalize_rerun": {
+  "how": "copies of measure-seed{0,1,2}.json + manifest.json into scratch <tmp>/fin2/runs/offline-psi; ran '.venv/bin/python experiments/offline-psi/run.py finalize --out-root runs/offline-psi' (same argv) from <tmp>/fin2 under the cpu-det slot with RSR_ORCH_ROOT set",
+  "rc": 0,
+  "claims.json": "byte-identical",
+  "run.json": "byte-identical (summary and tree state included)",
+  "ledger.json": "differs only in 7 timestamp lines (started_utc, 4x commands[].at_utc, finished_utc)",
+  "RESULTS.md": "byte-identical (sha256 compared; prose not read by the verifier)"
+ },
+ "not_read": "the report: RESULTS.md and the outbox were not opened"
+}
