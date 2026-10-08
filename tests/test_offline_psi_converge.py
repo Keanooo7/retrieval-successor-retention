@@ -140,3 +140,14 @@ def test_u_never_contains_an_eval_id():
     ids = [d.doc_id for d in OP.u_documents(0)[0]]
     assert not set(ids) & set(CV.EVAL_IDS)
     assert len(ids) == 1088
+
+
+def test_launcher_never_assigns_dollar_bang_into_an_array_element():
+    """2026-10-08: `pid[$s]=$!` stored the literal "$!" in zsh 5.9, `wait` failed with
+    rc 127, and finalize ran before any seed finished. Assign through a scalar."""
+    import re
+
+    text = (ROOT / "experiments/offline-psi-converge/launch.zsh").read_text()
+    code = "\n".join(ln.split("#", 1)[0] for ln in text.splitlines()[1:])  # no comments
+    assert not re.search(r"\w+\[[^\]]*\]=\$!", code)
+    assert "p=$!; pid[$s]=$p" in text

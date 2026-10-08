@@ -16,7 +16,7 @@ for s in 0 1 2; do
     --job-id offline-psi-converge-s$s -- \
     $PY experiments/offline-psi-converge/run.py run --seed $s --out-root $OUT \
     > $OUT/logs/seed$s.log 2>&1 &
-  pid[$s]=$!
+  p=$!; pid[$s]=$p  # zsh 5.9: pid[$s]=$! stores the literal "$!" (run 1's launcher)
 done
 for s in 0 1 2; do
   wait ${pid[$s]}; rc=$?
