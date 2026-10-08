@@ -388,7 +388,13 @@ class GestaltRecorder:
 
 
 def gestalt_forward(
-    model, docs: list, vmap: dict, *, batch: int = R1.EVAL_BATCH, m: int = M
+    model,
+    docs: list,
+    vmap: dict,
+    *,
+    batch: int = R1.EVAL_BATCH,
+    m: int = M,
+    steps: int = S,
 ) -> dict:
     """PREREG §1: one eval-mode, ``no_grad`` forward per document under FIFO memory.
 
@@ -396,7 +402,7 @@ def gestalt_forward(
     gestalt sentence ``i``'s write put in memory; ``c[n, t]`` is the step-``t``
     sentence gestalt from the forward (eval mode, so the eval forward's: checked
     bit-equal to the decision context at every full step)."""
-    n_s, L = S, int(model.cfg.max_sentence_tokens)
+    n_s, L = steps, int(model.cfg.max_sentence_tokens)
     d = int(model.cfg.D)
     S_out = torch.zeros(len(docs), n_s, d)
     C_out = torch.zeros(len(docs), n_s, d)
