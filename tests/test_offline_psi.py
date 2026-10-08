@@ -613,3 +613,10 @@ def test_factfiller_reference_is_seeded_per_document():
         for d in docs
     ]
     assert r == want
+
+
+def test_loading_the_harness_leaves_run_2s_run_1_cache_alone():
+    """Run 2's script rebinds the run-1 instance it caches as `_rsr_run2_r1`; this
+    harness must not leave ITS instance there, or run 2's own tests wrap `cli_argv`
+    twice (the full suite's first run at f5b7590 failed exactly so)."""
+    assert sys.modules.get("_rsr_run2_r1") is not OP.R2.R1

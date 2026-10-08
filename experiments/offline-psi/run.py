@@ -76,11 +76,26 @@ def _load(name: str, rel: str):
     return mod
 
 
+def _load_isolated(name: str, rel: str, private: tuple[str, ...]):
+    """`_load`, leaving ``sys.modules`` as it found it for the ``private`` names the
+    loaded script caches. Run 2's script loads run 1 as ``_rsr_run2_r1`` and REBINDS
+    that instance's ``cli_argv``; left cached, run 2's own tests would pick up the
+    rebound instance and wrap ``cli_argv`` twice (found by the full suite)."""
+    saved = {k: sys.modules.pop(k, None) for k in private}
+    try:
+        return _load(name, rel)
+    finally:
+        for k in private:
+            sys.modules.pop(k, None)
+            if saved[k] is not None:
+                sys.modules[k] = saved[k]
+
+
 #: Run 1's harness (held-out procedure, bootstrap, buckets, SUBSTRATE pins).
 R1 = _load("_offline_psi_r1", "experiments/rsr-run1/run.py")
 #: Run 2's harness (§2 label and class, §5 age-1 share and newcomer label, the probe
 #: wrapper, the ES source control C14, `_tg`). Its own run-1 instance is private to it.
-R2 = _load("_offline_psi_r2", "experiments/rsr-run2/run.py")
+R2 = _load_isolated("_offline_psi_r2", "experiments/rsr-run2/run.py", ("_rsr_run2_r1",))
 #: Step 1 (`run2-vs-random`, 6ed6583): `minus_random`, `hit_counts`,
 #: `conditional_counts`, `eviction_cost`, `mean_cost`.
 STEP1 = _load("_offline_psi_step1", "experiments/run2-vs-random/run.py")
