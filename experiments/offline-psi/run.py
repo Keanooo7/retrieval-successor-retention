@@ -1969,7 +1969,8 @@ def preflight(refs: Refs = REFS) -> dict:
         row["run2_psiC_ckpt"] = (
             Path(refs.run2_out) / "psiC" / f"seed{s}" / f"ckpt-{CKPT:06d}.pt"
         ).exists()
-        row["eval_output_absent"] = True  # checked per out-root by measure-seed (C9)
+        real = heldout_dir(ROOT / "runs" / RUN_ID, s) / f"{PRIMARY}.jsonl.gz"
+        row["eval_output_absent"] = not real.exists()  # C9; measure-seed checks again
         row["C14"] = R2.c14_es_source(s, refs.r2()).get("ok")
         out["seeds"][s] = row
     out["ok"] = out["prereg_text"]["ok"] and all(
@@ -1979,6 +1980,7 @@ def preflight(refs: Refs = REFS) -> dict:
         and r["cf_cap_ledger_ok"]
         and r["run2_records"]
         and r["run2_psiC_ckpt"]
+        and r["eval_output_absent"]
         for r in out["seeds"].values()
     )
     return out
