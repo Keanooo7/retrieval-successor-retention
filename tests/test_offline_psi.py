@@ -500,6 +500,34 @@ def test_headline_label_and_class():
     assert OP.deploy_class({0: "WIN", 1: "WIN"}) == "MIXED"
 
 
+def test_headline_reads_the_all_query_bucket():
+    """Review offline-psi-8418741 F2 (mutant R4 survived): the headline is acc.all, not
+    a gap bucket. cf is right except at gap 20 (> M), fifo only at gap 20."""
+    W = OP.R1.boot_weights(40, 0, 200)
+    cf = _recs(40, lambda j, i: i != 2)
+    fifo = _recs(40, lambda j, i: i == 2)
+    h = OP.headline(cf, fifo, W, 0.038)
+    assert math.isclose(h["point"], 1 / 3)
+    assert h["label"] == "WIN"  # gap_gt_M alone would read LOSS
+
+
+def test_every_file_the_launcher_writes_before_manifest_is_git_ignored():
+    """Review offline-psi-8418741 L1: `manifest` refuses any porcelain, and
+    `.gitignore` un-ignores `runs/**/*.json`, so a pre-manifest write must be ignored."""
+    import re
+    import subprocess
+
+    text = (ROOT / "experiments/offline-psi/launch.zsh").read_text()
+    pre = text.split("run.py manifest")[0]
+    targets = re.findall(r">\s*\$OUT/(\S+)", pre)
+    assert targets, "no pre-manifest write found: the parse is stale"
+    for t in targets:
+        path = f"runs/offline-psi/{t}"
+        r = subprocess.run(["git", "-C", str(ROOT), "check-ignore", "-q", path])
+        assert r.returncode == 0, f"{path} is not git-ignored"
+    assert "git status --porcelain" in pre.split("mkdir")[0]
+
+
 def test_pairing_is_the_full_sequence_never_a_prefix():
     a = _recs(5, lambda j, i: True)
     assert OP.pairing(a, _recs(5, lambda j, i: False))["ok"]  # same (doc, t, gap)

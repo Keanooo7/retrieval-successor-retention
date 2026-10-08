@@ -9,9 +9,14 @@ cd "${0:A:h}/../.." || exit 3
 PY=.venv/bin/python
 OUT=runs/offline-psi
 THREADS=${THREADS:-1}
+# Review offline-psi-8418741 L1: the tree must be clean BEFORE this script writes
+# anything, and every file written before `manifest` must be git-ignored (`.log`):
+# `.gitignore` un-ignores `runs/**/*.json`, and `manifest` refuses any porcelain.
+porcelain=$(git status --porcelain); rc=$?
+if (( rc != 0 )) || [[ -n $porcelain ]]; then echo "DID NOT RUN: tree not clean"; exit 3; fi
 mkdir -p $OUT/logs
-$PY experiments/offline-psi/run.py preflight > $OUT/logs/preflight.json 2>&1; rc=$?
-if (( rc != 0 )); then echo "preflight rc=$rc (see $OUT/logs/preflight.json)"; exit 3; fi
+$PY experiments/offline-psi/run.py preflight > $OUT/logs/preflight.log 2>&1; rc=$?
+if (( rc != 0 )); then echo "preflight rc=$rc (see $OUT/logs/preflight.log)"; exit 3; fi
 $PY experiments/offline-psi/run.py manifest --out-root $OUT > $OUT/logs/manifest.log 2>&1; rc=$?
 if (( rc != 0 )); then echo "manifest rc=$rc"; exit 3; fi
 for s in 0 1 2; do
