@@ -112,3 +112,32 @@ At x0.01 the cutoff (Amendment 1 item 3): FIT-MISSES, IN-SAMPLE-MISSES.
 - No EVAL number; no deployment; no change to offline-psi's, diagnostic A's or run 2's labels.
 - Not the best RANKING the class can express (PREREG §3 item 5): the fit minimises L_MC, a squared error over all of the arm's cells.
 - No lr or muP change (correction 15). No scaling or cognitive claim. §15 untouched.
+
+## PM reading (hand-written after review `1ec31ae`; not generated; no number changed)
+
+- **Route, with its caveat (PREREG §6 row 2, §3 item 5).** This ran the content-only bilinear
+  class's **L_MC-optimal** member. It misses on U-val (cap 0.386 / 0.527 / 0.345) and on its
+  own U-train documents (0.409 / 0.549 / 0.385). **A ranking-targeted fit of the same class
+  was not tested.** This MISSES does not show that no member of the class ranks well.
+- **"Exact" means exact on the kept subspace (F2).** At the registered cutoff, the solve is
+  stationary on the eigen-directions it keeps: residual ≤ 1.3e-10. Directions below `p·eps·λ_max`
+  are left unfit. At ×0.01 the cutoff, U-train L_MC is lower (seed 0 cf_all: 1.192 against
+  1.221), and the labels are the same.
+- **The optimizer was far from the class's L_MC minimum (F8).** cf_all U-val L_MC is
+  1.247 / 1.240 / 1.388 at the least-squares fit, against diagnostic A's converged 1.517 / 1.457 /
+  1.675. Those cuts are about the size of diagnostic A's whole gain over the constant-mean
+  baseline. The drafter expected "only modestly" (PREREG §8), which was wrong. Diagnostic A's
+  "CONVERGED" was a plateau of run 2's optimizer (weight decay and μP step sizes), not the
+  minimum. Even so, the cap stays in MISSES.
+- **Hypothesis only (F1).** The basis is descriptive, unregistered, cf_live and U-val readings,
+  which are never routed.
+  - At the least-squares fit, cf_live's cap (0.284 / 0.289 / 0.299) is below diagnostic A's
+    (0.523 / 0.547 / 0.316) on seeds 0 and 1. Seed 2 overlaps within its CI.
+  - The cap rises with ridge strength to 0.637 / 0.623 / 0.569 at ρ = 0.1, the edge of the grid.
+    cf_all's ridge path is flat within its CIs.
+  - That pattern is consistent with L_MC and the cap rewarding different things. It is not
+    established here.
+- **U-val is now spent on the ridge path (F10).** Any later regularised or ranking-targeted fit
+  must choose its hyperparameters on a split other than U-val, registered before the fit.
+- **Float64 only (F11).** The least-squares φ has ‖W‖ ≈ 2e6. Its readings hold in float64, which
+  is how they were computed. A float32 evaluation would not reproduce them.
