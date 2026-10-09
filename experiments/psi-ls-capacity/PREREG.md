@@ -161,3 +161,60 @@ by (W, u), so the parametrisation (μP or not) does not change the optimum.
   exact solution should lower the loss only modestly.
 - **In-sample label: MISSES too**, for the same reason. A cap above diagnostic A's on some seeds
   would not surprise me. A cap reaching 0.8 would.
+
+## Amendment 1 (2026-10-08, before launch, committed alone)
+
+**What the pre-launch smoke showed.** The smoke ran seed 0, cf_all, U-train only, twice. It
+computed assembly, C2, the solve and C3, and nothing else. **No cap and no U-val number was
+computed.**
+
+- **C2 passed:** worst relative error 2.8e-16 over 96 entries.
+- **The solve is deterministic:** identical `w` sha256 both times.
+- **Cost:** assembly 30 s, `eigh` 253 s, peak RSS 10.3 GB.
+- **C3(b) and C3(c) passed.**
+- **C3(a) failed:** `‖Xᵀ(Xw − y)‖ / ‖Xᵀy‖ = 1.06e-6`, against the 1e-6 tolerance.
+
+A follow-up diagnosis on the same data (seed 0, cf_all, U-train only; no cap, no U-val
+number) found why:
+
+- **The gestalts are full rank, not low-rank.** U-train's `s` and `c` both have rank 128. 35
+  singular values are above 1e-2 × the largest and 123 above 1e-4. So `XᵀX`'s spectrum decays
+  smoothly over about 16 decades with no gap. The registered cutoff `p·eps·λ_max` kept 9,897
+  of 16,640 directions.
+- **The solve is exact on what it keeps.** Projected onto the kept eigenvectors, the residual is
+  1.3e-10. All of the 1.06e-6 lies in the dropped directions, where the minimum-norm truncated
+  solution leaves the gradient at `−V_dropᵀXᵀy` **by construction**. C3(a) as written tested
+  stationarity in the full space, which a truncated solution cannot meet. That was a
+  specification error in the control, not a numerical one.
+- **Training L_MC depends on the cutoff (seen, declared):**
+
+  | cutoff multiplier | rank | U-train L_MC |
+  |---|---|---|
+  | ×0.01 | 14,378 | 1.192 |
+  | ×0.1 | 12,449 | 1.203 |
+  | ×1 (registered) | 9,897 | 1.221 |
+  | ×10 | 7,354 | 1.245 |
+  | ×100 | 5,415 | 1.274 |
+  | ×1e4 | 2,721 | 1.337 |
+  | ×1e6 | 793 | 1.450 |
+
+  Diagnostic A's selected φ had a U-train L_MC of 1.564. So "the exact optimum" in §0 and §2
+  means the optimum on the directions fp64 normal equations resolve. The directions with the
+  smallest variance are left unfit, and they would lower the U-train loss further.
+
+**Changes. None touches a label threshold, the label rule, the readout table, or the
+registered cutoff.**
+
+1. **C3(a) is replaced.** The new test is `‖V_keepᵀ Xᵀ(Xw − y)‖₂ ≤ 1e-6 · ‖Xᵀy‖₂`, where
+   `Xᵀ(Xw − y)` is still computed directly from the cells. It asks whether the solve is exact
+   on the subspace it claims to fit. The dropped-subspace residual `‖V_dropᵀ Xᵀ(Xw − y)‖₂ /
+   ‖Xᵀy‖₂` and the full-space value are reported, never gated.
+2. **Cutoff sensitivity is added (descriptive, §3 item 4).** For cutoff multipliers ×0.1 and
+   ×0.01 (still at least 166 × `eps·λ_max`), report the rank, U-train L_MC, U-val L_MC, U-val
+   cap and U-train cap, for both arms.
+3. **A caveat rule.** If the U-val label or the in-sample label computed at ×0.01 differs from
+   the one at the registered cutoff, RESULTS states both. The route then carries the words
+   "cutoff-sensitive". The label and route stay those of the registered cutoff.
+4. **A correction to the PM's report to Brendan.** The earlier statement that the gestalts span
+   "about 99 dimensions" was wrong. It inferred rank from the truncation count. They are full
+   rank, with a steep spectrum.
