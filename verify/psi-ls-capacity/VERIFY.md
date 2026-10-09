@@ -114,3 +114,74 @@ The cf_all hashes are 3a798de2…, 3b3fb670… and 70736cb3…. **PASS.**
 
 No code was edited, nothing was fixed, and no recommendation is made about what runs next.
 §15 is untouched.
+
+## Addendum: claims 0 and 2 re-run
+
+2026-10-08, rsr-verifier (Claude Opus 5.5, a model; not Brendan). This supersedes the
+**Overall status: INCONCLUSIVE** above. The new overall status over drawn claims 0, 1 and 2 is
+**OK**. The text above is left unedited as the record of attempt 1.
+
+Commands were executed from `.worktrees/psi-ls-capacity` at HEAD
+`90c27203ea5c01fdbe5993b0025a0a9f8fe93c5c`, the same tree as attempt 1. No RESULTS.md was read.
+The draw was re-run first:
+`PYTHONPATH=scripts .venv/bin/python -m orchestrator.verify draw psi-ls-capacity`, with rc=0, seed
+`fe00b510ad84ba72aeaee37ca372499bbb53705c7cf4b16d7e9aa41f7c822556`, n_claims 6, k 3 and chosen
+indices 0, 1, 2. That is identical to attempt 1.
+
+Comparison: stdout's last line was compared with `expected` using an exact string `==` in zsh
+(`[[ "$(tail -n 1 out)" == "<expected>" ]]`).
+
+### Claim 0
+
+```
+PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --job-id verify2-psi-ls-0-seq -- .venv/bin/python experiments/psi-ls-capacity/run.py recompute cap --seed 0 > claim0.out 2> claim0.err; rc=$?
+rc=0
+stdout (1 line): 0.38589211618257263 0.409457478005865
+stderr: (empty, 0 bytes)
+expected:        0.38589211618257263 0.409457478005865
+```
+
+**Verdict: CONFIRMED** (string `==`).
+
+### Claim 2
+
+```
+PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --job-id verify2-psi-ls-2-seq -- .venv/bin/python experiments/psi-ls-capacity/run.py recompute cap --seed 1 > claim2.out 2> claim2.err; rc=$?
+rc=0
+stdout (1 line): 0.527114967462039 0.5488077496274218
+stderr: (empty, 0 bytes)
+expected:        0.527114967462039 0.5488077496274218
+```
+
+**Verdict: CONFIRMED** (string `==`).
+
+### Claim 1 (carried from attempt 1)
+
+`recompute solve --seed 0` gave observed `1.2209696423420429 1.2468908153534253 0.38589211618257263`
+with rc=0. That was **CONFIRMED** in attempt 1 and was not re-run.
+
+### Incidents (declared)
+
+- The first execution of claims 0 and 2 (job ids `verify2-psi-ls-0` and `verify2-psi-ls-2`) was
+  issued as two concurrent tool calls. The instruction was one at a time. Both went through the
+  cpu-det slot wrapper with `--slots 1`, and both returned rc=0 with empty stderr and stdout
+  identical to the values above. They are **not** the recorded observations.
+- I then ran each claim again, alone and in sequence. Reusing job id `verify2-psi-ls-0` returned
+  rc=3, with stderr `DID NOT RUN: job record .../.orchestrator/jobs/verify2-psi-ls-0.json already
+  exists`. That is a did-not-run, not a result.
+- The recorded runs are the sequential re-runs under fresh job ids, `verify2-psi-ls-0-seq` and
+  `verify2-psi-ls-2-seq`, shown above. All three executions of each claim printed the same string.
+
+### Record
+
+- `runs/psi-ls-capacity/verification.json` from attempt 1 was moved, not deleted, to
+  `runs/psi-ls-capacity/verification.attempt1.json` (in `.worktrees/psi-ls-capacity`).
+- The new `runs/psi-ls-capacity/verification.json` has status `ok`, 3 claims, every `match: true`,
+  and verifier_sha `90c27203ea5c01fdbe5993b0025a0a9f8fe93c5c`. It is copied to this directory as
+  `verification.json`, replacing attempt 1's copy, which is preserved in git history at `7373528`
+  and as `verification.attempt1.json` in the run dir.
+- `PYTHONPATH=scripts .venv/bin/python -m orchestrator.verify check psi-ls-capacity > check.out 2>&1; rc=$?`
+  gave rc=0 and `OK: .../.worktrees/psi-ls-capacity/runs/psi-ls-capacity/verification.json is a valid record`.
+
+No code was edited, nothing was fixed, and no recommendation is made about what runs next.
+§15 is untouched.
