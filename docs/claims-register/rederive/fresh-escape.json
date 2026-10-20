@@ -1,0 +1,133 @@
+{
+ "experiment": "fresh-escape",
+ "tree_head": "4f0085adb2a4be0f0e6ae3833ed59fb1b6d6c58b",
+ "tree_dirty_at_run": false,
+ "finished_utc": "2026-10-20T08:13:09Z",
+ "n_commands": 1,
+ "n_checks": 10,
+ "n_equal": 10,
+ "n_not_equal": 0,
+ "n_did_not_run": 0,
+ "checks": [
+  {
+   "row": "fe.classification",
+   "label": "classification_reported_as",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "classification_reported_as",
+   "rc": 0,
+   "got": "NO_ESCAPE by 9000",
+   "expected": "NO_ESCAPE by 9000",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.classification",
+   "label": "classification_detail",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "classification_detail",
+   "rc": 0,
+   "got": "P = 9000; R(P) fails; a stream-loss window below the threshold at or before P on []: NO_ESCAPE by 9000 -- no sign of learning in P steps of a non-repeating stream",
+   "expected": "P = 9000; R(P) fails; a stream-loss window below the threshold at or before P on []: NO_ESCAPE by 9000 -- no sign of learning in P steps of a non-repeating stream",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.classification",
+   "label": "P",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "P",
+   "rc": 0,
+   "got": "9000",
+   "expected": "9000",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.classification",
+   "label": "R_at_P",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "R_at_P",
+   "rc": 0,
+   "got": "false",
+   "expected": "false",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.classification",
+   "label": "stirring",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "stirring",
+   "rc": 0,
+   "got": "false",
+   "expected": "false",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.classification",
+   "label": "stream_answer_loss_first_window_below_at_or_before_P",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "stream_answer_loss_first_window_below_at_or_before_P",
+   "rc": 0,
+   "got": "{\"seed0\": null, \"seed1\": null, \"seed2\": null}",
+   "expected": "{\"seed0\": null, \"seed1\": null, \"seed2\": null}",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.R_at_P",
+   "label": "samples s0-s2",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "A.ckpt9000.R_quantity",
+   "rc": 0,
+   "got": "[0.001416429877281189, 0.0013850405812263489, 0.0014124289155006409]",
+   "expected": "[0.001416429877281189, 0.0013850405812263489, 0.0014124289155006409]",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.C_at_P",
+   "label": "samples s0-s2",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "A.ckpt9000.C_quantity",
+   "rc": 0,
+   "got": "[0.9379374794345402, 0.9376528325833773, 0.9377105337920162]",
+   "expected": "[0.9379374794345402, 0.9376528325833773, 0.9377105337920162]",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.probe_R_at_P",
+   "label": "samples s0-s2",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "A.ckpt9000.probe_R_quantity",
+   "rc": 0,
+   "got": "[0.0, -0.0014204531908035278, 0.0]",
+   "expected": "[0.0, -0.0014204531908035278, 0.0]",
+   "equal": true,
+   "error": null
+  },
+  {
+   "row": "fe.M_at_P",
+   "label": "samples s0-s2",
+   "kind": "raw",
+   "cmd": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python docs/claims-register/recompute_from_raw.py --run fresh-escape",
+   "pick": "A.ckpt9000.M_quantity",
+   "rc": 0,
+   "got": "[0.017994370311498642, 0.015585653483867645, 0.015536725521087646]",
+   "expected": "[0.017994370311498642, 0.015585653483867645, 0.015536725521087646]",
+   "equal": true,
+   "error": null
+  }
+ ]
+}
