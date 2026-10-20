@@ -1939,3 +1939,52 @@ def test_lb2_smoke_variant_refusals(tmp_path, env, msg):
     )
     assert p.returncode == 3, p.stderr
     assert msg in p.stderr
+
+
+def test_lb2_smoke_needs_no_fifo_iters_in_the_plan_but_the_run_does(tmp_path):
+    """Run from the repo root (the launcher parses plan.json with .venv's python). The
+    smoke's OUT already holds a launch-git.json, so it refuses AFTER the fifo block
+    (head or already-launched) and never trains; the run refuses AT the fifo block,
+    before it creates anything."""
+    plan = tmp_path / "plan.json"
+    om = {"0": 8.0, "1": 8.0, "2": 8.0}
+    plan.write_text(json.dumps({"ok": True, "omega_s": om, "K_2b": 3000}))
+    out = tmp_path / "o"
+    out.mkdir()
+    (out / "launch-git.json").write_text("{}")
+    base = {
+        "PATH": "/usr/bin:/bin",
+        "HOME": str(tmp_path),
+        "GAMMA": "0.9",
+        "WD": "0.01",
+        "O5": "eval",
+        "C1_FLAGS": "--frozen-model-mode eval",
+        "PLAN": str(plan),
+    }
+    smoke = {
+        "SMOKE": "1",
+        "OUT": str(out),
+        "JOB_SUFFIX": "-s",
+        "SMOKE_SEEDS": "0",
+        "SMOKE_FIFO_STEPS": "48",
+        "SMOKE_STEPS": "96",
+    }
+    p = subprocess.run(
+        ["/bin/zsh", str(EXP / "launch_2b.zsh")],
+        env={**base, **smoke},
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert p.returncode == 3 and "no fifo_iters" not in p.stderr, p.stderr
+    assert "launched already" in p.stderr or "clean committed head" in p.stderr, p.stderr
+    p = subprocess.run(
+        ["/bin/zsh", str(EXP / "launch_2b.zsh")],
+        env=base,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert p.returncode == 3 and "no fifo_iters" in p.stderr, p.stderr
