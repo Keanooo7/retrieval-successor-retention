@@ -1,0 +1,98 @@
+{
+  "status": "ok",
+  "seed": "7935d0bb453da3be7bd3fb52f6e1c9548903ad9d04d96896ac206dca021d2cde",
+  "claims": [
+    {
+      "claim": "seed 1 factfiller minus FIFO all-query accuracy, CI, label",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 1 --arm factfiller",
+      "expected": "0.070795 0.067438 0.074332 WIN",
+      "observed": "0.070795 0.067438 0.074332 WIN",
+      "match": true,
+      "observed_by": "Independent path (verifier script, embedded below as independent_script; imports no experiment harness): raw heldout/seed{s}/factfiller.jsonl.gz read with gzip+json; FIFO from the ARCHIVE copy ~/rsr-runs-archive/rsr-run2-run/runs/rsr-run2/heldout/seed{s}/fifo.jsonl.gz (sha256 == archive MANIFEST.sha256 entry: true); doc order asserted identical; pooled all-query (gap>=1) accuracy; paired bootstrap with indices from the registered convention torch.Generator(20260927+seed).randint(0,2048,(2000,2048)), numpy bincount/ratio/np.quantile linear; delta read straight from .worktrees/b2-psi-probe/runs/b2-psi-probe-fit/ledger.json key ckpt3000.seed{s}.decisions.delta['0.9'] (equals rsr-run2 PREREG \u00a72.1 table); label by post-fails-controls PREREG \u00a73 rule.",
+      "detail": {
+        "delta": "0.03675691427360389",
+        "acc_factfiller": 0.8373118563506734,
+        "acc_fifo": 0.7665170319514127,
+        "n_answers": 37870,
+        "n_docs": 2048,
+        "fifo_sha_matches_archive_manifest": true,
+        "alt_rng_bootstrap_line_(robustness,_not_registered)": "0.070795 0.067394 0.074334 WIN"
+      },
+      "claimant_command_output_rc0": "0.070795 0.067438 0.074332 WIN",
+      "claimant_command_matches": true
+    },
+    {
+      "claim": "seed 2 factfiller minus FIFO all-query accuracy, CI, label",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 2 --arm factfiller",
+      "expected": "0.042420 0.039162 0.045736 WIN",
+      "observed": "0.042420 0.039162 0.045736 WIN",
+      "match": true,
+      "observed_by": "Independent path (verifier script, embedded below as independent_script; imports no experiment harness): raw heldout/seed{s}/factfiller.jsonl.gz read with gzip+json; FIFO from the ARCHIVE copy ~/rsr-runs-archive/rsr-run2-run/runs/rsr-run2/heldout/seed{s}/fifo.jsonl.gz (sha256 == archive MANIFEST.sha256 entry: true); doc order asserted identical; pooled all-query (gap>=1) accuracy; paired bootstrap with indices from the registered convention torch.Generator(20260927+seed).randint(0,2048,(2000,2048)), numpy bincount/ratio/np.quantile linear; delta read straight from .worktrees/b2-psi-probe/runs/b2-psi-probe-fit/ledger.json key ckpt3000.seed{s}.decisions.delta['0.9'] (equals rsr-run2 PREREG \u00a72.1 table); label by post-fails-controls PREREG \u00a73 rule.",
+      "detail": {
+        "delta": "0.03185756551141167",
+        "acc_factfiller": 0.8455174965641188,
+        "acc_fifo": 0.8030975790252669,
+        "n_answers": 37836,
+        "n_docs": 2048,
+        "fifo_sha_matches_archive_manifest": true,
+        "alt_rng_bootstrap_line_(robustness,_not_registered)": "0.042420 0.039136 0.045710 WIN"
+      },
+      "claimant_command_output_rc0": "0.042420 0.039162 0.045736 WIN",
+      "claimant_command_matches": true
+    },
+    {
+      "claim": "seed 2 factfiller age-1 evictions / evictions",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what age1 --seed 2 --arm factfiller",
+      "expected": "33165 65536",
+      "observed": "33165 65536",
+      "match": true,
+      "observed_by": "Independent path: raw heldout/seed2/factfiller.jsonl.gz, gzip+json, Counter of int(e[1]) over every record's evictions; age==1 count and total.",
+      "claimant_command_output_rc0": "33165 65536",
+      "claimant_command_matches": true
+    }
+  ],
+  "verifier_sha": "3f406c5338ad84321a87c50b67f1ae196a7b2f18",
+  "run_id": "post-fails-controls-1a",
+  "draw": {
+    "n_claims": 27,
+    "k": 3,
+    "indices": [
+      9,
+      18,
+      19
+    ]
+  },
+  "extra_checks_note": "The draw covered the FactFiller label on seeds 1 and 2 only. Seed 0's FactFiller label (claims.json index 0) was verified IN ADDITION at the caller's request. It sits under extra_checks, not claims, because `verify check` requires claims == exactly the drawn ones; it does not enter status.",
+  "extra_checks": [
+    {
+      "extra": true,
+      "index": 0,
+      "claim": "seed 0 factfiller minus FIFO all-query accuracy, CI, label",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 0 --arm factfiller",
+      "expected": "0.071355 0.067874 0.074792 WIN",
+      "observed": "0.071355 0.067874 0.074792 WIN",
+      "match": true,
+      "observed_by": "Independent path (verifier script, embedded below as independent_script; imports no experiment harness): raw heldout/seed{s}/factfiller.jsonl.gz read with gzip+json; FIFO from the ARCHIVE copy ~/rsr-runs-archive/rsr-run2-run/runs/rsr-run2/heldout/seed{s}/fifo.jsonl.gz (sha256 == archive MANIFEST.sha256 entry: true); doc order asserted identical; pooled all-query (gap>=1) accuracy; paired bootstrap with indices from the registered convention torch.Generator(20260927+seed).randint(0,2048,(2000,2048)), numpy bincount/ratio/np.quantile linear; delta read straight from .worktrees/b2-psi-probe/runs/b2-psi-probe-fit/ledger.json key ckpt3000.seed{s}.decisions.delta['0.9'] (equals rsr-run2 PREREG \u00a72.1 table); label by post-fails-controls PREREG \u00a73 rule.",
+      "detail": {
+        "delta": "0.03802185560447721",
+        "acc_factfiller": 0.8463265791350751,
+        "acc_fifo": 0.7749716006657332,
+        "fifo_sha_matches_archive_manifest": true,
+        "alt_rng_bootstrap_line_(robustness,_not_registered)": "0.071355 0.067641 0.074935 WIN"
+      },
+      "claimant_command_output_rc0": "0.071355 0.067874 0.074792 WIN",
+      "claimant_command_matches": true
+    }
+  ],
+  "factfiller_labels_rederived": {
+    "seed0": "WIN",
+    "seed1": "WIN",
+    "seed2": "WIN"
+  },
+  "notes": [
+    "ledger provenance.git_sha 3f406c5338ad84321a87c50b67f1ae196a7b2f18 equals the spawn prompt's researcher head; ledger provenance.dirty is true (recorded, not investigated).",
+    "Re-executed at the detached worktree .worktrees/verify-pfc-1a (3f406c5), lane cpu-det, 1 slot; all commands rc 0 read without a pipe.",
+    "The verifier did not read RESULTS.md, RESULTS-1a.md, or any outbox."
+  ],
+  "independent_script": "\"\"\"Independent re-derivation for post-fails-controls-1a (verifier).\n\nDoes NOT import the experiment harness. Reads raw jsonl.gz records with gzip/json,\nFIFO from the ARCHIVE copy of run 2's records (sha256-checked against the archive\nMANIFEST), delta straight from the B2 ledger JSON, and computes pooled accuracy,\nthe paired bootstrap CI (numpy arithmetic and numpy quantiles; resampling indices\nfrom the registered convention torch.Generator(20260927+seed).randint), and the\nlabel by PREREG \u00a73's rule. Also a second bootstrap with an unrelated numpy RNG as a\nrobustness check of the label (not a registered number).\n\"\"\"\n\nimport gzip\nimport hashlib\nimport json\nimport sys\nfrom collections import Counter\nfrom pathlib import Path\n\nimport numpy as np\nimport torch\n\nRUN = Path(\"/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a\")\nARCH = Path.home() / \"rsr-runs-archive\"\nR2_ARCH = ARCH / \"rsr-run2-run/runs/rsr-run2/heldout\"\nB2 = Path(\"/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/ledger.json\")\nN_BOOT = 2000\nBASE = 20260927\n\n\ndef manifest():\n    out = {}\n    for line in (ARCH / \"MANIFEST.sha256\").read_text().splitlines():\n        if line.strip():\n            h, p = line.split(None, 1)\n            out[p.strip()] = h\n    return out\n\n\ndef sha(p):\n    return hashlib.sha256(p.read_bytes()).hexdigest()\n\n\ndef read(p):\n    with gzip.open(p, \"rt\") as fh:\n        return [json.loads(x) for x in fh if x.strip()]\n\n\ndef per_doc(recs):\n    rows = []\n    for r in recs:\n        n = c = 0\n        for a in r[\"answers\"]:  # [t, gap, ok, nll]\n            if int(a[1]) >= 1:\n                n += 1\n                c += 1 if a[2] else 0\n        rows.append((n, c))\n    return np.array(rows, dtype=np.float64)\n\n\ndef delta(seed):\n    rows = {r[\"key\"]: r for r in json.loads(B2.read_text())[\"rows\"]}\n    return float(rows[f\"ckpt3000.seed{seed}.decisions.delta\"][\"value\"][\"0.9\"])\n\n\ndef label(p, lo, hi, d):\n    if lo > 0 and p >= d:\n        return \"WIN\"\n    if hi < 0 and p <= -d:\n        return \"LOSS\"\n    if -d < lo and hi < d:\n        return \"EQUIV\"\n    return \"UNRESOLVED\"\n\n\ndef headline(seed, arm, man):\n    fp = R2_ARCH / f\"seed{seed}\" / \"fifo.jsonl.gz\"\n    key = f\"./rsr-run2-run/runs/rsr-run2/heldout/seed{seed}/fifo.jsonl.gz\"\n    sha_ok = sha(fp) == man.get(key)\n    fifo = read(fp)\n    a = read(RUN / \"heldout\" / f\"seed{seed}\" / f\"{arm}.jsonl.gz\")\n    ids_f = [r[\"doc\"] for r in fifo]\n    ids_a = [r[\"doc\"] for r in a]\n    assert ids_f == ids_a, \"doc order differs\"\n    n = len(fifo)\n    A, F = per_doc(a), per_doc(fifo)\n    point = A[:, 1].sum() / A[:, 0].sum() - F[:, 1].sum() / F[:, 0].sum()\n    g = torch.Generator().manual_seed(BASE + seed)\n    idx = torch.randint(0, n, (N_BOOT, n), generator=g).numpy()\n    W = np.stack([np.bincount(row, minlength=n) for row in idx]).astype(np.float64)\n    rep = (W @ A[:, 1]) / (W @ A[:, 0]) - (W @ F[:, 1]) / (W @ F[:, 0])\n    lo, hi = np.quantile(rep, 0.025), np.quantile(rep, 0.975)\n    d = delta(seed)\n    # robustness: unrelated RNG\n    rng = np.random.default_rng(12345 + seed)\n    idx2 = rng.integers(0, n, (N_BOOT, n))\n    W2 = np.stack([np.bincount(row, minlength=n) for row in idx2]).astype(np.float64)\n    rep2 = (W2 @ A[:, 1]) / (W2 @ A[:, 0]) - (W2 @ F[:, 1]) / (W2 @ F[:, 0])\n    lo2, hi2 = np.quantile(rep2, 0.025), np.quantile(rep2, 0.975)\n    return {\n        \"seed\": seed, \"arm\": arm, \"n_docs\": n, \"fifo_sha_matches_archive_manifest\": sha_ok,\n        \"acc_arm\": A[:, 1].sum() / A[:, 0].sum(), \"acc_fifo\": F[:, 1].sum() / F[:, 0].sum(),\n        \"n_answers_arm\": int(A[:, 0].sum()), \"n_answers_fifo\": int(F[:, 0].sum()),\n        \"line\": f\"{point:.6f} {lo:.6f} {hi:.6f} {label(point, lo, hi, d)}\",\n        \"delta\": repr(d),\n        \"alt_rng_line\": f\"{point:.6f} {lo2:.6f} {hi2:.6f} {label(point, lo2, hi2, d)}\",\n    }\n\n\ndef age1(seed, arm):\n    a = read(RUN / \"heldout\" / f\"seed{seed}\" / f\"{arm}.jsonl.gz\")\n    ages = Counter(int(e[1]) for r in a for e in r[\"evictions\"])\n    return f\"{ages.get(1, 0)} {sum(ages.values())}\"\n\n\nif __name__ == \"__main__\":\n    man = manifest()\n    out = {}\n    for s in (0, 1, 2):\n        out[f\"headline.seed{s}.factfiller\"] = headline(s, \"factfiller\", man)\n    out[\"age1.seed2.factfiller\"] = age1(2, \"factfiller\")\n    print(json.dumps(out, indent=1, default=float))\n"
+}
