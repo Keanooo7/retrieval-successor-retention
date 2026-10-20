@@ -604,3 +604,24 @@ Projection = smoke wall x scale x 3 seeds (fixed overhead scaled with the work, 
 - 1e G3: 8 distinct pairs, `rng.sample(all 120 unordered pairs, 8)`; G4: `rng.sample(range(16), k)` for k = 4, 4, 8, after G3, same rng. Group members are ranks of FIFO's full memory (rank j holds sentence t - 16 + j).
 - 1e E-C1: B0-CF imputed 0 at resident cells with no donor and flagged them `missing`; there the recomputed single is NaN. E-C1 requires the flags to agree and every other resident cell to be equal (`==`). E-C2 is checked for every (document, t, rank) with a donor; pass-through is checked on every group forward.
 - G-C3: each item takes the suite log, its rc (read directly by the launcher) and the head it ran at; the census passes only if that head equals the launch head.
+
+## Amendment G-C1e (2026-10-20, PM): what counts as a "new hit". Committed alone, before any 1d or 1e data
+
+**Trigger.** 1d and 1e's attempt 2 exited 3 on G-C1(e). The §1.1 branch search found two new hits on
+`prereg/rsr-run3-ranking`: `experiments/rsr-run3-ranking/PREREG.md:93-94`, the phase-2 PREREG, which
+cites the bounds of TUNE (`997200`) and EVAL2 (`984000`) in its range table. No 1d or 1e number exists:
+both attempts are archived as `runs/post-fails-controls-1{d,e}.attempt-{1,2}/` and measured nothing.
+
+**Clarification.** G-C1(e) exists to detect a document in TUNE or EVAL2 being generated or read, or a
+range claimed by other work. A **citation of the sealed bounds** in a committed pre-registration file
+(`experiments/*/PREREG*.md`, including its amendments) that *registers or seals* those ranges is not a
+new hit. It is the seal being written down. Any other hit inside TUNE or EVAL2 remains a new hit, exit 3,
+and goes to the PM: in code, in a test, in a run artefact, or in any other document. This matches the rule
+item 1a already applied and ledgered (`runs/post-fails-controls-1a/ledger.json`
+`launch.G-C1.search.*`: hits in the PREREG allowed). It does not loosen G-C1(a)–(d). The guard, the
+per-item id ledger and the "0 sealed ids generated" assertion are unchanged.
+
+**B-C5 (1b) is NOT re-specified.** 1b exited 3 on B-C5, seed 0: the shuffled-label probe's CI was
+[0.479, 0.493], which excludes 0.5. That stands as registered: 1b's labels are NOT READ and go to Gate A as
+a control failure. A control changed after its failure is seen would be a post-data change. The PM
+records only, for Gate A, that the failure lies *below* 0.5, the direction leakage does not produce.
