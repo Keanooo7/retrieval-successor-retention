@@ -1,0 +1,22 @@
+{
+  "head": "3f406c5338ad84321a87c50b67f1ae196a7b2f18",
+  "ok": true,
+  "exit": 0
+}
+{
+  "G-C3": {
+    "rc": 0,
+    "summary": "passed=2716 failed=0 skipped=0 errors=0",
+    "passed": 2716,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "skipped_tests": [],
+    "ok": true,
+    "head": "3f406c5338ad84321a87c50b67f1ae196a7b2f18",
+    "head_is_launch_head": true,
+    "log": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a/logs/suite.log"
+  },
+  "search_new_hits": [],
+  "search_ok": true
+}
