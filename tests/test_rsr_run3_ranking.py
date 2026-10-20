@@ -1805,7 +1805,7 @@ def test_lb1_f6_measure_order_before_eval2():
         "c10_launch_values(",
         "_cheap_controls(",
         "c4_measure(",
-        "c_f(",
+        "c_f_at_r1(",
         "pm2_precheck(",
         "c11_prime(",
         "c_k(",
@@ -1847,6 +1847,7 @@ def _pre_world(p2b, monkeypatch, *, c10=True, c2=True):
     monkeypatch.setattr(R1, "c4_measure", lambda d, c: {"ok": True})
     monkeypatch.setattr(p2b, "c_f_at_r1", lambda cfg, out: {"ok": True})
     monkeypatch.setattr(p2b, "c11_prime", lambda *a: {"ok": True})
+    monkeypatch.setattr(H["R2"], "c11_target", lambda *a: {"ok": True})
     monkeypatch.setattr(p2b, "c_k", lambda *a: {"ok": True})
     monkeypatch.setattr(p2b, "c_omega", lambda *a: {"ok": True})
     monkeypatch.setattr(p2b, "read_2a", lambda p: {"selection": {0: {"k_conv": 1}}})
