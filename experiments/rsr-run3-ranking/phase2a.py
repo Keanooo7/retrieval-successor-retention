@@ -1390,6 +1390,97 @@ def projection(doc: dict) -> dict:
     }
 
 
+def render_amendment_2aS(record_path: Path, record_commit: str) -> str:
+    """Amendment 2a-S's text, generated from the smoke's record (no number typed)."""
+    rp = Path(record_path)
+    d = json.loads(rp.read_text())
+    sha = C.sha256_file(rp)
+    pr, f, t = d["projection"], d["fit"], d["timing"]
+    rel = rp.resolve().relative_to(ROOT) if rp.resolve().is_relative_to(ROOT) else rp
+    w: list[str] = []
+    a = w.append
+    a("## Amendment 2a-S (2026-10-20): phase 2a timing smoke and projection\n")
+    a(
+        "**Appended by a model** (Claude Opus 5.5, the phase-2 builder), committed "
+        "alone, after the 2a harness and before 2a launches. It fills §4.8's "
+        "placeholder; nothing above this line is edited. Generated from the smoke's "
+        f"own record (`{rel}`, sha256 `{sha}`, committed in `{record_commit}`) by "
+        "`phase2a.render_amendment_2aS`; no number below is typed.\n"
+    )
+    a(
+        f"**Smoke.** `run.py 2a time --seed {d['seed']} --steps "
+        f"{f[wtag(OMEGAS[0])]['steps']}`, one `cpu-det` slot, {d['threads']} thread, at "
+        f"`{d['tree']['head'][:7]}` (clean tree), {d['started_utc']} to "
+        f"{d['finished_utc']}. U documents only (U-train for the fit and J, the first "
+        f"{t['deploy_block_docs']} U-val documents for the deploy block); TUNE, EVAL "
+        "and EVAL2 never generated (R-SEAL census: "
+        f"{d['controls']['R-SEAL.census']['n_sealed_generated']} sealed ids, "
+        f"ok = {d['controls']['R-SEAL.census']['ok']}). Exit {d['exit']} by design (a "
+        f"smoke is never the run); failed controls: {d['controls_failed'] or 'none'}. "
+        f"Load average at start {d['loadavg_start'][0]:.2f} (the battery held 8 "
+        "cpu-det slots), at end "
+        f"{d['loadavg_end'][0]:.2f}. The loss values the smoke computed are not "
+        "results and are not reported.\n"
+    )
+    a("| configuration | steps | median s / step | one J over U-train (s) |")
+    a("|---|---|---|---|")
+    a(f"| L_MC (R-C2's path) | {f['mc']['steps']} | {f['mc']['step_s_median']:.5f} | — |")
+    for ww in OMEGAS:
+        r = f[wtag(ww)]
+        a(
+            f"| rank, ω = {ww:g} | {r['steps']} | {r['step_s_median']:.5f} "
+            f"| {r['J_s']:.3f} |"
+        )
+    a("")
+    a(
+        f"Deploy block: {t['deploy_block_docs']} documents in "
+        f"{t['deploy_block_s']:.3f} s "
+        f"({pr['deploy_s_per_document']:.4f} s per document; residency mismatches "
+        f"{t['deploy_block_residency_mismatched']}); FIFO + FactFiller references for "
+        f"the block {t['references_block_s']:.3f} s. Substrate manifest check "
+        f"(`shasum -c`, twice per process) {t['manifest_check_s']:.1f} s each. "
+        f"Descriptive U caps for one configuration {pr['u_caps_one_config_s']:.1f} s.\n"
+    )
+    a(
+        f"**Projection (worst case: every fit CAP-HIT at {STEP_CAP:,} steps, J at step 0 "
+        f"and every {J_EVERY} steps = {pr['n_J_per_fit']} evaluations).** One fit: "
+        + ", ".join(
+            f"ω = {ww:g} {pr['per_fit_worst_case_s'][wtag(ww)] / 3600:.2f} h"
+            for ww in OMEGAS
+        )
+        + f". One TUNE deploy (512 documents) {pr['tune_deploy_one_s'] / 60:.1f} min; "
+        f"one EVAL deploy (2048) {pr['eval_deploy_one_s'] / 60:.1f} min; R-C2 "
+        f"{pr['rc2_one_seed_s']:.0f} s per seed.\n"
+    )
+    a(
+        f"- **Serial (one slot, everything one after another): "
+        f"{pr['serial_cpu_h']:.2f} h"
+        + (" -- ABOVE the 8 h line.**" if pr["over_8h_serial"] else ".**")
+    )
+    a(
+        f"- **Wall under `launch_2a.zsh`'s layout** ({pr['layout']}): "
+        f"{pr['wall_layout_h']:.2f} h"
+        + (" -- ABOVE the 8 h line." if pr["over_8h_wall_layout"] else ".")
+        + " This needs 12 concurrent cpu-det slots for the fits; with fewer the slots "
+        "queue (`--wait`) and the wall grows toward the serial figure. Measured on one "
+        "process under the battery's load; 12 concurrent processes may each run "
+        "slower. Not included: the full suite at the launch head (T1(b) runs two "
+        "20-step processes) and the launch checks (§1 (d) search on every branch).\n"
+    )
+    a(
+        '§4.8 says "a projection above 8 h stops 2a and returns to the PM" and does '
+        "not say whether the projection is CPU-serial or wall-clock under a layout. "
+        + (
+            "The two readings disagree here (serial above, layout below), so this "
+            "amendment does not choose: **the go/no-go on this projection is the "
+            "PM's.** Nothing above is changed to fit either number."
+            if pr["over_8h_serial"] != pr["over_8h_wall_layout"]
+            else "Both readings agree."
+        )
+    )
+    return "\n".join(w) + "\n"
+
+
 # --------------------------------------------------------------------------- #
 # stage: finalize (ledger, claims.json, RESULTS.md); recompute
 # --------------------------------------------------------------------------- #
@@ -1864,6 +1955,9 @@ def main(argv: list[str]) -> int:
     pt.add_argument("--seed", type=int, default=0)
     pt.add_argument("--steps", type=int, default=50)
     pt.add_argument("--out", required=True)
+    pa = sub.add_parser("time-amendment")
+    pa.add_argument("--record", required=True)
+    pa.add_argument("--record-commit", required=True)
     pr = sub.add_parser("recompute")
     pr.add_argument("--out-root", required=True)
     pr.add_argument("--what", required=True)
@@ -1905,6 +1999,9 @@ def main(argv: list[str]) -> int:
             )
         )
         return int(Exit.OK) if not d["controls_failed"] else int(Exit.DID_NOT_RUN)
+    if a.cmd == "time-amendment":
+        print(render_amendment_2aS(Path(a.record), a.record_commit), end="")
+        return 0
     if a.cmd == "recompute":
         print(recompute(a.what, Path(a.out_root), a.seed))
         return 0
