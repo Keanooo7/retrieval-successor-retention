@@ -31,9 +31,12 @@ training process has exited with a completed footer; then §5.4's descriptive pa
 holds as registered); C10 runs once per view -- fifo against R-1, psiR/ageR against
 K_2b, every other field unchanged (``c10_per_arm``); C-F (fifo frozen, no optimizer,
 tensors = the substrate's) is added. ``plan`` no longer refuses for this. Run 1's C6,
-C2, C4, the held-out read of fifo's checkpoint and the training Δloss_lm also read fifo
-at ``cfg.iters`` and are NOT covered by PM-1 (``UNRULED``): at K_2b > 3000 ``measure``
-refuses before EVAL2 is opened and the list goes to the PM. Nothing here picks a reading.
+C2, C4, the held-out read of fifo's checkpoint and the training Δloss_lm read fifo at
+its own iters (R-1) and each RSR arm at K_2b (Amendment PM-2, f9eeb48: the ``pm2_*``
+wrappers call run 1's functions unchanged on per-arm views; C2 compares the RSR arms
+over [0, K_2b) and each with fifo over [0, R-1); Δloss_lm is matched steps only,
+labelled). ``measure`` still refuses before EVAL2 is opened if any of them cannot be
+computed as stated (``pm2_precheck``).
 """
 
 from __future__ import annotations
@@ -160,11 +163,150 @@ def harness() -> dict[str, Any]:
     R1.derive_every = derive_every
     globals()["_C10_ORIG"] = R1.c10_launch_values
     R1.c10_launch_values = c10_per_arm
+    # Amendment PM-2: every fifo read at R-1, every RSR read at K_2b.
+    g = globals()
+    g["_CKPT_ORIG"], R1.checkpoint_path = R1.checkpoint_path, pm2_checkpoint_path
+    g["_C6_ORIG"], R1.c6_steps = R1.c6_steps, pm2_c6_steps
+    g["_C2_ORIG"], R1.c2_pairing = R1.c2_pairing, pm2_c2_pairing
+    g["_C4_ORIG"], R1.c4_measure = R1.c4_measure, pm2_c4_measure
+    g["_TRAIN_ORIG"], R1.analyse_training = R1.analyse_training, pm2_analyse_training
     _H.update(R1=R1, R2=R2, cli_argv=cli_argv, derive_every=derive_every)
     return _H
 
 
 _C10_ORIG = None  # run 1's c10_launch_values, kept by harness() before rebinding
+_CKPT_ORIG = _C6_ORIG = _C2_ORIG = _C4_ORIG = _TRAIN_ORIG = None  # likewise (PM-2)
+
+
+# --------------------------------------------------------------------------- #
+# Amendment PM-2 (f9eeb48): fifo is read at its own iters (R-1), each RSR arm at its
+# own (K_2b). Run 1's functions are called UNCHANGED on per-arm views; nothing is
+# reimplemented. Identity when K_2b == R-1.
+# --------------------------------------------------------------------------- #
+
+
+def _k2b() -> int | None:
+    k = _PLAN.get("K_2b")
+    return None if k is None else int(k)
+
+
+def _fifo_cfg(cfg):
+    return dataclasses.replace(cfg, iters=fifo_iters())
+
+
+def pm2_checkpoint_path(out_dir: Path, step: int) -> Path:
+    """A read of fifo's checkpoint at the RSR step count is a read at R-1."""
+    k, fi = _k2b(), fifo_iters()
+    if Path(out_dir).parent.name == "fifo" and k is not None and step == k != fi:
+        step = fi
+    return _CKPT_ORIG(out_dir, step)
+
+
+def pm2_c6_steps(results: dict, hbs: dict, cfg) -> dict:
+    """C6 per arm against its own iters: fifo vs R-1, psiR / ageR vs K_2b."""
+    if _k2b() in (None, fifo_iters()):  # K_2b = R-1: run 1's C6 exactly
+        return _C6_ORIG(results, hbs, cfg)
+    views = {}
+    f = {a: r for a, r in results.items() if a == "fifo"}
+    o = {a: r for a, r in results.items() if a != "fifo"}
+    if f:
+        views["fifo"] = _C6_ORIG(f, hbs, _fifo_cfg(cfg))
+    if o:
+        views["rsr"] = _C6_ORIG(o, hbs, cfg)
+    per = {}
+    for v in views.values():
+        per.update(v.get("per_arm") or {})
+    return {
+        "views": views,
+        "per_arm": per,
+        "pm2": "C6 per arm (Amendment PM-2)",
+        "ok": bool(views) and all(v.get("ok") for v in views.values()),
+    }
+
+
+def pm2_c2_pairing(beats: dict, ids: dict, cfg, sampling, *, samplings=None) -> dict:
+    """C2: psiR and ageR with each other over [0, K_2b) (cfg as given); each with fifo
+    over the common steps [0, R-1) (fifo's cfg). Run 1's c2_pairing on each view."""
+    fi = fifo_iters()
+    if _k2b() in (None, fi):  # K_2b = R-1: run 1's C2 exactly
+        return _C2_ORIG(beats, ids, cfg, sampling, samplings=samplings)
+    sam = samplings or {}
+
+    def sub(d, arms, below=None):
+        out = {}
+        for a in arms:
+            v = d.get(a)
+            if isinstance(v, dict):
+                out[a] = {k: x for k, x in v.items() if below is None or k < below}
+            else:
+                out[a] = [b for b in (v or []) if below is None or b["step"] < below]
+        return out
+
+    rsr = [a for a in beats if a != "fifo"]
+    sam_r = {a: sam.get(a) for a in rsr} if sam else None
+    views = {
+        "rsr": _C2_ORIG(sub(beats, rsr), sub(ids, rsr), cfg, sampling, samplings=sam_r)
+    }
+    if "fifo" in beats:
+        for a in rsr:
+            arms = [a, "fifo"]
+            views[f"{a}+fifo"] = _C2_ORIG(
+                sub(beats, arms, fi),
+                sub(ids, arms, fi),
+                _fifo_cfg(cfg),
+                sampling,
+                samplings={x: sam.get(x) for x in arms} if sam else None,
+            )
+    warm = [v.get("warm_steps_compared") for v in views.values()]
+    mism = [
+        x for v in views.values() for x in v.get("c_loss_lm_warm_mismatch_steps") or []
+    ]
+    return {
+        "views": views,
+        "warm_steps_compared": min(w for w in warm if w is not None)
+        if all(w is not None for w in warm)
+        else None,
+        "c_loss_lm_warm_mismatch_steps": mism,
+        "pm2": "C2: RSR arms over [0, K_2b); each with fifo over [0, R-1) (PM-2)",
+        "ok": all(v.get("ok") for v in views.values()),
+    }
+
+
+def pm2_c4_measure(fifo_dir: Path, cfg) -> dict:
+    """C4 on fifo's checkpoint at its own iters (R-1)."""
+    return _C4_ORIG(fifo_dir, _fifo_cfg(cfg))
+
+
+def pm2_analyse_training(hbs: dict, diags: dict, cfg) -> dict:
+    """§7.3/§7.4 for the RSR arms at their own iters; the Δloss_lm against fifo over
+    the matched steps [T_warm, R-1) only (fifo's cfg), labelled; nothing beyond R-1."""
+    out = _TRAIN_ORIG(hbs, diags, cfg)
+    fi = fifo_iters()
+    if int(cfg.iters) != fi:
+        d = _TRAIN_ORIG(hbs, diags, _fifo_cfg(cfg))["delta_loss_lm"]
+        out["delta_loss_lm"] = {
+            **d,
+            "label": f"matched steps <= R-1 ({fi}); Amendment PM-2",
+        }
+    return out
+
+
+def pm2_precheck(out_root: Path, seed: int, plan: dict) -> dict:
+    """Before EVAL2 is opened: the five PM-2 reads can be computed as stated -- fifo's
+    checkpoint at R-1 and each RSR arm's at K_2b exist, and the heartbeats cover
+    [0, R-1) for fifo and [0, K_2b) for the RSR arms. Reads files only."""
+    R1 = harness()["R1"]
+    fi, k = int(plan["fifo_iters"]), int(plan["K_2b"])
+    problems = []
+    for a in R1.ARMS:
+        n = fi if a == "fifo" else k
+        d = R1.arm_dir(out_root, a, seed)
+        if not _CKPT_ORIG(d, n).exists():
+            problems.append(f"{a}: no checkpoint at {n}")
+        steps = {b["step"] for b in R1.read_heartbeat(d)["beats"]}
+        if not set(range(n)) <= steps:
+            problems.append(f"{a}: heartbeats do not cover [0, {n})")
+    return {"fifo_iters": fi, "K_2b": k, "problems": problems, "ok": not problems}
 
 
 def fifo_iters() -> int:
@@ -178,8 +320,9 @@ def fifo_iters() -> int:
     return int(reg["values"]["iters"])
 
 
-def c10_per_arm(cfg, owner, launch, results, hbs, jobs, out_root, *, rcs=None,
-                registered=None):  # fmt: skip
+def c10_per_arm(
+    cfg, owner, launch, results, hbs, jobs, out_root, *, rcs=None, registered=None
+):
     """Amendment PM-1 item 2: run 1's C10, UNCHANGED, called on two views and merged.
     fifo: ``iters`` (config, command, launch steps / ckpt / cadence) against R-1 =
     3000, the registered owner table as is. psiR and ageR: ``iters`` against
@@ -201,8 +344,14 @@ def c10_per_arm(cfg, owner, launch, results, hbs, jobs, out_root, *, rcs=None,
         views["fifo"] = _C10_ORIG(
             dataclasses.replace(cfg, iters=fi),
             dataclasses.replace(owner, iters=fi),
-            f_launch, f_res, hbs, jobs, out_root, rcs=rcs, registered=reg,
-        )  # fmt: skip
+            f_launch,
+            f_res,
+            hbs,
+            jobs,
+            out_root,
+            rcs=rcs,
+            registered=reg,
+        )
     r_res = {a: r for a, r in results.items() if a != "fifo"}
     if r_res:
         r_reg = json.loads(json.dumps(reg, default=str))
@@ -310,8 +459,10 @@ def make_plan(ledger_path: Path) -> dict:
         problems.append(f"2a exit {sm.get('exit')}: 2b does not run (§4.5)")
     if sm.get("gate_to_2b") is not True:
         problems.append("2a is not WIN on all 3 seeds: 2b does not run (§4.5, §7)")
-    if any(sm.get("labels", {}).get(str(s), sm.get("labels", {}).get(s)) != "WIN"
-           for s in seeds):  # fmt: skip
+    if any(
+        sm.get("labels", {}).get(str(s), sm.get("labels", {}).get(s)) != "WIN"
+        for s in seeds
+    ):
         problems.append(f"2a labels {sm.get('labels')}: not WIN on every seed")
     omega, kconv = {}, {}
     for s in seeds:
@@ -342,26 +493,24 @@ def make_plan(ledger_path: Path) -> dict:
 def set_plan(plan: dict) -> None:
     _PLAN["omega"] = {int(k): float(v) for k, v in plan["omega_s"].items()}
     _PLAN["fifo_iters"] = plan.get("fifo_iters")
+    _PLAN["K_2b"] = plan.get("K_2b")
 
 
-#: Run 1's controls that read fifo at the RSR step count ``cfg.iters``, which
-#: Amendment PM-1 does not rule on. At K_2b > 3000 each fails by construction (fifo ran
-#: 3000 steps), so ``measure`` refuses BEFORE EVAL2 is opened rather than spend the
-#: sealed range on a guaranteed exit 3. To the PM; nothing here picks a reading.
-UNRULED = [
-    "C6: steps_done == cfg.iters for every arm (fifo has 3000)",
-    "C2: same_step_sets / per-step fingerprints across arms over [0, cfg.iters)",
-    "C4: fresh-stream's R quantity on fifo's checkpoint at cfg.iters",
-    "held-out: fifo's checkpoint read at cfg.iters (it exists at 3000)",
-    "training analysis: loss_lm(arm, k) - loss_lm(fifo, k) for k in [T_warm, cfg.iters)",
-]
+#: Run 1's reads of fifo at the RSR step count (C6, C2, C4, the held-out read, the
+#: training Δloss_lm) were left open by PM-1; Amendment PM-2 rules on all five (see the
+#: pm2_* wrappers), so nothing is unruled. ``pm2_precheck`` still refuses before EVAL2
+#: if any of them cannot be computed as stated.
+UNRULED: list[str] = []  # Amendment PM-2 (f9eeb48) rules on all five
 
 
 def measure_precheck(plan: dict) -> dict:
     """Before EVAL2 is opened: the plan is ok and nothing it needs is unruled."""
     un = plan.get("unruled_at_K_gt_3000") or []
-    return {"plan_ok": bool(plan.get("ok")), "unruled": un,
-            "ok": bool(plan.get("ok")) and not un}  # fmt: skip
+    return {
+        "plan_ok": bool(plan.get("ok")),
+        "unruled": un,
+        "ok": bool(plan.get("ok")) and not un,
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -439,8 +588,13 @@ def c_k(plan: dict, launch: dict | None, steps_done: dict, kconv_2a: dict) -> di
         and plan.get("K_2b") == want
         and all(steps_done.get(a) == want for a in ("psiC", "age"))
     )
-    return {"rule": want, "launch": got, "plan": plan.get("K_2b"),
-            "steps_done": steps_done, "ok": bool(ok)}  # fmt: skip
+    return {
+        "rule": want,
+        "launch": got,
+        "plan": plan.get("K_2b"),
+        "steps_done": steps_done,
+        "ok": bool(ok),
+    }
 
 
 def c_omega(plan: dict, ledger_2a: dict, amendment: dict | None) -> dict:
@@ -569,6 +723,9 @@ def measure_stage(seed: int, out_root: Path, *, ledger_2a: Path = OUT_2A / "ledg
     foot = training_footers(out_root, seeds)
     if not foot["ok"]:
         raise R1.Refused(f"a training process has no completed footer: {foot}")
+    pm2 = pm2_precheck(out_root, seed, plan)
+    if not pm2["ok"]:
+        raise R1.Refused(f"2b measure refused before EVAL2 is opened (PM-2): {pm2}")
     K = int(plan["K_2b"])
     cfg = measure_cfg(seed, K)
     es = c_es(seed, cfg)  # before EVAL2 is read (§5.7 C-ES)
@@ -586,6 +743,7 @@ def measure_stage(seed: int, out_root: Path, *, ledger_2a: Path = OUT_2A / "ledg
     ctl = doc["controls"]
     ctl["R-SEAL.install"] = {**seal, "ok": True}
     ctl["R-SEAL.footers"] = foot
+    ctl["PM-2.precheck"] = pm2
     ctl["C11prime"] = c11_prime(results, hbs, launch, ctl.get("C11"))
     kc = {s: a2["selection"][s]["k_conv"] for s in seeds}
     ctl["C-K"] = c_k(plan, launch, steps_done, kc)
@@ -707,22 +865,31 @@ def extra_passes(seed: int, out_root: Path, cfg, plan: dict, es: dict) -> dict:
     sel = json.loads((OUT_2A / f"seed{seed}" / "selection.json").read_text())
     st = torch.load(sel["phi_path"], weights_only=True)
     conf = r2c["conf"]
-    ov = {**conf["policy_overrides"], "loss": LOSS_RANK, "rank_k": RANK_K,
-          "rank_omega": float(sel["omega_s"])}  # fmt: skip
+    ov = {
+        **conf["policy_overrides"],
+        "loss": LOSS_RANK,
+        "rank_k": RANK_K,
+        "rank_omega": float(sel["omega_s"]),
+    }
     spe = float(conf["epoch"]["steps_per_epoch"])
     passes["head_2a"] = lambda chunk: OP.deploy_policy(st, seed, ov, spe)
     out: dict[str, Any] = {}
     for name, mk in passes.items():
         recs = run_pass(model, mk, docs, vmap, cfg)
         sha = OP.write_records(hd / f"{name}.jsonl.gz", recs)
-        bad = [r["doc"] for r, d in zip(recs, docs, strict=True)
-               if not R1.residency_ok(d, r, cfg.memory_slots)]  # fmt: skip
+        bad = [
+            r["doc"]
+            for r, d in zip(recs, docs, strict=True)
+            if not R1.residency_ok(d, r, cfg.memory_slots)
+        ]
         out[name] = {
             "records_sha256": sha,
-            "C-pair": {"n": [len(recs), len(fifo)],
-                       "ok": len(recs) == len(fifo) and R2._tg(recs) == R2._tg(fifo)},
+            "C-pair": {
+                "n": [len(recs), len(fifo)],
+                "ok": len(recs) == len(fifo) and R2._tg(recs) == R2._tg(fifo),
+            },
             "C-res": {"n_mismatched": len(bad), "ok": not bad},
-        }  # fmt: skip
+        }
     if es.get("ok"):
         ES = es_module()
         pol = ES.es_policy_from_payload(es["_payload"])
@@ -761,8 +928,10 @@ def contrasts_5_6(seed: int, out_root: Path, cfg, delta) -> dict:
             continue
         row = {}
         for bucket in ("all", "gap_2_to_M", "gap_gt_M"):
-            per = {a: R1.answer_counts(recs[a], bk[bucket]),
-                   b: R1.answer_counts(recs[b], bk[bucket])}  # fmt: skip
+            per = {
+                a: R1.answer_counts(recs[a], bk[bucket]),
+                b: R1.answer_counts(recs[b], bk[bucket]),
+            }
             c = R1.contrast(per, a, b, W)
             row[bucket] = R2.label_contrast(c, delta) if key == "psiR_minus_es" else c
         out[key] = row
@@ -789,8 +958,10 @@ def smoke_measure(out: Path) -> dict:
             ]
 
             def med(key, beats=beats):
-                v = [b.get(key) if key != "rank_s" else (b.get("mc") or {}).get("rank_s")
-                     for b in beats]  # fmt: skip
+                v = [
+                    b.get(key) if key != "rank_s" else (b.get("mc") or {}).get("rank_s")
+                    for b in beats
+                ]
                 v = [x for x in v if _finite(x)]
                 return float(torch.tensor(v).median()) if v else None
 
@@ -814,8 +985,12 @@ def smoke_measure(out: Path) -> dict:
     )
     held = time.perf_counter() - t0
     med_step = max(v["step_s"] for v in rows.values() if v["step_s"] is not None)
-    res = {"per_process": rows, "heldout_64_eval_s": held, "max_median_step_s": med_step,
-           "census": SS.census({"EVAL": tuple(R1.EVAL)})}  # fmt: skip
+    res = {
+        "per_process": rows,
+        "heldout_64_eval_s": held,
+        "max_median_step_s": med_step,
+        "census": SS.census({"EVAL": tuple(R1.EVAL)}),
+    }
     (Path(out) / "smoke-measure.json").write_text(
         json.dumps(res, indent=1, default=str) + "\n"
     )
@@ -872,8 +1047,12 @@ def launch_checks(out_root: Path, *, suite_log: Path, suite_rc: Path, suite_head
         "config_hash": led.doc["config_hash"],
         "manifest_written_utc": led.doc["manifest_written_utc"],
     }
-    rep["ok"] = bool(cen.get("ok") and rep["R-SEAL.search"]["ok"] and rep["plan_ok"]
-                     and rep["dirty"] == [])  # fmt: skip
+    rep["ok"] = bool(
+        cen.get("ok")
+        and rep["R-SEAL.search"]["ok"]
+        and rep["plan_ok"]
+        and rep["dirty"] == []
+    )
     rep["exit"] = 0 if rep["ok"] else 3
     (out_root / "launch.json").write_text(json.dumps(rep, indent=1, default=str) + "\n")
     return rep["exit"]
@@ -929,8 +1108,11 @@ def finalize(out_root: Path) -> int:
             )
     led.command([".venv/bin/python", EXPERIMENT, "2b", "finalize"], exit_code=code)
     plan = json.loads((out_root / "plan.json").read_text())
-    led.run_meta(device="cpu", seeds_actually_run=[d["seed"] for d in docs],
-                 steps_requested=plan.get("K_2b"))  # fmt: skip
+    led.run_meta(
+        device="cpu",
+        seeds_actually_run=[d["seed"] for d in docs],
+        steps_requested=plan.get("K_2b"),
+    )
     led.note("summary", run, how=f"{EXPERIMENT} 2b finalize")
     for d in docs:
         for k, v in C.flatten(f"seed{d['seed']}", d, max_depth=4):
