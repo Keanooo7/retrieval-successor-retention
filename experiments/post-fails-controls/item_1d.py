@@ -3,7 +3,7 @@ and FactFiller over a grid of question-spacing mixes.
 
 Pre-registration: `experiments/post-fails-controls/PREREG.md`, committed alone at
 9f22d87. `main(argv)` measures and writes `runs/post-fails-controls-1d/{manifest.json,
-ledger.json}`; `finalize(out_root)` renders `RESULTS.md` and `claims.json`.
+ledger.json}`; `finalize(argv)` renders `RESULTS.md` and `claims.json`.
 
 Model-free (`rsr.metrics.headroom.simulate`, ``M = 16``): no checkpoint, no forward.
 Documents ``[995000, 997048)`` per seed (EVAL, already used), generated under each grid
@@ -43,6 +43,7 @@ RUN_ID = "post-fails-controls-1d"
 PREREG = "experiments/post-fails-controls/PREREG.md"
 PREREG_COMMIT = "9f22d87"
 OUT_DEFAULT = ROOT / "runs" / RUN_ID
+RUN_PY = "experiments/post-fails-controls/run.py"
 
 
 def _load(name: str, rel: str):
@@ -341,7 +342,7 @@ def execute(led, a) -> Exit:
     return Exit.OK
 
 
-def main(argv: list[str] | None = None) -> Exit:
+def _run(argv: list[str] | None = None) -> Exit:
     ap = ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--seeds", type=int, nargs="+", default=list(SEEDS))
     ap.add_argument("--limit", type=int, default=None, help="smoke only: first N ids")
@@ -366,7 +367,7 @@ def main(argv: list[str] | None = None) -> Exit:
         sealed = type(e).__name__ in ("SealedRange", "ControlFailure")
         rc = Exit.DID_NOT_RUN if sealed else Exit.FAIL
     led.command(
-        [sys.executable, EXPERIMENT] + (argv if argv is not None else sys.argv[1:]),
+        [sys.executable, RUN_PY, ITEM] + (argv if argv is not None else sys.argv[1:]),
         exit_code=int(rc),
         note="its exit code is the item's",
     )
@@ -388,7 +389,7 @@ def _fmt(x, nd: int = 4) -> str:
     return "n/a" if not _finite(x) else f"{x:.{nd}f}"
 
 
-def finalize(out_root: Path = OUT_DEFAULT) -> Path:
+def render(out_root: Path = OUT_DEFAULT) -> Path:
     led = json.loads((Path(out_root) / "ledger.json").read_text())
     rows = {r["key"]: r for r in led["rows"]}
     failed = rows["controls_failed"]["value"]
@@ -457,7 +458,7 @@ def finalize(out_root: Path = OUT_DEFAULT) -> Path:
     pth.write_text("\n".join(L) + "\n")
     base = (
         "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det "
-        f"--slots 1 --wait 3600 -- .venv/bin/python {EXPERIMENT} recompute"
+        f"--slots 1 --wait 3600 -- .venv/bin/python {RUN_PY} {ITEM} recompute"
     )
     claims = []
     for p, w in (BASE, (0.10, 0.70), (0.80, 0.0)):
@@ -493,13 +494,23 @@ def recompute(what: str, seed: int) -> str:
     raise ValueError(what)
 
 
-def cli(argv: list[str] | None = None) -> int:
+def finalize(argv: list[str] | None = None) -> int:
+    """``run.py finalize 1d [--out DIR]``: RESULTS.md and claims.json, from the ledger
+    in DIR (default ``runs/{RUN_ID}``). No number is typed."""
+    ap = ArgumentParser(description="finalize 1d")
+    ap.add_argument("--out", type=Path, default=OUT_DEFAULT)
+    a = ap.parse_args(list(argv or []))
+    print(render(a.out))
+    return int(Exit.OK)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """``run.py 1d [measure] [options]`` measures and writes the ledger;
+    ``run.py 1d finalize`` / ``run.py finalize 1d`` renders; ``run.py 1d recompute
+    --what KEY [--seed S]`` re-derives one value (the verifier's entry)."""
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] == ["finalize"]:
-        ap = ArgumentParser(description="finalize 1d")
-        ap.add_argument("--out", type=Path, default=OUT_DEFAULT)
-        print(finalize(ap.parse_args(argv[1:]).out))
-        return 0
+        return finalize(argv[1:])
     if argv[:1] == ["recompute"]:
         ap = ArgumentParser(description="recompute one 1d value")
         ap.add_argument("--what", required=True)
@@ -508,8 +519,10 @@ def cli(argv: list[str] | None = None) -> int:
         IC.common().install_seal()
         print(recompute(a.what, a.seed))
         return 0
-    return int(main(argv))
+    if argv[:1] == ["measure"]:
+        argv = argv[1:]
+    return int(_run(argv))
 
 
 if __name__ == "__main__":
-    run_main(cli)
+    run_main(main)

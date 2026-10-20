@@ -3,7 +3,7 @@ measured strictly after the decision step.
 
 Pre-registration: `experiments/post-fails-controls/PREREG.md`, committed alone at
 9f22d87. This module is the item's harness: `main(argv)` measures and writes
-`runs/post-fails-controls-1c/{manifest.json, ledger.json}`; `finalize(out_root)`
+`runs/post-fails-controls-1c/{manifest.json, ledger.json}`; `finalize(argv)`
 renders `RESULTS.md` and `claims.json` from that ledger (no number is typed).
 
 **Model-free except control C-C3** (E0d's r_i recomputed on 32 U documents per seed).
@@ -56,6 +56,7 @@ RUN_ID = "post-fails-controls-1c"
 PREREG = "experiments/post-fails-controls/PREREG.md"
 PREREG_COMMIT = "9f22d87"
 OUT_DEFAULT = ROOT / "runs" / RUN_ID
+RUN_PY = "experiments/post-fails-controls/run.py"
 
 
 def _load(name: str, rel: str):
@@ -151,7 +152,7 @@ class ControlFailure(RuntimeError):
 def common():
     """The shared harness module (G-C1 seal guard, G-C2 manifest check, G-C3 census,
     G-C4 refusals, ledger helpers). Owned by the 1a builder; imported, never copied."""
-    return _load("_pfc_common", "experiments/post-fails-controls/common.py")
+    return _load("pfc_common", "experiments/post-fails-controls/common.py")
 
 
 #: Named document ranges the G-C1 census reports per seed (besides the sealed ones).
@@ -198,9 +199,13 @@ class Globals:
         else:
             self.failed.append("G-C1(e): branch search not run (smoke)")
         log, rc = getattr(self.a, "suite_log", None), getattr(self.a, "suite_rc", None)
+        head = getattr(self.a, "suite_head", None)
         if log is not None and rc is not None:
             cen = self.cm.suite_census(Path(log).read_text(), int(rc))
-            cen["log"] = str(log)
+            now = self.cm.git_head()
+            cen.update(log=str(log), head=head, launch_head=now)
+            cen["head_is_launch_head"] = head is not None and head == now
+            cen["ok"] = cen["ok"] and cen["head_is_launch_head"]
             self.led.note("G-C3.suite", cen, how="common.suite_census of the launch log")
             if not cen["ok"]:
                 self.failed.append("G-C3: suite not rc 0 / failures / errors")
@@ -243,6 +248,7 @@ class Globals:
 def add_global_args(ap) -> None:
     ap.add_argument("--suite-log", type=Path, default=None, help="G-C3: the launch log")
     ap.add_argument("--suite-rc", type=int, default=None, help="G-C3: its rc, direct")
+    ap.add_argument("--suite-head", default=None, help="G-C3: the sha the suite ran at")
     ap.add_argument(
         "--no-branch-search",
         dest="branch_search",
@@ -1116,7 +1122,7 @@ def defects(per: dict[int, dict]) -> list[str]:
     return bad
 
 
-def main(argv: list[str] | None = None) -> Exit:
+def _run(argv: list[str] | None = None) -> Exit:
     ap = ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--seeds", type=int, nargs="+", default=list(SEEDS))
     ap.add_argument("--limit", type=int, default=None, help="smoke only: first N U docs")
@@ -1142,7 +1148,7 @@ def main(argv: list[str] | None = None) -> Exit:
         sealed = type(e).__name__ in ("SealedRange", "ControlFailure")
         rc = Exit.DID_NOT_RUN if sealed else Exit.FAIL
     led.command(
-        [sys.executable, EXPERIMENT] + (argv if argv is not None else sys.argv[1:]),
+        [sys.executable, RUN_PY, ITEM] + (argv if argv is not None else sys.argv[1:]),
         exit_code=int(rc),
         note="its exit code is the item's",
     )
@@ -1166,7 +1172,7 @@ def _fmt(x, nd: int = 4) -> str:
     return "n/a" if not _finite(x) else f"{x:.{nd}f}"
 
 
-def finalize(out_root: Path = OUT_DEFAULT) -> Path:
+def render(out_root: Path = OUT_DEFAULT) -> Path:
     """Render `RESULTS.md` and `claims.json` next to the ledger, from the ledger."""
     led = json.loads((Path(out_root) / "ledger.json").read_text())
     rows = {r["key"]: r for r in led["rows"]}
@@ -1313,7 +1319,7 @@ def write_claims(out_root: Path, rows: dict) -> Path:
     base = (
         "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det "
         "--slots 1 --wait 3600 -- .venv/bin/python "
-        f"{EXPERIMENT} recompute"
+        f"{RUN_PY} {ITEM} recompute"
     )
     claims = [
         {
@@ -1355,14 +1361,23 @@ def recompute(what: str, seed: int | None, n_boot: int = N_BOOT) -> str:
     return repr(flat[key][f])
 
 
-def cli(argv: list[str] | None = None) -> int:
+def finalize(argv: list[str] | None = None) -> int:
+    """``run.py finalize 1c [--out DIR]``: RESULTS.md and claims.json, from the ledger
+    in DIR (default ``runs/{RUN_ID}``). No number is typed."""
+    ap = ArgumentParser(description="finalize 1c")
+    ap.add_argument("--out", type=Path, default=OUT_DEFAULT)
+    a = ap.parse_args(list(argv or []))
+    print(render(a.out))
+    return int(Exit.OK)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """``run.py 1c [measure] [options]`` measures and writes the ledger;
+    ``run.py 1c finalize`` / ``run.py finalize 1c`` renders; ``run.py 1c recompute
+    --what KEY [--seed S]`` re-derives one value (the verifier's entry)."""
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] == ["finalize"]:
-        ap = ArgumentParser(description="finalize 1c")
-        ap.add_argument("--out", type=Path, default=OUT_DEFAULT)
-        a = ap.parse_args(argv[1:])
-        print(finalize(a.out))
-        return 0
+        return finalize(argv[1:])
     if argv[:1] == ["recompute"]:
         ap = ArgumentParser(description="recompute one 1c value")
         ap.add_argument("--what", required=True)
@@ -1371,8 +1386,10 @@ def cli(argv: list[str] | None = None) -> int:
         common().install_seal()
         print(recompute(a.what, a.seed))
         return 0
-    return int(main(argv))
+    if argv[:1] == ["measure"]:
+        argv = argv[1:]
+    return int(_run(argv))
 
 
 if __name__ == "__main__":
-    run_main(cli)
+    run_main(main)

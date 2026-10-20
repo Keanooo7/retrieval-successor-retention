@@ -3,7 +3,7 @@ status, and class-mean rank caps, on U.
 
 Pre-registration: `experiments/post-fails-controls/PREREG.md`, committed alone at
 9f22d87. `main(argv)` measures and writes `runs/post-fails-controls-1b/{manifest.json,
-ledger.json}`; `finalize(out_root)` renders `RESULTS.md` and `claims.json` from the
+ledger.json}`; `finalize(argv)` renders `RESULTS.md` and `claims.json` from the
 ledger.
 
 Trains no policy. Fits linear probes (float64, full-batch L-BFGS) on precomputed,
@@ -52,6 +52,7 @@ RUN_ID = "post-fails-controls-1b"
 PREREG = "experiments/post-fails-controls/PREREG.md"
 PREREG_COMMIT = "9f22d87"
 OUT_DEFAULT = ROOT / "runs" / RUN_ID
+RUN_PY = "experiments/post-fails-controls/run.py"
 
 
 def _load(name: str, rel: str):
@@ -800,7 +801,7 @@ def execute(led, a) -> Exit:
     return Exit.OK
 
 
-def main(argv: list[str] | None = None) -> Exit:
+def _run(argv: list[str] | None = None) -> Exit:
     ap = ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--seeds", type=int, nargs="+", default=list(SEEDS))
     ap.add_argument("--limit", type=int, default=None, help="smoke only: U positions < N")
@@ -825,7 +826,7 @@ def main(argv: list[str] | None = None) -> Exit:
         sealed = type(e).__name__ in ("SealedRange", "ControlFailure")
         rc = Exit.DID_NOT_RUN if sealed else Exit.FAIL
     led.command(
-        [sys.executable, EXPERIMENT] + (argv if argv is not None else sys.argv[1:]),
+        [sys.executable, RUN_PY, ITEM] + (argv if argv is not None else sys.argv[1:]),
         exit_code=int(rc),
         note="its exit code is the item's",
     )
@@ -854,7 +855,7 @@ def _ci3(rows, base, i):
     return f"{_fmt(p[i])} [{_fmt(lo[i])}, {_fmt(hi[i])}]"
 
 
-def finalize(out_root: Path = OUT_DEFAULT) -> Path:
+def render(out_root: Path = OUT_DEFAULT) -> Path:
     led = json.loads((Path(out_root) / "ledger.json").read_text())
     rows = {r["key"]: r for r in led["rows"]}
     labs = rows["labels"]["value"]
@@ -968,7 +969,7 @@ def finalize(out_root: Path = OUT_DEFAULT) -> Path:
     ]
     base = (
         "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det "
-        f"--slots 1 --wait 3600 -- .venv/bin/python {EXPERIMENT} recompute"
+        f"--slots 1 --wait 3600 -- .venv/bin/python {RUN_PY} {ITEM} recompute"
     )
     for s in SEEDS:
         for pname in ("kind_s", "status_scx"):
@@ -997,13 +998,23 @@ def recompute(what: str, seed: int | None) -> str:
     return repr(r["probes"][pname][lk]["bal_acc"][f])
 
 
-def cli(argv: list[str] | None = None) -> int:
+def finalize(argv: list[str] | None = None) -> int:
+    """``run.py finalize 1b [--out DIR]``: RESULTS.md and claims.json, from the ledger
+    in DIR (default ``runs/{RUN_ID}``). No number is typed."""
+    ap = ArgumentParser(description="finalize 1b")
+    ap.add_argument("--out", type=Path, default=OUT_DEFAULT)
+    a = ap.parse_args(list(argv or []))
+    print(render(a.out))
+    return int(Exit.OK)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """``run.py 1b [measure] [options]`` measures and writes the ledger;
+    ``run.py 1b finalize`` / ``run.py finalize 1b`` renders; ``run.py 1b recompute
+    --what KEY [--seed S]`` re-derives one value (the verifier's entry)."""
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] == ["finalize"]:
-        ap = ArgumentParser(description="finalize 1b")
-        ap.add_argument("--out", type=Path, default=OUT_DEFAULT)
-        print(finalize(ap.parse_args(argv[1:]).out))
-        return 0
+        return finalize(argv[1:])
     if argv[:1] == ["recompute"]:
         ap = ArgumentParser(description="recompute one 1b value")
         ap.add_argument("--what", required=True)
@@ -1013,8 +1024,10 @@ def cli(argv: list[str] | None = None) -> int:
         IC.common().install_seal()
         print(recompute(a.what, a.seed))
         return 0
-    return int(main(argv))
+    if argv[:1] == ["measure"]:
+        argv = argv[1:]
+    return int(_run(argv))
 
 
 if __name__ == "__main__":
-    run_main(cli)
+    run_main(main)
