@@ -1,0 +1,297 @@
+{
+ "run_id": "rsr-run3-2a",
+ "stage": "time",
+ "seed": 0,
+ "smoke": true,
+ "started_utc": "2026-10-20T08:52:06Z",
+ "loadavg_start": [
+  11.7431640625,
+  11.75244140625,
+  11.48486328125
+ ],
+ "threads": 1,
+ "controls": {
+  "R-SEAL.install": {
+   "run": "2a",
+   "stage": "time",
+   "source": "experiments/post-fails-controls/PREREG.md",
+   "file_ranges": {
+    "TUNE": [
+     997200,
+     997712
+    ],
+    "EVAL2": [
+     984000,
+     986048
+    ]
+   },
+   "sealed": {
+    "TUNE": [
+     997200,
+     997712
+    ],
+    "EVAL2": [
+     984000,
+     986048
+    ]
+   },
+   "opened": {},
+   "rebound": [
+    "rsr.train.loop._generate_document",
+    "rsr.train.loop.generate"
+   ],
+   "ok": true
+  },
+  "R-C3.record_refused": {
+   "replaced": [
+    "rsr.constants.record",
+    "rsr.constants.REGISTRY.record"
+   ],
+   "ok": true
+  },
+  "R-SEAL.leaks": {
+   "leaks": [],
+   "ok": true
+  },
+  "prereg_text": {
+   "values": {
+    "omegas": {
+     "prereg": [
+      2.0,
+      8.0,
+      32.0
+     ],
+     "code": [
+      2.0,
+      8.0,
+      32.0
+     ],
+     "ok": true
+    },
+    "k": {
+     "prereg": 3,
+     "code": 3,
+     "ok": true
+    },
+    "j_every": {
+     "prereg": 250,
+     "code": 250,
+     "ok": true
+    },
+    "conv_min": {
+     "prereg": 2000,
+     "code": 2000,
+     "ok": true
+    },
+    "conv_rel": {
+     "prereg": 0.001,
+     "code": 0.001,
+     "ok": true
+    },
+    "conv_window": {
+     "prereg": 2000,
+     "code": 2000,
+     "ok": true
+    },
+    "cap": {
+     "prereg": 200000,
+     "code": 200000,
+     "ok": true
+    },
+    "save": {
+     "prereg": [
+      3000,
+      10000
+     ],
+     "code": [
+      3000,
+      10000
+     ],
+     "ok": true
+    }
+   },
+   "ok": true
+  },
+  "R-C1.manifest_start": {
+   "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+   "cwd": "/Users/keanooo7/retrieval-successor-retention",
+   "rc": 0,
+   "n_ok": 435,
+   "n_lines": 435,
+   "not_ok": [],
+   "stderr": "",
+   "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+   "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+   "ok": true
+  },
+  "R-C3.substrate_pin_start": {
+   "path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+   "sha256": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+   "pin": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+   "ok": true
+  },
+  "R-C1.inputs": {
+   "gestalt_sha256": "211244f1469b90972e3b1d3b6635b3ee9eb095e78b932dc396bba64df3f5562b",
+   "gestalt_ok": true,
+   "delta_sha256": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+   "delta_ok": true,
+   "ok": true
+  },
+  "U_only": {
+   "overlaps": {
+    "EVAL": 0,
+    "TUNE": 0,
+    "EVAL2": 0
+   },
+   "ok": true
+  },
+  "R-SEAL.census": {
+   "per_seed": {
+    "0": {
+     "U": {
+      "range": [
+       64,
+       1088
+      ],
+      "count": 1024,
+      "min": 64,
+      "max": 1087
+     },
+     "TUNE": {
+      "range": [
+       997200,
+       997712
+      ],
+      "count": 0,
+      "min": null,
+      "max": null
+     },
+     "EVAL2": {
+      "range": [
+       984000,
+       986048
+      ],
+      "count": 0,
+      "min": null,
+      "max": null
+     },
+     "other": {
+      "count": 3136,
+      "min": 0,
+      "max": 4159
+     }
+    }
+   },
+   "sealed_ranges": {
+    "TUNE": [
+     997200,
+     997712
+    ],
+    "EVAL2": [
+     984000,
+     986048
+    ]
+   },
+   "n_sealed_generated": 0,
+   "refused_calls": [],
+   "leaks": [],
+   "ok": true,
+   "stage": [
+    "2a",
+    "time"
+   ]
+  }
+ },
+ "tree": {
+  "head": "b10f5e972ef581f828a5ed934a4dd5914d5af155",
+  "dirty": []
+ },
+ "fit": {
+  "mc": {
+   "steps": 50,
+   "step_s_median": 0.0025326251052320004,
+   "step_s_mean": 0.0028224350011441857,
+   "rc4_n_bad": 0
+  },
+  "omega2": {
+   "steps": 50,
+   "step_s_median": 0.016825750470161438,
+   "step_s_mean": 0.016816989160142837,
+   "rc4_n_bad": 0,
+   "J_s": 0.7136339580174536,
+   "J": {
+    "J": 0.6926846590312276,
+    "groups_with_pair": 42872,
+    "groups_no_pair": 1864
+   }
+  },
+  "omega8": {
+   "steps": 50,
+   "step_s_median": 0.016750916838645935,
+   "step_s_mean": 0.01676290833973326,
+   "rc4_n_bad": 0,
+   "J_s": 0.708880833000876,
+   "J": {
+    "J": 0.6925735611230118,
+    "groups_with_pair": 42872,
+    "groups_no_pair": 1864
+   }
+  },
+  "omega32": {
+   "steps": 50,
+   "step_s_median": 0.01686583273112774,
+   "step_s_mean": 0.016826686658896507,
+   "rc4_n_bad": 0,
+   "J_s": 0.7184765000129119,
+   "J": {
+    "J": 0.6923670163376382,
+    "groups_with_pair": 42872,
+    "groups_no_pair": 1864
+   }
+  }
+ },
+ "timing": {
+  "manifest_check_s": 27.42834079201566,
+  "inputs_and_model_s": 0.6976913749822415,
+  "reference_rates_s": 5.70534708397463,
+  "u_val_cap_s": 0.4595940000144765,
+  "u_train_cap_s": 2.776589833025355,
+  "deploy_block_s": 7.956947083002888,
+  "deploy_block_docs": 64,
+  "deploy_block_residency_mismatched": 0,
+  "references_block_s": 0.3417123749968596
+ },
+ "loadavg_end": [
+  11.59814453125,
+  11.7109375,
+  11.48486328125
+ ],
+ "projection": {
+  "per_fit_worst_case_s": {
+   "omega2": 3936.770894404268,
+   "omega8": 3917.9969149628887,
+   "omega32": 3948.66622273589
+  },
+  "worst_fit_s": 3948.66622273589,
+  "n_J_per_fit": 801,
+  "deploy_s_per_document": 0.12432729817192012,
+  "tune_deploy_one_s": 63.6555766640231,
+  "eval_deploy_one_s": 254.6223066560924,
+  "rc2_one_seed_s": 15.195750631392002,
+  "u_caps_one_config_s": 8.941530917014461,
+  "serial_cpu_s": 37716.74000191101,
+  "serial_cpu_h": 10.476872222753057,
+  "wall_layout_s": 4572.593608178082,
+  "wall_layout_h": 1.2701648911605783,
+  "layout": "9 fits + 3 R-C2 concurrently (12 slots), then 3 selects, then 3 deploys (3 slots each stage); 1 thread per process",
+  "over_8h_serial": true,
+  "over_8h_wall_layout": false
+ },
+ "controls_failed": [],
+ "notes": [
+  "SMOKE: never the run; nothing is read"
+ ],
+ "exit": 3,
+ "status": "did_not_run",
+ "finished_utc": "2026-10-20T08:52:58Z"
+}
