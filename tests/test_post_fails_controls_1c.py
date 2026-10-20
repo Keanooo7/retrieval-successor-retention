@@ -249,12 +249,13 @@ def test_seal_guards_1c_document_paths():
     assert not cm.seal_leaks()
 
 
-def _bs(paths, *, errors=(), rc=0, n_refs=3, allowed=()):
+def _bs(paths, *, errors=(), rc=0, n_refs=3, allowed=(), value=None):
+    lo = C.common().sealed_ranges()["TUNE"][0] if value is None else value
     hits = [
         {
             "path": p,
-            "token": "<sealed-bound>",
-            "value": None,
+            "token": str(lo),
+            "value": lo,
             "range": "TUNE",
             "allowed": p in allowed,
             "refs": ["refs/heads/x"],
@@ -271,23 +272,23 @@ def _bs(paths, *, errors=(), rc=0, n_refs=3, allowed=()):
     }
 
 
-def test_gc1e_allows_only_prereg_citations():
-    """Amendment G-C1e: a citation in a committed experiments/*/PREREG*.md is allowed;
-    any other hit (code, test, run artefact, other document) is still new: exit 3."""
-    ok = C.apply_gc1e(
-        _bs(
-            [
-                "experiments/rsr-run3-ranking/PREREG.md",
-                "experiments/post-fails-controls/PREREG.md",
-            ],
-            allowed=("experiments/post-fails-controls/PREREG.md",),
-        )
-    )
+def test_gc1e_allows_only_bound_citations_in_a_prereg():
+    """Amendment G-C1e (review FU-1): a hit is allowed only if its integer is a sealed
+    bound (read from the PREREG front matter, never typed) and it sits in a committed
+    experiments/*/PREREG*.md; anything else is still new: exit 3."""
+    run3 = "experiments/rsr-run3-ranking/PREREG.md"
+    mine = "experiments/post-fails-controls/PREREG.md"
+    ok = C.apply_gc1e(_bs([run3, mine], allowed=(mine,)))
     assert ok["ok"] and ok["n_new_hits"] == 0
-    assert [h["path"] for h in ok["allowed_by_G-C1e"]] == [
-        "experiments/rsr-run3-ranking/PREREG.md"
-    ]
+    assert [h["path"] for h in ok["allowed_by_G-C1e"]] == [run3]
     assert C.apply_gc1e(_bs(["experiments/x/PREREG-amend.md"]))["ok"]
+    rng = C.common().sealed_ranges()
+    for name, (lo, hi) in rng.items():
+        assert C.apply_gc1e(_bs([run3], value=lo))["ok"], name
+        assert C.apply_gc1e(_bs([run3], value=hi))["ok"], name
+        # an id strictly inside a sealed range, even in a PREREG, is not a citation
+        r = C.apply_gc1e(_bs([run3], value=lo + 1))
+        assert not r["ok"] and r["n_new_hits"] == 1, name
     for bad in (
         "experiments/rsr-run3-ranking/run.py",
         "tests/test_x.py",
@@ -298,7 +299,7 @@ def test_gc1e_allows_only_prereg_citations():
         "PREREG.md",
         "experiments/x/notes-PREREG.md",
     ):
-        r = C.apply_gc1e(_bs(["experiments/rsr-run3-ranking/PREREG.md", bad]))
+        r = C.apply_gc1e(_bs([run3, bad]))
         assert not r["ok"] and [h["path"] for h in r["new_hits"]] == [bad], bad
     assert not C.apply_gc1e(_bs([], errors=[{"ref": "r", "rc": 128}]))["ok"]
     assert not C.apply_gc1e(_bs([], rc=1))["ok"]

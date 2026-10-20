@@ -257,23 +257,33 @@ class Globals:
 GC1E_PREREG = re.compile(r"^experiments/[^/]+/PREREG[^/]*\.md$")
 
 
-def apply_gc1e(bs: dict) -> dict:
-    """G-C1(e) under Amendment G-C1e: every hit common.py's search did not already
-    allow is allowed only if its path is a committed ``experiments/*/PREREG*.md``;
-    every other hit stays new (exit 3). A git error is never a pass. Returns a copy
-    with ``new_hits``, ``n_new_hits``, ``allowed_by_G-C1e`` and ``ok`` recomputed."""
+def apply_gc1e(bs: dict, ranges: dict | None = None) -> dict:
+    """G-C1(e) under Amendment G-C1e: a hit common.py's search did not already allow
+    is allowed only if it is a citation of a sealed BOUND (an integer equal to a
+    range's lower or upper bound, machine-read from the PREREG front matter) in a
+    committed ``experiments/*/PREREG*.md``. Any other integer inside TUNE or EVAL2,
+    even in a PREREG, and every hit anywhere else stays new (exit 3); a git error is
+    never a pass. Returns a copy with ``new_hits``, ``n_new_hits``,
+    ``allowed_by_G-C1e`` and ``ok`` recomputed (review b7461397ce69 FU-1)."""
+    ranges = ranges if ranges is not None else common().sealed_ranges()
+    bounds = {int(b) for lo_hi in ranges.values() for b in lo_hi}
     out = dict(bs)
     hits = [dict(h) for h in bs.get("hits", [])]
     allowed_now, new = [], []
     for h in hits:
         if h.get("allowed"):
             continue
-        if GC1E_PREREG.match(str(h.get("path", ""))):
-            h["allowed_by"] = "Amendment G-C1e: a citation in a committed PREREG file"
+        in_prereg = bool(GC1E_PREREG.match(str(h.get("path", ""))))
+        is_bound = isinstance(h.get("value"), int) and h["value"] in bounds
+        if in_prereg and is_bound:
+            h["allowed_by"] = (
+                "Amendment G-C1e: a citation of a sealed bound in a committed PREREG"
+            )
             allowed_now.append(h)
         else:
             new.append(h)
     out["allowed_by_G-C1e"] = allowed_now
+    out["sealed_bounds"] = sorted(bounds)
     out["new_hits"] = new
     out["n_new_hits"] = len(new)
     git_ok = bs.get("for_each_ref_rc") == 0 and not bs.get("errors")
