@@ -1,0 +1,137 @@
+[
+  {
+    "claim": "seed 0 factfiller minus FIFO all-query accuracy, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 0 --arm factfiller",
+    "expected": "0.071355 0.067874 0.074792 WIN"
+  },
+  {
+    "claim": "seed 0 factfiller age-1 evictions / evictions",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what age1 --seed 0 --arm factfiller",
+    "expected": "33356 65536"
+  },
+  {
+    "claim": "seed 0 kindoracle minus FIFO all-query accuracy, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 0 --arm kindoracle",
+    "expected": "0.069770 0.066391 0.073247 WIN"
+  },
+  {
+    "claim": "seed 0 kindoracle age-1 evictions / evictions",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what age1 --seed 0 --arm kindoracle",
+    "expected": "37637 65536"
+  },
+  {
+    "claim": "seed 0 ac2",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what ac2 --seed 0",
+    "expected": "True 2048"
+  },
+  {
+    "claim": "seed 0 ac3",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what ac3 --seed 0",
+    "expected": "True 2048"
+  },
+  {
+    "claim": "seed 0 delta",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what delta --seed 0",
+    "expected": "0.03802185560447721"
+  },
+  {
+    "claim": "seed 0 kind",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what kind --seed 0",
+    "expected": "assert=0.5727861341252791 query=0.5340309760565028 filler=0.4585933976665784"
+  },
+  {
+    "claim": "seed 0 factfiller pooled in-loop hit rate (A-C6)",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what hit --seed 0 --arm factfiller",
+    "expected": "0.965604"
+  },
+  {
+    "claim": "seed 1 factfiller minus FIFO all-query accuracy, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 1 --arm factfiller",
+    "expected": "0.070795 0.067438 0.074332 WIN"
+  },
+  {
+    "claim": "seed 1 factfiller age-1 evictions / evictions",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what age1 --seed 1 --arm factfiller",
+    "expected": "33325 65536"
+  },
+  {
+    "claim": "seed 1 kindoracle minus FIFO all-query accuracy, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 1 --arm kindoracle",
+    "expected": "-0.132532 -0.136908 -0.128196 LOSS"
+  },
+  {
+    "claim": "seed 1 kindoracle age-1 evictions / evictions",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what age1 --seed 1 --arm kindoracle",
+    "expected": "24327 65536"
+  },
+  {
+    "claim": "seed 1 ac2",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what ac2 --seed 1",
+    "expected": "True 2048"
+  },
+  {
+    "claim": "seed 1 ac3",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what ac3 --seed 1",
+    "expected": "True 2048"
+  },
+  {
+    "claim": "seed 1 delta",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what delta --seed 1",
+    "expected": "0.03675691427360389"
+  },
+  {
+    "claim": "seed 1 kind",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what kind --seed 1",
+    "expected": "assert=0.40545977744004047 query=0.5097797520665056 filler=0.34245555224677743"
+  },
+  {
+    "claim": "seed 1 factfiller pooled in-loop hit rate (A-C6)",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what hit --seed 1 --arm factfiller",
+    "expected": "0.965566"
+  },
+  {
+    "claim": "seed 2 factfiller minus FIFO all-query accuracy, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 2 --arm factfiller",
+    "expected": "0.042420 0.039162 0.045736 WIN"
+  },
+  {
+    "claim": "seed 2 factfiller age-1 evictions / evictions",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what age1 --seed 2 --arm factfiller",
+    "expected": "33165 65536"
+  },
+  {
+    "claim": "seed 2 kindoracle minus FIFO all-query accuracy, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what headline --seed 2 --arm kindoracle",
+    "expected": "0.043794 0.040532 0.047082 WIN"
+  },
+  {
+    "claim": "seed 2 kindoracle age-1 evictions / evictions",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what age1 --seed 2 --arm kindoracle",
+    "expected": "37660 65536"
+  },
+  {
+    "claim": "seed 2 ac2",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what ac2 --seed 2",
+    "expected": "True 2048"
+  },
+  {
+    "claim": "seed 2 ac3",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what ac3 --seed 2",
+    "expected": "True 2048"
+  },
+  {
+    "claim": "seed 2 delta",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what delta --seed 2",
+    "expected": "0.03185756551141167"
+  },
+  {
+    "claim": "seed 2 kind",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what kind --seed 2",
+    "expected": "assert=0.5861518548626738 query=0.4772301429967551 filler=0.31805607256935275"
+  },
+  {
+    "claim": "seed 2 factfiller pooled in-loop hit rate (A-C6)",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/post-fails-controls-1a --what hit --seed 2 --arm factfiller",
+    "expected": "0.965033"
+  }
+]
