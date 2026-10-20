@@ -1,0 +1,92 @@
+{
+  "status": "ok",
+  "seed": "2a4bfeacac60ee2b15beb07dcaa091c014734e2080b38ad692df054a2a6f3ba9",
+  "claims": [
+    {
+      "claim": "seed 0: sha256 of the selected frozen phi",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what phi --seed 0",
+      "expected": "21ad98a009139fd39b6cd3aa816bd3c7d6ecc967237a78b2554a7de13da2d687",
+      "observed": "21ad98a009139fd39b6cd3aa816bd3c7d6ecc967237a78b2554a7de13da2d687",
+      "match": true,
+      "rc": 0,
+      "independent_path": "verifier's own state_sha (sha256 over sorted tensor names + bytes, written in scratch, no harness import) of seed0/phi-selected.pt = 21ad98a009139fd39b6cd3aa816bd3c7d6ecc967237a78b2554a7de13da2d687; identical state to seed0/phi-omega2-kconv.pt (omega_s=2 at K_conv) and to none of the other 8 saved phis; deploy.json .deploy.phi_sha256 and both R-C6 guard records carry the same sha; selection.json hashes to selection.sha256 (61fef47f...)"
+    },
+    {
+      "claim": "seed 1: omega_s and the TUNE cap points of the 3 configs",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what selection --seed 1",
+      "expected": "omega_s=2 omega2=-0.041077 omega8=-0.620875 omega32=-0.912458",
+      "observed": "omega_s=2 omega2=-0.041077 omega8=-0.620875 omega32=-0.912458",
+      "match": true,
+      "rc": 0,
+      "independent_path": "verifier's own pooled ceiling share (hit_arm - hit_fifo)/(hit_factfiller - hit_fifo) over gap>=1 queries, from the RECORDED TUNE hits (tune/seed1/omega{2,8,32}.jsonl.gz 'hits', references.json fifo/factfiller; no TUNE document regenerated): omega2=-0.041077441077441004 omega8=-0.6208754208754211 omega32=-0.912457912457913; highest is omega=2, no tie; equal to ledger seed1.omega{w}.tune_cap.point and selection.json cap_point"
+    },
+    {
+      "claim": "seed 2: sha256 of the selected frozen phi",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what phi --seed 2",
+      "expected": "0778f646dde62c50919c590373479e9827f9c10497fd0fae452183c9881a93d4",
+      "observed": "0778f646dde62c50919c590373479e9827f9c10497fd0fae452183c9881a93d4",
+      "match": true,
+      "rc": 0,
+      "independent_path": "verifier's own state_sha of seed2/phi-selected.pt = 0778f646dde62c50919c590373479e9827f9c10497fd0fae452183c9881a93d4; identical state to seed2/phi-omega2-kconv.pt only; deploy.json .deploy.phi_sha256 and both R-C6 guard records match; selection.json hashes to selection.sha256 (b7b883f1...)"
+    }
+  ],
+  "extra_checks": [
+    {
+      "extra": true,
+      "claim": "seed 0: EVAL acc.all(psiR-2a) - acc.all(fifo), paired per-document bootstrap CI, run 2 seed_label vs delta_seed",
+      "command": "verifier scratch script (no harness import): psiR2a heldout/seed0/psiR2a.jsonl.gz vs ~/rsr-runs-archive/rsr-run2-run/runs/rsr-run2/heldout/seed0/fifo.jsonl.gz; answers with gap>=1; torch.Generator().manual_seed(20260927+0), randint(0,2048,(2000,2048)); type-7 quantiles 0.025/0.975; delta from b2-psi-probe-fit ledger ckpt3000.seed0.decisions.delta['0.9']",
+      "expected": "-0.059757 -0.063592 -0.055821 LOSS",
+      "observed": "point -0.05975748289435445 lo -0.06359246122824427 hi -0.055820889524661896 delta 0.03802185560447721 label LOSS (acc psiR2a 0.7152141177713788, fifo 0.7749716006657332, n_docs 2048, n_answers 37853)",
+      "match": true
+    },
+    {
+      "extra": true,
+      "claim": "seed 1: EVAL acc.all(psiR-2a) - acc.all(fifo), paired per-document bootstrap CI, run 2 seed_label vs delta_seed",
+      "command": "as seed 0 with seed=1 (Generator seed 20260927+1, ckpt3000.seed1.decisions.delta['0.9'])",
+      "expected": "-0.031767 -0.035579 -0.028036 EQUIV",
+      "observed": "point -0.031766569844203896 lo -0.03557932644852174 hi -0.02803578196132468 delta 0.03675691427360389 label EQUIV (acc psiR2a 0.7347504621072088, fifo 0.7665170319514127, n_docs 2048, n_answers 37870)",
+      "match": true
+    },
+    {
+      "extra": true,
+      "claim": "seed 2: EVAL acc.all(psiR-2a) - acc.all(fifo), paired per-document bootstrap CI, run 2 seed_label vs delta_seed",
+      "command": "as seed 0 with seed=2 (Generator seed 20260927+2, ckpt3000.seed2.decisions.delta['0.9'])",
+      "expected": "-0.100618 -0.104698 -0.096712 LOSS",
+      "observed": "point -0.10061845861084673 lo -0.10469767967363264 hi -0.09671164889355406 delta 0.03185756551141167 label LOSS (acc psiR2a 0.7024791204144202, fifo 0.8030975790252669, n_docs 2048, n_answers 37836)",
+      "match": true
+    },
+    {
+      "extra": true,
+      "claim": "2a->2b gate input: WIN on all 3 seeds",
+      "command": "the three re-derived labels above",
+      "expected": "as re-derived",
+      "observed": "LOSS / EQUIV / LOSS -- no seed is WIN",
+      "match": true
+    },
+    {
+      "extra": true,
+      "claim": "selection recomputable from the ledger's TUNE caps (highest cap point, ties to smaller omega), all seeds",
+      "command": "read ledger seed{s}.omega{2,8,32}.tune_cap.point; apply rule",
+      "expected": "omega_s=2 on seeds 0,1,2 (ledger seed{s}.selection.omega_s)",
+      "observed": "seed0 2:-0.30836120401337724 8:-1.1892976588628752 32:-1.4468227424749152 -> 2; seed1 2:-0.041077441077441004 8:-0.6208754208754211 32:-0.912457912457913 -> 2; seed2 2:-0.5033200531208497 8:-1.0332005312084989 32:-1.1394422310756966 -> 2; no ties; the verifier's own pooled recomputation from recorded TUNE hits gives the same 9 points to full precision",
+      "match": true
+    },
+    {
+      "extra": true,
+      "claim": "input integrity: run 2 FIFO EVAL records and delta source",
+      "command": "shasum -a 256 vs ~/rsr-runs-archive/MANIFEST.sha256",
+      "expected": "manifest shas",
+      "observed": "fifo seed0 54b1aa233779618894c422eb7ce9b73544ffff3b855d06a708b0f607d0d44ba0, seed1 bee104db82a92375bcd72622950546d2ea5d86881910b660a5cefe9e4db51586, seed2 c55745c14d32942c739df274dbfa3b71daae737915c25df71c242ddbb1829537 -- all equal the manifest, and equal the .worktrees/rsr-run2-run copies the harness reads; b2-psi-probe-fit/ledger.json 413da4d6b3e46007bdbe2c191005c48c8d03563b3371a9b6046f24aee266d327 equals its manifest entry; psiR2a and fifo record document order identical, 2048 unique ids = exactly [995000, 997048), none in EVAL2 [984000, 986048); answer denominators identical per document",
+      "match": true
+    },
+    {
+      "extra": true,
+      "claim": "ledger provenance dirty:true, as scripts/ledger.py git_provenance computes it",
+      "command": "/opt/homebrew/bin/git status --porcelain / --untracked-files=all / diff --stat 8b0d14f in .worktrees/run3-2a-d (read-only)",
+      "expected": "explained",
+      "observed": "git_provenance sets dirty = bool(git status --porcelain output), which counts untracked files. In run3-2a-d (HEAD 8b0d14f09e47360c1e2105498a67bb0e3c705b72) the only porcelain entry is '?? runs/rsr-run3-2a/' (the run's own non-ignored outputs: ledger/manifest/claims/RESULTS/launch/seed*/*.json). No tracked file differs from 8b0d14f, nothing staged, no untracked path outside runs/rsr-run3-2a/. Ledger.write() separately refuses over uncommitted src/ scripts/ experiments/ paths and did not refuse. dirty:true is the run's own output directory, not uncommitted code (checked as of verification time).",
+      "match": true
+    }
+  ],
+  "verifier_sha": "8b0d14f09e47360c1e2105498a67bb0e3c705b72"
+}
