@@ -344,6 +344,27 @@ def fit_loop(
 # --------------------------------------------------------------------------- #
 
 
+def rank_fit_tensors(blob: dict, docs: list) -> dict:
+    """offline-psi's ``fit_tensors`` on the ``cf_all`` cells, with the mask cut to the
+    cells whose G is FINITE (§2.1's "finite G"; review F3): offline-psi's mask drops NaN
+    only, and the returns' ``nan_to_num`` turns a ±inf Delta into a huge finite G.
+    R-C2 keeps offline-psi's own tensors (it reproduces offline-psi's L_MC)."""
+    OP = harness()["OP"]
+    t = OP.fit_tensors(blob, docs, ARM)
+    fin = torch.stack([finite_return_cells(blob["Delta"][d.doc_id]) for d in docs])
+    excluded = int((t["mask"] & ~fin).sum())
+    return {**t, "mask": t["mask"] & fin, "n_nonfinite_excluded": excluded}
+
+
+def finite_return_cells(D: torch.Tensor) -> torch.Tensor:
+    """``[S, S]`` True where ``G[t][i] = sum_k gamma^k D[t+k][i]`` draws on no infinite
+    Delta: lookahead-room's ``discounted_returns`` ``nan_to_num``'s ±inf into a huge
+    finite number, so finiteness is read off Delta (reverse cumulative OR per column)."""
+    bad = torch.isinf(D).to(torch.int8)
+    suffix = torch.flip(torch.cummax(torch.flip(bad, [0]), 0).values, [0])
+    return suffix == 0
+
+
 def rank_overrides(base: dict, omega: float) -> dict:
     """Run 2's psiC overrides plus §0.3's labelled switch (the label gains
     ``loss=rank,rank_k=3,rank_omega=<omega>``)."""
@@ -647,11 +668,12 @@ def fit_seed_omega(
             "no_model_grad": C.no_grads(model),
             "ok": bool(only["ok"]) and isinstance(head, BilinearValueHead),
         }
-        data = {
-            "s": inp["S"],
-            "c": inp["C"],
-            **OP.fit_tensors(inp["blob"], inp["docs"], ARM),
+        ft = rank_fit_tensors(inp["blob"], inp["docs"])
+        doc["pairs"] = {
+            "set": "cf_all cells with finite G (§2.1; review F3)",
+            "n_nonfinite_excluded": ft.pop("n_nonfinite_excluded"),
         }
+        data = {"s": inp["S"], "c": inp["C"], **ft}
         r = fit_loop(
             head, opt, data, inp["train"], seed=seed, loss=LOSS_RANK, omega=omega, cap=cap
         )
