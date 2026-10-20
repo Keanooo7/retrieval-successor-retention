@@ -247,3 +247,59 @@ def test_seal_guards_1c_document_paths():
         with pytest.raises(cm.SealedRange):
             C.LR.documents(1, e_set=(lo, lo + 1))
     assert not cm.seal_leaks()
+
+
+def _bs(paths, *, errors=(), rc=0, n_refs=3, allowed=()):
+    hits = [
+        {
+            "path": p,
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "allowed": p in allowed,
+            "refs": ["refs/heads/x"],
+        }
+        for p in paths
+    ]
+    return {
+        "for_each_ref_rc": rc,
+        "n_refs": n_refs,
+        "errors": list(errors),
+        "hits": hits,
+        "new_hits": [h for h in hits if not h["allowed"]],
+        "ok": False,
+    }
+
+
+def test_gc1e_allows_only_prereg_citations():
+    """Amendment G-C1e: a citation in a committed experiments/*/PREREG*.md is allowed;
+    any other hit (code, test, run artefact, other document) is still new: exit 3."""
+    ok = C.apply_gc1e(
+        _bs(
+            [
+                "experiments/rsr-run3-ranking/PREREG.md",
+                "experiments/post-fails-controls/PREREG.md",
+            ],
+            allowed=("experiments/post-fails-controls/PREREG.md",),
+        )
+    )
+    assert ok["ok"] and ok["n_new_hits"] == 0
+    assert [h["path"] for h in ok["allowed_by_G-C1e"]] == [
+        "experiments/rsr-run3-ranking/PREREG.md"
+    ]
+    assert C.apply_gc1e(_bs(["experiments/x/PREREG-amend.md"]))["ok"]
+    for bad in (
+        "experiments/rsr-run3-ranking/run.py",
+        "tests/test_x.py",
+        "runs/x/ledger.json",
+        "docs/PLAN.md",
+        "experiments/x/RESULTS.md",
+        "experiments/a/b/PREREG.md",
+        "PREREG.md",
+        "experiments/x/notes-PREREG.md",
+    ):
+        r = C.apply_gc1e(_bs(["experiments/rsr-run3-ranking/PREREG.md", bad]))
+        assert not r["ok"] and [h["path"] for h in r["new_hits"]] == [bad], bad
+    assert not C.apply_gc1e(_bs([], errors=[{"ref": "r", "rc": 128}]))["ok"]
+    assert not C.apply_gc1e(_bs([], rc=1))["ok"]
+    assert not C.apply_gc1e(_bs([], n_refs=0))["ok"]

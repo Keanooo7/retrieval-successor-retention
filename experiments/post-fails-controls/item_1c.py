@@ -33,6 +33,7 @@ import importlib.util
 import json
 import math
 import random
+import re
 import subprocess
 import sys
 import time
@@ -192,8 +193,14 @@ class Globals:
             "G-C4.record_refused", self.cm.forbid_constants_record(), how="common"
         )
         if getattr(self.a, "branch_search", True):
-            bs = self.cm.branch_search()
-            self.led.note("G-C1.branch_search", bs, how="common.branch_search (§1.1)")
+            raw = self.cm.branch_search()
+            self.led.note("G-C1.branch_search", raw, how="common.branch_search (§1.1)")
+            bs = apply_gc1e(raw)
+            self.led.note(
+                "G-C1.branch_search.amended",
+                {k: bs[k] for k in ("ok", "n_new_hits", "new_hits", "allowed_by_G-C1e")},
+                how="item_1c.py::apply_gc1e (PREREG Amendment G-C1e, b82a81b)",
+            )
             if not bs["ok"]:
                 self.failed.append("G-C1(e): branch search new hit or git failure")
         else:
@@ -243,6 +250,35 @@ class Globals:
         if sorted(seeds_run) != list(SEEDS):
             self.failed.append(f"G-C5: seeds run {sorted(seeds_run)} != {list(SEEDS)}")
         return self.failed
+
+
+#: PREREG Amendment G-C1e (b82a81b): a hit is allowed only when it is a citation in a
+#: committed pre-registration file, ``experiments/<dir>/PREREG*.md``.
+GC1E_PREREG = re.compile(r"^experiments/[^/]+/PREREG[^/]*\.md$")
+
+
+def apply_gc1e(bs: dict) -> dict:
+    """G-C1(e) under Amendment G-C1e: every hit common.py's search did not already
+    allow is allowed only if its path is a committed ``experiments/*/PREREG*.md``;
+    every other hit stays new (exit 3). A git error is never a pass. Returns a copy
+    with ``new_hits``, ``n_new_hits``, ``allowed_by_G-C1e`` and ``ok`` recomputed."""
+    out = dict(bs)
+    hits = [dict(h) for h in bs.get("hits", [])]
+    allowed_now, new = [], []
+    for h in hits:
+        if h.get("allowed"):
+            continue
+        if GC1E_PREREG.match(str(h.get("path", ""))):
+            h["allowed_by"] = "Amendment G-C1e: a citation in a committed PREREG file"
+            allowed_now.append(h)
+        else:
+            new.append(h)
+    out["allowed_by_G-C1e"] = allowed_now
+    out["new_hits"] = new
+    out["n_new_hits"] = len(new)
+    git_ok = bs.get("for_each_ref_rc") == 0 and not bs.get("errors")
+    out["ok"] = bool(git_ok and not new and bs.get("n_refs", 0) > 0)
+    return out
 
 
 def add_global_args(ap) -> None:
