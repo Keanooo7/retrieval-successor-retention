@@ -1,0 +1,55 @@
+{
+ "status": "ok",
+ "seed": "9bada9e1c2871ce351602362ab18b49a34e95690aca5942ed40f73a90739d7ef",
+ "draw": {
+  "rule": "orchestrator.verify.draw_indices: sorted(random.Random(int(sha256('expire-span-referendum'),16)).sample(range(11), 3)); claim 0 (the class) added per the spawn prompt",
+  "drawn": [4, 9, 10],
+  "checked": [0, 4, 9, 10],
+  "note": "claims.json (sha256 e825020f...0eba5) is [{id, claim}] without the orchestrator schema's command/expected keys, so `orchestrator.verify draw` refuses it (load_claims raises); the draw was computed with the same draw_indices rule by hand"
+ },
+ "claims": [
+  {
+   "claim": "class == SUPERSEDES under §7.2 with δ {'0': 0.038022, '1': 0.036757, '2': 0.031858}",
+   "command": "OMP_NUM_THREADS=1 .venv/bin/python runs/expire-span-referendum/verify/recompute.py  (own numpy over eval/seed*/es.jsonl.gz and run 1's heldout/seed*/{psiC,fifo}.jsonl.gz; §7.2 order SUPERSEDES, LOSES, TIES, MIXED; δ typed from PREREG A1.1)",
+   "expected": "SUPERSEDES; ES-psiC lower CI > 0 on seeds 0, 1, 2",
+   "observed": "SUPERSEDES by both bootstraps. ES-psiC points (exact rationals from per-doc records) 7992/37853=0.21113253903257334, 689/3787=0.18193820966464225, 693/4204=0.16484300666032348 == ledger floats exactly. Replay of run 1's weights (torch.Generator(20260927+s).randint(0,2048,(2000,2048)), numpy statistic): CI s0 [0.20658302004607335, 0.21579348754498748], s1 [0.17758278679159756, 0.18628043386142393], s2 [0.16024588048256871, 0.1691977136541796] == ledger bit-exact. Own numpy bootstrap (4000 reps, seed 777001): s0 [0.20668, 0.21555], s1 [0.17774, 0.18631], s2 [0.16050, 0.16913]; max |own-ledger|/sd = 0.105 (< 0.25). All three lower bounds > 0 (also > δ_s, so not TIES-ambiguous). ledger delta == A1.1 table exactly. Docs paired: es/psiC/fifo doc ids identical and == range(995000, 997048) at every seed; per-doc answer counts identical across arms.",
+   "match": true
+  },
+  {
+   "claim": "seed 0 acc.all.es_minus_fifo point 0.005838374765540388 CI [0.0037998734406442664, 0.007836030097529463]",
+   "command": "OMP_NUM_THREADS=1 .venv/bin/python runs/expire-span-referendum/verify/recompute.py  -> ['0']['es_minus_fifo']",
+   "expected": "point 0.005838374765540388 (exact); CI within 0.25*sd of [0.0037998734406442664, 0.007836030097529463], or exact under replayed weights",
+   "observed": "point 221/37853 = 0.005838374765540388 (exact float equality). Replayed run-1 weights: CI [0.0037998734406442664, 0.007836030097529463] (bit-exact). Own numpy bootstrap: [0.00365577151869787, 0.007863881675579106], |diff|/sd = 0.139 / 0.027 (ledger sd 0.0010404461734073453).",
+   "match": true
+  },
+  {
+   "claim": "run 1 psiC/fifo passes read by finalize equal run 1's heldout files (sha256 in ledger) and run 1's own acc.all levels for psiC and fifo",
+   "command": "shasum -a 256 .worktrees/rsr-run1-run/runs/rsr-run1/heldout/seed{0,1,2}/{psiC,fifo}.jsonl.gz; OMP_NUM_THREADS=1 .venv/bin/python runs/expire-span-referendum/verify/recompute.py  -> level_psiC / level_fifo vs run 1 ledger rows seed<s>.heldout.accuracy.all.{psiC,fifo}",
+   "expected": "file sha256 == ES ledger seeds.<s>.sha256.{psiC,fifo}; ES ledger acc.all.{psiC,fifo} == run 1 ledger's",
+   "observed": "sha256 now: s0 psiC abd3a621..3c08 fifo b0538750..aa1e; s1 psiC 8f3accc9..d2c2 fifo 819bd8af..0413; s2 psiC a6bf4b10..0203 fifo 3a7ad2ce..2cb5 -- all six == ES ledger. ES ledger acc.all.{psiC,fifo} dicts == run 1 ledger seed<s>.heldout.accuracy.all.{psiC,fifo} (all six, every field). Own recompute from the files: points s0 psiC 0.5696774363987003 fifo 0.7749716006657332, s1 0.5386057565355162 / 0.7665170319514127, s2 0.6347658314832435 / 0.8030975790252669, n 37853/37870/37836 == run 1 exactly; replayed CIs == run 1 bit-exact. (Run 1 records no per-file sha256 of its own; the files themselves are the reference.)",
+   "match": true
+  },
+  {
+   "claim": "control A2-C: A2-C: 18/18 jobs BIT-IDENTICAL",
+   "command": "OMP_NUM_THREADS=1 .venv/bin/python runs/expire-span-referendum/verify/a2c.py <18 jobs: L{16,32,48}-k1e-{2,3,4}/seed{0,2}>  (re-run vs .worktrees/es-referendum-run/runs/expire-span-referendum)",
+   "expected": "18/18 BIT-IDENTICAL on A2.3 fields at steps 0-2999 and step-3000 w, b",
+   "observed": "18/18 (all, not a sample of 3): steps 0-2999 present in both, 3000 beats each; every beat field except wall-clock timing (elapsed_s, step_s, sent_per_s) equal at every step -- a superset of A2.3's five fields; first differing step None. Step-3000 checkpoints: policy weight/bias torch.equal; model, optimizer, policy, stream, step, format_version and torch CPU RNG state bitwise equal. Only differences: Python `random` and numpy global RNG states in ckpt['rng'], which also differ between seed 0 and seed 2 within the re-run (unseeded process-entropy globals; no training quantity reads them, as 3000 identical beats show). Not a difference A2-C measures.",
+   "match": true
+  }
+ ],
+ "provenance_checks": {
+  "launch_git": "run_sha 99646cb786fef3e7b8acb9add63e7ce94a92497f, dirty false, launched 2026-10-07T00:14:07Z; run worktree HEAD 99646cb, tracked tree clean; fix 35eb103 is an ancestor of HEAD",
+  "prereg_order": "Amendment 1 8ed8cbb (01:18) and Amendment 2 13fc843 (16:34, PREREG.md only) both committed before launch (17:14 local)",
+  "es_eval_sha256": "eval/seed{0,1,2}/es.jsonl.gz sha256 f6a3d97f..74e1, d6477679..8db2, 6ded09f4..a74a == ledger seeds.<s>.sha256.es == eval.json records_sha256 == claim 8",
+  "eval_read_once": "exactly 3 EVAL_READ markers under the a2 output root (eval/seed{0,1,2}), each one line naming config L48-k1e-2 (== selection.json selected); none under the original root .worktrees/es-referendum-run; no other config has EVAL output; markers 23:49:04, after selection.json 23:48:53; evaluate/finalize/select/validate rc files all 0",
+  "selection_supplementary": "not drawn; recomputed anyway from val/seed*/<cfg>.jsonl.gz (doc ids == range(994000, 994512)): exact-rational means equal selection.json mean_exact for all 9 configs; unique argmax L48-k1e-2 (0.7649603004787321), margin 0.02385 over L32-k1e-3; no tie"
+ },
+ "artefact_sha256": {
+  "claims.json": "e825020ff87ac6f70edda25d58f7fff1a2d7977899d53064ec454f5c7ce0eba5",
+  "ledger.json": "41d0213ea835e5cd0816558dd299e771e48765a72e3d00653f1b71a5e87a8e06",
+  "selection.json": "71aeb3b0cb010eb62a16d74b549540746966870c1a032dd653b405e9409fc090",
+  "launch-git.json": "d4744939a7831d959b6a93228d422a0cf759bb69ef45269cc0559f0b1468ef77"
+ },
+ "not_read": "runs/expire-span-referendum/RESULTS.md and runs/es-ref-a2c_control.py were not read; no run.py imported; no training or EVAL generation run",
+ "verifier_sha": "99646cb786fef3e7b8acb9add63e7ce94a92497f"
+}

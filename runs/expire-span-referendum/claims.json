@@ -1,0 +1,46 @@
+[
+  {
+    "id": 0,
+    "claim": "class == SUPERSEDES under \u00a77.2 with \u03b4 {'0': 0.038022, '1': 0.036757, '2': 0.031858}"
+  },
+  {
+    "id": 1,
+    "claim": "seed 0 acc.all.es_minus_psiC point 0.21113253903257334 CI [0.20658302004607335, 0.21579348754498748]"
+  },
+  {
+    "id": 2,
+    "claim": "seed 1 acc.all.es_minus_psiC point 0.18193820966464225 CI [0.17758278679159756, 0.18628043386142393]"
+  },
+  {
+    "id": 3,
+    "claim": "seed 2 acc.all.es_minus_psiC point 0.16484300666032348 CI [0.16024588048256871, 0.1691977136541796]"
+  },
+  {
+    "id": 4,
+    "claim": "seed 0 acc.all.es_minus_fifo point 0.005838374765540388 CI [0.0037998734406442664, 0.007836030097529463]"
+  },
+  {
+    "id": 5,
+    "claim": "seed 1 acc.all.es_minus_fifo point -0.04597306575125426 CI [-0.0485069795208777, -0.04340254182841155]"
+  },
+  {
+    "id": 6,
+    "claim": "seed 2 acc.all.es_minus_fifo point -0.0034887408816999255 CI [-0.006313933627345239, -0.0007401980303362236]"
+  },
+  {
+    "id": 7,
+    "claim": "selection: L48-k1e-2 is the unique max of mean VAL all-query accuracy over seeds 0-2 (table in selection.json)"
+  },
+  {
+    "id": 8,
+    "claim": "ES EVAL records sha256 per seed: {\"0\": \"f6a3d97f25c520c84091562002e719c489d5824ba53b484f2ad892ff12d194e1\", \"1\": \"d647767927b7c3655a8d473fdef990c534315ed461271c1a109d466dcd3f8db2\", \"2\": \"6ded09f44abdefd90d68c9dfcd2c8d904f7f1e8dc07c6f934078b4425ab5a74a\"}"
+  },
+  {
+    "id": 9,
+    "claim": "run 1 psiC/fifo passes read by finalize equal run 1's heldout files (sha256 in ledger) and run 1's own acc.all levels for psiC and fifo"
+  },
+  {
+    "id": 10,
+    "claim": "control A2-C: A2-C: 18/18 jobs BIT-IDENTICAL"
+  }
+]
