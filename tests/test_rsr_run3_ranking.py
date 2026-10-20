@@ -297,8 +297,25 @@ def test_t1b_twenty_steps_end_to_end_identical_to_728a42f(tmp_path):
         text=True,
     )
     assert ar.returncode == 0, ar.stderr
-    R2 = _load("_run3_t1b_r2", ROOT / "experiments/rsr-run2/run.py")
+    # run 2's module wraps its private run-1 instance's cli_argv at import; a second
+    # run-2 instance in this process would reuse a wrapped one (phase 1's launch-attempt
+    # lesson), so load ours against a fresh run 1 and restore sys.modules after.
+    saved = sys.modules.pop("_rsr_run2_r1", None)
+    try:
+        R2 = _load("_run3_t1b_r2", ROOT / "experiments/rsr-run2/run.py")
+    finally:
+        if saved is not None:
+            sys.modules["_rsr_run2_r1"] = saved
+        else:
+            sys.modules.pop("_rsr_run2_r1", None)
     R1 = R2.R1
+    probe = R2.cli_argv(
+        R1.prereg_config(0, 20),
+        "psiC",
+        R1.OwnerValues(0.9, 0.01, 20, "eval", (0,)),
+        tmp_path,
+    )
+    assert probe.count("target=loo_resample") == 1
     owner = R1.OwnerValues(
         gamma=0.9, phi_weight_decay=0.01, iters=20, o5="eval", seeds=(0,)
     )

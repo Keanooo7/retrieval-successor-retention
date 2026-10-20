@@ -184,6 +184,12 @@ def test_is_reduction_detects_a_single_flipped_switch():
         # term -- the reduction runs with observe off -- but a field of RSRConfig, so
         # it is enumerated and its flip must break the equality like any other.
         "target": "loo_resample",
+        # PREREG rsr-run3-ranking §0.3 (2026-10-20): the retention-loss switch. Not an
+        # eviction-score term either; its off values ("mc", None, None) are in
+        # REDUCTION_SWITCHES and each flip must break the equality.
+        "loss": "rank",
+        "rank_k": 3,
+        "rank_omega": 8.0,
     }
     assert set(flips) == set(REDUCTION_SWITCHES), "a switch has no flip case here"
     for name, value in flips.items():
