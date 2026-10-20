@@ -1,0 +1,495 @@
+{
+  "run_id": "post-fails-controls-1d-smoke",
+  "cycle": null,
+  "question": "Is FIFO's model-free strength a quirk of the question-spacing mix (PREREG \u00a76)?",
+  "started_utc": "2026-10-20T07:18:41Z",
+  "provenance": {
+    "git_sha": "d1c021aa993f831f19480765a4e753a48525876a",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0
+  ],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "did_not_run",
+  "config_hash": "4ce008cf0b48ef6e5ccbf710918098179ddbe4ce8f73d4882130c45da64eaaad",
+  "manifest_written_utc": "2026-10-20T07:18:41Z",
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1bcde/.venv/bin/python experiments/post-fails-controls/run.py 1d --seeds 0 --limit 256 --run-id post-fails-controls-1d-smoke",
+      "entry_point": "experiments/post-fails-controls/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 3,
+      "note": "its exit code is the item's",
+      "at_utc": "2026-10-20T07:21:01Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "G-C1.install",
+      "kind": "observation",
+      "value": {
+        "installed": true,
+        "ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "rebound_now": [
+          "rsr.train.loop._generate_document",
+          "rsr.train.loop.generate",
+          "_offline_psi_r1._generate_document",
+          "_diag_r1._generate_document",
+          "_pfc_e0d._generate_document",
+          "_pfc_e0d.generate"
+        ]
+      },
+      "how": "common.install_seal"
+    },
+    {
+      "key": "G-C4.record_refused",
+      "kind": "observation",
+      "value": {
+        "replaced": [
+          "rsr.constants.record",
+          "rsr.constants.REGISTRY.record"
+        ],
+        "ok": true
+      },
+      "how": "common"
+    },
+    {
+      "key": "G-C1.branch_search",
+      "kind": "observation",
+      "value": {
+        "git": "/opt/homebrew/bin/git",
+        "pattern": "(984|985|986|997)_?[0-9]{3}",
+        "token_regex": "(?<![0-9A-Za-z_.])([0-9]{1,3}(?:_?[0-9]{3})+)(?![0-9A-Za-z_])",
+        "allowed": [
+          "^experiments/post-fails-controls/PREREG\\.md$",
+          "^experiments/post-fails-controls/RESULTS[^/]*\\.md$",
+          "^runs/post-fails-controls-[^/]+/.*\\.json$",
+          "^runs/post-fails-controls-[^/]+/RESULTS[^/]*\\.md$"
+        ],
+        "for_each_ref_rc": 0,
+        "n_refs": 111,
+        "refs": [
+          "refs/heads/agent-f/canary-audit-status",
+          "refs/heads/build/pfc-1a",
+          "refs/heads/build/pfc-1bcde",
+          "refs/heads/c0-fix",
+          "refs/heads/c0-impl",
+          "refs/heads/c0-merge",
+          "refs/heads/clean/2026-09-22",
+          "refs/heads/diag/offline-psi-converge",
+          "refs/heads/diag/psi-ls-capacity",
+          "refs/heads/diag/run2-vs-random",
+          "refs/heads/docs/2026-09-27-state",
+          "refs/heads/docs/adr-leading-edge",
+          "refs/heads/docs/adr-learning-path",
+          "refs/heads/docs/claims-register",
+          "refs/heads/docs/for-brendan-2026-09-22",
+          "refs/heads/docs/for-brendan-2026-09-24",
+          "refs/heads/docs/for-brendan-2026-09-25",
+          "refs/heads/docs/prior-art-eviction-signals",
+          "refs/heads/docs/readme-refresh-2026-09-27",
+          "refs/heads/docs/record-corrections-0930",
+          "refs/heads/docs/record-fixes-2026-09-24",
+          "refs/heads/docs/research-2026-09-25",
+          "refs/heads/docs/verified-results-0930",
+          "refs/heads/eng/battery-union",
+          "refs/heads/eng/battery-union-annotated",
+          "refs/heads/eng/i1-isolation",
+          "refs/heads/eng/i2-sharding",
+          "refs/heads/eng/i6-env-record",
+          "refs/heads/eng/liveness-wiring",
+          "refs/heads/eng/loo",
+          "refs/heads/eng/t5b-review-gate",
+          "refs/heads/exp/carry-forward",
+          "refs/heads/exp/corpus-size-curve",
+          "refs/heads/exp/e0e",
+          "refs/heads/exp/fresh-escape",
+          "refs/heads/exp/fresh-stream",
+          "refs/heads/exp/lookahead-room",
+          "refs/heads/exp/retention-readability",
+          "refs/heads/exp/scaffold-dose",
+          "refs/heads/exp/scaffold-timing",
+          "refs/heads/feat/expire-span",
+          "refs/heads/feat/expire-span-arm",
+          "refs/heads/feat/rsr-run1-harness",
+          "refs/heads/feat/rsr-run1-ready",
+          "refs/heads/feat/rsr-run2",
+          "refs/heads/feat/rsr-slice1",
+          "refs/heads/fix/e0d-minors",
+          "refs/heads/fix/expire-span-nan-backward",
+          "refs/heads/fix/followups-1001",
+          "refs/heads/fix/followups-1001b",
+          "refs/heads/fix/followups-1001c",
+          "refs/heads/fix/night-0930-couplings",
+          "refs/heads/fix/on-write-slot-index",
+          "refs/heads/fix/review-minors-0930",
+          "refs/heads/fix/t-warm-units",
+          "refs/heads/infra/2026-09-22",
+          "refs/heads/integ/2026-09-26",
+          "refs/heads/integ/2026-09-26-final",
+          "refs/heads/integ/2026-10-02",
+          "refs/heads/integ/2026-10-19",
+          "refs/heads/main",
+          "refs/heads/night/2026-09-27",
+          "refs/heads/night/2026-09-30",
+          "refs/heads/owner/2026-09-24",
+          "refs/heads/owner/2026-10-07",
+          "refs/heads/prereg/offline-psi",
+          "refs/heads/prereg/post-fails-controls",
+          "refs/heads/prereg/rsr-run1",
+          "refs/heads/rc/retrieval-curve-fix",
+          "refs/heads/review/expire-span-arm-087a486",
+          "refs/heads/review/expire-span-nan-a992d7c",
+          "refs/heads/review/offline-psi-5e8d9ce",
+          "refs/heads/review/offline-psi-8418741",
+          "refs/heads/review/psi-ls-capacity-90c2720",
+          "refs/heads/review/rsr-run1-harness-63f930d",
+          "refs/heads/review/rsr-run2-728a42f",
+          "refs/heads/review/run1-ready-c02b16d",
+          "refs/heads/run/b0-ceilings",
+          "refs/heads/run/b1-beta-inertness",
+          "refs/heads/run/b2-psi-probe",
+          "refs/heads/run/b5-convergence",
+          "refs/heads/run/capacity-c0-2026-09-24",
+          "refs/heads/run/cf-ceiling",
+          "refs/heads/run/e0d",
+          "refs/heads/run/expire-span-referendum",
+          "refs/heads/run/expire-span-referendum-a2",
+          "refs/heads/run/gamma-ceiling",
+          "refs/heads/run/i2-sharding-measure",
+          "refs/heads/run/i5-flake",
+          "refs/heads/run/newcomer-bakeoff",
+          "refs/heads/run/retrieval-curve-2026-09-24",
+          "refs/heads/run/rsr-run1",
+          "refs/heads/run/rsr-run2",
+          "refs/heads/superseded/night-2026-09-30-bad-merge-2807314",
+          "refs/heads/verify/cf-ceiling",
+          "refs/heads/verify/expire-span-referendum",
+          "refs/heads/verify/gamma-ceiling",
+          "refs/heads/verify/offline-psi",
+          "refs/heads/verify/offline-psi-converge",
+          "refs/heads/verify/psi-ls-capacity",
+          "refs/heads/verify/rsr-run1",
+          "refs/heads/verify/rsr-run2",
+          "refs/heads/worktree-agent-a0c1a6bfe6bd8ffb3",
+          "refs/heads/worktree-agent-a140dcf9d07096cfd",
+          "refs/heads/worktree-agent-a26b66d99869fff5a",
+          "refs/heads/worktree-agent-a4d6a3274c8a26b45",
+          "refs/heads/worktree-agent-a585f6381e85b2a38",
+          "refs/heads/worktree-agent-a8c9f42c25d93f9dc",
+          "refs/heads/worktree-agent-a9cc72adc5b85cdd4",
+          "refs/heads/worktree-agent-ac675d478a21a9f2f",
+          "refs/heads/worktree-agent-ae2e86e37c5eb57da"
+        ],
+        "errors": [],
+        "n_hits": 11,
+        "hits": [
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 16,
+            "excerpt": "TUNE: \"[997200, 997712)\"",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 17,
+            "excerpt": "EVAL2: \"[984000, 986048)\"",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 64,
+            "excerpt": "| **TUNE** (phase 2a selection) | `[997200, 997712)` | 512 per seed | phase 2a |",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 65,
+            "excerpt": "| **EVAL2** (phase 2b headline) | `[984000, 986048)` | 2048 per seed | phase 2b |",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 80,
+            "excerpt": "`[984000, 986048)` lies in the gap between B2's claimed EVAL `[940000, 980000)` and the",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 488,
+            "excerpt": "1. **EVAL2 moved** to `[984000, 986048)`: the PM's candidate collides with generated ids (\u00a71).",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 524,
+            "excerpt": "3. **EVAL2 = `[984000, 986048)` is accepted.** Beyond the drafter's branch search, the PM also",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 526,
+            "excerpt": "- plain-text files (json/jsonl/log/md/txt/csv) for any integer in `[984000, 986048)` or",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 527,
+            "excerpt": "`[997200, 997712)`: no hit;",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a-smoke/measure-seed0.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 36,
+            "excerpt": "997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a-smoke/measure-seed0.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 40,
+            "excerpt": "984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a"
+            ]
+          }
+        ],
+        "n_new_hits": 0,
+        "new_hits": [],
+        "ok": true
+      },
+      "how": "common.branch_search (\u00a71.1)"
+    },
+    {
+      "key": "G-C3.suite",
+      "kind": "observation",
+      "value": null,
+      "how": "no suite log given: NOT a pass"
+    },
+    {
+      "key": "D-C2",
+      "kind": "observation",
+      "value": {
+        "n": 30,
+        "bad": [],
+        "ok": true
+      },
+      "how": "item_1d.py::d_c2"
+    },
+    {
+      "key": "G-C2.pins_end",
+      "kind": "observation",
+      "value": {
+        "n_files": 0,
+        "ok": true
+      },
+      "how": "common.Pins.recheck"
+    },
+    {
+      "key": "G-C1.census",
+      "kind": "observation",
+      "value": {
+        "per_seed": {
+          "0": {
+            "U_E": {
+              "range": [
+                64,
+                1088
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "U_P": {
+              "range": [
+                4096,
+                4160
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "EVAL": {
+              "range": [
+                995000,
+                997048
+              ],
+              "count": 256,
+              "min": 995000,
+              "max": 995255
+            },
+            "TUNE": {
+              "range": [
+                997200,
+                997712
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "EVAL2": {
+              "range": [
+                984000,
+                986048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "other": {
+              "count": 0,
+              "min": null,
+              "max": null
+            }
+          }
+        },
+        "sealed_ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "n_sealed_generated": 0,
+        "refused_calls": [],
+        "leaks": [],
+        "ok": true
+      },
+      "how": "common.seal_census (ids by range)"
+    },
+    {
+      "key": "G-C4.no_grads",
+      "kind": "observation",
+      "value": [],
+      "how": "common.no_grads"
+    },
+    {
+      "key": "seed0.controls",
+      "kind": "observation",
+      "value": {
+        "D-C1": {
+          "ok": false,
+          "smoke": true
+        }
+      },
+      "how": "item_1d.py::measure_seed"
+    },
+    {
+      "key": "controls_failed",
+      "kind": "observation",
+      "value": [
+        "G-C3: no suite census given to this launch",
+        "G-C5: seeds run [0] != [0, 1, 2]",
+        "D-C1 seed0",
+        "smoke: --limit 256 (not the registered set)"
+      ],
+      "how": "item_1d.py::execute"
+    }
+  ],
+  "verdict": null,
+  "finished_utc": "2026-10-20T07:21:01Z"
+}

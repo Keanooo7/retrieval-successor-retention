@@ -1,0 +1,103 @@
+[
+ {
+  "claim": "1b exited 3; its labels are NOT READ (control failure(s): ['B-C5 seed0']); the reading rule is not applied (PREREG \u00a70)",
+  "command": ".venv/bin/python -c \"import json; d=json.load(open('runs/post-fails-controls-1b/ledger.json')); r={x['key']: x for x in d['rows']}; print(json.dumps({'exit_code': d['commands'][-1]['exit_code'], 'labels_read': r['labels_read']['value'], 'controls_failed': r['controls_failed']['value']}))\"",
+  "expected": {
+   "exit_code": 3,
+   "labels_read": false,
+   "controls_failed": [
+    "B-C5 seed0"
+   ]
+  }
+ },
+ {
+  "claim": "seed 0 probe.kind_s.lam0.0001.bal_acc.point = 0.9999041594786275",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 0 --what probe.kind_s.lam0.0001.bal_acc.point",
+  "expected": 0.9999041594786275
+ },
+ {
+  "claim": "seed 0 probe.kind_s.lam0.0001.bal_acc.lo = 0.9997105623044906",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 0 --what probe.kind_s.lam0.0001.bal_acc.lo",
+  "expected": 0.9997105623044906
+ },
+ {
+  "claim": "seed 0 probe.kind_s.lam0.0001.bal_acc.hi = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 0 --what probe.kind_s.lam0.0001.bal_acc.hi",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 0 probe.status_scx.lam0.0001.bal_acc.point = 0.6705920093391615",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 0 --what probe.status_scx.lam0.0001.bal_acc.point",
+  "expected": 0.6705920093391615
+ },
+ {
+  "claim": "seed 0 probe.status_scx.lam0.0001.bal_acc.lo = 0.6623289516319979",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 0 --what probe.status_scx.lam0.0001.bal_acc.lo",
+  "expected": 0.6623289516319979
+ },
+ {
+  "claim": "seed 0 probe.status_scx.lam0.0001.bal_acc.hi = 0.6784592538322931",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 0 --what probe.status_scx.lam0.0001.bal_acc.hi",
+  "expected": 0.6784592538322931
+ },
+ {
+  "claim": "seed 1 probe.kind_s.lam0.0001.bal_acc.point = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 1 --what probe.kind_s.lam0.0001.bal_acc.point",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 1 probe.kind_s.lam0.0001.bal_acc.lo = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 1 --what probe.kind_s.lam0.0001.bal_acc.lo",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 1 probe.kind_s.lam0.0001.bal_acc.hi = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 1 --what probe.kind_s.lam0.0001.bal_acc.hi",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 1 probe.status_scx.lam0.0001.bal_acc.point = 0.6817282857516427",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 1 --what probe.status_scx.lam0.0001.bal_acc.point",
+  "expected": 0.6817282857516427
+ },
+ {
+  "claim": "seed 1 probe.status_scx.lam0.0001.bal_acc.lo = 0.6728603480205281",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 1 --what probe.status_scx.lam0.0001.bal_acc.lo",
+  "expected": 0.6728603480205281
+ },
+ {
+  "claim": "seed 1 probe.status_scx.lam0.0001.bal_acc.hi = 0.6905054263783241",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 1 --what probe.status_scx.lam0.0001.bal_acc.hi",
+  "expected": 0.6905054263783241
+ },
+ {
+  "claim": "seed 2 probe.kind_s.lam0.0001.bal_acc.point = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 2 --what probe.kind_s.lam0.0001.bal_acc.point",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 2 probe.kind_s.lam0.0001.bal_acc.lo = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 2 --what probe.kind_s.lam0.0001.bal_acc.lo",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 2 probe.kind_s.lam0.0001.bal_acc.hi = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 2 --what probe.kind_s.lam0.0001.bal_acc.hi",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 2 probe.status_scx.lam0.0001.bal_acc.point = 0.6408287586238743",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 2 --what probe.status_scx.lam0.0001.bal_acc.point",
+  "expected": 0.6408287586238743
+ },
+ {
+  "claim": "seed 2 probe.status_scx.lam0.0001.bal_acc.lo = 0.6335262757418104",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 2 --what probe.status_scx.lam0.0001.bal_acc.lo",
+  "expected": 0.6335262757418104
+ },
+ {
+  "claim": "seed 2 probe.status_scx.lam0.0001.bal_acc.hi = 0.6480990179334519",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 2 --what probe.status_scx.lam0.0001.bal_acc.hi",
+  "expected": 0.6480990179334519
+ }
+]

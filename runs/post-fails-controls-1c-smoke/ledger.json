@@ -1,0 +1,422 @@
+{
+  "run_id": "post-fails-controls-1c-smoke",
+  "cycle": null,
+  "question": "Does 'attention ranks the top of the ranking well and the bottom badly' survive once demand is measured strictly after the decision step (PREREG \u00a75)?",
+  "started_utc": "2026-10-20T07:16:52Z",
+  "provenance": {
+    "git_sha": "d1c021aa993f831f19480765a4e753a48525876a",
+    "dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0
+  ],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "did_not_run",
+  "config_hash": "e090cc5234a9462d3571b0ff5004150b73d2aca77643a2a6e5640127c261e63c",
+  "manifest_written_utc": "2026-10-20T07:16:52Z",
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1bcde/.venv/bin/python experiments/post-fails-controls/run.py 1c --seeds 0 --limit 128 --no-branch-search --run-id post-fails-controls-1c-smoke",
+      "entry_point": "experiments/post-fails-controls/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 3,
+      "note": "its exit code is the item's",
+      "at_utc": "2026-10-20T07:17:52Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "G-C1.install",
+      "kind": "observation",
+      "value": {
+        "installed": true,
+        "ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "rebound_now": [
+          "rsr.train.loop._generate_document",
+          "rsr.train.loop.generate",
+          "_offline_psi_r1._generate_document",
+          "_diag_r1._generate_document",
+          "_pfc_e0d._generate_document",
+          "_pfc_e0d.generate"
+        ]
+      },
+      "how": "common.install_seal"
+    },
+    {
+      "key": "G-C4.record_refused",
+      "kind": "observation",
+      "value": {
+        "replaced": [
+          "rsr.constants.record",
+          "rsr.constants.REGISTRY.record"
+        ],
+        "ok": true
+      },
+      "how": "common"
+    },
+    {
+      "key": "G-C3.suite",
+      "kind": "observation",
+      "value": null,
+      "how": "no suite log given: NOT a pass"
+    },
+    {
+      "key": "G-C2.start",
+      "kind": "observation",
+      "value": {
+        "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "cwd": "/Users/keanooo7/retrieval-successor-retention",
+        "rc": 0,
+        "n_ok": 435,
+        "n_lines": 435,
+        "not_ok": [],
+        "stderr": "",
+        "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "ok": true
+      },
+      "how": "common.manifest_check (shasum -a 256 -c)"
+    },
+    {
+      "key": "C-C1.es_manifest.start",
+      "kind": "observation",
+      "value": {
+        "rc": 0,
+        "out": [
+          "L48-k1e-2-seed0-ckpt-003000.pt: OK",
+          "L48-k1e-2-seed1-ckpt-003000.pt: OK",
+          "L48-k1e-2-seed2-ckpt-003000.pt: OK"
+        ],
+        "ok": true
+      },
+      "how": "shasum -a 256 -c (ES pinned)"
+    },
+    {
+      "key": "C-C1.es_manifest.end",
+      "kind": "observation",
+      "value": {
+        "rc": 0,
+        "out": [
+          "L48-k1e-2-seed0-ckpt-003000.pt: OK",
+          "L48-k1e-2-seed1-ckpt-003000.pt: OK",
+          "L48-k1e-2-seed2-ckpt-003000.pt: OK"
+        ],
+        "ok": true
+      },
+      "how": "shasum -a 256 -c (ES pinned)"
+    },
+    {
+      "key": "G-C2.end",
+      "kind": "observation",
+      "value": {
+        "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "cwd": "/Users/keanooo7/retrieval-successor-retention",
+        "rc": 0,
+        "n_ok": 435,
+        "n_lines": 435,
+        "not_ok": [],
+        "stderr": "",
+        "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "ok": true
+      },
+      "how": "common.manifest_check (shasum -a 256 -c)"
+    },
+    {
+      "key": "G-C2.pins_end",
+      "kind": "observation",
+      "value": {
+        "files": {
+          "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt": {
+            "first": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+            "end": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+            "ok": true
+          }
+        },
+        "n_files": 1,
+        "ok": true
+      },
+      "how": "common.Pins.recheck"
+    },
+    {
+      "key": "G-C1.census",
+      "kind": "observation",
+      "value": {
+        "per_seed": {
+          "0": {
+            "U_E": {
+              "range": [
+                64,
+                1088
+              ],
+              "count": 1024,
+              "min": 64,
+              "max": 1087
+            },
+            "U_P": {
+              "range": [
+                4096,
+                4160
+              ],
+              "count": 64,
+              "min": 4096,
+              "max": 4159
+            },
+            "EVAL": {
+              "range": [
+                995000,
+                997048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "TUNE": {
+              "range": [
+                997200,
+                997712
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "EVAL2": {
+              "range": [
+                984000,
+                986048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "other": {
+              "count": 3072,
+              "min": 0,
+              "max": 4095
+            }
+          }
+        },
+        "sealed_ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "n_sealed_generated": 0,
+        "refused_calls": [],
+        "leaks": [],
+        "ok": true
+      },
+      "how": "common.seal_census (ids by range)"
+    },
+    {
+      "key": "G-C4.no_grads",
+      "kind": "observation",
+      "value": [],
+      "how": "common.no_grads"
+    },
+    {
+      "key": "seed0.controls",
+      "kind": "observation",
+      "value": {
+        "C-C1": {
+          "gestalt_delta": {
+            "gestalt_sha256": "211244f1469b90972e3b1d3b6635b3ee9eb095e78b932dc396bba64df3f5562b",
+            "gestalt_ok": true,
+            "delta_sha256": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+            "delta_ok": true,
+            "ok": true
+          },
+          "D_manifest": {
+            "ok": true
+          },
+          "psiC": {
+            "path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2/psiC/seed0/ckpt-003000.pt",
+            "sha256": "8dd4fccb91179674eca77be5d9e97738d9db83718f558d75a6557ad1b4e97a3e",
+            "overrides": {
+              "b_enabled": false,
+              "beta": 1.0,
+              "gamma": 0.9,
+              "nu": 0.0,
+              "shadow_enabled": false,
+              "target": "loo_resample"
+            },
+            "no_age": true,
+            "dtype": "torch.float32"
+          },
+          "op": {
+            "path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/offline-psi/runs/offline-psi/seed0/phi-cf_all.pt",
+            "file_sha256": "3d52084932c1701d109d017263bfd6e01648bbecf55a21562b4a469fd304b449",
+            "state_sha256": "7fb4c1005d982cda939112001899a13b6bd8ff7dc22ad2df72a161a32aa6e978",
+            "pin": "7fb4c1005d982cda939112001899a13b6bd8ff7dc22ad2df72a161a32aa6e978",
+            "ok": true
+          },
+          "ls": {
+            "path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/psi-ls-capacity/runs/psi-ls-capacity/seed0/phi-cf_all-ls.pt",
+            "sha256": "3a798de25e0ce92a7d5276b60f2b242149e52fcd4bd5606dafa20e7296f9f01a",
+            "pin": "3a798de25e0ce92a7d5276b60f2b242149e52fcd4bd5606dafa20e7296f9f01a",
+            "ok": true,
+            "dtype": "float64"
+          },
+          "es": {
+            "path": "/Users/keanooo7/rsr-substrate/2026-10-07-es-pinned/L48-k1e-2-seed0-ckpt-003000.pt",
+            "sha256": "f98411a469c4a00615adb74de6b892088dcdb45425e723f309e25705326ede6d"
+          },
+          "ok": true
+        },
+        "C-C2": {
+          "live_index_ok": true,
+          "D_ids_ok": true,
+          "D_bad": [],
+          "delta_ids_ok": true,
+          "delta_n_bad": 0,
+          "ok": true
+        },
+        "C-C3": {
+          "n_docs": 32,
+          "batch": 16,
+          "n_cells": 20224,
+          "n_bit_exact": 5953,
+          "max_abs_diff": 8.940696716308594e-08,
+          "max_abs_r": 0.35759374499320984,
+          "tolerance": 3.575937449932098e-07,
+          "problems": [],
+          "ok": true
+        },
+        "C-C4": {
+          "uniform_equals_chance": true,
+          "self_is_one": true,
+          "detail": [],
+          "ok": true
+        },
+        "C-C5": {
+          "cells": [
+            [
+              17,
+              42
+            ],
+            [
+              24,
+              26
+            ],
+            [
+              37,
+              16
+            ],
+            [
+              85,
+              25
+            ]
+          ],
+          "psiC": {
+            "n_cells": 64,
+            "all_equal": true
+          },
+          "op": {
+            "n_cells": 64,
+            "all_equal": true
+          },
+          "ls": {
+            "n_cells": 64,
+            "all_equal": true
+          },
+          "head_class": {
+            "psiC": "BilinearValueHead",
+            "op": "BilinearValueHead",
+            "ls": "BilinearValueHead"
+          },
+          "ok": true
+        },
+        "C-C6": {
+          "state": {
+            "keys_equal": true,
+            "n_tensors": 206,
+            "n_differ": 0,
+            "differ": [],
+            "ok": true
+          },
+          "argmin": {
+            "n": 64,
+            "mismatch": [],
+            "n_mismatch": 0,
+            "ok": true
+          },
+          "ok": true
+        },
+        "substrate": {
+          "path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+          "sha256": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+          "pin": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+          "ok": true
+        }
+      },
+      "how": "item_1c.py::measure_seed"
+    },
+    {
+      "key": "seed0.finite",
+      "kind": "observation",
+      "value": {
+        "psiC": true,
+        "op": true,
+        "ls": true,
+        "es": true,
+        "ceiling": true,
+        "r_i": true,
+        "age": true,
+        "uniform": true,
+        "F": true
+      },
+      "how": "item_1c.py::measure_seed"
+    },
+    {
+      "key": "controls_failed",
+      "kind": "observation",
+      "value": [
+        "G-C1(e): branch search not run (smoke)",
+        "G-C3: no suite census given to this launch",
+        "G-C5: seeds run [0] != [0, 1, 2]",
+        "smoke: --limit 128 (not the registered set)"
+      ],
+      "how": "item_1c.py::execute"
+    },
+    {
+      "key": "es_row_omitted_seeds",
+      "kind": "observation",
+      "value": [],
+      "how": "C-C6, scoped to the ES row"
+    },
+    {
+      "key": "label",
+      "kind": "observation",
+      "value": "DROPPED",
+      "how": "item_1c.py::label (PREREG \u00a75, tightened)"
+    },
+    {
+      "key": "label_read",
+      "kind": "observation",
+      "value": false,
+      "how": "False: a control failed, NOT READ (DROPPED)"
+    }
+  ],
+  "verdict": null,
+  "finished_utc": "2026-10-20T07:17:52Z"
+}
