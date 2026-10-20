@@ -311,8 +311,18 @@ def test_t1b_twenty_steps_end_to_end_identical_to_728a42f(tmp_path):
         rc = p.wait()
         log.close()
         assert rc == 0, (tmp_path / f"{_name}.log").read_text()[-3000:]
-    for name, src in (("new", ROOT / "src"), ("old", old_src / "src")):
-        assert str(src) in (tmp_path / f"{name}.log").read_text() or True
+    for src, has_switch in ((ROOT / "src", True), (old_src / "src", False)):
+        # each side imported the tree it claims: rsr from `src`, and only this head
+        # has the switch
+        env = R1.thread_env(1)
+        env["PYTHONPATH"] = os.pathsep.join([str(src), str(ROOT / "scripts")])
+        probe = subprocess.run(
+            [str(PY), "-c", "import rsr, importlib.util as u; print(rsr.__file__); "
+             "print(u.find_spec('rsr.retention.rank_loss') is not None)"],
+            cwd=ROOT, env=env, capture_output=True, text=True,
+        )  # fmt: skip
+        f, sw = probe.stdout.split()
+        assert Path(f).resolve().is_relative_to(src.resolve()) and sw == str(has_switch)
     a, b = tmp_path / "new", tmp_path / "old"
     assert R2.comparable_heartbeat(a / "heartbeat.jsonl") == R2.comparable_heartbeat(
         b / "heartbeat.jsonl"

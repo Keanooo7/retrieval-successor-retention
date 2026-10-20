@@ -791,19 +791,40 @@ def tune_closure(seed: int) -> dict:
     }
 
 
+def fit_done(f: dict | None) -> bool:
+    """A fit counts as done for R-C6 if it exited 0, or -- in a stand-in pipeline smoke
+    only -- if it is a smoke with no failed control and no error."""
+    if not f:
+        return False
+    if f.get("exit") == 0:
+        return True
+    return bool(f.get("smoke")) and not f.get("controls_failed") and not f.get("error")
+
+
+def standin_docs(seed: int, n: int, offset: int = 0) -> list:
+    """SMOKE ONLY: U-val documents standing in for TUNE or EVAL (offline-psi's
+    ``--smoke`` pattern). U is already inspected; nothing sealed or EVAL is touched."""
+    OP = harness()["OP"]
+    docs, _vmap = OP.u_documents(seed)
+    _train, val = OP.u_split(len(docs))
+    return [docs[p] for p in val[offset : offset + n]]
+
+
 def select_seed(
-    seed: int, out_root: Path, *, n_boot: int = N_BOOT, tune_docs=None
+    seed: int, out_root: Path, *, n_boot: int = N_BOOT, standin: int | None = None
 ) -> int:
     """§4.3: TUNE's first read. Each omega's phi at ``K_conv``, frozen, deployed on the
     512 TUNE documents (offline-psi's ``deploy_pass``, T_warm = 0); the cap; the
-    selection, written and hashed before ``deploy`` can run. ``tune_docs`` is for the
-    test fixture only (stand-in documents; TUNE is never generated then)."""
+    selection, written and hashed before ``deploy`` can run. ``standin`` is the
+    pipeline smoke only: that many U-val documents stand in for TUNE, TUNE is never
+    generated, and the stage exits 3 by design."""
     out_root = Path(out_root)
     path = seed_dir(out_root, seed) / "select.json"
     if path.exists() or selection_file(out_root, seed).exists():
         raise C.ControlFailure(f"{path}: TUNE is read once per seed")
     doc: dict[str, Any] = {"run_id": RUN_ID, "stage": "select", "seed": seed}
     doc["started_utc"] = utc()
+    doc["smoke"] = standin is not None
     pins = C.Pins()
     try:
         ctl = open_stage("select", doc)
@@ -815,20 +836,19 @@ def select_seed(
             fits[wtag(w)] = f
         ctl["R-C6.fits_done"] = {
             "exits": {k: v.get("exit") for k, v in fits.items()},
-            "ok": all(v.get("exit") == 0 for v in fits.values()),
+            "ok": all(fit_done(v) for v in fits.values()),
         }
         if not ctl["R-C6.fits_done"]["ok"]:
             raise C.ControlFailure("a fit did not exit 0: TUNE is not opened")
         cfg = R1.prereg_config(seed, OP.CKPT)
-        if tune_docs is None:
+        if standin is None:
             ctl["R-SEAL.closure_TUNE"] = tune_closure(seed)  # before any model loads
             if not ctl["R-SEAL.closure_TUNE"]["ok"]:
                 raise C.ControlFailure("TUNE closure failed: TUNE is not read further")
             tune = SS.sealed_ranges()[TUNE_NAME]
             docs = R1.docs_by_id(cfg, list(range(*tune)))
         else:
-            docs = list(tune_docs)
-            doc["fixture"] = True
+            docs = standin_docs(seed, standin)  # SMOKE: TUNE is never generated
         substrate_checks(seed, ctl, "start")
         inp_ov, spe, _lr = harness()["CV"].run2_conf(seed)
         model, _payloads, _sha = OP.load_frozen(cfg)
@@ -946,12 +966,18 @@ def selection_guard(out_root: Path, seed: int) -> dict:
     return {"selection": sel, "selection_sha256": got, "deploy_guard": g, "ok": True}
 
 
-def deploy_seed(seed: int, out_root: Path, *, n_boot: int = N_BOOT) -> int:
-    """§4.4 / §4.6 item 4: the selected phi, frozen, deployed once on EVAL."""
+def deploy_seed(
+    seed: int, out_root: Path, *, n_boot: int = N_BOOT, standin: int | None = None
+) -> int:
+    """§4.4 / §4.6 item 4: the selected phi, frozen, deployed once on EVAL.
+    ``standin`` is the pipeline smoke only: U-val documents stand in for EVAL, run 2's
+    records are replaced by passes over them (offline-psi's ``write_standin``), EVAL is
+    never generated, and the stage exits 3 by design."""
     out_root = Path(out_root)
     path = seed_dir(out_root, seed) / "deploy.json"
     doc: dict[str, Any] = {"run_id": RUN_ID, "stage": "deploy", "seed": seed}
     doc["started_utc"] = utc()
+    doc["smoke"] = standin is not None
     pins = C.Pins()
     try:
         ctl = open_stage("deploy", doc)
@@ -973,7 +999,13 @@ def deploy_seed(seed: int, out_root: Path, *, n_boot: int = N_BOOT) -> int:
         ov = rank_overrides(inp_ov, sel["omega_s"])
         st = torch.load(sel["phi_path"], weights_only=True)
         model, _payloads, _sha = OP.load_frozen(cfg)
-        docs = R1.docs_by_id(cfg, list(cfg.eval_ids()))
+        if standin is None:
+            docs = R1.docs_by_id(cfg, list(cfg.eval_ids()))
+        else:  # SMOKE: EVAL is never generated; run 2's records are re-made over these
+            docs = standin_docs(seed, standin, offset=standin)
+            payload = OP.run2_psic_config(OP.REFS, seed)["payload"]
+            OP.write_standin(model, cfg, docs, seed, payload, out_root)
+            refs = OP.standin_refs(OP.REFS, out_root)
 
         def make():
             return OP.deploy_policy(st, seed, ov, spe)
@@ -1012,7 +1044,7 @@ def deploy_seed(seed: int, out_root: Path, *, n_boot: int = N_BOOT) -> int:
         )
         ctl["R-C8"] = {**sc["C6"], "ok": bool(sc["C6"]["ok"])}
         doc["heldout"] = rename_arm(sc)
-        doc["heldout"]["extra"] = eval_extra(r["records"], docs, seed, cfg, n_boot)
+        doc["heldout"]["extra"] = eval_extra(r["records"], docs, seed, cfg, n_boot, refs)
         substrate_checks(seed, ctl, "end")
         ctl["R-C1.pins_end"] = pins.recheck()
         close_stage(doc, {"EVAL": tuple(R1.EVAL)})
@@ -1039,7 +1071,7 @@ def rename_arm(x: Any, old: str = "cf_all", new: str = "psiR2a") -> Any:
     return x
 
 
-def eval_extra(recs: list[dict], docs: list, seed: int, cfg, n_boot: int) -> dict:
+def eval_extra(recs: list[dict], docs: list, seed: int, cfg, n_boot: int, refs) -> dict:
     """§4.6 item 4 beyond offline-psi's secondary block: psiR2a - offline-psi cf_all
     (the loss-only contrast, PM §12 item 2), hit rate and the FactFiller ceiling
     share."""
@@ -1048,6 +1080,8 @@ def eval_extra(recs: list[dict], docs: list, seed: int, cfg, n_boot: int) -> dic
     W = R1.boot_weights(len(recs), seed, n_boot)
     out: dict[str, Any] = {}
     cf = R1.read_pass(CV.OP_OUT / "heldout" / f"seed{seed}", "cf_all")
+    if refs is not OP.REFS:  # smoke: a prefix of the right length, never paired
+        cf = cf[: len(recs)]
     out["pairing_offline_psi_cf_all"] = OP.pairing(recs, cf)
     if out["pairing_offline_psi_cf_all"]["ok"]:
         bk = R1.buckets_for(m)
@@ -1063,7 +1097,7 @@ def eval_extra(recs: list[dict], docs: list, seed: int, cfg, n_boot: int) -> dic
             )
             for b in ("all", "gap_2_to_M", "gap_gt_M")
         }
-    fifo = R1.read_pass(Path(OP.REFS.run2_out) / "heldout" / f"seed{seed}", "fifo")
+    fifo = R1.read_pass(Path(refs.run2_out) / "heldout" / f"seed{seed}", "fifo")
     hits = {
         "psiR2a": [r["hits"] for r in recs],
         "fifo": [r["hits"] for r in fifo],
@@ -1817,10 +1851,12 @@ def main(argv: list[str]) -> int:
     g.add_argument("--rc2", action="store_true")
     g.add_argument("--omega", type=float)
     pf.add_argument("--out-root", default=str(OUT_DEFAULT))
+    pf.add_argument("--smoke-cap", type=int, default=None, help="SMOKE only: exit 3")
     for name in ("select", "deploy"):
         ps = sub.add_parser(name)
         ps.add_argument("--seed", type=int, required=True)
         ps.add_argument("--out-root", default=str(OUT_DEFAULT))
+        ps.add_argument("--smoke-standin", type=int, default=None, help="SMOKE: exit 3")
     pz = sub.add_parser("finalize")
     pz.add_argument("--out-root", default=str(OUT_DEFAULT))
     pt = sub.add_parser("time")
@@ -1847,11 +1883,15 @@ def main(argv: list[str]) -> int:
     if a.cmd == "fit":
         if a.rc2:
             return rc2_seed(a.seed, Path(a.out_root))
+        if a.smoke_cap is not None:
+            return fit_seed_omega(
+                a.seed, a.omega, Path(a.out_root), cap=a.smoke_cap, smoke=True
+            )
         return fit_seed_omega(a.seed, a.omega, Path(a.out_root))
     if a.cmd == "select":
-        return select_seed(a.seed, Path(a.out_root))
+        return select_seed(a.seed, Path(a.out_root), standin=a.smoke_standin)
     if a.cmd == "deploy":
-        return deploy_seed(a.seed, Path(a.out_root))
+        return deploy_seed(a.seed, Path(a.out_root), standin=a.smoke_standin)
     if a.cmd == "finalize":
         return finalize(Path(a.out_root), argv_self=["2a", "finalize", *argv[1:]])
     if a.cmd == "time":
