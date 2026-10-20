@@ -120,6 +120,9 @@ def rederive(only: list[str] | None) -> int:
                     cache[ch.cmd] = run_cmd(ch.cmd)
                 res = cache[ch.cmd]
                 got, err = pick(res["last"], ch.pick) if res["rc"] == 0 else (None, None)
+                if ch.expected in ("null", "None", "") and not err:
+                    # a null compared to a null proves nothing (a mis-read key reads null)
+                    err = "expected value is null: the check cannot discriminate"
                 equal = None if (res["rc"] != 0 or err) else (got == ch.expected)
                 out.append(
                     {

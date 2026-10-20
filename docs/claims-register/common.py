@@ -97,8 +97,19 @@ def lrows(run_id: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for r in ledger(run_id).get("rows") or []:
         if isinstance(r, dict) and isinstance(r.get("key"), str):
-            out[r["key"]] = r.get("value")
+            out[r["key"]] = row_value(r)
     return out
+
+
+def row_value(r: dict) -> Any:
+    """A ledger row's value. ``scripts/ledger.py`` writes two row shapes: scalar rows
+    ``{key, kind, value, how}`` and statistic rows ``{key, kind, samples, mean, sd, n,
+    sd_exactly_zero, how}`` with no ``value``. A statistic row resolves to the row
+    minus ``key`` (so ``samples.<s>`` is the per-seed value); reading ``value`` there
+    would silently give None."""
+    if "value" in r:
+        return r["value"]
+    return {k: v for k, v in r.items() if k != "key"}
 
 
 def dig(x: Any, path: str | list[str] | None) -> Any:

@@ -21,7 +21,7 @@ def main(argv: list[str]) -> int:
     rows = {}
     for r in d.get("rows") or []:
         if isinstance(r, dict) and isinstance(r.get("key"), str):
-            rows[r["key"]] = r.get("value")
+            rows[r["key"]] = C.row_value(r)
     if argv[1] not in rows:
         print(f"MISSING key {argv[1]!r}", file=sys.stderr)
         return 3
