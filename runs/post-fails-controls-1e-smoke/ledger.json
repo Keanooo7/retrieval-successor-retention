@@ -1,0 +1,342 @@
+{
+  "run_id": "post-fails-controls-1e-smoke",
+  "cycle": null,
+  "question": "Does single leave-one-out mis-value slots whose value is shared: the interaction share of group knockout against the sum of singles (PREREG \u00a77)?",
+  "started_utc": "2026-10-20T07:17:53Z",
+  "provenance": {
+    "git_sha": "d1c021aa993f831f19480765a4e753a48525876a",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0
+  ],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "did_not_run",
+  "config_hash": "4109d7b93ca4e97e9412a4801150f9a1e15cbc6a05265e51262fd265abef9eec",
+  "manifest_written_utc": "2026-10-20T07:17:53Z",
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1bcde/.venv/bin/python experiments/post-fails-controls/run.py 1e --seeds 0 --n-batches 1 --no-branch-search --run-id post-fails-controls-1e-smoke",
+      "entry_point": "experiments/post-fails-controls/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 3,
+      "note": "its exit code is the item's",
+      "at_utc": "2026-10-20T07:19:57Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "G-C1.install",
+      "kind": "observation",
+      "value": {
+        "installed": true,
+        "ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "rebound_now": [
+          "rsr.train.loop._generate_document",
+          "rsr.train.loop.generate",
+          "_offline_psi_r1._generate_document",
+          "_diag_r1._generate_document",
+          "_pfc_e0d._generate_document",
+          "_pfc_e0d.generate"
+        ]
+      },
+      "how": "common.install_seal"
+    },
+    {
+      "key": "G-C4.record_refused",
+      "kind": "observation",
+      "value": {
+        "replaced": [
+          "rsr.constants.record",
+          "rsr.constants.REGISTRY.record"
+        ],
+        "ok": true
+      },
+      "how": "common"
+    },
+    {
+      "key": "G-C3.suite",
+      "kind": "observation",
+      "value": null,
+      "how": "no suite log given: NOT a pass"
+    },
+    {
+      "key": "G-C2.start",
+      "kind": "observation",
+      "value": {
+        "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "cwd": "/Users/keanooo7/retrieval-successor-retention",
+        "rc": 0,
+        "n_ok": 435,
+        "n_lines": 435,
+        "not_ok": [],
+        "stderr": "",
+        "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "ok": true
+      },
+      "how": "common.manifest_check (shasum -a 256 -c)"
+    },
+    {
+      "key": "G-C2.end",
+      "kind": "observation",
+      "value": {
+        "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "cwd": "/Users/keanooo7/retrieval-successor-retention",
+        "rc": 0,
+        "n_ok": 435,
+        "n_lines": 435,
+        "not_ok": [],
+        "stderr": "",
+        "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "ok": true
+      },
+      "how": "common.manifest_check (shasum -a 256 -c)"
+    },
+    {
+      "key": "G-C2.pins_end",
+      "kind": "observation",
+      "value": {
+        "files": {
+          "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt": {
+            "first": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+            "end": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+            "ok": true
+          }
+        },
+        "n_files": 1,
+        "ok": true
+      },
+      "how": "common.Pins.recheck"
+    },
+    {
+      "key": "G-C1.census",
+      "kind": "observation",
+      "value": {
+        "per_seed": {
+          "0": {
+            "U_E": {
+              "range": [
+                64,
+                1088
+              ],
+              "count": 1024,
+              "min": 64,
+              "max": 1087
+            },
+            "U_P": {
+              "range": [
+                4096,
+                4160
+              ],
+              "count": 64,
+              "min": 4096,
+              "max": 4159
+            },
+            "EVAL": {
+              "range": [
+                995000,
+                997048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "TUNE": {
+              "range": [
+                997200,
+                997712
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "EVAL2": {
+              "range": [
+                984000,
+                986048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "other": {
+              "count": 3072,
+              "min": 0,
+              "max": 4095
+            }
+          }
+        },
+        "sealed_ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "n_sealed_generated": 0,
+        "refused_calls": [],
+        "leaks": [],
+        "ok": true
+      },
+      "how": "common.seal_census (ids by range)"
+    },
+    {
+      "key": "G-C4.no_grads",
+      "kind": "observation",
+      "value": [],
+      "how": "common.no_grads"
+    },
+    {
+      "key": "seed0.controls",
+      "kind": "observation",
+      "value": {
+        "E-C1": {
+          "batches": [
+            {
+              "n_cells": 16384,
+              "n_equal": 16380,
+              "n_missing_agree": 4,
+              "bad": [],
+              "ok": true
+            }
+          ],
+          "delta_sha256": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+          "delta_pin": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+          "ok": true
+        },
+        "E-C2": {
+          "batches": [
+            {
+              "n": 16380,
+              "n_equal": 16380,
+              "passthrough_ok": true,
+              "base_equal": true,
+              "bad": [],
+              "ok": true
+            }
+          ],
+          "ok": true
+        },
+        "E-C3": {
+          "finite": true,
+          "ok": true
+        },
+        "closure": {
+          "ok": true,
+          "missing": [],
+          "n_missing": 0
+        },
+        "subset_ids": [
+          64,
+          95,
+          32
+        ]
+      },
+      "how": "item_1e.py::measure_seed"
+    },
+    {
+      "key": "seed0.batches",
+      "kind": "observation",
+      "value": [
+        {
+          "doc_ids": [
+            64,
+            65,
+            66,
+            67,
+            68,
+            69,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86,
+            87,
+            88,
+            89,
+            90,
+            91,
+            92,
+            93,
+            94,
+            95
+          ],
+          "E-C1": {
+            "n_cells": 16384,
+            "n_equal": 16380,
+            "n_missing_agree": 4,
+            "bad": [],
+            "ok": true
+          },
+          "E-C2": {
+            "n": 16380,
+            "n_equal": 16380,
+            "passthrough_ok": true,
+            "base_equal": true,
+            "bad": [],
+            "ok": true
+          },
+          "n_group_forwards": 1092,
+          "seconds_single": 22.886556749988813,
+          "seconds_groups": 42.392996500013396
+        }
+      ],
+      "how": "item_1e.py::measure_batch"
+    },
+    {
+      "key": "seed0.G-C4.no_grads",
+      "kind": "observation",
+      "value": {
+        "n_params": 206,
+        "with_grad": [],
+        "ok": true
+      },
+      "how": "common.no_grads"
+    },
+    {
+      "key": "controls_failed",
+      "kind": "observation",
+      "value": [
+        "G-C1(e): branch search not run (smoke)",
+        "G-C3: no suite census given to this launch",
+        "G-C5: seeds run [0] != [0, 1, 2]",
+        "smoke: --n-batches 1 (not the registered subset)"
+      ],
+      "how": "item_1e.py::execute"
+    }
+  ],
+  "verdict": null,
+  "finished_utc": "2026-10-20T07:19:57Z"
+}

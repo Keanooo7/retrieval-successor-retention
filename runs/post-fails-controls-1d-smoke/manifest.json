@@ -1,0 +1,61 @@
+{
+  "M": 16,
+  "already_used": true,
+  "args": {
+    "branch_search": "True",
+    "limit": "256",
+    "n_boot": "2000",
+    "run_id": "post-fails-controls-1d-smoke",
+    "runs_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1bcde/runs",
+    "seeds": "[0]",
+    "suite_head": "None",
+    "suite_log": "None",
+    "suite_rc": "None"
+  },
+  "base": [
+    0.3,
+    0.35
+  ],
+  "bootstrap": {
+    "fn": "R1.boot_weights",
+    "n": 2000,
+    "seed_base": 20260927
+  },
+  "device": "cpu",
+  "documents": [
+    995000,
+    997048
+  ],
+  "expected": "PREREG \u00a710: FIFO's hit rate falls as heavy_tail_weight rises; FactFiller's gain over FIFO rises.",
+  "factfiller_rng": "random.Random(f\"ff:{seed}:{doc_id}\")",
+  "falsifier": "NONE: descriptive sensitivity table (PREREG \u00a76); it gates nothing.",
+  "grid": {
+    "geometric_p": [
+      0.1,
+      0.2,
+      0.3,
+      0.5,
+      0.8
+    ],
+    "heavy_tail_weight": [
+      0.0,
+      0.1,
+      0.2,
+      0.35,
+      0.5,
+      0.7
+    ]
+  },
+  "item": "1d",
+  "oracle_gamma": 0.9,
+  "prereg": "experiments/post-fails-controls/PREREG.md",
+  "prereg_commit": "9f22d87",
+  "question": "Is FIFO's model-free strength a quirk of the question-spacing mix (PREREG \u00a76)?",
+  "run2_out": "/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2",
+  "run_id": "post-fails-controls-1d",
+  "seeds": [
+    0,
+    1,
+    2
+  ]
+}

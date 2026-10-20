@@ -1,0 +1,7 @@
+1b seed 0 lambda 0.0001 done 14s
+1b seed 0 lambda 1e-05 done 27s
+1b seed 0 lambda 0.001 done 36s
+1b seed 0 done 48s
+real 108.51
+user 98.83
+sys 4.81

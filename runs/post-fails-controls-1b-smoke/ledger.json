@@ -1,0 +1,340 @@
+{
+  "run_id": "post-fails-controls-1b-smoke",
+  "cycle": null,
+  "question": "Is sentence kind, and an assert's pending/answered status, linearly decodable from what psi_hat sees, and where do E[G | kind] and E[G | status] rank (PREREG \u00a74)?",
+  "started_utc": "2026-10-20T07:16:52Z",
+  "provenance": {
+    "git_sha": "d1c021aa993f831f19480765a4e753a48525876a",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0
+  ],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "did_not_run",
+  "config_hash": "f578be0542fd1cb9b38975438ac7ba626df1cfe073102f77251c299caf2c0560",
+  "manifest_written_utc": "2026-10-20T07:16:52Z",
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1bcde/.venv/bin/python experiments/post-fails-controls/run.py 1b --seeds 0 --limit 160 --no-branch-search --run-id post-fails-controls-1b-smoke",
+      "entry_point": "experiments/post-fails-controls/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 3,
+      "note": "its exit code is the item's",
+      "at_utc": "2026-10-20T07:18:39Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "G-C1.install",
+      "kind": "observation",
+      "value": {
+        "installed": true,
+        "ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "rebound_now": [
+          "rsr.train.loop._generate_document",
+          "rsr.train.loop.generate",
+          "_offline_psi_r1._generate_document",
+          "_diag_r1._generate_document",
+          "_pfc_e0d._generate_document",
+          "_pfc_e0d.generate"
+        ]
+      },
+      "how": "common.install_seal"
+    },
+    {
+      "key": "G-C4.record_refused",
+      "kind": "observation",
+      "value": {
+        "replaced": [
+          "rsr.constants.record",
+          "rsr.constants.REGISTRY.record"
+        ],
+        "ok": true
+      },
+      "how": "common"
+    },
+    {
+      "key": "G-C3.suite",
+      "kind": "observation",
+      "value": null,
+      "how": "no suite log given: NOT a pass"
+    },
+    {
+      "key": "G-C2.start",
+      "kind": "observation",
+      "value": {
+        "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "cwd": "/Users/keanooo7/retrieval-successor-retention",
+        "rc": 0,
+        "n_ok": 435,
+        "n_lines": 435,
+        "not_ok": [],
+        "stderr": "",
+        "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "ok": true
+      },
+      "how": "common.manifest_check (shasum -a 256 -c)"
+    },
+    {
+      "key": "G-C2.end",
+      "kind": "observation",
+      "value": {
+        "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "cwd": "/Users/keanooo7/retrieval-successor-retention",
+        "rc": 0,
+        "n_ok": 435,
+        "n_lines": 435,
+        "not_ok": [],
+        "stderr": "",
+        "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "ok": true
+      },
+      "how": "common.manifest_check (shasum -a 256 -c)"
+    },
+    {
+      "key": "G-C2.pins_end",
+      "kind": "observation",
+      "value": {
+        "n_files": 0,
+        "ok": true
+      },
+      "how": "common.Pins.recheck"
+    },
+    {
+      "key": "G-C1.census",
+      "kind": "observation",
+      "value": {
+        "per_seed": {
+          "0": {
+            "U_E": {
+              "range": [
+                64,
+                1088
+              ],
+              "count": 1024,
+              "min": 64,
+              "max": 1087
+            },
+            "U_P": {
+              "range": [
+                4096,
+                4160
+              ],
+              "count": 64,
+              "min": 4096,
+              "max": 4159
+            },
+            "EVAL": {
+              "range": [
+                995000,
+                997048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "TUNE": {
+              "range": [
+                997200,
+                997712
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "EVAL2": {
+              "range": [
+                984000,
+                986048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "other": {
+              "count": 3072,
+              "min": 0,
+              "max": 4095
+            }
+          }
+        },
+        "sealed_ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "n_sealed_generated": 0,
+        "refused_calls": [],
+        "leaks": [],
+        "ok": true
+      },
+      "how": "common.seal_census (ids by range)"
+    },
+    {
+      "key": "G-C4.no_grads",
+      "kind": "observation",
+      "value": [],
+      "how": "common.no_grads"
+    },
+    {
+      "key": "seed0.controls",
+      "kind": "observation",
+      "value": {
+        "B-C1": {
+          "gestalt_sha256": "211244f1469b90972e3b1d3b6635b3ee9eb095e78b932dc396bba64df3f5562b",
+          "gestalt_ok": true,
+          "delta_sha256": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+          "delta_ok": true,
+          "ok": true
+        },
+        "B-C2": {
+          "sizes": {
+            "P_fit": 109,
+            "P_test": 28,
+            "U_val": 156
+          },
+          "expected_P_fit_P_test": [
+            745,
+            187
+          ],
+          "overlaps": {},
+          "u_val_ids_in_probe_tensors": 0,
+          "n_U_train": 932,
+          "n_U_train_ok": true,
+          "ok": true
+        },
+        "B-C3": {
+          "skipped_smoke": true,
+          "ok": false
+        },
+        "B-C4": {
+          "skipped_smoke": true,
+          "ok": false
+        },
+        "B-C5": {
+          "shuffled": {
+            "fit": {
+              "loss": 0.6393598115960053,
+              "grad_max_abs": 0.00024529200797498085,
+              "n_iter": 1000,
+              "func_evals": 1049,
+              "max_iter": 1000,
+              "max_eval": 1250,
+              "converged": false,
+              "finite": true,
+              "seconds": 11.677339625020977
+            },
+            "bal_acc": {
+              "point": 0.491561387804667,
+              "lo": 0.4769074814181207,
+              "hi": 0.5057556649219014,
+              "sd": 0.007558132472947732,
+              "dropped": 0,
+              "recall": [
+                0.4469243331518781,
+                0.536198442457456
+              ],
+              "n_cells": [
+                1837.0,
+                3467.0
+              ]
+            },
+            "n_features": 16640,
+            "std": [
+              {
+                "n_zero_sd": 0
+              },
+              {
+                "n_zero_sd": 0
+              }
+            ],
+            "n_fit_cells": 20209,
+            "n_test_cells": 5304
+          },
+          "ci_contains_half": true,
+          "ok": true
+        },
+        "B-C6": {
+          "finite": true,
+          "converged": {
+            "kind_s": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_s": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_c": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_scx": {
+              "lam0.0001": false,
+              "lam1e-05": false,
+              "lam0.001": true
+            }
+          },
+          "ok": true
+        }
+      },
+      "how": "item_1b.py::measure_seed"
+    },
+    {
+      "key": "controls_failed",
+      "kind": "observation",
+      "value": [
+        "G-C1(e): branch search not run (smoke)",
+        "G-C3: no suite census given to this launch",
+        "G-C5: seeds run [0] != [0, 1, 2]",
+        "B-C3 seed0",
+        "B-C4 seed0",
+        "smoke: --limit 160 (not the registered set)"
+      ],
+      "how": "item_1b.py::execute"
+    },
+    {
+      "key": "labels",
+      "kind": "observation",
+      "value": {
+        "kind_s": "UNRESOLVED",
+        "status_scx": "UNRESOLVED"
+      },
+      "how": "item_1b.py::labels_of (PREREG \u00a74, tightened)"
+    },
+    {
+      "key": "labels_read",
+      "kind": "observation",
+      "value": false,
+      "how": "False: a control failed, NOT READ"
+    }
+  ],
+  "verdict": null,
+  "finished_utc": "2026-10-20T07:18:39Z"
+}
