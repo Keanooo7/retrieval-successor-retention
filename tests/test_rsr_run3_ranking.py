@@ -1248,3 +1248,154 @@ def test_2b_rebinding_is_private(p2b):
     run2_own = sys.modules.get("_rsr_run2_r1")
     if run2_own is not None:
         assert run2_own.RUN_ID == "rsr-run2"
+
+
+# --------------------------------------------------------------------------- #
+# Amendment PM-1 (c7f63ea): the 2a launch-slot check; C10 / C-F at K_2b > 3000
+# --------------------------------------------------------------------------- #
+
+
+def test_pm1_2a_smoke_record_is_machine_read_from_amendment_2aS(p2a):
+    rec = p2a.amendment_2aS_record()
+    assert rec["path"] == ROOT / "runs" / "rsr-run3-2a-smoke" / "time-seed0.json"
+    assert rec["sha_ok"], rec
+
+
+def test_pm1_wall_projection_by_slot_count(p2a):
+    d = json.loads(p2a.amendment_2aS_record()["path"].read_text())
+    jobs = p2a.launch_jobs(d)
+    assert len(jobs) == 3 * (1 + 3 + 2)  # per seed: rc2, 3 fits, select, deploy
+    w12 = p2a.wall_for_slots(d, 12)
+    assert abs(w12 - d["projection"]["wall_layout_s"]) < 1e-6  # 2a-S's layout figure
+    assert abs(p2a.wall_for_slots(d, 1) - sum(j["s"] for j in jobs)) < 1e-6
+    walls = [p2a.wall_for_slots(d, n) for n in range(1, 13)]
+    assert max(walls) == walls[0] and min(walls) == walls[-1]
+    # the ruling: >= 9 slots launches; fewer launches iff the recomputed wall <= 8 h
+    assert p2a.slot_decision(9, d)["ok"] and p2a.slot_decision(12, d)["ok"]
+    assert not p2a.slot_decision(0, d)["ok"]
+    for n in range(1, 9):
+        r = p2a.slot_decision(n, d)
+        assert r["recomputed"] and r["ok"] == (r["wall_h"] <= 8.0), (n, r)
+
+
+def test_pm1_slot_decision_on_a_slow_record(p2a):
+    d = json.loads(p2a.amendment_2aS_record()["path"].read_text())
+    slow = json.loads(json.dumps(d))
+    for w in p2a.OMEGAS:
+        slow["projection"]["per_fit_worst_case_s"][p2a.wtag(w)] = 6 * 3600.0
+    assert p2a.slot_decision(9, slow)["ok"]  # >= 9: no recompute (the ruling)
+    assert not p2a.slot_decision(8, slow)["ok"]  # 6 h fits on 8 slots: two waves
+
+
+def test_pm1_launcher_gates_every_fit_on_the_slot_check():
+    t = (EXP / "launch_2a.zsh").read_text()
+    i, j = t.index("2a slot-check"), t.index("2a fit --seed $s --rc2")
+    assert i < j
+    assert "slot-check.rc" in t and "nothing fitted" in t
+
+
+def test_pm1_2b_plan_no_longer_refuses_at_k_above_3000(p2b, tmp_path):
+    win = {"0": "WIN", "1": "WIN", "2": "WIN"}
+    big = p2b.make_plan(_ledger_2a(tmp_path, [2000, 95_500, 1000], win))
+    assert big["ok"], big["problems"]
+    assert big["K_2b"] == 96_000 and big["fifo_iters"] == 3000
+    assert big["fifo_ckpt_every"] == 40 and big["ckpt_every"] == p2b.ckpt_every(96_000)
+    assert not any("C10" in x for x in big["problems"])
+    assert big["unruled_at_K_gt_3000"]  # recorded, and measure refuses before EVAL2
+    assert not p2b.measure_precheck(big)["ok"]
+    small = p2b.make_plan(_ledger_2a(tmp_path, [2000, 2000, 1000], win))
+    assert small["ok"] and small["unruled_at_K_gt_3000"] == []
+    assert p2b.measure_precheck(small)["ok"]
+
+
+def test_pm1_fifo_command_is_run_1s_3000_step_command_at_any_k(p2b):
+    H = p2b.harness()
+    R1, R2 = H["R1"], H["R2"]
+    p2b.set_plan({"omega_s": {"0": 2.0, "1": 8.0, "2": 32.0}, "fifo_iters": 3000})
+    K = 96_000
+    ow = R1.OwnerValues(0.9, 0.01, K, "eval", (0, 1, 2))
+    for seed in (0, 1, 2):
+        cfg = R1.prereg_config(seed, K)
+        out = Path(f"runs/rsr-run3-2b/fifo/seed{seed}")
+        got = R1.cli_argv(cfg, "fifo", ow, out)
+        want = R2._R1_CLI_ARGV(R1.prereg_config(seed, 3000), "fifo", ow, out)
+        assert got == want
+        assert got[got.index("--iters") + 1] == "3000"
+        assert got[got.index("--ckpt-every") + 1] == "40"
+        psi = R1.cli_argv(cfg, "psiC", ow, Path(f"runs/rsr-run3-2b/psiC/seed{seed}"))
+        assert psi[psi.index("--iters") + 1] == str(K)
+        assert psi[psi.index("--ckpt-every") + 1] == str(p2b.ckpt_every(K))
+
+
+def test_pm1_c10_checks_fifo_against_r1_and_rsr_against_k(p2b, monkeypatch):
+    """The per-arm C10: run 1's c10_launch_values, unchanged, called once on fifo's
+    view (iters = R-1 = 3000, its own steps / ckpt / cadence) and once on the RSR arms'
+    (iters = K_2b, the registered R-1 replaced by K_2b); results merged."""
+    H = p2b.harness()
+    R1 = H["R1"]
+    seen = []
+
+    def fake(
+        cfg, owner, launch, results, hbs, jobs, out_root, *, rcs=None, registered=None
+    ):
+        seen.append((cfg.iters, owner.iters, dict(launch), sorted(results), registered))
+        bad = [a for a in results if results[a]["config"]["iters"] != owner.iters]
+        return {
+            "per_arm": {a: {"ok": a not in bad} for a in results},
+            "launch_problems": [],
+            "ok": not bad,
+        }
+
+    monkeypatch.setattr(p2b, "_C10_ORIG", fake)
+    plan = {
+        "K_2b": 96_000,
+        "fifo_iters": 3000,
+        "ckpt_every": p2b.ckpt_every(96_000),
+        "fifo_ckpt_every": 40,
+    }
+    p2b.set_plan({"omega_s": {"0": 2.0, "1": 8.0, "2": 32.0}, **plan})
+    cfg = R1.prereg_config(0, 96_000)
+    ow = R1.OwnerValues(0.9, 0.01, 96_000, "eval", (0, 1, 2))
+    launch = {
+        "steps": "96000",
+        "ckpt": "32000",
+        "ckpt_every": str(plan["ckpt_every"]),
+        "fifo_steps": "3000",
+        "fifo_ckpt": "1000",
+        "fifo_ckpt_every": "40",
+    }
+    res = {a: {"config": {"iters": 96_000 if a != "fifo" else 3000}} for a in R1.ARMS}
+    reg = {"status": "filled", "values": {"iters": 3000, "gamma": 0.9}}
+    out = p2b.c10_per_arm(cfg, ow, launch, res, {}, {}, Path("x"), registered=reg)
+    assert out["ok"], out
+    fifo_v = next(v for v in seen if v[3] == ["fifo"])
+    rsr_v = next(v for v in seen if v[3] == ["age", "psiC"])
+    assert fifo_v[0] == fifo_v[1] == 3000 and fifo_v[2]["steps"] == "3000"
+    assert fifo_v[2]["ckpt"] == "1000" and fifo_v[2]["ckpt_every"] == "40"
+    assert fifo_v[4]["values"]["iters"] == 3000  # registered R-1, unchanged
+    assert rsr_v[0] == rsr_v[1] == 96_000 and rsr_v[2]["steps"] == "96000"
+    assert rsr_v[4]["values"]["iters"] == 96_000  # K_2b, per PM-1
+    res_bad = {**res, "fifo": {"config": {"iters": 96_000}}}
+    assert not p2b.c10_per_arm(
+        cfg, ow, launch, res_bad, {}, {}, Path("x"), registered=reg
+    )["ok"]
+
+
+def test_pm1_c_f_on_run_2s_fifo_checkpoint_and_tampered(p2b):
+    H = p2b.harness()
+    R1 = H["R1"]
+    p = Path(R1._R) / ".worktrees/rsr-run2-run/runs/rsr-run2/fifo/seed0/ckpt-003000.pt"
+    payload = R1.read_checkpoint(p)
+    sub, _sha = R1.load_substrate_model(R1.prereg_config(0, 3000))
+    assert p2b.c_f(payload, sub)["ok"]
+    t = {**payload, "model": dict(payload["model"])}
+    k = next(iter(t["model"]))
+    t["model"][k] = t["model"][k].clone() + 1e-7
+    assert not p2b.c_f(t, sub)["ok"]
+    assert not p2b.c_f(
+        {**payload, "optimizer": {"state": {}, "param_groups": [{}]}}, sub
+    )["ok"]
+    conf = {**payload["meta"]["config"], "freeze_transformer": False}
+    assert not p2b.c_f({**payload, "meta": {**payload["meta"], "config": conf}}, sub)[
+        "ok"
+    ]
