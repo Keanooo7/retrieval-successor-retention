@@ -281,7 +281,6 @@ def ckpt_every(steps: int) -> int:
 # --------------------------------------------------------------------------- #
 
 
-
 def read_2a(ledger_path: Path) -> dict:
     """2a's ledger: the summary row (exit, gate, labels) and each seed's selection
     row; the file's sha256."""
