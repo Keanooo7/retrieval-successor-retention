@@ -109,8 +109,14 @@ def test_no_registry_owned_field_has_a_default(field):
 def test_one_hundred_evictions_are_attributable_to_the_score(measured):
     """Gauntlet 0.2's PASS. A run whose records are all `fifo_warmup` is stock TG
     reporting itself as RSR."""
+    # shadow_enabled=False explicitly: RSRPolicy refuses True in slice 1 (ADR-0009
+    # L6(a)); the dataclass default is True and nothing consumes it.
     cfg = RSRConfig.from_registry(
-        "synthetic", steps_per_epoch=0.5, registry=measured, b_enabled=False
+        "synthetic",
+        steps_per_epoch=0.5,
+        registry=measured,
+        b_enabled=False,
+        shadow_enabled=False,
     )
     assert cfg.t_warm == 0.5  # warmup ends after optimizer step 0; dispatch is k < T_warm
     policy = RSRPolicy(cfg, d_model=4, generator=torch.Generator().manual_seed(0))
@@ -137,7 +143,11 @@ def test_one_hundred_evictions_are_attributable_to_the_score(measured):
 def test_warmup_is_attributed_to_fifo_not_to_the_score(measured):
     """The converse, so the attribution field is proved to discriminate."""
     cfg = RSRConfig.from_registry(
-        "synthetic", steps_per_epoch=10_000, registry=measured, b_enabled=False
+        "synthetic",
+        steps_per_epoch=10_000,
+        registry=measured,
+        b_enabled=False,
+        shadow_enabled=False,  # ADR-0009 L6(a): True is refused in slice 1
     )
     policy = RSRPolicy(cfg, d_model=4, generator=torch.Generator().manual_seed(0))
     policy.set_train_step(0)  # correction 31: warm because k = 0 < T_warm

@@ -1,0 +1,1003 @@
+{
+  "run_id": "b2-psi-probe",
+  "cycle": null,
+  "question": "Can the spec's context-conditioned value head psi_hat(s_i, c_t) = s_i^T W c_t + u^T [s_i ; c_t], fitted with no age input to the MC return G, produce an eviction rule that beats the best age-based reference through the model? Q1: kind prior; Q2: c_t beyond kind.",
+  "started_utc": "2026-09-29T22:27:01Z",
+  "provenance": {
+    "git_sha": "80c1cd78e4f0151aa4878e526c4acfbbf4b2b3bf",
+    "dirty": false,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "ok",
+  "config_hash": "27b112406ec1d601a3d460c109f4df347d069c9230704df2bf5981aee598f056",
+  "manifest_written_utc": "2026-09-29T22:27:01Z",
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py eval-child --checkpoint 2500 --seed 0 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe/phaseB --fits /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/phaseA --n-e 1024 --n-tier2 1024",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-29T23:46:41Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py eval-child --checkpoint 2500 --seed 1 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe/phaseB --fits /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/phaseA --n-e 1024 --n-tier2 1024",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-29T23:46:41Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py eval-child --checkpoint 3000 --seed 1 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe/phaseB --fits /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/phaseA --n-e 1024 --n-tier2 1024",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-29T23:46:41Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py eval-child --checkpoint 2500 --seed 2 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe/phaseB --fits /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/phaseA --n-e 1024 --n-tier2 1024",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-29T23:46:43Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py eval-child --checkpoint 3000 --seed 2 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe/phaseB --fits /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/phaseA --n-e 1024 --n-tier2 1024",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-29T23:46:47Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/experiments/b2-psi-probe/run.py eval-child --checkpoint 3000 --seed 0 --source /Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream --out /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe/phaseB --fits /Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/phaseA --n-e 1024 --n-tier2 1024",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "",
+      "at_utc": "2026-09-29T23:46:57Z"
+    },
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/.venv/bin/python experiments/b2-psi-probe/run.py eval",
+      "entry_point": "experiments/b2-psi-probe/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 0,
+      "note": "the parent; E0h is separate",
+      "at_utc": "2026-09-29T23:47:03Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "T0.start",
+      "kind": "observation",
+      "value": {
+        "ok": true,
+        "n": 435,
+        "bad": [],
+        "n_bad": 0,
+        "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256"
+      },
+      "how": "run.py::t0_verify"
+    },
+    {
+      "key": "T0.end",
+      "kind": "observation",
+      "value": {
+        "ok": true,
+        "n": 435,
+        "bad": [],
+        "n_bad": 0,
+        "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256"
+      },
+      "how": "run.py::t0_verify"
+    },
+    {
+      "key": "classification",
+      "kind": "observation",
+      "value": {
+        "row": 1,
+        "class": "HARMFUL",
+        "psiU": [
+          "LOSS",
+          "LOSS",
+          "EQUIV"
+        ],
+        "psiC": [
+          "EQUIV",
+          "EQUIV",
+          "EQUIV"
+        ],
+        "gating": true,
+        "underpowered": false
+      },
+      "how": "run.py::classify_all (\u00a79.6), ckpt3000 gamma=0.9"
+    },
+    {
+      "key": "classification.companion",
+      "kind": "observation",
+      "value": {
+        "class": "HARMFUL",
+        "psiU+": [
+          "LOSS",
+          "LOSS",
+          "EQUIV"
+        ],
+        "psiC+": [
+          "EQUIV",
+          "EQUIV",
+          "EQUIV"
+        ],
+        "label": "non-gating, companion"
+      },
+      "how": "run.py::classify_all"
+    },
+    {
+      "key": "classification.moving",
+      "kind": "observation",
+      "value": false,
+      "how": "run.py::classify_all"
+    },
+    {
+      "key": "classification.gamma0_secondary",
+      "kind": "observation",
+      "value": {
+        "2500": {
+          "row": 1,
+          "class": "HARMFUL",
+          "psiU": [
+            "LOSS",
+            "LOSS",
+            "EQUIV"
+          ],
+          "psiC": [
+            "LOSS",
+            "EQUIV",
+            "EQUIV"
+          ],
+          "companion": {
+            "class": "MIXED / UNRESOLVED",
+            "psiU+": [
+              "EQUIV",
+              "EQUIV",
+              "EQUIV"
+            ],
+            "psiC+": [
+              "EQUIV",
+              "EQUIV",
+              "WIN"
+            ],
+            "label": "non-gating, companion"
+          },
+          "label": "secondary"
+        },
+        "3000": {
+          "row": 1,
+          "class": "HARMFUL",
+          "psiU": [
+            "LOSS",
+            "LOSS",
+            "UNRESOLVED"
+          ],
+          "psiC": [
+            "LOSS",
+            "UNRESOLVED",
+            "UNRESOLVED"
+          ],
+          "companion": {
+            "class": "NOT LEARNABLE, offline",
+            "psiU+": [
+              "EQUIV",
+              "EQUIV",
+              "EQUIV"
+            ],
+            "psiC+": [
+              "EQUIV",
+              "EQUIV",
+              "EQUIV"
+            ],
+            "label": "non-gating, companion"
+          },
+          "label": "secondary"
+        }
+      },
+      "how": "run.py::classify_all"
+    },
+    {
+      "key": "classification.by_key",
+      "kind": "observation",
+      "value": {
+        "ckpt2500.0.9.tier2": {
+          "row": 1,
+          "class": "HARMFUL",
+          "psiU": [
+            "LOSS",
+            "LOSS",
+            "EQUIV"
+          ],
+          "psiC": [
+            "EQUIV",
+            "EQUIV",
+            "EQUIV"
+          ],
+          "companion": {
+            "class": "HARMFUL",
+            "psiU+": [
+              "LOSS",
+              "LOSS",
+              "UNRESOLVED"
+            ],
+            "psiC+": [
+              "EQUIV",
+              "EQUIV",
+              "EQUIV"
+            ],
+            "label": "non-gating, companion"
+          }
+        },
+        "ckpt2500.0.0.tier2": {
+          "row": 1,
+          "class": "HARMFUL",
+          "psiU": [
+            "LOSS",
+            "LOSS",
+            "EQUIV"
+          ],
+          "psiC": [
+            "LOSS",
+            "EQUIV",
+            "EQUIV"
+          ],
+          "companion": {
+            "class": "MIXED / UNRESOLVED",
+            "psiU+": [
+              "EQUIV",
+              "EQUIV",
+              "EQUIV"
+            ],
+            "psiC+": [
+              "EQUIV",
+              "EQUIV",
+              "WIN"
+            ],
+            "label": "non-gating, companion"
+          }
+        },
+        "ckpt3000.0.9.tier1": {
+          "row": 1,
+          "class": "HARMFUL",
+          "psiU": [
+            "LOSS",
+            "LOSS",
+            "EQUIV"
+          ],
+          "psiC": [
+            "EQUIV",
+            "EQUIV",
+            "EQUIV"
+          ]
+        },
+        "ckpt3000.0.9.tier2": {
+          "row": 1,
+          "class": "HARMFUL",
+          "psiU": [
+            "LOSS",
+            "LOSS",
+            "EQUIV"
+          ],
+          "psiC": [
+            "EQUIV",
+            "EQUIV",
+            "EQUIV"
+          ],
+          "companion": {
+            "class": "HARMFUL",
+            "psiU+": [
+              "LOSS",
+              "LOSS",
+              "EQUIV"
+            ],
+            "psiC+": [
+              "EQUIV",
+              "EQUIV",
+              "EQUIV"
+            ],
+            "label": "non-gating, companion"
+          }
+        },
+        "ckpt3000.0.0.tier2": {
+          "row": 1,
+          "class": "HARMFUL",
+          "psiU": [
+            "LOSS",
+            "LOSS",
+            "UNRESOLVED"
+          ],
+          "psiC": [
+            "LOSS",
+            "UNRESOLVED",
+            "UNRESOLVED"
+          ],
+          "companion": {
+            "class": "NOT LEARNABLE, offline",
+            "psiU+": [
+              "EQUIV",
+              "EQUIV",
+              "EQUIV"
+            ],
+            "psiC+": [
+              "EQUIV",
+              "EQUIV",
+              "EQUIV"
+            ],
+            "label": "non-gating, companion"
+          }
+        }
+      },
+      "how": "run.py::classify_all"
+    },
+    {
+      "key": "classification.ckpt2500",
+      "kind": "observation",
+      "value": {
+        "row": 1,
+        "class": "HARMFUL",
+        "psiU": [
+          "LOSS",
+          "LOSS",
+          "EQUIV"
+        ],
+        "psiC": [
+          "EQUIV",
+          "EQUIV",
+          "EQUIV"
+        ],
+        "companion": {
+          "class": "HARMFUL",
+          "psiU+": [
+            "LOSS",
+            "LOSS",
+            "UNRESOLVED"
+          ],
+          "psiC+": [
+            "EQUIV",
+            "EQUIV",
+            "EQUIV"
+          ],
+          "label": "non-gating, companion"
+        },
+        "label": "reported, never gating"
+      },
+      "how": "run.py::classify_all"
+    },
+    {
+      "key": "ckpt2500.0.9.tier2",
+      "kind": "observation",
+      "value": {
+        "0": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU1": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU2": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU3": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-UNRESOLVED"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-WIN"
+          }
+        },
+        "1": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU1": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU2": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU3": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-WIN"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-WIN"
+          }
+        },
+        "2": {
+          "psiU": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU1": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU2": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU3": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-LOSS"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-LOSS"
+          }
+        }
+      },
+      "how": "run.py::summarise_eval"
+    },
+    {
+      "key": "ckpt2500.0.0.tier2",
+      "kind": "observation",
+      "value": {
+        "0": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-WIN"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-WIN"
+          }
+        },
+        "1": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-WIN"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-WIN"
+          }
+        },
+        "2": {
+          "psiU": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "WIN",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-LOSS"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-LOSS"
+          }
+        }
+      },
+      "how": "run.py::summarise_eval"
+    },
+    {
+      "key": "ckpt2500.seed0.cost",
+      "kind": "observation",
+      "value": {
+        "seconds": {
+          "0.9.tier2": {
+            "run": 3203.1856165819336,
+            "n_run": 1024
+          },
+          "0.0.tier2": {
+            "run": 1514.6194026786834,
+            "n_run": 1024
+          },
+          "child_wall": 4773.574750900269
+        },
+        "peak_rss_gb": 0.518094848,
+        "threads": 1,
+        "n_resumed": {
+          "0.9.tier2": 0,
+          "0.0.tier2": 0
+        }
+      },
+      "how": "phaseB/ckpt2500-seed0.pt"
+    },
+    {
+      "key": "ckpt2500.seed1.cost",
+      "kind": "observation",
+      "value": {
+        "seconds": {
+          "0.9.tier2": {
+            "run": 3201.212172044674,
+            "n_run": 1024
+          },
+          "0.0.tier2": {
+            "run": 1516.21722272411,
+            "n_run": 1024
+          },
+          "child_wall": 4773.211580038071
+        },
+        "peak_rss_gb": 0.523730944,
+        "threads": 1,
+        "n_resumed": {
+          "0.9.tier2": 0,
+          "0.0.tier2": 0
+        }
+      },
+      "how": "phaseB/ckpt2500-seed1.pt"
+    },
+    {
+      "key": "ckpt2500.seed2.cost",
+      "kind": "observation",
+      "value": {
+        "seconds": {
+          "0.9.tier2": {
+            "run": 3202.874361957656,
+            "n_run": 1024
+          },
+          "0.0.tier2": {
+            "run": 1518.3705021736678,
+            "n_run": 1024
+          },
+          "child_wall": 4776.303409814835
+        },
+        "peak_rss_gb": 0.544178176,
+        "threads": 1,
+        "n_resumed": {
+          "0.9.tier2": 0,
+          "0.0.tier2": 0
+        }
+      },
+      "how": "phaseB/ckpt2500-seed2.pt"
+    },
+    {
+      "key": "ckpt3000.0.9.tier1",
+      "kind": "observation",
+      "value": {
+        "0": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-LOSS"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-LOSS"
+          }
+        },
+        "1": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-WIN"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-WIN"
+          }
+        },
+        "2": {
+          "psiU": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-LOSS"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-UNRESOLVED"
+          }
+        }
+      },
+      "how": "run.py::summarise_eval"
+    },
+    {
+      "key": "ckpt3000.0.9.tier2",
+      "kind": "observation",
+      "value": {
+        "0": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU1": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU2": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "psiU3": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-LOSS"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-LOSS"
+          }
+        },
+        "1": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU1": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU2": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU3": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-WIN"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-WIN"
+          }
+        },
+        "2": {
+          "psiU": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiU1": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "psiU2": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "psiU3": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-LOSS"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-UNRESOLVED"
+          }
+        }
+      },
+      "how": "run.py::summarise_eval"
+    },
+    {
+      "key": "ckpt3000.0.0.tier2",
+      "kind": "observation",
+      "value": {
+        "0": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-LOSS"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-LOSS"
+          }
+        },
+        "1": {
+          "psiU": {
+            "label": "LOSS",
+            "flags": []
+          },
+          "psiC": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-WIN"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-WIN"
+          }
+        },
+        "2": {
+          "psiU": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "psiC": {
+            "label": "UNRESOLVED",
+            "flags": []
+          },
+          "psiU+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "psiC+": {
+            "label": "EQUIV",
+            "flags": []
+          },
+          "q2_psiU_minus_kind": {
+            "label": "Q2-LOSS"
+          },
+          "q2_psiC_minus_kind": {
+            "label": "Q2-LOSS"
+          }
+        }
+      },
+      "how": "run.py::summarise_eval"
+    },
+    {
+      "key": "ckpt3000.seed0.cost",
+      "kind": "observation",
+      "value": {
+        "seconds": {
+          "0.9.tier1": {
+            "run": 2029.395277645206,
+            "n_run": 1024
+          },
+          "0.9.tier2": {
+            "run": 1189.7071416468825,
+            "n_run": 1024
+          },
+          "0.0.tier2": {
+            "run": 1518.692747704452,
+            "n_run": 1024
+          },
+          "child_wall": 4789.736337184906
+        },
+        "peak_rss_gb": 0.50356224,
+        "threads": 1,
+        "n_resumed": {
+          "0.9.tier1": 0,
+          "0.9.tier2": 0,
+          "0.0.tier2": 0
+        }
+      },
+      "how": "phaseB/ckpt3000-seed0.pt"
+    },
+    {
+      "key": "ckpt3000.seed1.cost",
+      "kind": "observation",
+      "value": {
+        "seconds": {
+          "0.9.tier1": {
+            "run": 2020.5122968198266,
+            "n_run": 1024
+          },
+          "0.9.tier2": {
+            "run": 1183.4619250246324,
+            "n_run": 1024
+          },
+          "0.0.tier2": {
+            "run": 1513.370966712013,
+            "n_run": 1024
+          },
+          "child_wall": 4773.293879032135
+        },
+        "peak_rss_gb": 0.499286016,
+        "threads": 1,
+        "n_resumed": {
+          "0.9.tier1": 0,
+          "0.9.tier2": 0,
+          "0.0.tier2": 0
+        }
+      },
+      "how": "phaseB/ckpt3000-seed1.pt"
+    },
+    {
+      "key": "ckpt3000.seed2.cost",
+      "kind": "observation",
+      "value": {
+        "seconds": {
+          "0.9.tier1": {
+            "run": 2022.4468103672843,
+            "n_run": 1024
+          },
+          "0.9.tier2": {
+            "run": 1184.0900892138015,
+            "n_run": 1024
+          },
+          "0.0.tier2": {
+            "run": 1518.9260636628605,
+            "n_run": 1024
+          },
+          "child_wall": 4779.792564868927
+        },
+        "peak_rss_gb": 0.5074944,
+        "threads": 1,
+        "n_resumed": {
+          "0.9.tier1": 0,
+          "0.9.tier2": 0,
+          "0.0.tier2": 0
+        }
+      },
+      "how": "phaseB/ckpt3000-seed2.pt"
+    }
+  ],
+  "verdict": {
+    "falsifier": "B2 is kill-gate evidence (PLAN-v4 \u00a70.2), not a spec falsifier; E0h is falsifier 3c and has its own entry point and rc (A1.3).",
+    "outcome": "inconclusive",
+    "detail": "B2 class HARMFUL (recommendation to Brendan; not a spec kill)",
+    "capped_from": null,
+    "capped_because": null
+  },
+  "finished_utc": "2026-09-29T23:47:03Z"
+}

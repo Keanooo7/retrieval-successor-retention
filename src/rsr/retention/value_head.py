@@ -38,7 +38,7 @@ import math
 import torch
 from torch import Tensor, nn
 
-__all__ = ["BilinearValueHead"]
+__all__ = ["AgeOnlyValueHead", "BilinearValueHead"]
 
 
 class BilinearValueHead(nn.Module):
@@ -171,3 +171,49 @@ class BilinearValueHead(nn.Module):
             f"bilinear_multiplier={self.bilinear_multiplier:.3g}, "
             f"linear_multiplier={self.linear_multiplier:.3g}"
         )
+
+
+class AgeOnlyValueHead(nn.Module):
+    """The **age-only baseline arm** (spec section 7.1 item 2; ADR-0009 L6).
+
+        psi_age(a_i) = theta[min(a_i, A_max)]        theta in R^(A_max + 1)
+
+    A learned table over slot age, fitted by the same `L_MC` on the same `G` as
+    the content head. It is the best age-only predictor of the return the
+    regression can find: recency at its strongest, not `-a_i`.
+
+    Which arms section 7.1 item 2 / E2 compares is the PREREG's to name. RSR's
+    own head (`BilinearValueHead`) is **content-only** -- age is excluded from
+    `psi_hat` (CLAUDE.md) and `b` is off in slice 1. The **content+age** head is
+    a separate baseline arm (spec §6 A3) and is **not built**; nothing here is
+    it (review MINOR-2 of feat/rsr-run1-ready).
+
+    🔴 **It is a separate, labelled ARM, never an input to `psi_hat`.** CLAUDE.md:
+    "Age is excluded from `psi_hat` ... An age-only head and a content+age head
+    exist as separate baseline arms." `BilinearValueHead` never receives age; this
+    class receives **nothing but** age -- no gestalt, no context. An arm runs one
+    or the other, selected by `psi_override="age_only"` and labelled `psi=age_only`
+    (ADR-0009 L12), and the section 3.7 reduction pins `psi_override="neg_age"`, so
+    it cannot reach E0b's path.
+
+    **Zero-initialised: it draws no RNG** (the E0b note -- constructing it moves
+    neither the global stream nor `phi`'s). At init every slot ties, the z-score
+    leaves the ties, and the argmin takes the lowest live index. `A_max` is the
+    config's own (section 3.6(a), `A_max <= S`); ages beyond it share its entry.
+    """
+
+    def __init__(self, max_age: int) -> None:
+        super().__init__()
+        if int(max_age) < 1:
+            raise ValueError(f"max_age={max_age}: the table needs at least ages 0..1")
+        self.max_age = int(max_age)
+        self.table = nn.Parameter(torch.zeros(self.max_age + 1))
+
+    def forward(self, age: Tensor) -> Tensor:
+        """`age`: integer ages, any shape. Returns `theta[clamp(age, 0, A_max)]`.
+        Dead slots (age -1) clamp to 0; the policy masks them to +inf anyway."""
+        idx = age.to(device=self.table.device, dtype=torch.long)
+        return self.table[idx.clamp(0, self.max_age)]
+
+    def extra_repr(self) -> str:
+        return f"max_age={self.max_age}"

@@ -130,6 +130,7 @@ def test_a_whole_night_never_moves_main(orch):
     wt = orch.root / ".worktrees" / "a"
     assert orch.git("rev-parse", "--abbrev-ref", "HEAD", cwd=wt) == "run/a"
     run_head = orch.commit(wt, {"runs/a/ledger.json": '{"loss": 1.0}\n'}, "run a")
+    run_head = orch.review(wt, "run/a", run_head)  # T5(b): a committed review record
 
     # tick 2: the researcher returned -> verifying; the manager verifies it
     assert orch.run("tick").returncode == 0

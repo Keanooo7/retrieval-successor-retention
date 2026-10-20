@@ -1,0 +1,28 @@
+{
+ "status": "ok",
+ "seed": "857b8082a56abe3b4fd90a0cc9cd0ccd361a07f9e665ca3793285f4f3adb0aa2",
+ "claims": [
+  {
+   "claim": "B2 gating classification (ckpt3000, gamma 0.9) is row 1 HARMFUL with psiU LOSS/LOSS/EQUIV and psiC EQUIV x3",
+   "command": "python3 -c \"import json;r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe/ledger.json'))['rows']};c=r['classification'];print(c['row'],c['class'],c['psiU'],c['psiC'])\"",
+   "expected": "1 HARMFUL ['LOSS', 'LOSS', 'EQUIV'] ['EQUIV', 'EQUIV', 'EQUIV']",
+   "observed": "1 HARMFUL ['LOSS', 'LOSS', 'EQUIV'] ['EQUIV', 'EQUIV', 'EQUIV'] (rc 0). Independent re-derivation from the 3x1024 tier-1 units (own paired bootstrap, PREREG 9.2/9.3/9.5/9.6 + A1.13): {'row': 1, 'class': 'HARMFUL', 'psiU': ['LOSS', 'LOSS', 'EQUIV'], 'psiC': ['EQUIV', 'EQUIV', 'EQUIV']}",
+   "match": true
+  },
+  {
+   "claim": "B2 ledger status ok at sha 80c1cd7, clean tree, seeds 0,1,2, T0 ok at start and end",
+   "command": "python3 -c \"import json;L=json.load(open('runs/b2-psi-probe/ledger.json'));r={x['key']:x['value'] for x in L['rows']};print(L['status'],L['provenance']['git_sha'][:7],L['provenance']['dirty'],L['seeds_actually_run'],r['T0.start']['ok'],r['T0.end']['ok'])\"",
+   "expected": "ok 80c1cd7 False [0, 1, 2] True True",
+   "observed": "ok 80c1cd7 False [0, 1, 2] True True (rc 0)",
+   "match": true
+  },
+  {
+   "claim": "E0h at ckpt2500 exits 2 (unratified); within-step R2 of psiU(gamma=0) 0.4010/0.4759/0.5716 (needs the gitignored phaseB payloads under runs/b2-psi-probe/phaseB of the run/b2-psi-probe worktree on the Mac Studio)",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 600 -- .venv/bin/python experiments/b2-psi-probe/run.py e0h --checkpoint 2500 > /dev/null 2>&1; echo rc=$?; python3 -c \"import json;d=json.load(open('runs/b2-psi-probe/phaseB/e0h-ckpt2500.json'));print(['%.4f'%d['e0h.r2_headline'][s] for s in '012'])\"",
+   "expected": "rc=2 then ['0.4010', '0.4759', '0.5716']",
+   "observed": "rc=2 then ['0.4010', '0.4759', '0.5716'] (re-run in a detached worktree at 80c1cd7 on copies of the *.e0h.pt and phase-A inputs; regenerated e0h-ckpt2500.json is byte-identical to the run's, sha256 c575c2a7d76749dcf40bd72c0333d26b2fb5ad6b62fc86a387d184460e263ec6)",
+   "match": true
+  }
+ ],
+ "verifier_sha": "80c1cd78e4f0151aa4878e526c4acfbbf4b2b3bf"
+}

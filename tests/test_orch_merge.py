@@ -74,11 +74,13 @@ def test_a_verified_clean_branch_merges_into_the_night_branch_only(orch):
     main_before = orch.main_refs()
     head = _run_branch(orch, {"runs/a/ledger.json": "{}\n", "src/new.py": "x = 1\n"})
     _verify(orch)
+    reviewed = orch.review(orch.root / ".worktrees" / "a", "run/a", head)
     proc = orch.run("merge", "a")
     assert proc.returncode == 0, proc.stderr
     parents = orch.git("rev-list", "--parents", "-n", "1", _night_head(orch)).split()
     assert len(parents) == 3, "a merge commit, not a fast-forward"
-    assert head in parents
+    assert reviewed in parents
+    assert orch.git("merge-base", "--is-ancestor", head, reviewed) == ""
     assert orch.main_refs() == main_before
     assert lc.halted(orch.root) is None
 
@@ -108,8 +110,9 @@ def test_the_guard_does_not_trip_on_a_measured_constant_edit(orch):
     """Specificity: the guard protects FROZEN entries, not the whole file."""
     edited = CONSTANTS_PY.replace('source_experiment="E0e"', 'source_experiment="E1"')
     assert edited != CONSTANTS_PY
-    _run_branch(orch, {"src/rsr/constants.py": edited})
+    head = _run_branch(orch, {"src/rsr/constants.py": edited})
     _verify(orch)
+    orch.review(orch.root / ".worktrees" / "a", "run/a", head)
     proc = orch.run("merge", "a")
     assert proc.returncode == 0, proc.stderr
     assert lc.halted(orch.root) is None

@@ -1,0 +1,65 @@
+{
+  "N_E_phase_a": {
+    "N_E": 1024,
+    "per": {
+      "psiC_minus_random@seed0": 37,
+      "psiC_minus_random@seed1": 42,
+      "psiC_minus_random@seed2": 59,
+      "psiC_minus_refC.gap_2_to_M@seed0": 36,
+      "psiC_minus_refC.gap_2_to_M@seed1": 27,
+      "psiC_minus_refC.gap_2_to_M@seed2": 58,
+      "psiC_minus_refC@seed0": 34,
+      "psiC_minus_refC@seed1": 23,
+      "psiC_minus_refC@seed2": 74,
+      "psiU_minus_random@seed0": 87,
+      "psiU_minus_random@seed1": 68,
+      "psiU_minus_random@seed2": 97,
+      "psiU_minus_refU.gap_2_to_M@seed0": 166,
+      "psiU_minus_refU.gap_2_to_M@seed1": 140,
+      "psiU_minus_refU.gap_2_to_M@seed2": 156,
+      "psiU_minus_refU@seed0": 114,
+      "psiU_minus_refU@seed1": 90,
+      "psiU_minus_refU@seed2": 130
+    },
+    "raw_max": 166,
+    "underpowered": false
+  },
+  "N_E_prereg": 1024,
+  "N_E_run": 1024,
+  "N_tier2": 1024,
+  "ceiling": [
+    {
+      "N_E": 1024,
+      "projected_h": 0.53248,
+      "reduced": false
+    },
+    {
+      "N_E": 1024,
+      "projected_h": 0.9762133333333333,
+      "reduced": false
+    }
+  ],
+  "checkpoints": [
+    2500,
+    3000
+  ],
+  "expected": "PREREG \u00a713 (not edited; its F2 citation is corrected by the B0 addendum): HARMFUL ~40%, MIXED ~40%, NOT LEARNABLE ~10%, NOT RULED OUT ~10%; psi-C closer to FIFO than psi-U; age decodability substantial; Q2-WIN unlikely; E0h within-step R^2 > 0.49 likely.",
+  "falsifier": "B2 is kill-gate evidence (PLAN-v4 \u00a70.2), not a spec falsifier; E0h is falsifier 3c and has its own entry point and rc (A1.3).",
+  "fits": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/phaseA",
+  "parallel": 6,
+  "prereg": "experiments/b2-psi-probe/PREREG.md",
+  "prereg_commits": {
+    "amendment1": "2ec60dd",
+    "b0_addendum": "99a6626",
+    "base": "e5ab398"
+  },
+  "resume": "units under phaseB/ckpt{c}-seed{s}/units are read, not rerun, when their key (format, fits sha256, run.py sha256, arms, gamma, tier, document) matches; any other key is exit 3",
+  "run_id": "b2-psi-probe",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "source": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream",
+  "threads_per_child": "1"
+}

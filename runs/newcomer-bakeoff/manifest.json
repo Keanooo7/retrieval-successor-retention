@@ -1,0 +1,70 @@
+{
+  "K": 40,
+  "N_E": 2048,
+  "N_F": 264,
+  "analysis_sha256": "41232ed335f8341631f3569e1ba73bd71a4092909fdb022f1ec3032149f3ba83",
+  "arms": [
+    "psiC",
+    "psiU",
+    "graceU1",
+    "graceU2",
+    "graceU4",
+    "psiR1",
+    "psiR1L1",
+    "psiU+",
+    "psiC+",
+    "fifo",
+    "lru",
+    "ageU",
+    "ageC",
+    "ageR1",
+    "ageR1L1",
+    "random0",
+    "random1",
+    "random2",
+    "random3",
+    "random4",
+    "kind",
+    "oracle"
+  ],
+  "b2_fit_sha256": {
+    "0": "0227d80a2f77d52ff84b4311250636ce55e1509ed5a89fb833b3f406336a4846",
+    "1": "cdb2c3640a584dcac3dbb22a20025df21f0aefa0f238cce1d83d219e4c98c0db",
+    "2": "5ed0142cb0601046e790c470607f65273f802f9edf0899944f0867ac76861cfe"
+  },
+  "b2_fits_dir": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b2-psi-probe/runs/b2-psi-probe-fit/phaseA",
+  "code_sha256": "017b5ccff4ee0659cdab233f808efe09efd7287617dcaf673a82ba32d436fa19",
+  "eval_nb": [
+    990000,
+    992048
+  ],
+  "expected": "PREREG \u00a79: replication U LOSS s0,s1 / C EQUIV x3 ~70%; DQ1 NO 60 / MIXED 30 / YES 10; DQ2 INTERMEDIATE 40 / HARMFUL 35 / SAFE 25; DQ3 YES 55 / NO 25 / other 20.",
+  "falsifier": "none of the spec's falsifiers directly: MEASURE-THEN-DECIDE evidence for ADR-0009 L3/L4 and the newcomer options (pack \u00a74); \u00a77.1 vacuity (falsifier 1) is read on the effective rule as a report, not a gate.",
+  "gamma": 0.9,
+  "grace_g": [
+    1,
+    2,
+    4
+  ],
+  "label": 3000,
+  "lambda_shadow": 0.5,
+  "only_aggregate": false,
+  "parallel": 12,
+  "prereg": "experiments/newcomer-bakeoff/PREREG.md",
+  "prereg_commit": "801635c",
+  "r1_lambdas": {
+    "R1": 0.5,
+    "R1L1": 1.0
+  },
+  "run_id": "newcomer-bakeoff",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "source": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream",
+  "threads": {
+    "eval": 1,
+    "fit": 4
+  }
+}

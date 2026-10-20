@@ -180,6 +180,10 @@ def test_is_reduction_detects_a_single_flipped_switch():
         "a_max": M + 1,
         "context_source": ContextSource.RUNNING_CONTEXT,
         "sent_pos_index": SentPosIndex.ABSOLUTE_AGE,
+        # Owner ruling C3 (2026-10-07): the regression target. Not an eviction-score
+        # term -- the reduction runs with observe off -- but a field of RSRConfig, so
+        # it is enumerated and its flip must break the equality like any other.
+        "target": "loo_resample",
     }
     assert set(flips) == set(REDUCTION_SWITCHES), "a switch has no flip case here"
     for name, value in flips.items():

@@ -245,6 +245,39 @@ class Orch:
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(text)
 
+    def review(
+        self,
+        wt: Path,
+        branch: str,
+        reviewed_head: str,
+        verdict: str = "MERGE",
+        *,
+        reviewer: str = "reviewer-session",
+        author: str = "author-session",
+        fixes_verified_at: str | None = None,
+        record_branch: str | None = None,
+        filename: str | None = None,
+    ) -> str:
+        """Commit a T5(b) review record (docs/review-records.md) on `wt`; return
+        the new head. `record_branch`/`filename` override the fields a test wants
+        to get wrong."""
+        lines = [
+            "---",
+            f"branch: {record_branch or branch}",
+            f"reviewed_head: {reviewed_head}",
+            f"author: {author}",
+            f"reviewer: {reviewer}",
+            f"verdict: {verdict}",
+        ]
+        if fixes_verified_at is not None:
+            lines.append(f"fixes_verified_at: {fixes_verified_at}")
+        lines += ["---", "", "Adversarial review body.", ""]
+        slug = branch.replace("/", "-")
+        name = filename or f"{reviewed_head[:12]}.md"
+        return self.commit(
+            wt, {f"docs/reviews/{slug}/{name}": "\n".join(lines)}, "review record"
+        )
+
     def commit(self, wt: Path, files: dict[str, str], msg: str = "work") -> str:
         self.write(wt, files)
         self.git("add", "-A", cwd=wt)

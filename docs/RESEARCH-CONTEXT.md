@@ -821,21 +821,68 @@ is 100`, exit 1, against the real suite's exit 0.
 *(added 2026-09-27.)* **Neither changes any constant, rule or gate.** Each is an input to an owner
 decision that §12 lists. Neither is a correction; a correction is written by Brendan.
 
-1. **`r_i` barely separates pending facts from filler.** In `runs/lookahead-room-r2/ledger.json`
-   (arm B, FIFO-resident slots at full-memory steps, ckpt 3000), the mean immediate demand
-   `B.ckpt3000.class.res.pending.D.mean` is **0.0711 / 0.0688 / 0.0787** (3 seeds). For filler,
-   `B.ckpt3000.class.res.filler.D.mean` is **0.0573 / 0.0606 / 0.0544**. Roughly 0.07 against 0.06.
-   So a rule that evicts on the `γ = 0` target sits near FIFO. Its hit rate,
-   `B.ckpt3000.U.hit.rule_g0`, is **0.7997 / 0.7881 / 0.8457**, against `B.ckpt3000.U.hit.fifo`
-   **0.8059 / 0.8093 / 0.8088**. The causal fact/filler rule reaches `B.ckpt3000.U.hit.factfiller`
-   **0.9655 / 0.9653 / 0.9666**. **The headroom exists, and `r_i` points at it only weakly.**
+1. **`r_i`'s pending-vs-filler separation depends on age, and "filler" includes query sentences.**
+   *(Rewritten 2026-09-30 from B0's ledger, `runs/b0-ceilings/ledger.json` —
+   `experiments/b0-ceilings/RESULTS.md`, git `bb40c40`, rsr-verifier `status: ok`
+   (`runs/b0-ceilings/verification.json`), merged at `f7a6b10`. PLAN-v4 §2D; the edit waited for this
+   ledger so that no scratch-script number enters this file.)* Arm B, FIFO, ckpt 3000, immediate demand
+   `D` (the `γ = 0` target), seeds 0 / 1 / 2. The class is lookahead-room's `slot_class`
+   (`experiments/lookahead-room/run.py:241`): an assert is *pending* before its query, and **every
+   non-assert sentence — query sentences included — is *filler***.
+   - **Pooled over FIFO-resident slots** the gap is small: `B.ckpt3000.F1.D.age_le_M|pending.mean`
+     **0.0711 / 0.0688 / 0.0787** against `B.ckpt3000.F1.D.age_le_M|filler.mean`
+     **0.0573 / 0.0606 / 0.0544**. These are the numbers this finding carried before (from
+     `runs/lookahead-room-r2/ledger.json`), now reproduced in B0's ledger.
+   - **By age it is not one gap.** At age 1, `B.ckpt3000.F1.D.1|pending.mean`
+     **0.0930 / 0.0999 / 0.1047** against `B.ckpt3000.F1.D.1|filler.mean` **0.0580 / 0.0831 / 0.0615**.
+     The gap (pending − filler) narrows at older ages — strictly at every step from age 1 to 16 only on
+     seed 0; it rises at age 2 on seed 2 and at ages 2 and 8–10 on seed 1 — and **reverses from age 13
+     on seeds 0 and 1**, still inside FIFO memory:
+     at age 13, `…D.13|pending.mean` 0.0562 / 0.0472 / 0.0682 against `…D.13|filler.mean`
+     0.0579 / 0.0523 / 0.0601; at age 16, `…D.16|pending.mean` 0.0783 / 0.0508 / 0.0758 against
+     `…D.16|filler.mean` 0.0928 / 0.0683 / 0.0731. On seed 2 pending stays above filler at every age
+     1–16. Full table: `B.ckpt3000.F1.D_by_age_class` (the per-age signs are arithmetic on it).
+     **Pooling across ages hides a sign change.**
+   - For evicted sentences probed back at rank 0 (`B.ckpt3000.F1.D.age_gt_M|*`), pending
+     (`B.ckpt3000.F1.D.age_gt_M|pending.mean`) **0.0843 / 0.0544 / 0.0829** against filler
+     (`B.ckpt3000.F1.D.age_gt_M|filler.mean`) **0.0962 / 0.0817 / 0.0757**: filler is higher on seeds
+     0 and 1, pending is higher on seed 2.
+   - **A rule that evicts on the `γ = 0` target sits near FIFO.** `B.ckpt3000.hit.rule_g0`
+     **0.7997 / 0.7881 / 0.8457** against `U.hit.fifo.all` **0.8059 / 0.8093 / 0.8088**; its share of
+     the fact/filler gain, `B.ckpt3000.cap.rule_g0.point`, is −0.039 / −0.136 / +0.234. The causal
+     fact/filler rule reaches `U.hit.factfiller.all` **0.9655 / 0.9653 / 0.9666**. **The headroom
+     exists, and `r_i` points at it only weakly.**
+   - By sentence kind rather than class (query sentences separated out), mean `G_0` on B0's decision
+     rows is `B.ckpt3000.g0.E_G.kind.assert` 0.0815 / 0.0612 / 0.0836, `…kind.query`
+     0.0765 / 0.0765 / 0.0705, `…kind.filler` 0.0663 / 0.0539 / 0.0474;
+     `B.ckpt3000.g0.F2.assert_minus_filler` +0.0152 [0.0148, 0.0156] / +0.0073 [0.0070, 0.0076] /
+     +0.0361 [0.0357, 0.0366].
+
    Whether `r_i` is the right target is **E0d's question** (§3.2.1). 🔴 These are hindsight,
-   FIFO-world proxies (RESULTS-r2's own caveat), not a result about a trained RSR head.
-2. **`β` is inert under AdamW with `φ`-only gradient.** Only `φ` receives `L_MC`'s gradient
-   (§13.3), and AdamW is invariant to a constant rescaling of the gradient. So `β` as a loss weight
-   changes nothing, and E1's `β` sweep would return a null by construction. That is the shape of
-   defect D-1. Source: ADR-0009 decision **L7**, on the **unmerged, proposed** PR #52
-   (`docs/decisions/ADR-0009-rsr-learning-path.md` on branch `docs/adr-learning-path`).
+   FIFO-world proxies, computed in-sample on the already-inspected U range (B0 is descriptive, no
+   gate) — not a result about a trained RSR head.
+2. **`β`'s inertness with `φ`-only gradient, as measured by B1: it fails at `ε = 1e-8` and holds at
+   `ε = 1e-12` in the three decoupled-weight-decay AdamW arms; under coupled L2 (`torch.optim.Adam`
+   with `weight_decay`, not AdamW) `β` is LIVE at both.** Only these two `ε` values were measured.
+   *(Updated 2026-09-30 with B1's measured result, replacing "`β` is inert"; PLAN-v4 §2D.)* The premise
+   (ADR-0009 decision **L7**, proposed, on the unmerged PR #52, branch `docs/adr-learning-path`): only `φ` receives `L_MC`'s gradient (§13.3) and AdamW is
+   invariant to a constant rescaling of the gradient, so `β` as a loss weight would change nothing,
+   and E1's `β` sweep would return a null by construction — the shape of defect D-1.
+   **B1 measured it at real scale** (`experiments/b1-beta-inertness/RESULTS.md`,
+   `runs/b1-beta-inertness/ledger.json`, git `412f136`, seeds 0 / 1 / 2, 3000 steps, `β ∈ {0.01, 0.1}`
+   against `β = 1`; rsr-verifier `status: ok`, `runs/b1-beta-inertness/verification.json`; merged into
+   `night/2026-09-30` at `524aa50`). Classes, from the ledger's `class.<arm>.eps<ε>` rows:
+   - decoupled weight decay, no `φ` clip: **LIVE at `ε = 1e-8`** (`class.decoupled_wd.eps1e-08`: min
+     argmin agreement 0.9707, max relative max|Δφ| 0.176) and **INERT at `ε = 1e-12`**
+     (`class.decoupled_wd.eps1e-12`: 1.0, 0.000156);
+   - `φ` clip at 1.0: the same classes (`class.phi_clip.eps1e-08` LIVE, `class.phi_clip.eps1e-12`
+     INERT), and the clip never bound (clip fraction 0 in every `phi_clip` run), so B1 does not
+     measure a binding `φ` clip;
+   - joint clip: LIVE at 1e-8, INERT at 1e-12 (`class.joint_clip.eps1e-08`, `…eps1e-12`);
+   - coupled L2: **LIVE at both `ε`** (`class.coupled_l2.eps1e-08`, `…eps1e-12`).
+
+   The ledger's `verdict.outcome` is `falsified` for L7's premise at real scale (PREREG §1's mapping:
+   decoupled_wd LIVE at `ε = 1e-8`). B1 is evidence for L7 and L8, **not a decision** on either.
    **This is a candidate spec correction for Brendan to write.** It is not in
    `docs/spec-corrections.md`, and no agent should add it there. The registry's `beta` entry is
    untouched.

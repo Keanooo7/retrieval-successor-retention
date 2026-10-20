@@ -112,6 +112,12 @@ class EvictionRecord:
     is how the warmup came to be measured in sentences. None when `T_warm = 0` and
     no loop set it (the section 3.7 reduction)."""
 
+    victim_age: int | None = None
+    """`step - written_at` of the evicted slot (spec section 7.1; ADR-0009 L6).
+    The victim-age histogram is one of the section 7.1 diagnostics every RESULTS
+    carries: a policy whose victims all sit at age `M` is FIFO whatever its
+    attribution says. None for a caller that did not record it."""
+
 
 @dataclass
 class RankShiftLog:
@@ -123,10 +129,16 @@ class RankShiftLog:
 
     counts: Counter[int] = field(default_factory=Counter)
     victim_ranks: Counter[int] = field(default_factory=Counter)
+    victim_ages: Counter[int] = field(default_factory=Counter)
+    """Spec section 7.1 / ADR-0009 L6: the victim-age histogram, beside the rank
+    histogram. Records without an age (`victim_age=None`) are not counted here,
+    so `sum(victim_ages.values())` can be below `n` -- and says so."""
 
     def add(self, record: EvictionRecord) -> None:
         self.counts[record.rank_shift] += 1
         self.victim_ranks[record.victim_rank] += 1
+        if record.victim_age is not None:
+            self.victim_ages[record.victim_age] += 1
 
     @property
     def n(self) -> int:
@@ -160,4 +172,5 @@ class RankShiftLog:
             ),
             "shift_distribution": self.distribution(),
             "victim_rank_distribution": dict(sorted(self.victim_ranks.items())),
+            "victim_age_distribution": dict(sorted(self.victim_ages.items())),
         }

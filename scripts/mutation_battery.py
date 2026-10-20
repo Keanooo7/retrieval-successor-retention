@@ -30,15 +30,26 @@ table stood at "17/17, 11 off-gate" from 0a9f5d8 while the suite had grown to 19
 off-gate on that same mutation, and a record that has to be retyped is a record
 that goes stale.
 
-The source tree is restored after every mutation, including on failure.
+🔴 **The tree you run this from is never mutated** (I1, 2026-09-29). Every suite
+run -- the baseline and each mutation -- happens in a shard: a git worktree of the
+invoking tree's HEAD (which must be clean) with its own venv, outside the invoking
+tree (`scripts/battery_isolation.py`). A suite whose `rsr` does not resolve under
+its shard, in the pytest process or in a child of it, is `DID_NOT_RUN` -- never
+`PROVEN` or `LEAKS`. After a SIGKILL, which no handler sees, the only leftovers
+are shard worktrees:
+
+    uv run python scripts/mutation_battery.py --prune-shards
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import signal
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,9 +57,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import battery_isolation as iso  # noqa: E402
 from orchestrator import lanes  # noqa: E402
 
-from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main  # noqa: E402
+from rsr.exit_codes import ArgumentParser, Exit, refuse, run_main, status  # noqa: E402
 
 PYTEST = ROOT / ".venv" / "bin" / "pytest"
 
@@ -73,6 +85,32 @@ class Mutation:
 
 # Reasons shared by several declared couplings. Written once so the table below
 # stays readable and so a reader can see that the same argument is being made.
+_REVIEW_GATE_COUPLING = (
+    "every T5(b) refusal is returned by the one review_gate() call; skipping the "
+    "call turns each of them into a merge. The coupling is the design: one gate."
+)
+_REVIEW_GATE_REFUSALS: tuple[str, ...] = (
+    "test_a_record_for_a_different_head_is_refused",
+    "test_a_record_for_another_branch_is_refused",
+    "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+    "test_a_record_whose_filename_is_not_its_reviewed_head_is_refused",
+    "test_a_reviewer_who_is_a_git_author_of_the_branch_is_refused",
+    "test_a_self_review_is_refused",
+    "test_an_unknown_verdict_is_refused",
+    "test_do_not_merge_is_refused_as_a_failure",
+    "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
+    "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+    "test_merge_with_fixes_without_fixes_verified_at_is_refused",
+    "test_other_prefixes_are_refused_without_a_review[docs/x]",
+    "test_other_prefixes_are_refused_without_a_review[eng/x]",
+    # added with the review fixes (MAJOR-1, MAJOR-2, MINOR-2), 2026-09-30
+    "test_merge_with_fixes_is_never_mergeable_on_its_own",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[run/a]",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[HEAD]",
+    "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit[" + "0" * 40 + "]",
+    "test_only_the_merging_runs_own_verification_is_exempt",
+    "test_no_verification_json_is_exempt_on_other_prefixes",
+)
 _REDUCTION_TABLE_COUPLING = (
     "`reduction_to_tg()` is built *from* the off-switch table, so removing an "
     "entry makes every reduction test fail to construct a config. The coupling is "
@@ -403,6 +441,104 @@ _LIVENESS_BATCH_STAMP_COUPLING = (
     "test that reads it reddens: the default-path config, seen from liveness."
 )
 
+_I1_E2E_WIRING = (
+    "I1: the end-to-end stub tests run the real battery; each depends on the "
+    "guard this mutation disables for its own assertion, so one edit reddens the "
+    "unit gate and every end-to-end path through the same guard. Asserted both "
+    "ways on purpose: a unit test alone would pass a guard that is never called."
+)
+_I1_SHARD_MUTATION = (
+    "I1: every end-to-end stub test either asserts the invoking tree stays clean "
+    "mid-run and after, or needs the mutation to land in the shard to get its "
+    "verdict; a battery that mutates the invoking tree breaks each by construction."
+)
+_I1_TEARDOWN = (
+    "I1: every end-to-end stub test that finishes or stops a battery asserts no "
+    "worktree registration is left; a pool never torn down leaves one in each."
+)
+_I1_DIRTY = (
+    "I1: tracked edits and untracked files are the two halves of 'dirty'; one "
+    "check covers both, so one edit reddens both tests."
+)
+
+
+_I1_RESET_E2E = (
+    "I1 review: every end-to-end stub test runs more than one suite in one shard, "
+    "so the reset between them is on its path; a reset that leaves state behind "
+    "fails verify_clean or changes the next verdict in each."
+)
+_I1_POOL_LOCK = (
+    "I1 review: --prune-shards and a battery take the same pool lock; one edit to "
+    "the lock reddens both tests."
+)
+_I1_GROUP = (
+    "I1 review: every test that stops a suite -- the battery or the pytest child -- "
+    "asserts the suite's grandchild is gone; one edit to the group kill reddens "
+    "each."
+)
+
+
+def _i1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
+    """Declared couplings on tests/test_battery_isolation.py nodes, one reason."""
+    return tuple((f"tests/test_battery_isolation.py::{n}", reason) for n in nodes)
+
+
+def _s1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
+    """Declared couplings on tests/test_rsr_learning_path.py nodes, one reason."""
+    return tuple((f"tests/test_rsr_learning_path.py::{n}", reason) for n in nodes)
+
+
+def _r1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
+    """Declared couplings on tests/test_run1_ready.py nodes, one reason."""
+    return tuple((f"tests/test_run1_ready.py::{n}", reason) for n in nodes)
+
+
+# ADR-0009 slice 1. Each reason below was written after the mutation was applied
+# by hand and every off-gate red inspected (feat/rsr-slice1, 2026-09-30).
+_S1_RSR_THROUGH_TRAIN = (
+    "every slice-1 test that drives an RSR arm through the real train() needs "
+    "build_policy to run: a FIFOPolicy has no `.config`, so train() raises "
+    "AttributeError where it stamps T_warm. The same defect -- the stamped name "
+    "and the built policy disagree -- observed from each RSR-arm test."
+)
+_S1_ITERS_EPOCH_ZERO = (
+    "these tests build an RSR arm with iters=0; `float(iters)` = 0 is refused by "
+    "the registry's `steps_per_epoch > 0` constraint (ConstraintViolation). The "
+    "iters-as-epoch defect surfacing loudly instead of as a FIFO-forever warmup."
+)
+_S1_TRAIN_MODE_TRACE = (
+    "every learning path reads r_i from the eval forward's capture; with "
+    "model.eval() dropped it is stamped eval_mode=False and reward._require_eval "
+    "raises TrainModeTrace (correction 20 / D-F, the guard working). The FIFO "
+    "tests that red instead see the 'eval' forward draw dropout RNG, which shifts "
+    "the training forward's masks or the global RNG state."
+)
+_S1_MODE_NOT_RESTORED = (
+    "the same restore, seen from train() (model.training after the loop) and "
+    "from the FIFO loss: left in eval mode, every later training forward runs "
+    "without dropout, so the loss with the eval forward differs from without."
+)
+_S1_RETURN_ARITHMETIC = (
+    "both tests read G from mc_returns: one step of gamma short changes every "
+    "multi-term target (the keying test's (3, 0)) and makes G(T_b - 1) = gamma * r "
+    "instead of r (the truncation test)."
+)
+_S1_ROWS_MERGED = (
+    "the per-row tests index mc_targets by row: merged into row 0, row 1 has no "
+    "samples (max() over an empty selection) and the (row, t) group count no "
+    "longer matches n_groups."
+)
+_S1_PHI_FROM_GEN = (
+    "phi drawn from `gen` is no longer the phi_generator(seed) head (the init and "
+    "beta=0 tests compare against it), and on MPS the CPU-built head raises on the "
+    "MPS generator -- L11's two defects, one per test."
+)
+_S1_NO_VALUE_HEAD_GROUP = (
+    "phi out of the optimizer never moves: T4's 'L_MC acted' check fails, and a "
+    "frozen arm has no trainable parameter left (build_param_groups raises)."
+)
+
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -413,13 +549,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "gauntlet 0.1: the reduction stops reaching the score path",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                "ep",
                 _REDUCTION_WARMUP_LOUD_COUPLING,
             ),
             (
                 "tests/test_device_placement.py::"
                 "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
                 _REDUCTION_WARMUP_LOUD_COUPLING,
+            ),
+            *_r1_declare(
+                "the run-1 test builds RSRPolicy(reduction_to_tg(M)) and evicts once; "
+                "with T_warm = inf and no optimizer step set, select_eviction raises "
+                "(correction 31's loud refusal) -- the reduction table seen from the "
+                "diagnostics-off test.",
+                "test_a_directly_built_policy_collects_no_diagnostics",
             ),
         ),
     ),
@@ -432,11 +576,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the §3.7 reduction is no longer argmin(-a_i)",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
+                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                "ep",
                 "it builds RSRConfig.reduction_to_tg() and asserts the one eviction is "
                 "attributed to neg_age -- the psi_override this mutation clears "
                 "(measured under it, W11: {'psi': 1} != {'neg_age': 1}). The "
                 "reduction, seen from correction 16's no-counter test.",
+            ),
+            *_r1_declare(
+                "the run-1 test asserts REDUCTION_SWITCHES['psi_override'] == "
+                "'neg_age': the age-only arm is a psi_override VALUE and must stay out "
+                "of the reduction. The same switch, asserted from the age-only side.",
+                "test_the_reduction_still_pins_neg_age",
             ),
         ),
     ),
@@ -447,43 +598,53 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    "nu": 0.0,\n    "beta": 0.0,',
         '    "beta": 0.0,',
         "a term with no documented off-switch; the brief records this exact hole",
-        off_gate_allowed=tuple(
-            (f"tests/test_reduction.py::{t}", _REDUCTION_TABLE_COUPLING)
-            for t in (
-                "test_a_max_tracks_capacity",
-                "test_is_reduction_detects_a_single_flipped_switch",
-                "test_reduction_agrees_with_fifo_on_every_eviction",
-                "test_reduction_config_disables_every_added_term",
-                "test_reduction_runs_through_the_score_path",
-                "test_switching_psi_source_to_the_learned_head_reddens_the_reduction",
-                "test_t_warm_is_zero_not_infinity",
-                "test_the_learned_head_does_shift_ranks",
-                "test_the_reduction_pins_the_context_source",
-                "test_the_reduction_pins_the_positional_index_to_rank",
-                "test_the_reduction_shifts_no_ranks",
-                # 📌 Added 2026-09-18. docs/mutation-battery.md recorded 11 here
-                # at 0a9f5d8; the suite has grown and the same coupling now
-                # reaches 19. The count in that table was stale, not wrong.
-                "test_a_learned_head_changes_the_loss",
-                "test_loss_curve_is_bit_exact_against_stock_tg",
-                "test_phi_construction_does_not_perturb_the_global_rng",
-                "test_the_learned_head_does_evict_middle_slots",
-                "test_the_reduction_displaces_no_ranks_on_the_real_model",
-                "test_the_reduction_ran_through_the_score_path",
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_reduction.py::{t}", _REDUCTION_TABLE_COUPLING)
+                for t in (
+                    "test_a_max_tracks_capacity",
+                    "test_is_reduction_detects_a_single_flipped_switch",
+                    "test_reduction_agrees_with_fifo_on_every_eviction",
+                    "test_reduction_config_disables_every_added_term",
+                    "test_reduction_runs_through_the_score_path",
+                    "test_switching_psi_source_to_the_learned_head_reddens_the_reduction",
+                    "test_t_warm_is_zero_not_infinity",
+                    "test_the_learned_head_does_shift_ranks",
+                    "test_the_reduction_pins_the_context_source",
+                    "test_the_reduction_pins_the_positional_index_to_rank",
+                    "test_the_reduction_shifts_no_ranks",
+                    # 📌 Added 2026-09-18. docs/mutation-battery.md recorded 11 here
+                    # at 0a9f5d8; the suite has grown and the same coupling now
+                    # reaches 19. The count in that table was stale, not wrong.
+                    "test_a_learned_head_changes_the_loss",
+                    "test_loss_curve_is_bit_exact_against_stock_tg",
+                    "test_phi_construction_does_not_perturb_the_global_rng",
+                    "test_the_learned_head_does_evict_middle_slots",
+                    "test_the_reduction_displaces_no_ranks_on_the_real_model",
+                    "test_the_reduction_ran_through_the_score_path",
+                )
             )
-        )
-        + tuple(
-            (f"tests/test_device_placement.py::{t}", _REDUCTION_TABLE_COUPLING)
-            for t in (
-                "test_rsr_policy_exposes_a_to_method",
-                "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+            + tuple(
+                (f"tests/test_device_placement.py::{t}", _REDUCTION_TABLE_COUPLING)
+                for t in (
+                    "test_rsr_policy_exposes_a_to_method",
+                    "test_rsr_policy_runs_where_the_memory_lives[neg_age]",
+                )
             )
-        )
-        + (
-            # W11: RSRConfig(...) missing 'nu' at construction, measured under it.
-            (
-                "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_step",
-                _REDUCTION_TABLE_COUPLING,
+            + (
+                # W11: RSRConfig(...) missing 'nu' at construction, measured under it.
+                (
+                    "tests/test_t_warm_dispatch.py::test_the_reduction_needs_no_training_st"
+                    "ep",
+                    _REDUCTION_TABLE_COUPLING,
+                ),
+            ),
+            *_r1_declare(
+                "both run-1 tests construct RSRConfig.reduction_to_tg(M), which is "
+                "built from the table (TypeError: missing nu). The coupling is the "
+                "design: one enumeration (as _REDUCTION_TABLE_COUPLING).",
+                "test_a_directly_built_policy_collects_no_diagnostics",
+                "test_the_reduction_still_pins_neg_age",
             ),
         ),
     ),
@@ -502,8 +663,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "LRU state back in MemoryState.accum",
         "test_lru_and_fifo_choose_different_slots_in_a_real_eviction_loop",
         "src/rsr/baselines/lru.py",
-        "        self._last_used[winner] = step",
-        "        slots.accum.setdefault('lru', {})[winner] = step",
+        "        self._last_used.setdefault(slots.row, {})[occupant] = step",
+        "        slots.accum.setdefault('lru', {})[occupant] = step",
         "gauntlet 0.4: LRU silently becomes FIFO",
         off_gate_allowed=(
             (
@@ -517,6 +678,20 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the round-trip asserts LRU's recency lives in the policy's own "
                 "state; moving it into MemoryState.accum is exactly what that test "
                 "is checking cannot happen",
+            ),
+            (
+                "tests/test_on_write_slot.py::test_lru_state_is_per_batch_row",
+                "2026-09-29: with recency in the per-step accum no record survives "
+                "to select_eviction, so row B falls back to write order and the "
+                "per-row assertion fails -- LRU losing all cross-step state, seen "
+                "from the per-row test",
+            ),
+            (
+                "tests/test_on_write_slot.py::"
+                "test_lru_recency_follows_the_occupant_through_compaction",
+                "2026-09-29: the step-3 use of occupant 1 is forgotten by step 4, "
+                "so LRU evicts it as FIFO would -- the same lost cross-step state, "
+                "seen from the compaction test",
             ),
         ),
     ),
@@ -694,7 +869,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 _DISPLACEMENT_COUPLING,
             ),
             (
-                "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_most",
+                "tests/test_instrumentation.py::test_evicting_the_newest_displaces_the_"
+                "most",
                 _DISPLACEMENT_COUPLING,
             ),
             (
@@ -706,6 +882,19 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_reduction_displaces_no_ranks_on_the_real_model",
                 _DISPLACEMENT_COUPLING + " Added 2026-09-18: the on-the-real-model "
                 "variant post-dates docs/mutation-battery.md's table.",
+            ),
+            *_r1_declare(
+                "the §7.1 histograms are built from EvictionRecord.rank_shift: counting "
+                "the window gives displacement != victim_rank - 1, so the by-hand {0: "
+                "1, 2: 1} and the train()-level {0: 88} both change.",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_victim_age_and_rank_histograms_by_hand",
+            ),
+            *_r1_declare(
+                "the split-histogram test reads the warmup displacement histogram, "
+                "which is built from rank_shift: counting the window gives {3: "
+                "176}, not {0: 176}.",
+                "test_the_run_level_histograms_split_warmup_from_scored",
             ),
         ),
     ),
@@ -1010,10 +1199,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a red baseline exits 1 again",
         "test_a_red_baseline_exits_3",
         "scripts/mutation_battery.py",
-        "        refuse(\n"
-        "            Exit.DID_NOT_RUN,\n"
-        '            f"the suite is not green',
-        '        refuse(\n            Exit.FAIL,\n            f"the suite is not green',
+        # 📌 Re-anchored 2026-09-29 (I1): the baseline now runs inside the shard's
+        # `with`, four columns deeper. Same edit.
+        "            refuse(\n"
+        "                Exit.DID_NOT_RUN,\n"
+        '                f"the suite is not green',
+        "            refuse(\n"
+        "                Exit.FAIL,\n"
+        '                f"the suite is not green',
         "S0-05: a suite red before mutating means no mutation ran.",
     ),
     Mutation(
@@ -1035,12 +1228,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        raise SystemExit(2)",
         "S0-05: argparse's 2 gave render_scoreboard's `2` two meanings, bad "
         "arguments and an empty board.",
-        off_gate_allowed=tuple(
-            (node, _USAGE_ERROR_COUPLING)
-            for node in (
-                "tests/test_canary_split.py::test_an_unknown_canary_device_did_not_run",
-                "tests/test_orch_outbox.py::test_the_cli_usage_error_exits_3",
-            )
+        off_gate_allowed=(
+            *tuple(
+                (node, _USAGE_ERROR_COUPLING)
+                for node in (
+                    "tests/test_canary_split.py::test_an_unknown_canary_device_did_not_run",
+                    "tests/test_orch_outbox.py::test_the_cli_usage_error_exits_3",
+                )
+            ),
+            *_r1_declare(
+                "the C-1 and CLI-routing tests assert the run-1 flags' usage errors "
+                "exit 3 (--frozen-model-mode off; partial pool or warm-start flag "
+                "sets); with usage errors back at 2 they see 2.",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_the_cli_routes_the_pool_and_the_warm_start",
+            ),
         ),
     ),
     Mutation(
@@ -1118,7 +1320,8 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
             (
                 "tests/test_lookahead_room.py::"
-                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe"
+                "_holds",
                 "lookahead-room records r_i and runs its probes and online_g0 rule from "
                 "observe(); never reached, no demand is recorded: the same call site, "
                 "seen from W10.",
@@ -1137,6 +1340,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "observe(); never reached, no demand is recorded: the same call site, "
                 "seen from W10.",
             ),
+            *_r1_declare(
+                "with observe never called L_MC is None, so phi (the frozen warm-start "
+                "test) and the age-only table (the age-only arm test) never move -- the "
+                "learning path seen from two run-1 arms.",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+            ),
         ),
     ),
     # ----------------------------------------------------------------------- #
@@ -1147,9 +1357,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "policy built unconditionally again",
         "test_train_does_not_stamp_a_policy_it_did_not_build",
         "src/rsr/train/loop.py",
-        "    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, "
-        "generator=gen)",
-        "    policy = FIFOPolicy()",
+        # Anchor refreshed for ADR-0009 slice 1 (the call now passes phi's own
+        # generator, the derived epoch and the L12 overrides); same defect.
+        "    policy = build_policy(\n        policy_name,\n        d_model=d,\n",
+        "    policy = FIFOPolicy() or build_policy(\n        policy_name,\n"
+        "        d_model=d,\n",
         "S0-01 defect (b), the original line. `policy_name` still flows into the "
         "frozen config and the `run_id`, so `train(policy_name='rsr')` completes "
         "and returns `run_id='rsr-d32-...'` for a stream FIFO evicted. Nothing "
@@ -1159,12 +1371,77 @@ MUTATIONS: tuple[Mutation, ...] = (
         "genuine.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_traini"
+                "ng_steps",
                 _BUILD_POLICY_INJECTION_COUPLING,
             ),
             (
-                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one"
+                "_stream",
                 _BUILD_POLICY_INJECTION_COUPLING,
+            ),
+            *_s1_declare(
+                _S1_RSR_THROUGH_TRAIN,
+                "test_beta_zero_leaves_phi_bitwise_at_init",
+                "test_every_trace_reaching_observe_in_train_is_eval_mode",
+                "test_fifo_and_rsr_arms_see_the_same_first_batch",
+                "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                "test_overrides_are_stamped_into_frozen_hash_and_label",
+                "test_phi_is_initialised_from_its_own_seeded_stream",
+                "test_steps_per_epoch_is_derived_from_the_pool[16]",
+                "test_steps_per_epoch_is_derived_from_the_pool[8]",
+                "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                "test_the_reduction_through_train_has_no_head_no_observe_and_no_loss",
+                "test_the_rsr_arm_builds_and_steps_on_mps",
+            ),
+            (
+                "tests/test_train_loop.py::"
+                "test_the_value_head_lands_in_its_own_mup_group",
+                _S1_RSR_THROUGH_TRAIN,
+            ),
+            *_r1_declare(
+                "every run-1 test that drives an RSR arm through train() needs "
+                "build_policy to run: a FIFOPolicy has no `.config` (AttributeError "
+                "where T_warm is stamped). The FIFO refusal test reds because the "
+                "unconditional FIFOPolicy() never reaches build_policy's m-5 check.",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_frozen_mode_records_that_dropout_stays_on",
+                "test_no_warmup_ablation_on_the_fifo_arm_is_refused",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_epoch_records_sampling_with_replacement",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "every run-1 test that drives an RSR arm through train() (C-1, pool "
+                "epochs, drained records, attribution, every-step diagnostics, "
+                "pairing, split histograms, the sampler record) needs build_policy: "
+                "a FIFOPolicy has no `.config` (AttributeError where T_warm is "
+                "stamped).",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+            *_r1_declare(
+                "the fix-round tests drive RSR arms (content or age-only) through "
+                "train(): a FIFOPolicy has no `.config` (AttributeError where "
+                "T_warm is stamped).",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_every_pool_arm_records_its_sampler_in_the_hash",
             ),
         ),
     ),
@@ -1184,12 +1461,28 @@ MUTATIONS: tuple[Mutation, ...] = (
         "and two warmup tests that fed `select_eviction` the sentence index.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one"
+                "_stream",
                 _T_WARM_COUPLING,
             ),
             (
                 "tests/test_t_warm_dispatch.py::test_warmup_longer_than_a_stream_ends",
                 _T_WARM_COUPLING,
+            ),
+            *_r1_declare(
+                "both run-1 tests read the warm flag per optimizer step (relative steps "
+                "0, 1 warm; every train() eviction warm at T_warm = 32); compared "
+                "against the sentence index, evictions at t >= T_warm stop being warm.",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+            ),
+            *_r1_declare(
+                "the drained-records, attribution and split-histogram tests count "
+                "warmup evictions per optimizer step; compared against the sentence "
+                "index, evictions at t >= T_warm turn scored inside a warmup step.",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_run_level_histograms_split_warmup_from_scored",
             ),
         ),
     ),
@@ -1205,8 +1498,40 @@ MUTATIONS: tuple[Mutation, ...] = (
         "FIFO arm.",
         off_gate_allowed=(
             (
-                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_traini"
+                "ng_steps",
                 _T_WARM_COUPLING,
+            ),
+            *_r1_declare(
+                "every run-1 RSR arm with T_warm > 0 run through train() raises 'no "
+                "training step was set' at its first eviction (correction 31's guard).",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "every run-1 RSR arm with T_warm > 0 run through train() raises 'no "
+                "training step was set' at its first eviction (correction 31's "
+                "guard).",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
+            *_r1_declare(
+                "the fix-round RSR arms (resume, age-only C-1) run with T_warm > 0 "
+                "and raise 'no training step was set' at their first eviction.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
             ),
         ),
     ),
@@ -1231,7 +1556,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "a ledger exists, not at all.",
         off_gate_allowed=(
             (
-                "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_not_build",
+                "tests/test_train_loop.py::test_train_does_not_stamp_a_policy_it_did_no"
+                "t_build",
                 "train() reaches the epoch refusal through build_policy: one "
                 "refusal, two call sites, and the S0-01 test matches its message "
                 "to prove `iters` is no longer passed.",
@@ -1240,16 +1566,50 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "train() passes iters as steps_per_epoch again",
-        "test_train_does_not_stamp_a_policy_it_did_not_build",
+        "test_steps_per_epoch_is_derived_from_the_pool",
         "src/rsr/train/loop.py",
-        "    policy = build_policy(policy_name, d_model=d, steps_per_epoch=None, "
-        "generator=gen)",
-        "    policy = build_policy(policy_name, d_model=d, "
-        "steps_per_epoch=float(iters), generator=gen)",
+        # Re-pointed for the 31(b) ruling (R-2026-09-30-rsr-run-1-scope, owner
+        # draft): train() now derives the epoch from the pool, so the defect is
+        # `iters` replacing that derivation, and the gate is the derivation's test.
+        "    steps_per_epoch = epoch_steps(pool_docs, batch)\n",
+        "    steps_per_epoch = float(iters)\n",
         "Correction 31 (b), the original line. `iters` makes section 3.4's one "
-        "epoch the whole run, so the warmup never ends and a future 'rsr' run is "
-        "FIFO throughout. Today the registry would still refuse (E1 has not "
-        "logged nu/beta/gamma); the day it does not, this line is the defect.",
+        "epoch the whole run, so the warmup never ends and an 'rsr' run is FIFO "
+        "throughout. Since the 31(b) ruling an epoch is one pass over the pool, "
+        "pool / batch steps, and an RSR arm with labelled overrides reaches the "
+        "warmup -- so this line is now live, not latent.",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_ITERS_EPOCH_ZERO,
+                "test_overrides_are_stamped_into_frozen_hash_and_label",
+                "test_phi_is_initialised_from_its_own_seeded_stream",
+                "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+            ),
+            *_r1_declare(
+                "run-1 tests at iters = 0 are refused by the registry (steps_per_epoch "
+                "> 0), and the pool tests read steps_per_epoch / T_warm from the pool "
+                "(2.0), not from iters (3.0 or 1.0).",
+                "test_frozen_mode_records_that_dropout_stays_on",
+                "test_the_epoch_records_sampling_with_replacement",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "iters = 0 runs are refused by the registry (steps_per_epoch > 0); "
+                "with iters = 3 the split test's T_warm becomes 3 steps (264 warmup "
+                "evictions, not 176).",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+            *_r1_declare(
+                "the sampler-in-hash test builds an RSR pool arm at iters = 0, "
+                "which the registry refuses (steps_per_epoch > 0).",
+                "test_every_pool_arm_records_its_sampler_in_the_hash",
+            ),
+        ),
     ),
     Mutation(
         "--policy stops reaching train()",
@@ -1313,6 +1673,49 @@ MUTATIONS: tuple[Mutation, ...] = (
         "two arms the docstring names as the whole reason `overrides` exists -- "
         "the `gamma = 0` control and A2's `A_max = M` -- are unbuildable until "
         "E1 logs constants neither of them uses.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "every run-1 RSR arm is built from labelled overrides (L12); read "
+                "eagerly, the registry raises UnmeasuredConstant on nu/beta/gamma for "
+                "each, including build_policy called directly.",
+                "test_a_directly_built_policy_collects_no_diagnostics",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_frozen_mode_records_that_dropout_stays_on",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_epoch_records_sampling_with_replacement",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "every run-1 RSR arm is built from labelled overrides (L12); read "
+                "eagerly, the registry raises UnmeasuredConstant on nu for each -- "
+                "the age-only nu refusal through build_policy included.",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_age_only_arm_refuses_nu",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+            *_r1_declare(
+                "the fix-round RSR arms are built from labelled overrides (L12); "
+                "read eagerly, the registry raises UnmeasuredConstant on nu.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_every_pool_arm_records_its_sampler_in_the_hash",
+            ),
+        ),
     ),
     Mutation(
         "the shuffle control hands each row its own memory",
@@ -1324,12 +1727,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "permutation the control reads exactly 0.0 on ANY model, live or dead -- "
         "the reading §10.3's null was, and the one cycle 1 was rejected for not "
         "having ruled out. Only the live-memory decoy can see it.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in (
-                "test_the_controls_read_what_they_must_on_a_real_run",
-                "test_a_decoy_aliased_to_the_trained_model_is_invalid",
-            )
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in (
+                    "test_the_controls_read_what_they_must_on_a_real_run",
+                    "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+                )
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -1341,12 +1753,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the same no-op with a correct `derangement()`: the replay reaches the "
         "forward un-permuted. The derangement test stays green, so only the "
         "live-memory reading catches it.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in (
-                "test_the_controls_read_what_they_must_on_a_real_run",
-                "test_a_decoy_aliased_to_the_trained_model_is_invalid",
-            )
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in (
+                    "test_the_controls_read_what_they_must_on_a_real_run",
+                    "test_a_decoy_aliased_to_the_trained_model_is_invalid",
+                )
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -1360,9 +1781,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the live-memory decoy still moves, so neither of the other two entries "
         "sees it -- only a replay of each row's OWN memory, which must read "
         "exactly 0.0, can tell a faithful replay from a perturbed one.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -1375,9 +1805,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "delta measures memory PLUS the bos gestalt rather than memory alone. With "
         "memory disabled the kv swap is a no-op but the bos swap is not, so the "
         "disabled-memory reading stops being exactly 0.0.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     # -- decisive run (experiments/decisive-shuffle/PREREG.md, Mutation bar) -- #
@@ -1490,7 +1929,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "anti-oracle fails both, the oracle seen from that control.",
             ),
             (
-                "tests/test_retention_readability.py::test_oracle_keeps_every_queried_fact",
+                "tests/test_retention_readability.py::test_oracle_keeps_every_queried_f"
+                "act",
                 "retention-readability's arm A is OraclePolicy(discounted_demand(doc)); "
                 "the test asserts it keeps every queried fact resident, which an "
                 "oracle evicting the most-needed sentence cannot: the oracle, seen "
@@ -1529,7 +1969,8 @@ MUTATIONS: tuple[Mutation, ...] = (
             ),
             (
                 "tests/test_lookahead_room.py::"
-                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe_holds",
+                "test_probes_fill_demand_for_every_past_sentence_and_the_identity_probe"
+                "_holds",
                 _LOOKAHEAD_S003_COUPLING,
             ),
             (
@@ -1668,8 +2109,66 @@ MUTATIONS: tuple[Mutation, ...] = (
                 for t in _READABILITY_WORLD_READERS
             ),
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_S003_COUPLING,
+            ),
+            *_r1_declare(
+                "answer_targets() raises in every train() call, including the "
+                "module-scoped substrate fixture's FIFO run, so every run-1 test that "
+                "trains (or uses the fixture) errors before its assertion.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_a_non_fifo_source_is_refused",
+                "test_a_wrong_sha_is_refused",
+                "test_frozen_mode_records_that_dropout_stays_on",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_epoch_records_sampling_with_replacement",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_is_stamped_into_frozen_hash_and_label",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "answer_targets() raises in every train() call, the module-scoped "
+                "substrate fixture's FIFO run included, so every run-1 test that "
+                "trains (or uses the fixture) errors before its assertion.",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+                "test_a_pool_resume_continues_its_epoch",
+                "test_a_resumed_sampler_run_continues_the_data_order",
+                "test_a_seed_mismatch_is_refused_unless_labelled",
+                "test_a_source_with_a_different_vocabulary_map_is_refused",
+                "test_an_identical_map_from_another_document_count_is_accepted",
+                "test_an_unexpected_sha256_is_refused",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_checkpoints_record_their_config_and_vocabulary",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_load_bytes_refuses_a_quarantined_source",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_srep_norm_reg_weight_is_a_validated_cli_flag",
+                "test_the_bytes_loaded_are_the_bytes_hashed",
+                "test_the_cli_warm_start_reaches_the_real_verification",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+            *_r1_declare(
+                "answer_targets() raises in every train() call, so every fix-round "
+                "test that trains errors before its assertion.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
+                "test_every_pool_arm_records_its_sampler_in_the_hash",
             ),
         ),
     ),
@@ -1784,7 +2283,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "collapse into 'real failure'",
         off_gate_allowed=(
             (
-                "tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plus_n",
+                "tests/test_orch_slot.py::test_a_child_killed_by_a_signal_exits_128_plu"
+                "s_n",
                 _SLOT_RC_COUPLING,
             ),
             (
@@ -2478,6 +2978,19 @@ MUTATIONS: tuple[Mutation, ...] = (
                     *_LIVENESS_HOOK_READERS,
                 )
             ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
+            *_r1_declare(
+                "the legacy-source test rebuilds the source's vocabulary from its "
+                "frozen config; a None n_documents stamped into every default-path "
+                "config breaks the rebuild (int(None)).",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+            ),
         ),
     ),
     Mutation(
@@ -2498,7 +3011,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
             ),
             (
-                "tests/test_retention_readability.py::test_documents_are_E_then_P_and_closed",
+                "tests/test_retention_readability.py::test_documents_are_E_then_P_and_c"
+                "losed",
                 _HELDOUT_READERS_COUPLING,
             ),
         ),
@@ -2514,7 +3028,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         "primary readout must be the squared distance.",
         off_gate_allowed=(
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
             (
@@ -2720,6 +3235,19 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_every_train_ends_with_the_liveness_measurement",
                     *_LIVENESS_HOOK_READERS,
                 )
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
+            *_r1_declare(
+                "the legacy-source test rebuilds the source's vocabulary from its "
+                "frozen config; a None stream stamped into every default-path "
+                "config breaks the rebuild (None['vocab_documents']).",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
             ),
         ),
     ),
@@ -3182,7 +3710,8 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
             ),
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
         ),
@@ -3342,7 +3871,8 @@ MUTATIONS: tuple[Mutation, ...] = (
         ),
         off_gate_allowed=(
             (
-                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_model",
+                "tests/test_carry_forward.py::test_measure_one_end_to_end_on_a_tiny_mod"
+                "el",
                 _CARRY_FORWARD_BITEXACT_COUPLING,
             ),
             (
@@ -3532,9 +4062,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "Bar 2: the falsifier itself -- a run that never measures and reports live "
         "exits 0 with nothing behind it, so an inert run is again indistinguishable "
         "from a live one.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_HOOK_COUPLING)
-            for t in _LIVENESS_HOOK_READERS
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_HOOK_COUPLING)
+                for t in _LIVENESS_HOOK_READERS
+            ),
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
         ),
     ),
     Mutation(
@@ -3561,6 +4100,13 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        decoy.load_state_dict(model.state_dict())\n",
         "decisive PREREG *Mutation bar* (decoy aliasing): A_decoy == A_trained, "
         "ratio == 1.0 exactly, which the rule makes invalid (3), never 0.",
+        off_gate_allowed=_r1_declare(
+            "the run-1 decoy test reads train()'s liveness record (band and reason, "
+            "cold and warm); a mutation of the liveness measurement -- its shuffle "
+            "controls, its hook, its decoy, or a None stamped into the config "
+            "liveness_batch reads -- changes the band or reason it asserts.",
+            "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+        ),
     ),
     Mutation(
         "liveness-wiring: an inconclusive ratio rounded to inert",
@@ -3934,10 +4480,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the battery drops the failure reason",
         "test_a_mutation_row_carries_the_failure_reasons",
         "scripts/mutation_battery.py",
-        # 📌 split so this literal is not itself the first match in this file
-        '                "failure_reasons": {f: reasons[f] '
-        + "for f in sorted(reasons)},",
-        '                "failure_reasons": dict.fromkeys(' + "sorted(reasons)),",
+        # 📌 split so this literal is not itself the first match in this file.
+        # Re-anchored 2026-09-29 (I1): the row is built in `_row`, eight columns
+        # shallower. Same edit.
+        '        "failure_reasons": {f: reasons[f] ' + "for f in sorted(reasons)},",
+        '        "failure_reasons": dict.fromkeys(' + "sorted(reasons)),",
         "I5: the 09-26 dispatch red left only a node id because the battery ran "
         "--tb=no. A row whose reasons are all null is that blindness back.",
     ),
@@ -4009,6 +4556,2667 @@ MUTATIONS: tuple[Mutation, ...] = (
         "B0 PREREG §6 C3: the reproduction of lookahead-room-r2's U.hit keys is exact "
         "(same tensors, same documents, same simulate); a tolerance would hide a "
         "different reading of D.pt.",
+    ),
+    # ------------------------------------------------------------------ I1
+    # P1.1 (2026-09-29): battery isolation. Each guard in
+    # scripts/battery_isolation.py and in this file's shard wiring, disabled.
+    # 📌 anchors in THIS file are split so the table's own text never matches.
+    Mutation(
+        "i1: the battery mutates the invoking tree again",
+        "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+        "scripts/mutation_battery.py",
+        "            original = apply(m, " + "shard.root)",
+        "            original = apply(" + "m)",
+        "I1: the live checkout the battery is invoked from is never mutated; a "
+        "stopped battery left mutated loop.py and lanes.py behind twice.",
+        off_gate_allowed=tuple(
+            (n, _I1_SHARD_MUTATION)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_check_still_fails_on_an_unproven_gate",
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+                "tests/test_battery_isolation.py::"
+                "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGTERM]",
+                "tests/test_battery_isolation.py::"
+                "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGHUP]",
+                "tests/test_battery_isolation.py::"
+                "test_a_sigkilled_battery_leaves_only_shards_and_prune_removes_them",
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        )
+        + _i1_declare(
+            _I1_SHARD_MUTATION,
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_markdown_is_written_when_every_row_ran",
+            "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+            "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGINT]",
+            "test_a_stopped_battery_kills_its_suites_grandchildren",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: the path assertion accepts any rsr",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        "        if not is_under(probe.get(key), root):",
+        "        if False:",
+        "I1: rsr must resolve under the shard or the suite DID NOT RUN; the 09-27 "
+        "suite ran on the main checkout's venv (DIGEST cycle 16b).",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_suite_on_another_checkouts_venv_did_not_run",
+            )
+        ),
+    ),
+    Mutation(
+        "i1: the path assertion skips the pytest child",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '    for key in ("in_process", "child"):',
+        '    for key in ("in_process",):',
+        "I1: a test's sys.path.insert can put the shard's src first in the pytest "
+        "process while every child it spawns imports another checkout's rsr.",
+        off_gate_allowed=tuple(
+            (f"tests/test_battery_isolation.py::{t}", _I1_E2E_WIRING)
+            for t in ("test_a_suite_on_another_checkouts_venv_did_not_run",)
+        ),
+    ),
+    Mutation(
+        "i1: a missing probe is accepted",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '        return "no probe: the suite did not report where it imported rsr from"',
+        "        return None",
+        "I1: a suite that says nothing about where it imported rsr from has not "
+        "shown that it ran in the shard.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+            )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_completed_suite_is_judged_by_its_probe",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: run_suite never reads the probe",
+        "test_a_suite_on_another_checkouts_venv_did_not_run",
+        "scripts/mutation_battery.py",
+        # 📌 Re-anchored for the review fixes: run_suite consults suite_problem
+        # (completion AND probe) now. Same edit, and it disables every layer at
+        # once, so it is also the mutation that gates the end-to-end tests.
+        "    problem = iso.suite_problem(proc.returncode, "
+        + "iso.read_probe(shard.probe), shard.root)",
+        "    problem = None",
+        "I1: the path assertion and the completion check exist only if the battery "
+        "consults them.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+            )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_killed_pytest_is_did_not_run_not_a_failure",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: a killed pytest is scored as a verdict",
+        "test_a_killed_pytest_is_did_not_run_not_a_failure",
+        # 📌 Re-anchored for the review fixes: the check moved into
+        # battery_isolation.suite_problem. Same edit.
+        "scripts/battery_isolation.py",
+        "    if returncode < 0:",
+        "    if False:",
+        "I1: a pytest killed by a signal became a '<collection/exit -9>' failure and "
+        "was scored LEAKS or ADDS NOTHING; it is DID NOT RUN.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        ),
+    ),
+    Mutation(
+        "i1: a DID_NOT_RUN row exits 0",
+        "test_a_mutation_whose_suite_reports_no_probe_did_not_run",
+        "scripts/mutation_battery.py",
+        '    if any(r["verdict"] == "DID_NOT_' + 'RUN" for r in rows):',
+        "    if False:",
+        "I1 / exit-code protocol: a mutation that did not run is not a table entry; "
+        "'did not run' never becomes exit 0.",
+        off_gate_allowed=tuple(
+            (n, _I1_E2E_WIRING)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            )
+        )
+        + _i1_declare(
+            _I1_E2E_WIRING,
+            "test_markdown_is_not_written_while_a_row_did_not_run",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: RSR_ORCH_ROOT is not the shard's",
+        "test_the_suite_env_is_the_shards_own",
+        "scripts/battery_isolation.py",
+        '    env["RSR_ORCH_ROOT"] = str(shard.root)\n',
+        "    pass\n",
+        "I1: without it an orchestrator write from a test resolves the MAIN "
+        "checkout (lanes.orch_root), the stray-write class of 2026-09-27.",
+    ),
+    Mutation(
+        "i1: a dirty invoking tree is battery'd at HEAD",
+        "test_a_dirty_invoking_tree_is_refused",
+        "scripts/battery_isolation.py",
+        '    if dirty.strip():\n        raise Unisolated(\n            f"{root} has',
+        '    if False:\n        raise Unisolated(\n            f"{root} has',
+        "I1: a shard is a commit; uncommitted edits in the invoking tree would not "
+        "be in it, and the record would certify a tree the battery never ran.",
+        off_gate_allowed=tuple(
+            (n, _I1_DIRTY)
+            for n in (
+                "tests/test_battery_isolation.py::"
+                "test_an_untracked_file_in_the_invoking_tree_is_refused",
+            )
+        ),
+    ),
+    Mutation(
+        "i1: a shard pool inside the invoking tree is accepted",
+        "test_a_pool_inside_the_invoking_tree_is_refused",
+        "scripts/battery_isolation.py",
+        "    if is_under(pool, source):",
+        "    if False:",
+        "I1: shards live outside the invoking tree, so no path under it is written.",
+    ),
+    Mutation(
+        "i1: the shard reset leaves untracked files",
+        "test_reset_restores_the_pinned_tree",
+        "scripts/battery_isolation.py",
+        # 📌 Re-anchored for the review fixes: the clean is CLEAN_ARGV now.
+        '    _ok(git(shard.root, *CLEAN_ARGV), f"git clean in {shard.root}")\n',
+        "    pass\n",
+        "I1: a file one mutated suite created must not be in the next one's tree.",
+        off_gate_allowed=_i1_declare(
+            _I1_RESET_E2E,
+            "test_an_ignored_file_left_in_a_shard_is_not_clean",
+            "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+            "test_check_still_fails_on_an_unproven_gate",
+            "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        ),
+    ),
+    Mutation(
+        "i1: a shard suite writes bytecode again",
+        "test_a_shard_suite_writes_no_bytecode",
+        "scripts/battery_isolation.py",
+        '    env["PYTHONDONTWRITEBYTECODE"] = "1"\n',
+        "    pass\n",
+        "I1: a same-size mutation restored within one second passes the .pyc "
+        "mtime+size check, so the next suite ran the previous mutation's code "
+        "(observed on the stub battery, 2026-09-29).",
+    ),
+    Mutation(
+        "i1: the reset keeps __pycache__",
+        "test_reset_purges_bytecode_outside_the_venv",
+        "scripts/battery_isolation.py",
+        '            shutil.rmtree(Path(dirpath) / "__pycache__", ignore_errors=True)\n',
+        "            pass\n",
+        "I1: the second layer under PYTHONDONTWRITEBYTECODE, for caches written by "
+        "anything that sets its own env.",
+    ),
+    Mutation(
+        "i1: the shard interpreter is not checked",
+        "test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite",
+        "scripts/battery_isolation.py",
+        "    check_interpreter(shard, shard_env(shard, dict(os.environ)))\n",
+        "    pass\n",
+        "I1: an editable install pointing at another checkout is refused before the "
+        "first (multi-minute) suite, not after it.",
+    ),
+    Mutation(
+        "i1: the shard pool is never torn down",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean",
+        "scripts/battery_isolation.py",
+        "            if not keep:",
+        "            if keep:",
+        "I1: a finished or stopped battery leaves no worktree registration behind.",
+        off_gate_allowed=tuple(
+            (n, _I1_TEARDOWN)
+            for n in (
+                "tests/test_battery_isolation.py::test_reset_restores_the_pinned_tree",
+                "tests/test_battery_isolation.py::"
+                "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+                "tests/test_battery_isolation.py::"
+                "test_a_suite_on_another_checkouts_venv_did_not_run",
+                "tests/test_battery_isolation.py::"
+                "test_a_shard_venv_that_imports_another_checkout_is_refused_before_any_suite",
+                "tests/test_battery_isolation.py::"
+                "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+                "tests/test_battery_isolation.py::"
+                "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+                "tests/test_battery_isolation.py::test_two_batteries_never_share_a_pool",
+            )
+        )
+        + _i1_declare(
+            _I1_TEARDOWN,
+            "test_prune_refuses_while_a_battery_holds_the_pool",
+            "test_a_baseline_that_did_not_run_exits_3",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: two batteries share a shard pool",
+        "test_two_batteries_never_share_a_pool",
+        "scripts/battery_isolation.py",
+        "        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)",
+        "        pass",
+        "I1: a shard is reset between mutations; a second battery in the same pool "
+        "would reset or mutate the tree under the first one's suite.",
+        off_gate_allowed=_i1_declare(
+            _I1_POOL_LOCK,
+            "test_prune_refuses_while_a_battery_holds_the_pool",
+        ),
+    ),
+    Mutation(
+        "i1: a foreign directory in the pool is taken over",
+        "test_a_directory_in_the_pool_that_is_not_our_worktree_is_refused",
+        "scripts/battery_isolation.py",
+        "        if path not in _registered(source):",
+        "        if False:",
+        "I1: the pool only ever resets worktrees of this repository; anything else "
+        "at a shard path is refused, never checked out over or cleaned.",
+    ),
+    # ------------------------------------------------ I1 review fixes (09-29)
+    Mutation(
+        "i1: an incomplete pytest run is scored",
+        "test_a_suite_that_did_not_complete_did_not_run",
+        "scripts/battery_isolation.py",
+        "    if returncode not in COMPLETED_EXIT:",
+        "    if False:",
+        "Review MAJOR-1: pytest exiting 2 (SIGINT), 3 or 4 did not run the suite to "
+        "the end; it was scored, and an interrupt after the gate failed is a "
+        "false PROVEN.",
+    ),
+    Mutation(
+        "i1: pytest's own exit status is not checked",
+        "test_the_path_assertion_requires_rsr_under_the_shard",
+        "scripts/battery_isolation.py",
+        '    if probe.get("exitstatus") not in COMPLETED_EXIT:',
+        "    if False:",
+        "Review MAJOR-1: the probe's exitstatus is pytest's own verdict on whether "
+        "the session completed, independent of how the process ended.",
+    ),
+    Mutation(
+        "i1: the reset keeps ignored files",
+        "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
+        "scripts/battery_isolation.py",
+        'CLEAN_ARGV = ("clean", "-ffdxq", "-e", "/.venv/")',
+        'CLEAN_ARGV = ("clean", "-ffdq", "-e", "/.venv/")',
+        "Review MAJOR-2: an ignored runs/ or .orchestrator/ file one mutation's "
+        "suite wrote changed the next mutation's verdict.",
+        off_gate_allowed=_i1_declare(
+            _I1_RESET_E2E,
+            "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+            "test_an_ignored_file_left_in_a_shard_is_not_clean",
+            "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
+            "test_check_still_fails_on_an_unproven_gate",
+            "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        ),
+    ),
+    Mutation(
+        "i1: the clean check cannot see ignored files",
+        "test_an_ignored_file_left_in_a_shard_is_not_clean",
+        "scripts/battery_isolation.py",
+        '        git(shard.root, "status", "--porcelain", "--ignored"),',
+        '        git(shard.root, "status", "--porcelain"),',
+        "Review MAJOR-2: `verify_clean` claimed a pinned tree while ignored files "
+        "from a previous suite were in it.",
+    ),
+    Mutation(
+        "i1: a reused shard keeps ignored files",
+        "test_a_kept_shard_is_reused_at_the_new_pinned_sha",
+        "scripts/battery_isolation.py",
+        '        _ok(git(path, *CLEAN_ARGV), f"git clean in {path}")',
+        '        _ok(git(path, "clean", "-fdq"), f"git clean in {path}")',
+        "Review MAJOR-2: a --keep-shards pool carries one battery's ignored state "
+        "into the next battery.",
+    ),
+    Mutation(
+        "i1: --prune-shards takes no lock",
+        "test_prune_refuses_while_a_battery_holds_the_pool",
+        "scripts/battery_isolation.py",
+        "    with pool_lock(pool):\n        return _prune_unlocked(source, pool)",
+        "    return _prune_unlocked(source, pool)",
+        "Review MAJOR-3: the default pool is shared by every worktree; an unlocked "
+        "prune removes another battery's live shard mid-suite.",
+    ),
+    Mutation(
+        "i1: the suite inherits PYTHONPATH",
+        "test_the_suite_never_inherits_pythonpath_or_a_pycache_prefix",
+        "scripts/battery_isolation.py",
+        '_SUITE_STRIP = ("PYTHONPATH", "PYTHONPYCACHEPREFIX")',
+        "_SUITE_STRIP = ()",
+        "Review MINOR-1: another checkout's scripts/ via PYTHONPATH passes the rsr "
+        "probe; a pycache prefix escapes the reset.",
+    ),
+    Mutation(
+        "i1: the suite's process group outlives it",
+        "test_a_stopped_battery_kills_its_suites_grandchildren",
+        "scripts/mutation_battery.py",
+        "    finally:\n        _kill_" + "group(proc)\n",
+        "    finally:\n        proc.kill()\n        proc.wait()\n",
+        "Review MINOR-2: a grandchild of the suite kept writing into the shard under "
+        "the next suite or the teardown.",
+        off_gate_allowed=_i1_declare(
+            _I1_GROUP,
+            "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
+            "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: SIGINT is not handled",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGINT]",
+        "scripts/mutation_battery.py",
+        "_HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGHUP, " + "signal.SIGINT)",
+        "_HANDLED_SIGNALS = (signal.SIGTERM, " + "signal.SIGHUP)",
+        "Review MINOR-3: a Ctrl-C exited with a traceback, and a second Ctrl-C cut "
+        "the teardown short.",
+    ),
+    Mutation(
+        "i1: --markdown records DID_NOT_RUN rows",
+        "test_markdown_is_not_written_while_a_row_did_not_run",
+        "scripts/mutation_battery.py",
+        "    if args.markdown and " + "did_not_run:",
+        "    if False:",
+        "Review MINOR-4: the committed table records verdicts; a mutation that did "
+        "not run has none.",
+    ),
+    Mutation(
+        "i1: a baseline that did not run exits 1",
+        "test_a_baseline_that_did_not_run_exits_3",
+        "scripts/mutation_battery.py",
+        "            refuse(Exit.DID_NOT_RUN, "
+        + 'f"the baseline suite did not run: {e}")',
+        '            refuse(Exit.FAIL, f"the baseline suite did not ' + 'run: {e}")',
+        "Review MINOR-8: nothing was mutated, so nothing was tested: 3, not 1.",
+        off_gate_allowed=_i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_suite_on_another_checkouts_venv_did_not_run",
+        ),
+    ),
+    Mutation(
+        "i1: battery_subset drops --shard-dir",
+        "test_battery_subset_passes_the_shard_dir_through",
+        "scripts/battery_subset.py",
+        '        extra, rest = ["--shard-dir", rest[1]], rest[2:]',
+        "        rest = rest[2:]",
+        "Review MINOR-7 / pool policy: a subset beside another battery needs its "
+        "own pool, or it exits 3.",
+    ),
+    Mutation(
+        "i1: no SIGTERM/SIGHUP handler",
+        "test_a_stopped_battery_leaves_the_live_tree_and_git_clean",
+        "scripts/mutation_battery.py",
+        "    old = {s: signal.signal(s, _raise_"
+        + "signalled) for s in _HANDLED_SIGNALS}",
+        "    old = {}",
+        "I1 defence in depth: a stopped battery kills its pytest child and tears its "
+        "shards down; without the handler both outlive it.",
+        off_gate_allowed=_i1_declare(
+            _I1_E2E_WIRING,
+            "test_a_stopped_battery_kills_its_suites_grandchildren",
+        ),
+    ),
+    Mutation(
+        "on_write is told the victim index again",
+        "test_on_write_receives_the_newcomers_slot_after_an_eviction",
+        "src/rsr/model/tg/policy_loop.py",
+        "                    policy.on_write(memory_state(mem, t, row), slot, t)",
+        "                    policy.on_write(memory_state(mem, t, row), "
+        "int(victim[row]), t)",
+        "2026-09-29, gauntlet 0.4 one level down: `write_at` compacts behind the "
+        "victim and writes the newcomer at M-1 (§3.1, ADR-0006), so after the "
+        "write the victim index names a different occupant -- and on an underfull "
+        "row it is the placeholder 0. Any policy keying state on `slot` (LRU, "
+        "H2O, E1's per-slot baselines) would update the wrong slot. The loop's "
+        "own written_at guard checks `slot`, not the argument actually passed, so "
+        "it cannot catch this mutation; only the recording-policy test does.",
+        off_gate_allowed=(
+            (
+                "tests/test_on_write_slot.py::"
+                "test_on_write_receives_the_newly_filled_slot_on_a_non_full_row",
+                "the same call site: the old call passed the placeholder 0 on an "
+                "underfull row, which is the other half of the defect this gate "
+                "names",
+            ),
+        ),
+    ),
+    # T5(b), 2026-09-30: the review gate (docs/review-records.md). Proven by hand
+    # at authoring time against tests/test_orch_merge*.py only (battery lane busy).
+    Mutation(
+        "merge: the review gate is skipped",
+        "test_merge_is_refused_without_a_review_record",
+        "scripts/orchestrator/merge.py",
+        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
+        "    if code != Exit.OK:\n",
+        "    code, record = review_gate(root, branch, base, head_sha, run_item)\n"
+        "    if False:\n",
+        "PLAN-v4 §4 T5(b) stops being a mechanism: any verified run/ branch, and "
+        "any fix/ eng/ feat/ docs/ branch at all, merges into the night branch with "
+        "no adversarial review on record.",
+        off_gate_allowed=tuple(
+            (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
+            for t in _REVIEW_GATE_REFUSALS
+        ),
+    ),
+    Mutation(
+        "merge: a stale review record is accepted",
+        "test_a_record_older_than_head_with_a_code_change_since_is_refused",
+        "scripts/orchestrator/merge.py",
+        "    unreviewed = [\n"
+        "        p for p in diff.stdout.splitlines() if p and not review_exempt(p, "
+        "run_item)\n"
+        "    ]\n",
+        "    unreviewed = []\n",
+        "a review of an early head waves through every commit made after it -- "
+        "the census shape of 2026-09-29 (eng/i1-isolation reviewed at ff6dccc, "
+        "7 files changed since).",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_orch_merge_review.py::{t}",
+                "a forged verification.json is refused by the same staleness diff; "
+                "no diff, no refusal. One check, two path classes.",
+            )
+            for t in (
+                "test_only_the_merging_runs_own_verification_is_exempt",
+                "test_no_verification_json_is_exempt_on_other_prefixes",
+            )
+        ),
+    ),
+    # T5(b) review fixes, 2026-09-30 (docs/reviews/eng-t5b-review-gate/
+    # bbfa38c9bade.md). Proven by hand, targeted files only (B5 holds the CPU).
+    Mutation(
+        "merge: MERGE WITH FIXES merges on its own",
+        "test_merge_with_fixes_is_never_mergeable_on_its_own",
+        "scripts/orchestrator/merge.py",
+        '    if fm["verdict"] == "MERGE WITH FIXES":\n'
+        "        # Review MAJOR-2, PM decision",
+        "    if False:\n        # Review MAJOR-2, PM decision",
+        "review MAJOR-2 (probe P3): the author commits a 'fix', edits the "
+        "reviewer's record to attest it, and the unreviewed fix merges.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_orch_merge_review.py::{t}",
+                "every MERGE WITH FIXES record is refused by this one branch; "
+                "without it each falls through to the MERGE path.",
+            )
+            for t in (
+                "test_merge_with_fixes_without_fixes_verified_at_is_refused",
+                "test_merge_with_fixes_with_code_after_the_fix_check_is_refused",
+                "test_merge_with_fixes_verified_at_not_an_ancestor_is_refused",
+            )
+        ),
+    ),
+    Mutation(
+        "merge: fixes_verified_at is not validated",
+        "test_fixes_verified_at_must_be_a_full_sha_of_a_real_commit",
+        "scripts/orchestrator/merge.py",
+        "        if fixes is not None and not (_full_sha(fixes) and _commit(root, "
+        "fixes)):",
+        "        if False:",
+        "review MAJOR-1 (probe P1): a record naming a moving ref (`fix/x`, `HEAD`) "
+        "is accepted as if it named a commit.",
+    ),
+    Mutation(
+        "merge: every runs/*/verification.json is staleness-exempt",
+        "test_only_the_merging_runs_own_verification_is_exempt",
+        "scripts/orchestrator/merge.py",
+        '    return run_item is not None and path == f"runs/{run_item}/'
+        'verification.json"',
+        '    return path.startswith("runs/") and path.endswith("/verification.json")',
+        "review MINOR-2 (probe P4): a forged verification.json for another run id "
+        "rides in after review and then satisfies gate 1 for that run from the "
+        "night branch.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_no_verification_json_is_exempt_on_other_prefixes",
+                "the same exemption, reached from a non-run/ prefix.",
+            ),
+        ),
+    ),
+    Mutation(
+        "battery-union: a one-sided tail change keeps ours",
+        "test_a_tail_change_only_theirs_made_is_taken_from_theirs",
+        "scripts/battery_union.py",
+        '        return t.tail, "theirs"',
+        '        return o.tail, "ours"',
+        "the 2026-09-30 rule: theirs' post-MUTATIONS tail is taken iff ours' tail == "
+        "base. Keeping ours silently drops main's I5 edit, which is what 13ea9ae and "
+        "74dec77 would have lost.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_union.py::"
+                "test_cli_one_sided_tail_exits_0_and_writes_the_union",
+                "the same rule through the CLI: the written file keeps ours' tail",
+            ),
+            *(
+                (
+                    "tests/test_battery_union.py::"
+                    f"test_reproduces_the_mutation_battery_the_0929_merges_committed[{m}]",
+                    "both real 09-29 merges took theirs' tail; keeping ours cannot "
+                    "reproduce the committed file",
+                )
+                for m in ("13ea9ae", "74dec77")
+            ),
+        ),
+    ),
+    Mutation(
+        "battery-union: an annotated constant is not a constant",
+        "test_an_annotated_constant_is_split_out_as_a_constant",
+        "scripts/battery_union.py",
+        '_CONST = re.compile(r"^(_[A-Z0-9_]+)(?:: [^\\n=]+)? = ',
+        '_CONST = re.compile(r"^(_[A-Z0-9_]+) = ',
+        "2026-09-30: `_X: tuple[str, ...] = (` must be keyed as a constant. The "
+        "pre-fix regex made it head code, and the union refused the i1 merge "
+        "(7eda821 was resolved by hand). Reverting only _CONST is worse than the "
+        "original defect: _CONST_STRIP still removes the constant from head code, "
+        "so a theirs-only annotated constant vanishes from the union silently.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_battery_union.py::{t}",
+                    "the same regex seen through union(): the annotated constant is "
+                    "neither a constant nor head code, so it is dropped (measured by "
+                    "hand 2026-09-30 on tests/test_battery_union.py: 5 red, 25 green)",
+                )
+                for t in (
+                    "test_an_annotated_constant_new_in_theirs_merges_when_ours_changed_"
+                    "head_code",
+                    "test_an_annotated_constant_only_theirs_changed_is_updated",
+                    "test_a_constant_new_in_theirs_lands_where_theirs_put_it",
+                )
+            ),
+            (
+                "tests/test_battery_union.py::"
+                "test_reproduces_the_mutation_battery_the_i1_merge_committed",
+                "the real i1 merge: theirs' _REVIEW_GATE_REFUSALS is annotated, so "
+                "the union cannot reproduce 7eda821 without it",
+            ),
+        ),
+    ),
+    Mutation(
+        "b2-psi-probe: age leaks into psi-hat",
+        "test_no_age_in_psi_hat_permuting_written_at_and_step_changes_nothing",
+        "experiments/b2-psi-probe/run.py",
+        "            return X @ self.w\n",
+        "            return X @ self.w"
+        " + 1e-3 * (step - slots.written_at[live]).double()\n",
+        "PREREG §4, §6, §11 control 9 (CLAUDE.md: age is excluded from psi-hat): the "
+        "bilinear score reads (s_i, c_t) only. A score that also reads written_at and "
+        "the step collapses onto recency and makes the vacuity failure invisible.",
+        off_gate_allowed=(
+            (
+                "tests/test_b2_psi_probe.py::"
+                "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+                "inspected: that test ties slots 1 and 2 at psi 0.1 with ages 3 and 2; "
+                "an age term (+1e-3 * age) makes them 0.103 and 0.102, so the argmin "
+                "moves to slot 2 and the logged psi vector changes -- the same leak "
+                "seen through the tie-break and the per-eviction log.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b2-psi-probe: a captured s_i / c_t keeps its graph",
+        "test_stopgrad_cuts_the_graph",
+        "experiments/b2-psi-probe/run.py",
+        "    return x.detach().clone()\n",
+        "    return x.clone()\n",
+        "PREREG §1, §5 (CLAUDE.md: no gradient into the transformer or W_sent; c_t "
+        "enters psi-hat with a stop-gradient): `_stopgrad` is the one place a captured "
+        "gestalt or context leaves the transformer.",
+    ),
+    Mutation(
+        "b2-psi-probe: the ridge lambda is chosen on whatever rows it is handed",
+        "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
+        "experiments/b2-psi-probe/run.py",
+        # fit_heads's pair: r2_split_by_index (review F11) repeats the FIT_VAL line alone,
+        # so the FIT_TRAIN line above it keeps this anchor unique (--check-anchors).
+        '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n'
+        '    require_range([c.doc_id for c in val_caps], "FIT_VAL")\n',
+        '    require_range([c.doc_id for c in train_caps], "FIT_TRAIN")\n    pass\n',
+        "PREREG §6 / A1.7: lambda minimises the FIT_VAL validation MSE. Without the "
+        "range guard an EVAL capture selects lambda silently -- a fit tuned on the "
+        "data it is scored on.",
+    ),
+    Mutation(
+        "b2-psi-probe: ref is chosen on whatever accuracies it is handed",
+        "test_ref_is_never_chosen_on_eval",
+        "experiments/b2-psi-probe/run.py",
+        '    require_range(doc_ids, "FIT_VAL")  # §9.3: ref on FIT_VAL, never EVAL\n',
+        "    pass\n",
+        "PREREG §9.3 / PLAN-v4: ref (FIFO or the age-only head) is chosen per seed on "
+        "FIT_VAL, never on EVAL. Choosing it on EVAL picks the easier comparator after "
+        "seeing the contrast.",
+    ),
+    Mutation(
+        "b2-psi-probe: kind-oracle ties go to the oldest",
+        "test_kind_oracle_ties_are_uniform_random_seeded_per_step",
+        "experiments/b2-psi-probe/run.py",
+        "        return rng.choice(ks)\n",
+        "        return ks[0]\n",
+        "PREREG A1.10: ties inside the lowest class are uniformly random, seeded "
+        "ko:seed:doc:t. An oldest tie-break hands Q2's comparator the age information "
+        "psi-hat is barred from.",
+    ),
+    Mutation(
+        "b2-psi-probe: the random floor is its best seed, not its 5-seed mean",
+        "test_the_bootstrap_is_paired_and_the_random_floor_is_the_five_seed_mean",
+        "experiments/b2-psi-probe/run.py",
+        "    return torch.stack(xs).mean(0)\n",
+        "    return torch.stack(xs).min(0).values\n",
+        "PREREG §9.2: the random arm's accuracy per replicate is the mean over its 5 "
+        "seeds. Its minimum lowers the floor that WIN's clause (4) must clear.",
+    ),
+    Mutation(
+        "b2-psi-probe: WIN no longer has to beat random",
+        "test_the_random_floor_is_part_of_win",
+        "experiments/b2-psi-probe/run.py",
+        "and noninf_lo > -delta and rand_lo > 0:",
+        "and noninf_lo > -delta:",
+        "PREREG §9.5 WIN clause (4) (REDTEAM-v3 edit 5): psi-hat must beat the random "
+        "arm's 5-seed mean with a paired CI lower bound > 0.",
+        off_gate_allowed=(
+            (
+                "tests/test_b2_psi_probe.py::test_the_outcome_rule",
+                "the outcome rule's table carries the same clause as one of its rows "
+                "(rand_lo = -0.01 must not be WIN); the dedicated test isolates it. "
+                "Inspected: both fail on that one row and nothing else.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b2-psi-probe: E0h reads its class before the thresholds are ratified",
+        "test_e0h_rc_is_its_own_and_is_2_until_ratified",
+        "experiments/b2-psi-probe/run.py",
+        "    if not ratified:\n        return 2\n",
+        "    pass\n",
+        "PREREG A1.3: until a ruling ratifies the proposed 0.90 / 0.49, E0h exits 2 "
+        "whatever the R^2; otherwise an unratified COLLINEAR is a kill (rc 1).",
+    ),
+    Mutation(
+        "b2-psi-probe: an exception inside E0h exits 1",
+        "test_e0h_without_its_fits_or_on_an_exception_exits_3",
+        "experiments/b2-psi-probe/run.py",
+        "            pass\n        return 3\n",
+        "            pass\n        return 1\n",
+        "PREREG A1.3: an exception inside run.py e0h is DID NOT RUN (3); 1 means "
+        "COLLINEAR under a ratifying ruling, and a crash must never read as a kill.",
+    ),
+    Mutation(
+        "b2-psi-probe: the range check skips the used ranges",
+        "test_an_overlap_with_any_used_range_is_a_problem",
+        "experiments/b2-psi-probe/run.py",
+        "        for uname, urng in used.items():\n",
+        "        for uname, urng in {}.items():\n",
+        "PREREG §3 / A1.15: B2's ranges are asserted disjoint from every used range, "
+        "E0d's [262144, 263168) included, before any model is loaded (exit 3).",
+    ),
+    Mutation(
+        "b2-psi-probe: the selected lambda's residual is not checked",
+        "test_a_selected_lambda_over_1e8_residual_or_no_eligible_point_exits_1",
+        "experiments/b2-psi-probe/run.py",
+        '    if path[best]["resid"] > SELECTED_RESID:\n',
+        '    if path[best]["resid"] > SELECTED_RESID * 1e3:\n',
+        "PREREG A1.6 / §11 control 10: the selected lambda's relative residual must "
+        "be <= 1e-8, else exit 1.",
+    ),
+    Mutation(
+        "b2-psi-probe: psi-hat ties go to the newest",
+        "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+        "experiments/b2-psi-probe/run.py",
+        "            if vals[q] < vals[j]:  # strict: ties to the lowest slot, "
+        "the oldest\n",
+        "            if vals[q] <= vals[j]:  # strict: ties to the lowest slot, "
+        "the oldest\n",
+        "PREREG §4: argmin with ties to the lowest slot index (the oldest), as "
+        "OraclePolicy. Ties to the newest is an age preference nobody registered.",
+    ),
+    Mutation(
+        "b2-psi-probe: a CI that excludes its estimate is read",
+        "test_a_ci_excluding_the_estimate_is_unresolved",
+        "experiments/b2-psi-probe/run.py",
+        '    if outcome_flags(point, lo, hi):\n        return "UNRESOLVED"\n',
+        "    pass\n",
+        "PREREG A1.13: if the estimate is outside its CI the contrast is UNRESOLVED "
+        "(CI_EXCLUDES_ESTIMATE); it removes the only WIN and EQUIV overlap.",
+    ),
+    Mutation(
+        "b2-psi-probe: Q2's contrast sizes N_E",
+        "test_power_takes_the_max_over_gating_contrasts_only_and_clips",
+        "experiments/b2-psi-probe/run.py",
+        "        if c in GATING_CONTRASTS\n",
+        "        if True\n",
+        "PREREG A1.12: only the gating contrasts enter the max; psi-U - kind-oracle "
+        "(Q2, outside the truth table) is reported with the N_E that results.",
+    ),
+    Mutation(
+        "b2-psi-probe: the FIT_VAL R² multiplies a summed SSE by n_val again",
+        "test_val_r2_raw_is_one_minus_sse_over_sst",
+        "experiments/b2-psi-probe/run.py",
+        '            "val_r2_raw": [1.0 - float(x) / sst if sst > 0 else None'
+        " for x in sse_raw[j]],\n",
+        '            "val_r2_raw": [1.0 - float(x) * n_val / sst if sst > 0 else None'
+        " for x in sse_raw[j]],\n",
+        "PREREG §6 / §8.1, A1.3: phase A (280a2ad) logged 1 - n_val*SSE/SST, so every "
+        "pooled R² read near -2e5 and E0h's R² > 0 informativeness gate read every "
+        "seed UNINFORMATIVE. The old test asserted only r2 <= 1 and passed on it.",
+    ),
+    Mutation(
+        "b2-psi-probe: the E0h pre-hook changes the forward pass",
+        "test_the_logit_prehook_does_not_change_the_forward",
+        "experiments/b2-psi-probe/run.py",
+        "        x, mem_kv, mem_valid = args[:3]\n        with torch.no_grad():\n"
+        "            lg = recompute_logits(module, x, mem_kv, mem_valid)\n"
+        "        self._pending.append(lg)\n        self._valid = mem_valid\n"
+        "        self.calls.append(tuple(lg.shape))\n        return None\n",
+        "        x, mem_kv, mem_valid = args[:3]\n        x = x * 1.001\n"
+        "        with torch.no_grad():\n"
+        "            lg = recompute_logits(module, x, mem_kv, mem_valid)\n"
+        "        self._pending.append(lg)\n        self._valid = mem_valid\n"
+        "        self.calls.append(tuple(lg.shape))\n        return (x, *args[1:])\n",
+        "PREREG A1.5: the logits come from a forward pre-hook and the forward pass is "
+        "unchanged (test_fidelity / test_reduction untouched). A hook that edits its "
+        "input passes the softmax control, since the recompute sees the same edit.",
+    ),
+    Mutation(
+        "b2-psi-probe: EVAL units are held in RAM until the tier ends",
+        "test_eval_units_reach_disk_before_the_next_document_runs",
+        "experiments/b2-psi-probe/run.py",
+        "            _flush(pending)  # F1: every unit reaches disk before the next "
+        "document runs\n",
+        "            pass  # units wait in `pending` until the tier ends\n",
+        "B2 build review F1 (BLOCKER): EVAL's per-eviction logs are about 1 kB a "
+        "record; held in RAM for a tier they reach tens of GB at the N_E cap. Each "
+        "document's unit must be on disk before the next runs, which is also what "
+        "makes a killed child resumable.",
+    ),
+    Mutation(
+        "b2-psi-probe: an E0h logit-control failure stops B2's EVAL child",
+        "test_a_failed_logit_control_is_e0h_exit_3_and_b2_still_completes",
+        "experiments/b2-psi-probe/run.py",
+        '            if not u["residency_ok"] or u["sum_worst"] > SUM_TOL:\n',
+        '            if not u["residency_ok"] or u["sum_worst"] > SUM_TOL or '
+        '(u["logit_control_worst"] or 0.0) > LOGIT_TOL:\n',
+        "PREREG A1.3 / A1.5 (build review F3): a failed logit control is E0h exit 3, "
+        "and B2's rc covers B2 alone. Raising it from the EVAL child kills B2 after "
+        "its cost is paid.",
+    ),
+    Mutation(
+        "b2-psi-probe: non-inferiority reads the all-query CI",
+        "test_win_needs_non_inferiority_on_gap_2_to_m",
+        "experiments/b2-psi-probe/run.py",
+        '            boot["gap_2_to_M"][k],\n',
+        '            boot["all"][k],\n',
+        "PREREG §9.5 WIN clause (3): the non-inferiority bound is read on "
+        "gap_2_to_M. Reading it on all queries lets an arm that loses the "
+        "short-gap bucket win (build review F4, M1).",
+    ),
+    Mutation(
+        "b2-psi-probe: E0h pairs each slot's logits with another slot's psi-hat",
+        "test_e0h_rows_pair_each_slot_with_its_own_sentence",
+        "experiments/b2-psi-probe/run.py",
+        "        i_idx = torch.arange(t - m, t)  # FIFO memory at t, oldest first\n",
+        "        i_idx = torch.arange(t - m, t).flip(0)"
+        "  # FIFO memory at t, oldest first\n",
+        "PREREG §10 / A1.4: E0h's rows pair FIFO slot j's logits with "
+        "psi-hat(s_{t-m+j}, c_t) and D[t, t-m+j]. A reversed index regresses one "
+        "slot's psi-hat on another's logits (build review F4, M2).",
+    ),
+    Mutation(
+        "b2-psi-probe: delta is measured from a random seed, not FIFO",
+        "test_val_decisions_delta_is_a_quarter_of_oracle_minus_fifo",
+        "experiments/b2-psi-probe/run.py",
+        '    d09 = delta_of(out["acc"][0.9]["oracle"], out["acc"][0.9]["fifo"])\n',
+        '    d09 = delta_of(out["acc"][0.9]["oracle"], out["acc"][0.9]["random0"])\n',
+        "PREREG §9.3: delta = 0.25 (acc_oracle - acc_FIFO) on FIT_VAL. Any other "
+        "baseline rescales every WIN / EQUIV / LOSS threshold (build review F4, M3).",
+    ),
+    Mutation(
+        "b2-psi-probe: the gamma = 0 contrasts use the gamma = 0.9 ref",
+        "test_the_gamma_zero_contrasts_use_the_gamma_zero_ref",
+        "experiments/b2-psi-probe/run.py",
+        '        ref = {"U": decisions["ref"][f"U@{g}"], '
+        '"C": decisions["ref"][f"C@{g}"]}\n',
+        '        ref = {"U": decisions["ref"]["U@0.9"], '
+        '"C": decisions["ref"]["C@0.9"]}\n',
+        "PREREG §9.3 / §9.8: ref is chosen per (seed, arm, gamma) on FIT_VAL; gamma "
+        "= 0 is read against its own ref (build review F4, M4).",
+    ),
+    Mutation(
+        "b2-psi-probe: the bootstrap draws from the global RNG",
+        "test_the_bootstrap_is_seeded_and_leaves_the_global_rng_alone",
+        "experiments/b2-psi-probe/run.py",
+        "    idx = torch.randint(0, D, (n_boot, D), generator=g)\n",
+        "    idx = torch.randint(0, D, (n_boot, D))\n",
+        "PREREG §9.2: the paired bootstrap uses torch.Generator(20260927 + seed). "
+        "Unseeded, every CI changes run to run and consumes the global stream "
+        "(build review F4, M7).",
+    ),
+    Mutation(
+        "b2-psi-probe: WIN's random clause reads the ref contrast",
+        "test_win_needs_the_random_floor_not_the_ref",
+        "experiments/b2-psi-probe/run.py",
+        'noninf_lo=n["lo"], rand_lo=rn["lo"]',
+        'noninf_lo=n["lo"], rand_lo=a["lo"]',
+        "PREREG §9.5 WIN clause (4): psi-hat - random's CI lower bound > 0. Reading "
+        "the ref contrast's bound instead drops the random floor from the wiring "
+        "(build review F4, M9).",
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace protects the newest slot even when switched off",
+        "test_grace_g0_is_the_inner_policy",
+        "experiments/newcomer-bakeoff/run.py",
+        "        ok = [a > self.g for a in ages]\n",
+        "        ok = [a > max(self.g, 1) for a in ages]\n",
+        "PREREG §4: g = 0 is the grace rule's off-switch and must return exactly the "
+        "inner psi-U victim (the pack's reduction requirement, stated for this "
+        "experiment-local wrapper).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::test_grace_protects_the_g_newest",
+                "its first assertion is the g = 0 case (the newest slot, the inner "
+                "argmin), which the mutation protects",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_units_are_atomic_resumable_and_keyed",
+                "the module fixture `fitted` runs fit_core, whose run-time control C9 "
+                "asserts the g = 0 off-switch reproduces psi-U; the mutation trips C9, "
+                "the fixture raises and every test that uses it errors. By design: the "
+                "off-switch is guarded twice",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace lets the g-th newest slot be evicted",
+        "test_grace_protects_the_g_newest",
+        "experiments/newcomer-bakeoff/run.py",
+        "        ok = [a > self.g for a in ages]\n",
+        "        ok = [a >= self.g for a in ages]\n",
+        "PREREG §4: a slot of age <= g is ineligible (the g newest are protected; B2's "
+        "convention, newest = age 1).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_grace_falls_back_when_every_slot_is_protected",
+                "at g = 4 with ages 1..4, `>=` makes the age-4 slot eligible, so the "
+                "fallback is never reached and the victim changes",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "it asserts graceU1 never evicts age 1 and graceU2 never age <= 2 on "
+                "the tiny model; `>=` lets exactly those through",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: grace has no fallback when every slot is protected",
+        "test_grace_falls_back_when_every_slot_is_protected",
+        "experiments/newcomer-bakeoff/run.py",
+        '        return ok if any(ok) else [True] * len(ages)  # "unless all are"\n',
+        '        return ok  # "unless all are"\n',
+        "PREREG §4: 'ineligible unless all are' -- with every slot protected the rule "
+        "falls back to the unmasked argmin.",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_units_are_atomic_resumable_and_keyed",
+                "the module fixture `fitted` runs fit_core, whose C8 determinism "
+                "control runs graceU4 at the tiny model's M = 4, where every slot has "
+                "age <= 4 on some steps; without the fallback the argmin has no "
+                "eligible slot and raises, so the fixture and every test using it error",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: the R1 shadow part is not down-weighted",
+        "test_r1_at_half_weight_is_resident_plus_half_the_shadow",
+        "experiments/newcomer-bakeoff/run.py",
+        "torch.where(in_win, lam * base, torch.zeros_like(base))",
+        "torch.where(in_win, base, torch.zeros_like(base))",
+        "PREREG §5 / ADR-0009 L3 R1: the shadow r~ enters the return at weight "
+        "lambda_shadow (FROZEN 0.5, read from the registry).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::"
+                "test_r1_at_zero_weight_is_the_censored_target",
+                "at lambda 0 R1 must equal B2's censored target; ignoring lambda gives "
+                "U's demand instead",
+            ),
+            (
+                "tests/test_newcomer_bakeoff.py::test_r1_window_truncates_at_k",
+                "it checks the in-window cells equal 0.5 * D0, which the mutation makes"
+                " D0",
+            ),
+        ),
+    ),
+    Mutation(
+        "newcomer-bakeoff: the R1 shadow window is one step too deep",
+        "test_r1_window_truncates_at_k",
+        "experiments/newcomer-bakeoff/run.py",
+        "    in_win = after & ((t - t_e.unsqueeze(0)) < K)\n",
+        "    in_win = after & ((t - t_e.unsqueeze(0)) <= K)\n",
+        "PREREG §5: a slot stays in the depth-K shadow buffer while fewer than K "
+        "evictions followed its own (t - t_e < K).",
+    ),
+    Mutation(
+        "newcomer-bakeoff: partial rho does not partial out content",
+        "test_partial_rho_removes_an_age_signal_carried_by_content",
+        "experiments/newcomer-bakeoff/analysis.py",
+        "    P = torch.linalg.pinv(dZ.T @ dZ)\n",
+        "    P = 0 * torch.linalg.pinv(dZ.T @ dZ)\n",
+        "PREREG §6.3: the §7.1 vacuity statistic on the effective rule is a PARTIAL rho"
+        " given content; without the content regression it is the raw within-step "
+        "Spearman.",
+    ),
+    Mutation(
+        "b1: L_MC means over rows, not over (doc, t)",
+        "test_l_mc_sums_over_live_slots_and_means_over_doc_t",
+        "experiments/b1-beta-inertness/run.py",
+        "    return (diff * diff).sum() / (N * (S - 1))\n",
+        "    return (diff * diff).sum() / rows.sum()\n",
+        "PREREG §3 / ADR-0009 L9: sum over resident slots, then mean over (doc, t).",
+    ),
+    Mutation(
+        "b1: the rows are rowset U, not C",
+        "test_rows_are_b2_rowset_c_and_target_is_c_at_09",
+        "experiments/b1-beta-inertness/run.py",
+        '        t, i = B2.row_index(cap, "C", m)\n',
+        '        t, i = B2.row_index(cap, "U", m)\n',
+        "PREREG §2: B2 rowset C, the FIFO-resident slots online L_MC sums over.",
+        off_gate_allowed=(
+            (
+                (
+                    "tests/test_b1_beta_inertness.py::test_full_memory_steps_are_those_with_m_resident"
+                ),
+                (
+                    "full is derived from rows (|rows[t]| = M); under rowset U every i "
+                    "< t is a row, so the full steps become t = M only instead of t >= "
+                    "M -- the same defect seen from the decision set"
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "b1: full-memory steps include M-1 resident",
+        "test_full_memory_steps_are_those_with_m_resident",
+        "experiments/b1-beta-inertness/run.py",
+        '        "full": rows_t.sum(-1) == m,\n',
+        '        "full": rows_t.sum(-1) >= m - 1,\n',
+        "PREREG §6 m2: decisions only where |resident[t]| = M.",
+    ),
+    Mutation(
+        "b1: pack accepts a captured input carrying graph",
+        "test_pack_refuses_inputs_that_carry_graph",
+        "experiments/b1-beta-inertness/run.py",
+        "            if x.requires_grad or x.grad_fn is not None:\n",
+        "            if False:\n",
+        "PREREG §2 / CLAUDE.md isolation: no gradient reaches the transformer.",
+    ),
+    Mutation(
+        "b1: psi_all pairs s_t with c_i",
+        "test_psi_all_is_the_head_at_every_t_and_i",
+        "experiments/b1-beta-inertness/run.py",
+        "    return head(g, ctx.reshape(N * S, d)).reshape(N, S, S)\n",
+        "    return head(g, ctx.reshape(N * S, d)).reshape(N, S, S).transpose(1, 2)\n",
+        "PREREG §3: psi[n, t, i] = head(s_i, c_t).",
+    ),
+    Mutation(
+        "b1: beta does not scale the loss",
+        "test_beta_scales_the_loss_and_never_the_lr_in_the_four_arms",
+        "experiments/b1-beta-inertness/run.py",
+        "    return 1.0 if arm == CONTROL_P else beta\n",
+        "    return 1.0\n",
+        "PREREG §5: phi's loss is beta * L_MC in the four arms.",
+    ),
+    Mutation(
+        "b1: P does not scale the LR",
+        "test_positive_control_scales_the_lr_and_not_the_loss",
+        "experiments/b1-beta-inertness/run.py",
+        "    lr_eff = beta * lr if arm == CONTROL_P else lr\n",
+        "    lr_eff = lr\n",
+        "PREREG §5 P: L7(a)'s reading, lr = beta * lr_phi.",
+        off_gate_allowed=(
+            (
+                (
+                    "tests/test_b1_beta_inertness.py::test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not"
+                ),
+                (
+                    "its last assertion is that P at beta = 0.01 moves phi away from "
+                    "beta = 1; with the LR unscaled and the loss unscaled, P is the "
+                    "beta = 1 run exactly, so the end-to-end test sees the same defect"
+                ),
+            ),
+        ),
+    ),
+    Mutation(
+        "b1: coupled_l2 is AdamW",
+        "test_coupled_l2_is_adam_with_l2_and_the_others_are_adamw_decoupled",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            "        return torch.optim.Adam(params, lr=lr, betas=ADAM_BETAS, eps=eps, "
+            "weight_decay=L2)\n"
+        ),
+        (
+            "        return torch.optim.AdamW(params, lr=lr, betas=ADAM_BETAS, eps=eps,"
+            " weight_decay=L2)\n"
+        ),
+        "PREREG §5 arm 4: coupled L2 is Adam with the L2 term in the gradient.",
+    ),
+    Mutation(
+        "b1: the phi clip is never applied",
+        "test_phi_clip_binds_on_phi_norm_at_one",
+        "experiments/b1-beta-inertness/run.py",
+        "        torch.nn.utils.clip_grad_norm_(params, PHI_CLIP)\n",
+        "        pass\n",
+        "PREREG §5 arm 2: clip_grad_norm_(phi, 1.0).",
+    ),
+    Mutation(
+        "b1: the joint clip ignores phi's norm",
+        "test_joint_clip_uses_the_joint_norm_with_the_transformers",
+        "experiments/b1-beta-inertness/run.py",
+        "math.sqrt(g_T * g_T + n * n)",
+        "g_T",
+        "PREREG §5 arm 3: the joint norm is sqrt(g_T^2 + |g_phi|^2).",
+    ),
+    Mutation(
+        "b1: the batch order samples with replacement",
+        "test_batch_order_is_a_permutation_per_epoch_and_seed_determined",
+        "experiments/b1-beta-inertness/run.py",
+        "        perm = torch.randperm(n, generator=g)\n",
+        "        perm = torch.randint(n, (n,), generator=g)\n",
+        "PREREG §3: without replacement within an epoch.",
+    ),
+    Mutation(
+        "b1: the argmin reads non-resident slots",
+        "test_argmins_only_over_resident_slots_at_full_steps",
+        "experiments/b1-beta-inertness/run.py",
+        '    x = psi.masked_fill(~rows, float("inf"))\n',
+        "    x = psi\n",
+        "PREREG §6 m2: argmin over resident slots only.",
+    ),
+    Mutation(
+        "b1: eps ratio without bias correction",
+        "test_eps_ratio_uses_the_bias_corrected_second_moment",
+        "experiments/b1-beta-inertness/run.py",
+        '            vhat = st["exp_avg_sq"].double() / (1.0 - b2**k)\n',
+        '            vhat = st["exp_avg_sq"].double()\n',
+        "PREREG §6 m3: eps / sqrt(v / (1 - 0.95^k)).",
+    ),
+    Mutation(
+        "b1: INERT needs agreement strictly above 0.99",
+        "test_classify_thresholds_are_the_prereg_ones",
+        "experiments/b1-beta-inertness/run.py",
+        "    if min(agreements) >= INERT_AGREE and max(rels) <= INERT_REL:\n",
+        "    if min(agreements) > INERT_AGREE and max(rels) <= INERT_REL:\n",
+        "PREREG §7: INERT is agreement >= 0.99 and rel <= 0.01.",
+    ),
+    Mutation(
+        "b1: every cell is compared against decoupled_wd",
+        "test_compare_reads_every_cell_against_its_own_beta_one",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            '    return "decoupled_wd" if arm in (CONTROL_P, CONTROL_N, CONTROL_I) else'
+            " arm\n"
+        ),
+        '    return "decoupled_wd"\n',
+        "PREREG §6: against beta = 1 of the same seed, arm and eps.",
+    ),
+    Mutation(
+        "b1: g_T accepts a missing step",
+        "test_read_g_t_takes_steps_2000_to_2999_and_refuses_a_gap",
+        "experiments/b1-beta-inertness/run.py",
+        "    if sorted(got) != list(range(lo, hi)):\n",
+        "    if not got:\n",
+        "PREREG §4: exactly one logged transformer norm per step 2000-2999.",
+    ),
+    Mutation(
+        "b1: phi is initialised from the global generator",
+        "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+        "experiments/b1-beta-inertness/run.py",
+        (
+            "        d, base_width=BASE_WIDTH, "
+            "generator=torch.Generator().manual_seed(init_seed)\n"
+        ),
+        "        d, base_width=BASE_WIDTH, generator=None\n",
+        (
+            "PREREG §2 / ADR-0009 L11: a dedicated generator, so every beta/arm/eps of "
+            "a seed starts from the same phi (N is bit-identical)."
+        ),
+    ),
+    # ------------------------------------------------------------------ #
+    # Expire-Span [P7] (spec §5.4, D-4, falsifier 6; release condition 3).
+    # P7:L<n> = line of ~/research-corpus/sources/memory-retention/
+    # sukhbaatar-2021-expire-span.md
+    # ------------------------------------------------------------------ #
+    Mutation(
+        "expire-span: eviction takes the MOST remaining span",
+        "test_expire_span_evicts_the_slot_with_least_remaining_span",
+        "src/rsr/baselines/expire_span.py",
+        "            victim = int(r.argmin().item())",
+        "            victim = int(r.argmax().item())",
+        "ADR-0010 q6 (a port choice; [P7] has no capacity): a full memory "
+        "drops the slot whose longest remaining span over layers is least. "
+        "argmax keeps the dying slot.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_a_slot_one_layer_still_reads_is_not_the_victim",
+                "the cross-layer eviction test asserts the same argmin, over "
+                "max-over-layers.",
+            ),
+            (
+                "tests/test_expire_span.py::test_at_zero_weight_init_expire_span_evicts_exactly_fifo",
+                "at the zero-weight init least-remaining IS oldest; argmax is "
+                "newest-first.",
+            ),
+            (
+                "tests/test_expire_span.py::test_eviction_ignores_dead_slots",
+                "dead slots are masked to +inf for the argmin; argmax picks exactly "
+                "those.",
+            ),
+            (
+                "tests/test_expire_span.py::test_span_resets_on_admission",
+                "ends by asserting the fresh newcomer is not the victim; under argmax "
+                "it is.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: newcomer inherits the row's oldest age",
+        "test_span_resets_on_admission",
+        "src/rsr/baselines/expire_span.py",
+        "        age = (step - mem_step).to(e.dtype)",
+        "        age = (step - mem_step.min(dim=-1, keepdim=True).values.clamp(min=0))"
+        ".to(e.dtype)",
+        "gauntlet 0.4: a new occupant is aged from its own write (P7:L267 r = "
+        "e - (t-i)). Aging every slot from the row's oldest tenant makes the "
+        "newcomer born expired.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_memory_weight_is_zero_on_dead_slots_and_follows_age",
+                "pins age = step - written_at per slot by hand; any other age reddens "
+                "it.",
+            ),
+            (
+                "tests/test_expire_span.py::test_each_cross_layer_gets_its_own_span_and_mask",
+                "compares per-layer masks at hand-set ages; wrong ages collapse them "
+                "to 0.",
+            ),
+            (
+                "tests/test_expire_span.py::test_structured_dropout_drops_every_memory_older_than_one_cutoff",
+                "the cutoff drops by the same age; wrong ages expire everything at eval.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_span_loss_charges_memories_on_the_ramp_only",
+                "the ramp window is an age window; wrong ages move memories off it.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_span_loss_carries_gradient_only_through_the_span",
+                "its one charged memory is chosen by age; wrong ages charge none.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: predictor path leaks into the gestalt",
+        "test_predictor_path_trains_the_predictor_but_not_the_gestalt",
+        "src/rsr/baselines/expire_span.py",
+        "        return kv.detach()",
+        "        return kv",
+        "ADR-0010 q1: `predictor` must stop span gradient at w, b. Without the "
+        "detach it silently becomes `through_gestalt` under a config that says "
+        "otherwise.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_model_gradients_are_identical_under_none_and_predictor",
+                "the end-to-end form of the same guard.",
+            ),
+            (
+                "tests/test_expire_span.py::test_through_gestalt_changes_the_model_gradients",
+                "with the detach gone `predictor` and `through_gestalt` are one setting.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: structured dropout never fires",
+        "test_structured_dropout_drops_every_memory_older_than_one_cutoff",
+        "src/rsr/baselines/expire_span.py",
+        "        if training and self.cfg.structured_dropout:",
+        "        if False and self.cfg.structured_dropout:",
+        "[P7] §4.2 (P7:L387-392): sample l ~ U(0, L) per step and zero every "
+        "memory older than l in training. A switch that is on and never "
+        "applied is an unregularised comparator passing as a regularised one.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_structured_dropout_is_reproducible_under_its_seed",
+                "with no draws two seeds give the same all-ones mask; the test asserts "
+                "they differ.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: construction draws from the global RNG",
+        "test_construction_does_not_consume_the_global_rng",
+        "src/rsr/baselines/expire_span.py",
+        "        self.weight = nn.Parameter(torch.zeros(n_layers, d_model))",
+        "        self.weight = nn.Parameter(torch.randn(n_layers, d_model) * 0.0)",
+        "tests/test_reduction.py's RNG trap: identical values, but the "
+        "constructor consumed global draws, shifting data order and dropout "
+        "for every later arm.",
+    ),
+    Mutation(
+        "model: Expire-Span mask never reaches cross-attention",
+        "test_a_zero_weight_slot_receives_no_attention_and_rows_renormalise",
+        "src/rsr/model/tg/model.py",
+        "            att = _reweight_attention(att, mem_weight)",
+        "            att = att",
+        "Eq. 4 (P7:L272-279): the mask in attention is the only route by which "
+        "the LM loss trains the spans. Dropped, Expire-Span is hard eviction "
+        "by an untrained predictor.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_each_c_block_reads_its_own_layer_of_the_mask",
+                "asserts a per-layer zero shows in that layer's attention; no mask, no "
+                "zero.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_lm_loss_reaches_the_span_predictor_through_the_model",
+                "with alpha = 0 the LM loss reaches w only through the mask.",
+            ),
+            (
+                "tests/test_expire_span.py::test_the_loop_passes_the_mask_to_the_model",
+                "fully-expired spans must change the loss vs FIFO; unmasked, it is "
+                "FIFO's.",
+            ),
+        ),
+    ),
+    Mutation(
+        "loop: Expire-Span's span loss is dropped",
+        "test_the_loop_adds_the_span_loss",
+        "src/rsr/model/tg/policy_loop.py",
+        "            contrib = contrib + span_loss",
+        "            contrib = contrib",
+        "Eq. 7 (P7:L332-335): the alpha term must enter the objective the arm "
+        "trains on; a loop that discards it runs alpha = 0 under a config "
+        "stamped otherwise.",
+    ),
+    Mutation(
+        "expire-span: the mask ramp is not clamped at 1",
+        "test_the_mask_is_the_clamped_ramp",
+        "src/rsr/baselines/expire_span.py",
+        "        return (1.0 + remaining / self.cfg.ramp).clamp(0.0, 1.0)",
+        "        return (1.0 + remaining / self.cfg.ramp).clamp(0.0, None)",
+        "Eq. 5 (P7:L284) m = max(0, min(1, 1 + r/R)): unclamped above, an "
+        "unexpired slot's weight grows with its span -- an attention bias, not "
+        "expiry.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_span_resets_on_admission",
+                "asserts the newcomer's mask is exactly 1.",
+            ),
+            (
+                "tests/test_expire_span.py::test_structured_dropout_drops_every_memory_older_than_one_cutoff",
+                "asserts the eval mask is exactly 1 before testing the cutoff.",
+            ),
+            (
+                "tests/test_expire_span.py::test_structured_dropout_is_off_at_eval_and_when_switched_off",
+                "asserts every weight is exactly 1 at long spans.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: span loss charged once at admission",
+        "test_the_span_loss_charges_memories_on_the_ramp_only",
+        "src/rsr/baselines/expire_span.py",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid & row_valid.view(-1, 1)",
+        "            charged = (mem_step == step - 1) & mem_valid"
+        " & row_valid.view(-1, 1)",
+        "[P7] §4.2 Loss Computation (P7:L368-382): charging at admission "
+        "'empirically results in poor performance'; the loss is charged while "
+        "0 < m < 1. This mutation restores this branch's own first (wrong) "
+        "implementation.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::"
+                "test_rows_past_their_stream_length_are_not_charged",
+                "its memories sit on the ramp (age 3) and must be charged before the "
+                "row mask can halve the charge; charged only at admission they are "
+                "never charged, so its 'charge > 0' precondition fails.",
+            ),
+        ),
+    ),
+    Mutation(
+        "model: every C block reads layer 0's mask",
+        "test_each_c_block_reads_its_own_layer_of_the_mask",
+        "src/rsr/model/tg/model.py",
+        "                layer_weight = mem_weight[c_idx]",
+        "                layer_weight = mem_weight[0]",
+        "[P7] computes spans 'independently for each layer' (P7:L81-82). "
+        "Routing one layer's mask to every block silently shares one span "
+        "across layers.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_the_lm_loss_reaches_the_span_predictor_through_the_model",
+                "asserts more than one layer's predictor receives LM gradient; with "
+                "layer 0's mask everywhere only layer 0's does.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: eviction uses the SHORTEST-lived layer",
+        "test_a_slot_one_layer_still_reads_is_not_the_victim",
+        "src/rsr/baselines/expire_span.py",
+        "            r = (e - age).amax(dim=0)",
+        "            r = (e - age).amin(dim=0)",
+        "ADR-0010 q6: a slot any layer still reads is alive (as P7:L353-355 "
+        "says for heads). min over layers evicts a slot a deep layer is still "
+        "retaining.",
+    ),
+    Mutation(
+        "expire-span: span loss charged at eval",
+        "test_the_span_loss_is_not_charged_at_eval",
+        "src/rsr/baselines/expire_span.py",
+        "        if training:\n            charged",
+        "        if True:\n            charged",
+        "review MAJOR-1 (feat-expire-span @ 49027dd): Eq. 7 is a training objective "
+        "(P7:L330-335). Charged at eval, every loss read from the loop bills "
+        "Expire-Span alone for its spans -- biasing the referendum against the "
+        "baseline whose win ends the project, the direction B-3 forbids.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span.py::test_memory_weight_returns_no_span_loss_at_eval",
+                "the unit form of the same guard: the policy returns None at eval.",
+            ),
+        ),
+    ),
+    Mutation(
+        "expire-span: rows past their stream are charged",
+        "test_rows_past_their_stream_length_are_not_charged",
+        "src/rsr/baselines/expire_span.py",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid & row_valid.view(-1, 1)",
+        "            charged = (m > 0.0) & (m < 1.0) & mem_valid",
+        "review MINOR-1: after a row's stream ends step_fn masks it, so no LM "
+        "gradient opposes a span charge on its still-ageing memories; charging it "
+        "pushes spans down for nothing.",
+    ),
+    # ----------------------------------------------------------------------- #
+    # ADR-0009 slice 1 -- the psi-hat learning path (feat/rsr-slice1). ADR §6's
+    # list, plus one per signed item and per run-1 build rule. Gates live in
+    # tests/test_rsr_learning_path.py unless named otherwise.
+    # ----------------------------------------------------------------------- #
+    Mutation(
+        "slice1: L_MC's regression drops the policy's own detach",
+        "test_the_policys_own_detach_holds_for_attached_inputs",
+        "src/rsr/retention/rsr.py",
+        # Anchor refreshed (feat/rsr-run1-ready): the line moved into the content
+        # head's branch of retention_loss when the age-only arm was added.
+        "            psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)",
+        "            psi = self.head(s.unsqueeze(1), c).squeeze(1)",
+        "ADR-0009 §2 / T3. §3.3 and CLAUDE.md: the retention loss must not reach "
+        "the transformer or W_sent. In the loop the inputs arrive detached "
+        "upstream, which masks this site; the gate feeds attached inputs so the "
+        "policy's own stop-gradient is what is tested (not an equivalent mutant).",
+    ),
+    Mutation(
+        "slice1: the eval-capture forward runs in train mode",
+        "test_every_trace_reaching_observe_in_train_is_eval_mode",
+        "src/rsr/model/tg/policy_loop.py",
+        "        model.eval()\n        try:\n",
+        "        pass  # MUTATED: model.eval() dropped\n        try:\n",
+        "ADR-0009 L1(a) / T6, correction 20 (D-F). The 'eval' forward with dropout "
+        "live yields a train-mode alpha; reward._require_eval refuses it "
+        "(TrainModeTrace), which is the guard working -- the mutation proves the "
+        "toggle is load-bearing, not decorative.",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_TRAIN_MODE_TRACE,
+                "test_fifo_and_rsr_arms_see_the_same_first_batch",
+                "test_l1_eval_forward_cost_is_measured",
+                "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
+                "test_l_mc_reaches_phi_and_nothing_else",
+                "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                "test_steps_per_epoch_is_derived_from_the_pool[16]",
+                "test_steps_per_epoch_is_derived_from_the_pool[8]",
+                "test_the_decision_and_the_regression_read_one_context",
+                "test_the_eval_forward_draws_no_rng_and_restores_the_mode",
+                "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                "test_the_lm_loss_never_reaches_phi",
+                "test_the_return_is_truncated_at_each_rows_length",
+                "test_the_rsr_arm_builds_and_steps_on_mps",
+                "test_the_training_forward_is_unchanged_by_the_eval_forward",
+                "test_warmup_evicts_fifo_and_phi_still_trains",
+            ),
+            (
+                "tests/test_train_loop.py::"
+                "test_the_value_head_lands_in_its_own_mup_group",
+                _S1_TRAIN_MODE_TRACE,
+            ),
+            *_r1_declare(
+                "every run-1 learning arm reads r_i from the eval capture; stamped "
+                "eval_mode=False, reward._require_eval raises TrainModeTrace in each "
+                "RSR arm run through train().",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+                "test_two_pools_give_two_hashes_and_two_batches",
+            ),
+            *_r1_declare(
+                "every run-1 learning arm reads r_i from the eval capture; stamped "
+                "eval_mode=False, reward._require_eval raises TrainModeTrace in "
+                "each RSR arm run through train().",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_records_are_drained_and_checkpoints_stay_bounded",
+                "test_rsr_beats_carry_the_decision_attribution",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
+            *_r1_declare(
+                "the same-dir resume test runs an RSR learning arm, whose r_i comes "
+                "from the eval capture: TrainModeTrace.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
+        ),
+    ),
+    Mutation(
+        "slice1: the eval-capture forward leaves the model in eval mode",
+        "test_the_eval_forward_draws_no_rng_and_restores_the_mode",
+        "src/rsr/model/tg/policy_loop.py",
+        "            model.train(was_training)\n",
+        "            pass  # MUTATED: mode not restored\n",
+        "ADR-0009 L1(a): 'mode restored after'. Not restored, every later training "
+        "forward runs without dropout -- a different objective for the RSR arm "
+        "than for the FIFO arm, so the arms no longer differ only in the eviction "
+        "rule (§3.7).",
+        off_gate_allowed=_s1_declare(
+            _S1_MODE_NOT_RESTORED,
+            "test_every_trace_reaching_observe_in_train_is_eval_mode",
+            "test_the_training_forward_is_unchanged_by_the_eval_forward",
+        ),
+    ),
+    Mutation(
+        "slice1: the decision reads the train-mode srep again",
+        "test_the_decision_and_the_regression_read_one_context",
+        "src/rsr/model/tg/policy_loop.py",
+        "        decision_ctx = ev.srep if ev is not None else out.srep.detach()",
+        "        decision_ctx = out.srep.detach()",
+        "ADR-0009 L2 (signed): one c_t for regression and decision. Fitted on the "
+        "eval gestalt and decided on the dropout-noised training gestalt is a "
+        "silent train/test skew in exactly the input psi-hat conditions on.",
+    ),
+    Mutation(
+        "slice1: the return is keyed by slot index",
+        "test_g_is_keyed_by_written_at_through_a_middle_slot_eviction",
+        "src/rsr/retention/rsr.py",
+        "                keys=slots.written_at[live].clone(),",
+        "                keys=live.clone(),",
+        "ADR-0009 §1 / T5. write_at compacts the prefix after a middle-slot "
+        "eviction, so an index names different gestalts at different steps; G "
+        "keyed by index sums one slot's early r with its successor's later r.",
+    ),
+    Mutation(
+        "slice1: the return's discount starts at k = 1",
+        "test_mc_return_matches_the_closed_form",
+        "src/rsr/retention/mc.py",
+        "        out[..., t] = r[..., t] + gamma * nxt",
+        "        out[..., t] = gamma * (r[..., t] + nxt)",
+        "ADR-0009 T5: G_i(t) = sum_{k=0} gamma^k r_i(t+k) (spec §3.3, correction "
+        "2). Every term one power of gamma short is a plausible-looking return "
+        "with the wrong scale and the wrong gamma=0 limit.",
+        off_gate_allowed=_s1_declare(
+            _S1_RETURN_ARITHMETIC,
+            "test_g_is_keyed_by_written_at_through_a_middle_slot_eviction",
+            "test_the_return_is_truncated_at_each_rows_length",
+        ),
+    ),
+    Mutation(
+        "slice1: the return runs past the row's length",
+        "test_the_return_is_truncated_at_each_rows_length",
+        "src/rsr/model/tg/policy_loop.py",
+        "                if bool(row_valid[row]):\n                    policy.observe(",
+        "                if True:\n                    policy.observe(",
+        "ADR-0009 §1 / T5: the return is truncated at T_b = lengths[b]. Observed "
+        "past it, a short row regresses on r read from padding sentences.",
+        off_gate_allowed=(
+            (
+                "tests/test_capture_bridge.py::test_observe_is_called_once_per_live_row_per_step",
+                "the S0-02 call-site test counts observe calls per live row per step: "
+                "the same row_valid gate, seen from the capture bridge.",
+            ),
+        ),
+    ),
+    Mutation(
+        "slice1: every row's samples land in row 0's buffer",
+        "test_two_rows_keep_two_buffers",
+        "src/rsr/retention/rsr.py",
+        "        self._mc.setdefault(int(slots.row), []).append(",
+        "        self._mc.setdefault(0, []).append(",
+        "ADR-0009 L10 / T7, the row-0 bug class (OraclePolicy, LRU 2026-09-29). "
+        "written_at is unique per row, not per batch: merged, two rows' keys "
+        "collide and each row's G mixes in the other's r.",
+        off_gate_allowed=_s1_declare(
+            _S1_ROWS_MERGED,
+            "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
+            "test_the_return_is_truncated_at_each_rows_length",
+        ),
+    ),
+    Mutation(
+        "slice1: L_MC is a per-slot mean, not sum-then-mean",
+        "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
+        "src/rsr/retention/rsr.py",
+        "        loss = (psi - target.detach()).pow(2).sum() / n_groups",
+        "        loss = (psi - target.detach()).pow(2).mean()",
+        "ADR-0009 L9 (signed): unweighted, sum over live slots, then mean over "
+        "(row, t). B1 measured beta LIVE at eps = 1e-8, so the loss scale is not "
+        "inert and the reduction is part of what beta means.",
+        off_gate_allowed=_r1_declare(
+            "the age-only L_MC by hand is sum-then-mean (0.25 + 0.0625 over one "
+            "group = 0.3125); a per-slot mean gives 0.15625.",
+            "test_the_age_only_arm_regresses_and_evicts_on_age_alone",
+        ),
+    ),
+    Mutation(
+        "slice1: beta = 0 computes L_MC times zero",
+        "test_beta_zero_leaves_phi_bitwise_at_init",
+        "src/rsr/retention/rsr.py",
+        "        return self.head is not None and self.config.beta != 0.0",
+        "        return self.head is not None",
+        "ADR-0009 L13(a) / T12: beta = 0 means L_MC is not computed. Computed x0, "
+        "phi's gradients are zeros rather than None, AdamW's decoupled decay "
+        "shrinks phi, and 'beta = 0' stops meaning 'no retention learning'.",
+    ),
+    Mutation(
+        "slice1: shadow_enabled=True accepted silently",
+        "test_shadow_enabled_true_is_refused_by_the_policy",
+        "src/rsr/retention/rsr.py",
+        "        if config.shadow_enabled:\n",
+        "        if False:  # MUTATED\n",
+        "ADR-0009 L6(a) / T11: the shadow buffer is slice 2. A switch that is set "
+        "and does nothing is worse than no switch (rsr.py's own rule).",
+    ),
+    Mutation(
+        "slice1: phi joins the transformer's gradient clip",
+        "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+        "src/rsr/train/loop.py",
+        "gnorm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)",
+        "gnorm = torch.nn.utils.clip_grad_norm_([*model.parameters(), *phi_params], 1.0)",
+        "ADR-0009 L8 (signed part) / T4: a joint norm makes the transformer's clip "
+        "factor depend on L_MC -- a gradient-free but real channel from the "
+        "retention loss into transformer updates (§2).",
+    ),
+    Mutation(
+        "slice1: phi built from the data-order generator",
+        "test_fifo_and_rsr_arms_see_the_same_first_batch",
+        "src/rsr/train/loop.py",
+        "        generator=phi_gen,\n",
+        "        generator=gen,\n",
+        "ADR-0009 L11 / T10, both latent defects: phi's init draws from `gen`, so "
+        "an RSR arm trains on a different stream than the FIFO arm at the same "
+        "seed (§3.7), and on MPS the CPU-built head raises on an MPS generator.",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_PHI_FROM_GEN,
+                "test_beta_zero_leaves_phi_bitwise_at_init",
+                "test_phi_is_initialised_from_its_own_seeded_stream",
+                "test_the_rsr_arm_builds_and_steps_on_mps",
+            ),
+            *_r1_declare(
+                "the warm-start phi-fresh test compares phi with phi_generator(seed)'s "
+                "head; drawn from `gen` it is a different head.",
+                "test_the_warm_start_builds_phi_fresh",
+            ),
+            *_r1_declare(
+                "phi drawn from the data-order generator consumes draws from gen, "
+                "so the RSR arm's pool permutation is no longer the FIFO arm's -- "
+                "the pairing the test asserts.",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+            ),
+        ),
+    ),
+    Mutation(
+        "slice1: value_head=None into build_param_groups again",
+        "test_the_value_head_lands_in_its_own_mup_group",
+        "src/rsr/train/loop.py",
+        "build_param_groups(model, head, base_lr=lr, d_model=d, base_width=128)",
+        "build_param_groups(model, None, base_lr=lr, d_model=d, base_width=128)",
+        "ADR-0009 T9 / §4.3, S0-01's old strict xfail: psi-hat outside its own "
+        "muP group -- here, outside the optimizer altogether, so phi never moves.",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_NO_VALUE_HEAD_GROUP,
+                "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+            ),
+            *_r1_declare(
+                "phi (frozen warm start) and the age-only table are outside the "
+                "optimizer, so neither moves -- the value_head group seen from two "
+                "run-1 arms.",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_the_age_only_arm_through_train_is_labelled_and_learns",
+            ),
+            *_r1_declare(
+                "C-1's tests freeze the transformer; with phi out of the optimizer "
+                "a frozen RSR arm has no trainable parameter (build_param_groups: "
+                "'no trainable parameters found').",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+            ),
+            *_r1_declare(
+                "the age-only C-1 arm is frozen; with its table out of the "
+                "optimizer it has no trainable parameter ('no trainable parameters "
+                "found').",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+            ),
+        ),
+    ),
+    Mutation(
+        "slice1: a t_warm override accepted without the ablation declaration",
+        "test_a_t_warm_override_needs_the_ablation_declaration",
+        "src/rsr/train/loop.py",
+        '    if "t_warm" in overrides and not no_warmup_ablation:\n',
+        "    if False:  # MUTATED\n",
+        "ADR-0009 L12: otherwise an override decides correction 31(b) by the back "
+        "door -- the owner ruled the epoch; T_warm follows from it (§3.4).",
+    ),
+    Mutation(
+        "slice1: b_enabled=False no longer required",
+        "test_b_enabled_false_is_required",
+        "src/rsr/train/loop.py",
+        '        if ov.get("b_enabled") is not False:\n',
+        "        if False:  # MUTATED\n",
+        "ADR-0009 L12: no ProtectionBias exists (§12 item 3), so every slice-1 arm "
+        "is b=off and says so; the requirement is the label's guarantee.",
+    ),
+    Mutation(
+        "slice1: the overrides are not stamped into the frozen config",
+        "test_overrides_are_stamped_into_frozen_hash_and_label",
+        "src/rsr/train/loop.py",
+        "            k: _jsonable(v) for k, v in "
+        "sorted((policy_overrides or {}).items())",
+        "            k: _jsonable(v) for k, v in sorted({}.items())",
+        "ADR-0009 L12: the overrides are stamped into `frozen`, so into the hash "
+        "and the run_id. A frozen config that does not say what the arm departed "
+        "from proves nothing about what it ran.",
+    ),
+    Mutation(
+        "slice1: the frozen option leaves the transformer trainable",
+        "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+        "src/rsr/train/loop.py",
+        "        model.requires_grad_(False)  # D2(b): no L_NTP update to transformer, "
+        "W_sent\n",
+        "        pass  # MUTATED\n",
+        "docs/owner/rulings/R-2026-09-30-rsr-run-1-scope.md D2(b): the transformer "
+        "and "
+        "W_sent get no update in run 1. Left trainable, the transformer sits in "
+        "the optimizer (and its decoupled decay) while the run is labelled frozen.",
+        off_gate_allowed=_s1_declare(
+            "the frozen FIFO arm is the same rule with no head: left trainable, the "
+            "transformer is put in an optimizer the frozen arm must not have (its "
+            "checkpoint carries optimizer state).",
+            "test_a_frozen_fifo_arm_runs_without_an_optimizer",
+        ),
+    ),
+    # ---- run-1 readiness (feat/rsr-run1-ready): review record
+    # docs/reviews/feat-rsr-slice1/7be03038a905.md m-1 .. m-8, P-2. Each was
+    # applied by hand, its gate seen red, the tree restored.
+    Mutation(
+        "run1: a warm start counts k from the source checkpoint's step",
+        "test_the_warm_start_runs_t_warm_at_relative_steps",
+        "src/rsr/train/loop.py",
+        "                policy.set_train_step(it)\n",
+        '                policy.set_train_step(it + (ws_record or {}).get("source_step", '
+        "0))  # MUTATED\n",
+        "m-1 / §3.4, correction 31: k counted from the source's step 3000 starts "
+        "past T_warm (16 steps at pool 256 / batch 16) and skips the warmup "
+        "silently -- the review's exact finding.",
+    ),
+    Mutation(
+        "run1: the warm-start sha256 is not compared",
+        "test_a_wrong_sha_is_refused",
+        "src/rsr/train/loop.py",
+        "    if got != want:\n",
+        "    if False:  # MUTATED\n",
+        "m-1: a checkpoint the T0 manifest did not freeze would seed run 1 under "
+        "the manifest's name.",
+    ),
+    Mutation(
+        "run1: the warm start restores the source's RNG",
+        "test_the_warm_start_restores_weights_only",
+        "src/rsr/train/loop.py",
+        # Re-anchored at the review fixes: the load is now from the hashed bytes
+        # (MINOR-5), which restore nothing; the mutation adds the restore back.
+        '    payload = ck.load_bytes(data, source=rec["checkpoint"])\n',
+        '    payload = ck.load_bytes(data, source=rec["checkpoint"])\n'
+        '    ck.RngState(**payload["rng"]).restore()  # MUTATED\n',
+        "m-1: weights only. Restoring the source run's RNG makes the dropout masks "
+        "and every later global draw the source's continuation, not this seed's.",
+    ),
+    Mutation(
+        "run1: the warm start is not stamped into the frozen config",
+        "test_the_warm_start_is_stamped_into_frozen_hash_and_label",
+        "src/rsr/train/loop.py",
+        '        frozen["warm_start"] = ws_record\n',
+        "        pass  # MUTATED\n",
+        "m-1: the source's path and sha256 must be in the hash: a frozen config "
+        "that does not say which substrate it started from proves nothing.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the relative-step test also reads frozen['warm_start']['source_step'] "
+                "to prove the source sat past T_warm; unstamped, that key is missing "
+                "(KeyError) -- the same record, read from the warmup gate.",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+            ),
+            *_r1_declare(
+                "the legacy-source, seed, identical-map and unrecorded-vocabulary "
+                "tests read frozen['warm_start'] (KeyError) -- the same record, "
+                "read from the MAJOR-1 and seed tests.",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+                "test_a_seed_mismatch_is_refused_unless_labelled",
+                "test_an_identical_map_from_another_document_count_is_accepted",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: a non-FIFO warm-start source accepted",
+        "test_a_non_fifo_source_is_refused",
+        "src/rsr/train/loop.py",
+        '    if source_policy != "fifo":\n',
+        "    if False:  # MUTATED\n",
+        "m-1 / D2(a): the substrate is a FIFO checkpoint; an RSR source's phi "
+        "would be dropped silently by a weights-only load.",
+    ),
+    Mutation(
+        # Renamed and re-anchored at review MAJOR-1: the guard compares the
+        # token->id MAP now; the document-count comparison it replaces refused
+        # identical maps and skipped unrecorded sources.
+        "run1: a warm-start source with another vocabulary map accepted",
+        "test_a_source_with_a_different_vocabulary_map_is_refused",
+        "src/rsr/train/loop.py",
+        "        if src_vocab != run_vocab:\n",
+        "        if False:  # MUTATED\n",
+        "MAJOR-1: token ids from a different token->id map mean different words; "
+        "a strict shape check cannot see it when V happens to agree.",
+    ),
+    Mutation(
+        "run1: the warm start loads before the liveness decoy is copied",
+        "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+        "src/rsr/train/loop.py",
+        # Re-anchored at the review fixes (_load_warm_start's signature changed).
+        "            model, warm_start, vocab_map=build_vocab(probe), seed=seed\n"
+        "        )\n",
+        "            model, warm_start, vocab_map=build_vocab(probe), seed=seed\n"
+        "        )\n        init_state = {k: v.detach().clone() "
+        "for k, v in model.state_dict().items()}  # MUTATED\n",
+        "m-1, the review's liveness note: the decoy is the untrained model at the "
+        "same seed (R-2026-09-22-inert-exit-5's decisive PREREG Decoy); copied "
+        "after the load it is the substrate, and a frozen run reads ratio 1.0.",
+    ),
+    Mutation(
+        "run1: the pool is not stamped into the frozen config",
+        "test_two_pools_give_two_hashes_and_two_batches",
+        "src/rsr/train/loop.py",
+        '        frozen["pool"] = {**asdict(pool), "ids": [pool.offset, pool.offset + '
+        "pool.length]}\n",
+        "        pass  # MUTATED\n",
+        "m-2: two pools would share a config hash and a run_id.",
+    ),
+    Mutation(
+        "run1: the pool's offset is ignored",
+        "test_two_pools_give_two_hashes_and_two_batches",
+        "src/rsr/train/loop.py",
+        "        docs = pool_documents(\n            pool, SyntheticConfig(",
+        "        docs = pool_documents(\n            DocumentPool(0, pool.length, "
+        "pool.vocab_documents), SyntheticConfig(",
+        "m-2: 'a pool arm B never saw' would silently be documents [0, N), which "
+        "arm B's source DID see -- with the pool's identity still in the hash.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the C-2 tests map each logged or received batch row back to the "
+                "pool's own documents; with the offset ignored the rows are "
+                "documents [0, N), which the pool does not hold.",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: the epoch's with-replacement sampling not recorded",
+        "test_the_epoch_records_sampling_with_replacement",
+        "src/rsr/train/loop.py",
+        # Re-anchored at R-2 (the record now names the sampler that ran).
+        "                SAMPLING_PERMUTATION if pool is not None else "
+        "SAMPLING_WITH_REPLACEMENT\n",
+        "                None  # MUTATED\n",
+        "m-3: 'one pass over the pool' overstates a with-replacement epoch "
+        "(about 1 - 1/e of the documents); the record must say so.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "both C-2 sampler tests assert the recorded sampling string (None).",
+                "test_every_pool_epoch_covers_the_pool_exactly_once",
+                "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: the frozen model mode not recorded",
+        "test_frozen_mode_records_that_dropout_stays_on",
+        "src/rsr/train/loop.py",
+        # Re-anchored at C-1: the record is looked up from the mode.
+        '        frozen["frozen_model_mode"] = '
+        "FROZEN_MODEL_MODE_RECORD[frozen_model_mode]\n",
+        "        pass  # MUTATED\n",
+        "m-4 and C-1 test (f): freezing removes the update only, and the mode the "
+        "frozen model ran in -- train or eval -- must be on the record.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the frozen warm-start test and C-1 test (e) assert the same "
+                "frozen_model_mode record (KeyError).",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: no_warmup_ablation accepted on the FIFO arm",
+        "test_no_warmup_ablation_on_the_fifo_arm_is_refused",
+        "src/rsr/train/loop.py",
+        "        if no_warmup_ablation:\n            # m-5",
+        "        if False:  # MUTATED\n            # m-5",
+        "m-5: a switch that is set and does nothing (the branch's own rule).",
+    ),
+    Mutation(
+        "run1: AdamW eps in B1's inert regime",
+        "test_the_adamw_eps_is_pinned_at_1e_8_and_recorded",
+        "src/rsr/train/loop.py",
+        "ADAMW_EPS: float = 1e-8\n",
+        "ADAMW_EPS: float = 1e-12\n",
+        "P-2: B1 measured beta live at eps 1e-8 and inert at 1e-12; the pin is "
+        "what makes beta mean what B1 measured.",
+        off_gate_allowed=_s1_declare(
+            "the slice-1 eps test asserts torch's default == the recorded default "
+            "== ADAMW_EPS at torch 2.14.0; moving the pin off 1e-8 breaks that "
+            "equality, which is the point of keeping it.",
+            "test_the_adamw_eps_pin_equals_torchs_recorded_default",
+        ),
+    ),
+    Mutation(
+        "run1: the §7.1 diagnostics are not logged on the beat",
+        "test_the_section_7_1_diagnostics_are_logged_every_step",
+        "src/rsr/train/loop.py",
+        '                    "diag": policy.step_diagnostics(),\n',
+        '                    "diag": None,  # MUTATED\n',
+        "m-8 / ADR-0009 L6: the §7.1 diagnostics are mandatory in every RESULTS, "
+        "so every RSR beat carries them.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the every-step test compares each beat's `diag` with the step's "
+                "diagnostics.jsonl row (None is not subscriptable).",
+                "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: step diagnostics accumulate over the whole run",
+        "test_step_diagnostics_cover_one_stream_only",
+        "src/rsr/retention/rsr.py",
+        "        self._diag_from = len(self.records)\n",
+        "        self._diag_from = 0  # MUTATED\n",
+        "m-8: a per-step histogram that silently grows into a cumulative one "
+        "mixes warmup and scored evictions in one beat.",
+        off_gate_allowed=_r1_declare(
+            "the train()-level diagnostics test asserts the same histogram through "
+            "the beat (88 evictions/step, all age 4 in warmup); the mutation "
+            "shows there as 176 == 88 on the second beat.",
+            "test_the_section_7_1_diagnostics_are_logged_every_step",
+        ),
+    ),
+    Mutation(
+        "run1: the victim age is recorded as its rank",
+        "test_victim_age_and_rank_histograms_by_hand",
+        "src/rsr/retention/rsr.py",
+        "            victim_age=int(slots.ages()[victim].item()),\n",
+        "            victim_age=victim_rank,  # MUTATED\n",
+        "m-8 / §7.1: age and rank coincide only under FIFO; RSR breaks the map "
+        "(ADR-0006), which is why both histograms exist.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the train()-level diagnostics test asserts the same histogram through "
+                "the beat (88 evictions/step, all age 4 in warmup); the mutation "
+                "shows there as {'1': 88} == {'4': 88}.",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+            ),
+            *_r1_declare(
+                "the split-histogram test reads the warmup victim-age histogram: "
+                "rank 1 for every FIFO victim, not age 4.",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: victim ages not counted by the rank-shift log",
+        "test_victim_age_and_rank_histograms_by_hand",
+        "src/rsr/retention/instrumentation.py",
+        "        if record.victim_age is not None:\n"
+        "            self.victim_ages[record.victim_age] += 1\n",
+        "        pass  # MUTATED\n",
+        "m-8: the victim-age histogram is the log's to aggregate; an empty one "
+        "reads as 'no evictions'.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the train()-level diagnostics test asserts the same histogram through "
+                "the beat (88 evictions/step, all age 4 in warmup); the mutation "
+                "shows there as an empty age histogram.",
+                "test_the_section_7_1_diagnostics_are_logged_every_step",
+            ),
+            *_r1_declare(
+                "the split-histogram test reads the warmup victim-age histogram "
+                "from the same log ({}).",
+                "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: rankdata gives tied values distinct ranks",
+        "test_rankdata_averages_ties",
+        "src/rsr/metrics/vacuity.py",
+        "    avg = first.to(torch.float64) + (counts.to(torch.float64) + 1.0) / 2.0\n",
+        "    avg = first.to(torch.float64) + 1.0  # MUTATED\n",
+        "m-8: ages tie heavily (every FIFO victim is age M); Spearman needs "
+        "average ranks.",
+    ),
+    Mutation(
+        "run1: partial rho is not residualised on content",
+        "test_partial_spearman_matches_the_first_order_formula",
+        "src/rsr/metrics/vacuity.py",
+        "        Z = torch.cat([ones, z], dim=1)\n",
+        "        Z = ones  # MUTATED\n",
+        "m-8 / §7.1 item 1: 'partial correlation, not raw rho' -- without the "
+        "covariates it is v0.1's raw Spearman under the partial's name.",
+        off_gate_allowed=_r1_declare(
+            "both assert None where the covariates leave nothing defined: content "
+            "that determines age (now 1.0) and 32 covariates over 8 samples (now "
+            "-0.258). Without the residualisation neither case is undefined.",
+            "test_partial_rho_is_one_for_a_score_that_is_age_and_none_when_undefined",
+            "test_victim_age_and_rank_histograms_by_hand",
+        ),
+    ),
+    Mutation(
+        "run1: age enters the content head's score",
+        "test_the_content_head_never_reads_age",
+        "src/rsr/retention/rsr.py",
+        "            psi = self.head(slots.gestalts.detach(), context.detach())\n",
+        "            psi = self.head(slots.gestalts.detach(), context.detach()) + "
+        "slots.ages()  # MUTATED\n",
+        "CLAUDE.md: age is excluded from psi_hat -- supplying it invites collapse "
+        "onto recency and hides the vacuity failure (§3.2.2, §7.1).",
+    ),
+    Mutation(
+        "run1: the age-only head ignores age",
+        "test_the_age_only_arm_regresses_and_evicts_on_age_alone",
+        "src/rsr/retention/value_head.py",
+        "        return self.table[idx.clamp(0, self.max_age)]\n",
+        "        return self.table[torch.zeros_like(idx)]  # MUTATED\n",
+        "m-8 / §7.1 item 2: an 'age-only' arm that is a constant is not recency "
+        "at its strongest; content+age ~= age-only would then mean nothing.",
+        off_gate_allowed=_r1_declare(
+            "both drive AgeOnlyValueHead with a hand-set table: the histogram test "
+            "picks its middle-slot victim by theta[age] (now slot 0, all ties), and "
+            "the content-head test's age-only half expects theta[age] = (4,3,2,1).",
+            "test_victim_age_and_rank_histograms_by_hand",
+            "test_the_content_head_never_reads_age",
+        ),
+    ),
+    Mutation(
+        "run1: diagnostics on for a directly built policy",
+        "test_a_directly_built_policy_collects_no_diagnostics",
+        "src/rsr/retention/rsr.py",
+        "        diagnostics: bool = False,\n",
+        "        diagnostics: bool = True,  # MUTATED\n",
+        "m-8: E0b's direct path (tests/test_reduction.py) collects nothing; the "
+        "diagnostics are turned on by train()'s build_policy only.",
+    ),
+    Mutation(
+        "run1: eval_forward synchronises on MPS only again",
+        "test_synchronize_waits_on_cuda_and_mps",
+        "src/rsr/model/tg/policy_loop.py",
+        '    elif device.type == "cuda":\n',
+        "    elif False:  # MUTATED\n",
+        "m-7: on CUDA eval_forward_s would time the launch, not the work "
+        "(ADR-0009 L1(a)'s measured cost).",
+    ),
+    Mutation(
+        "run1: eval_forward bypasses the synchronize dispatch",
+        "test_eval_forward_synchronises_through_the_dispatch",
+        "src/rsr/model/tg/policy_loop.py",
+        "    synchronize(out.srep.device)  # m-7: MPS and CUDA alike\n",
+        "    pass  # MUTATED\n",
+        "m-7: the dispatch is only worth having if eval_forward goes through it.",
+    ),
+    # ---- review fixes (docs/reviews/feat-rsr-run1-ready/78607cd02787.md):
+    # MAJOR-1, the seed ruling, MINOR-1/3/5/7. Each applied by hand, its gate
+    # seen red, the tree restored.
+    Mutation(
+        "run1: an unrecorded warm-start vocabulary accepted without its flag",
+        "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+        "src/rsr/train/loop.py",
+        "    elif not ws.allow_unrecorded_vocabulary:\n",
+        "    elif False:  # MUTATED\n",
+        "MAJOR-1: a source with no recorded config was accepted with no check and "
+        "no warning; only a labelled flag may lift the refusal.",
+    ),
+    Mutation(
+        "run1: a source config not bound to the run_id hash accepted",
+        "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+        "src/rsr/train/loop.py",
+        "    if want is None or _config_hash(cfg) != want:\n",
+        "    if False:  # MUTATED\n",
+        "MAJOR-1: a side-file config is trusted only because it hashes to the "
+        "sha-verified checkpoint's run_id; unbound, any JSON could vouch for it.",
+    ),
+    Mutation(
+        "run1: the unrecorded-vocabulary flag not in the label",
+        "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+        "src/rsr/train/loop.py",
+        '            toks.append("vocab=unchecked")\n',
+        "            pass  # MUTATED\n",
+        "MAJOR-1 ruling: the allow flag enters the label, so an unchecked arm "
+        "cannot read like a checked one.",
+    ),
+    Mutation(
+        "run1: the unrecorded-vocabulary flag not in the frozen config",
+        "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+        "src/rsr/train/loop.py",
+        "        allow_unrecorded_vocabulary=ws.allow_unrecorded_vocabulary,\n",
+        "        # MUTATED\n",
+        "MAJOR-1 ruling: the allow flag enters the config hash.",
+    ),
+    Mutation(
+        "run1: a warm-start seed mismatch accepted",
+        "test_a_seed_mismatch_is_refused_unless_labelled",
+        "src/rsr/train/loop.py",
+        "    if src_seed != seed and not ws.allow_seed_mismatch:\n",
+        "    if False:  # MUTATED\n",
+        "Seed ruling: 'documents arm B never saw' is a statement about arm B's "
+        "seed-0 documents; a different seed silently changes what it means.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the unrecorded-vocabulary test expects the SEED refusal when only "
+                "the vocabulary flag is set (an unrecorded source's seed is "
+                "unrecorded); with the seed check gone it is accepted.",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: the source seed not in the warm-start label",
+        "test_the_warm_start_is_stamped_into_frozen_hash_and_label",
+        "src/rsr/train/loop.py",
+        "            f\"src_seed={'unrecorded' if seed is None else seed}\",\n",
+        "            # MUTATED\n",
+        "Seed ruling: the source's seed is in the label.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the seed and unrecorded-vocabulary tests assert the label's "
+                "src_seed token (0 / unrecorded).",
+                "test_a_seed_mismatch_is_refused_unless_labelled",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: the warm start reloads the checkpoint from its path",
+        "test_the_bytes_loaded_are_the_bytes_hashed",
+        "src/rsr/train/loop.py",
+        '    payload = ck.load_bytes(data, source=rec["checkpoint"])\n',
+        '    payload = ck.load(rec["checkpoint"], restore_rng=False)  # MUTATED\n',
+        "MINOR-5: a second read opens a window in which the bytes loaded need "
+        "not be the bytes hashed.",
+    ),
+    Mutation(
+        "run1: load_bytes defaults to allowing a quarantined checkpoint",
+        "test_load_bytes_refuses_a_quarantined_source",
+        "src/rsr/train/checkpoint.py",
+        "    allow_quarantined: bool = False,  # refuses by default, as load() does\n",
+        "    allow_quarantined: bool = True,  # MUTATED\n",
+        "R-2026-09-22-inert-checkpoint-quarantine: the byte loader keeps load()'s "
+        "refusal; an INERT run's checkpoint must not seed a run silently.",
+    ),
+    Mutation(
+        "run1: the expected warm-start sha256 is not compared",
+        "test_an_unexpected_sha256_is_refused",
+        "src/rsr/train/loop.py",
+        "    if ws.expected_sha256 is not None and got != ws.expected_sha256.lower():\n",
+        "    if False:  # MUTATED\n",
+        "MINOR-7: the command names the checkpoint by sha256; a different file "
+        "under the same name must be refused.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the CLI test passes a wrong --warm-start-sha256; unchecked, "
+                "train() goes on to load the d32/max_tokens-16 fixture into the "
+                "CLI's max_tokens-64 model (RuntimeError, pos_embed size) instead "
+                "of refusing.",
+                "test_the_cli_warm_start_reaches_the_real_verification",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: checkpoints stop recording their config",
+        "test_checkpoints_record_their_config_and_vocabulary",
+        "src/rsr/train/loop.py",
+        '                        "config": json.loads('
+        "json.dumps(frozen, default=str)),\n",
+        "                        # MUTATED\n",
+        "MAJOR-1's foundation: without the config in the checkpoint, every later "
+        "warm start from it is unrecorded.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "every fixture checkpoint then lacks meta['config'], so each warm "
+                "start from one is refused 'the source records no config', and the "
+                "legacy/unrecorded tests that strip that key find none (KeyError) "
+                "-- the record MAJOR-1's check reads.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+                "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
+                "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+                "test_a_seed_mismatch_is_refused_unless_labelled",
+                "test_a_source_with_a_different_vocabulary_map_is_refused",
+                "test_an_identical_map_from_another_document_count_is_accepted",
+                "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+                "test_the_bytes_loaded_are_the_bytes_hashed",
+                "test_the_warm_start_builds_phi_fresh",
+                "test_the_warm_start_is_stamped_into_frozen_hash_and_label",
+                "test_the_warm_start_loads_the_source_weights_bitwise",
+                "test_the_warm_start_restores_weights_only",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: the age-only arm accepts nu",
+        "test_the_age_only_arm_refuses_nu",
+        "src/rsr/retention/rsr.py",
+        "            if config.nu != 0.0:\n",
+        "            if False:  # MUTATED\n",
+        "MINOR-1: with nu != 0 the redundancy term reads the gestalts, so the "
+        "'age-only' arm's score depends on content.",
+    ),
+    Mutation(
+        "run1: the §7.1 diagnostics written on beat steps only",
+        "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+        "src/rsr/train/loop.py",
+        # Re-anchored at C-2: one per-step record carries diag and the pool ids.
+        "                _write_step_diagnostics(out / DIAGNOSTICS_FILE, step_record)\n",
+        "                (it % beat_every == 0) and _write_step_diagnostics(  "
+        "# MUTATED\n                    out / DIAGNOSTICS_FILE, step_record)\n",
+        "MINOR-3: computed every step, so written every step; at beat_every > 1 "
+        "partial rho for the other steps was computed and discarded.",
+    ),
+    Mutation(
+        "run1: the CLI drops the pool",
+        "test_the_cli_routes_the_pool_and_the_warm_start",
+        "src/rsr/train/loop.py",
+        "        pool=pool,\n",
+        "        pool=None,  # MUTATED\n",
+        "MINOR-7: run 1's RESULTS quotes one command; a flag that does not reach "
+        "train() makes that command lie.",
+    ),
+    Mutation(
+        "run1: a partial pool flag set is not refused",
+        "test_the_cli_routes_the_pool_and_the_warm_start",
+        "src/rsr/train/loop.py",
+        "    if (a.pool_offset is None) != (a.pool_length is None):\n",
+        "    if False:  # MUTATED\n",
+        "MINOR-7: a partial flag set is a usage error (exit 3), never half a pool.",
+    ),
+    # ---- PREREG-drafter defects (prereg/rsr-run1 @ 7c58777): attribution,
+    # bounded records, data-order resume, the srep flag, split histograms.
+    Mutation(
+        "run1: RSR beats carry no attribution again",
+        "test_rsr_beats_carry_the_decision_attribution",
+        "src/rsr/retention/rsr.py",
+        "    def attribution(self) -> dict[str, float] | None:\n",
+        "    def _attribution_unreached(self) -> dict[str, float] | None:  # MUTATED\n",
+        "Defect 1 (RESEARCH-CONTEXT §10.1 defect 4): train() asks "
+        "policy.attribution(); without it every RSR beat records null, against "
+        "§3.4's per-eviction attribution from the first policy run.",
+    ),
+    Mutation(
+        "run1: train() stops draining the eviction records",
+        "test_records_are_drained_and_checkpoints_stay_bounded",
+        "src/rsr/train/loop.py",
+        "                _drain_evictions(policy, out / EVICTIONS_FILE)\n",
+        "                pass  # MUTATED\n",
+        "Defect 2: ~1.5M records per run-1 arm held in memory and pickled into "
+        "every checkpoint.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the relative-step test reads evictions.jsonl, which is never written.",
+                "test_the_warm_start_runs_t_warm_at_relative_steps",
+            ),
+            *_r1_declare(
+                "the same-dir resume test reads evictions.jsonl, which is never written.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: drain_records keeps the records",
+        "test_records_are_drained_and_checkpoints_stay_bounded",
+        "src/rsr/retention/rsr.py",
+        "        out, self.records = self.records, []\n",
+        "        out = list(self.records)  # MUTATED\n",
+        "Defect 2: a drain that copies leaves memory and checkpoints unbounded "
+        "and writes every record again each step.",
+        off_gate_allowed=(
+            (
+                "tests/test_t_warm_dispatch.py::test_warm_status_never_flips_inside_one_stream",
+                "test_t_warm_dispatch's helper collects what train() drains plus "
+                "what the policy still holds; a copying drain hands over every "
+                "record again each step (440 / 1232 evictions, not 88 per step).",
+            ),
+            (
+                "tests/test_t_warm_dispatch.py::test_warmup_below_S_covers_whole_training_steps",
+                "test_t_warm_dispatch's helper collects what train() drains plus "
+                "what the policy still holds; a copying drain hands over every "
+                "record again each step (440 / 1232 evictions, not 88 per step).",
+            ),
+            *_r1_declare(
+                "a copying drain leaves the records in the policy, so the step-2 "
+                "checkpoint carries steps 0-1's records and the resumed run writes "
+                "them into the fresh dir's evictions.jsonl ([0, 1, 2, 3], not [2, "
+                "3]).",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: the data-order generator is not checkpointed",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        # Re-anchored at R-2 (the stream dict also carries the pool position).
+        "                            DATA_GENERATOR_STATE: gen.get_state(),\n",
+        "                            # MUTATED\n",
+        "Defect 3: without the sampler's state a resumed arm cannot continue its "
+        "data order.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the pool resume needs the generator state too: refused 'no "
+                "data-order generator state'.",
+                "test_a_pool_resume_continues_its_epoch",
+            ),
+            *_r1_declare(
+                "the same-dir resume test resumes a pool run; without the generator "
+                "state the resume is refused.",
+                "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: the saved data-order state is not restored",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        "            gen.set_state(gen_state)\n",
+        "            pass  # MUTATED\n",
+        "Defect 3: restarted from the seed, a resumed arm re-reads step 0's "
+        "batches and stops pairing with an uninterrupted arm.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the pool resume draws its next permutation from the restored "
+                "generator; restarted from the seed, the resumed epoch-1 order "
+                "differs.",
+                "test_a_pool_resume_continues_its_epoch",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: a resume without data-order state is not refused",
+        "test_a_resumed_sampler_run_continues_the_data_order",
+        "src/rsr/train/loop.py",
+        "            if gen_state is None:\n",
+        "            if False:  # MUTATED\n",
+        "Defect 3: a pre-fix checkpoint must be refused with a clear message, "
+        "not resumed into a different data order.",
+    ),
+    Mutation(
+        "run1: srep_norm_reg_weight is not validated",
+        "test_srep_norm_reg_weight_is_a_validated_cli_flag",
+        "src/rsr/train/loop.py",
+        "    if not (math.isfinite(w_srep) and w_srep >= 0.0):\n",
+        "    if False:  # MUTATED\n",
+        "Defect 4: reachable from the CLI now, so a negative or non-finite "
+        "hinge weight must be refused, not trained.",
+    ),
+    Mutation(
+        "run1: the CLI drops srep_norm_reg_weight",
+        "test_srep_norm_reg_weight_is_a_validated_cli_flag",
+        "src/rsr/train/loop.py",
+        "        srep_norm_reg_weight=a.srep_norm_reg_weight,\n",
+        "        srep_norm_reg_weight=None,  # MUTATED\n",
+        "Defect 4: arm B trained at 0.0; a flag that does not reach train() "
+        "runs run 1 at 0.01 under a command that says 0.0.",
+    ),
+    Mutation(
+        "run1: the run-level histograms merge warmup and scored evictions",
+        "test_the_run_level_histograms_split_warmup_from_scored",
+        "src/rsr/retention/rsr.py",
+        '        self.phase_shifts["fifo_warmup" if warm else "scored"].add(record)\n',
+        '        self.phase_shifts["fifo_warmup"].add(record)  # MUTATED\n',
+        "Defect 5: a RESULTS must never read one histogram that mixes FIFO-warmup "
+        "and scored evictions.",
+    ),
+    # ---- run-1 PREREG review R-2 (permutation epochs) and item 7 (eval mode)
+    Mutation(
+        "run1: pool mode samples with replacement again",
+        "test_every_pool_epoch_covers_the_pool_exactly_once",
+        "src/rsr/train/loop.py",
+        "                    sel = pool_order.take(batch)  # R-2: permutation epochs\n",
+        "                    sel = torch.randint(0, all_ids.shape[0], (batch,), "
+        "generator=gen, device=device)  # MUTATED\n",
+        "R-2 / 31(b): 'one pass over the document pool: 256 documents seen'; a "
+        "with-replacement epoch sees ~162 of them.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the pairing test checks each run's order is a permutation of the "
+                "pool (sorted == range(8)); with replacement it repeats documents.",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: the pool order is fixed, not drawn",
+        "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+        "src/rsr/train/loop.py",
+        "            perm = torch.randperm(self.n, generator=self.gen, "
+        "device=self.device)\n",
+        "            perm = torch.arange(self.n, device=self.device)  # MUTATED\n",
+        "R-2: the order is drawn from the data-order generator; a fixed order is "
+        "one pass but the same document sequence every epoch and every seed.",
+    ),
+    Mutation(
+        "run1: a pool resume loses its epoch position",
+        "test_a_pool_resume_continues_its_epoch",
+        "src/rsr/train/loop.py",
+        "            pool_order.load_state(resume_pool_order)\n",
+        "            pass  # MUTATED\n",
+        "R-2 with defect 3: resumed mid-epoch without its position, a run draws a "
+        "new permutation and that epoch is no longer one pass.",
+    ),
+    Mutation(
+        "run1: a pool resume without its epoch position is not refused",
+        "test_a_pool_resume_continues_its_epoch",
+        "src/rsr/train/loop.py",
+        "            if pool is not None and resume_pool_order is None:\n",
+        "            if False:  # MUTATED\n",
+        "R-2 with defect 3: a pool checkpoint without its position is refused, "
+        "not resumed into a different epoch.",
+    ),
+    Mutation(
+        "run1: frozen_model_mode eval not applied",
+        "test_c1_the_training_forward_equals_the_eval_forward",
+        "src/rsr/train/loop.py",
+        "        model.eval()\n",
+        "        pass  # MUTATED\n",
+        "C-1 test (a): an arm recorded as eval (dropout off) must not train its "
+        "memory through a dropout-live forward.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "C-1 tests (b) and (c) read the same missing model.eval(): the "
+                "global RNG moves and model.training is True at loop end.",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_model_is_in_eval_mode_at_loop_end",
+            ),
+            *_r1_declare(
+                "the FIFO and age-only C-1 cases read the same missing "
+                "model.eval(): train mode at loop exit, global RNG drawn.",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: frozen eval mode leaves the blocks in train mode",
+        "test_c1_a_training_step_draws_no_global_rng",
+        "src/rsr/train/loop.py",
+        "        model.eval()\n",
+        "        model.eval()\n        model.blocks.train()  # MUTATED\n",
+        "C-1 test (b): with any dropout left live a step draws masks from the "
+        "global RNG; the top-level flag still reads eval, so (c) cannot see it.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "C-1 test (a): with the blocks in train mode the training forward's "
+                "srep differs from the eval forward's.",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+            ),
+            *_r1_declare(
+                "the FIFO and age-only C-1 cases: the top-level flag reads eval but "
+                "the blocks draw dropout masks from the global RNG.",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: eval_forward restores train mode, not the prior mode",
+        "test_c1_the_model_is_in_eval_mode_at_loop_end",
+        "src/rsr/model/tg/policy_loop.py",
+        "            model.train(was_training)\n",
+        "            model.train()  # MUTATED\n",
+        "C-1 test (c): the one mode switch on the training path must restore the "
+        "PRIOR mode, or a frozen eval-mode model is back in train mode from the "
+        "second sentence on.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "C-1 tests (a) and (b): after the first eval forward the model "
+                "trains in train mode (srep differs, dropout draws RNG); and the "
+                "slice-1 two-rows test runs its model in eval mode, so batch size "
+                "starts changing the dropout masks.",
+                "test_c1_a_training_step_draws_no_global_rng",
+                "test_c1_the_training_forward_equals_the_eval_forward",
+            ),
+            *_s1_declare(
+                "C-1 tests (a) and (b): after the first eval forward the model "
+                "trains in train mode (srep differs, dropout draws RNG); and the "
+                "slice-1 two-rows test runs its model in eval mode, so batch size "
+                "starts changing the dropout masks.",
+                "test_two_rows_keep_two_buffers",
+            ),
+            *_r1_declare(
+                "the age-only C-1 case: its eval forward hands the model back in "
+                "train mode (the FIFO case has no eval forward, so it stays green).",
+                "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: an unknown frozen_model_mode is accepted",
+        "test_c1_eval_without_the_freeze_is_refused",
+        "src/rsr/train/loop.py",
+        "    if frozen_model_mode not in FROZEN_MODEL_MODES:\n",
+        "    if False:  # MUTATED\n",
+        "C-1 test (d): a mode that is neither train nor eval would be recorded "
+        "and labelled as if it meant something.",
+    ),
+    Mutation(
+        "run1: the eval mode is missing from the label",
+        "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
+        "src/rsr/train/loop.py",
+        '        label = f"{label}[eval]"  # C-1: "+frozen[eval]" (PREREG A1.3 item 3)\n',
+        "        pass  # MUTATED\n",
+        "C-1 test (e): an eval-mode arm must not read like a train-mode one.",
+    ),
+    Mutation(
+        "run1: a pool not divisible by the batch is accepted",
+        "test_a_pool_not_divisible_by_the_batch_is_refused",
+        "src/rsr/train/loop.py",
+        "        if pool.length % batch:\n",
+        "        if False:  # MUTATED\n",
+        "C-2 (A1.7 item 1): one epoch must be a whole number of steps, or step k "
+        "no longer reads pi_e[batch*(k mod E) : ... + batch].",
+    ),
+    Mutation(
+        "run1: the per-step pool ids are not logged",
+        "test_every_pool_epoch_covers_the_pool_exactly_once",
+        "src/rsr/train/loop.py",
+        '                step_record["pool_doc_ids"] = step_pool_ids  # A1.7 item 3 '
+        "(C-2)\n",
+        "                pass  # MUTATED\n",
+        "C-2 (A1.7 item 3; A1.8 m-4 (a)): the PREREG's primary pairing check reads "
+        "the logged per-step pool ids.",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the pairing test reads the logged pool_doc_ids (diagnostics.jsonl "
+                "is not written for the FIFO arm).",
+                "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
+            ),
+        ),
+    ),
+    Mutation(
+        "run1: frozen_model_mode eval accepted without the freeze",
+        "test_c1_eval_without_the_freeze_is_refused",
+        "src/rsr/train/loop.py",
+        '    if frozen_model_mode == "eval":\n        if not freeze_transformer:\n',
+        '    if frozen_model_mode == "eval":\n        if False:  # MUTATED\n',
+        "C-1 test (d): eval mode without the freeze would silently remove dropout "
+        "from an optimised L_NTP (A1.3 item 1; correction 20).",
+    ),
+    # ---- second review (c02b16d): MINOR-1, MINOR-3, MINOR-4 (HM-C, HM-F)
+    Mutation(
+        "run1: a FIFO pool run's hash does not record the sampler",
+        "test_every_pool_arm_records_its_sampler_in_the_hash",
+        "src/rsr/train/loop.py",
+        '        frozen["sampling"] = SAMPLING_PERMUTATION\n',
+        "        pass  # MUTATED\n",
+        "Review MINOR-1: a FIFO pool arm under a different sampler would share its "
+        "config hash and run_id (PREREG A1.7 C-2 item 2: 'so the hash changes').",
+    ),
+    Mutation(
+        "run1: a resume into a dir with later rows is not refused",
+        "test_a_resume_into_a_dir_with_later_rows_is_refused",
+        "src/rsr/train/loop.py",
+        "        _refuse_rows_past(out, start)  # review MINOR-3: append-only files\n",
+        "        pass  # MUTATED\n",
+        "Review MINOR-3: the per-step files are append-only; a same-dir resume "
+        "writes the steps after the checkpoint twice.",
+    ),
+    Mutation(
+        "run1: frozen eval applied to RSR arms only",
+        "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms",
+        "src/rsr/train/loop.py",
+        "        model.eval()\n",
+        '        if policy_name == "rsr":  # MUTATED\n            model.eval()\n',
+        "Review MINOR-4(a), HM-C: A1.3 puts the frozen transformer in eval mode in "
+        "EVERY arm, the FIFO comparator included.",
+    ),
+    Mutation(
+        "run1: the age-only guard accepts a negative nu",
+        "test_the_age_only_arm_refuses_nu",
+        "src/rsr/retention/rsr.py",
+        "            if config.nu != 0.0:\n",
+        "            if config.nu > 0.0:  # MUTATED\n",
+        "Review MINOR-4(b), HM-F: a negative nu reads the gestalts as much as a "
+        "positive one.",
     ),
 )
 
@@ -4088,6 +7296,11 @@ def _markdown(rows: list[dict]) -> str:
         "present reddens under every mutation by construction — it made all 32 score "
         "`LEAKS` the first time clause 2 was enforced. `apply()` raises on a stale "
         "anchor instead.",
+        "- **The probe writer (`tests/_battery_probe.py`) cannot be mutated here.** "
+        "A suite that writes no probe, or a wrong one, is `DID_NOT_RUN` by design "
+        "(I1), so its mutation could never score `PROVEN`. Proved on a stub "
+        "repository instead: `test_a_mutation_whose_suite_reports_no_probe_did_not_run` "
+        "and `test_a_suite_on_another_checkouts_venv_did_not_run`.",
         "",
     ]
     return "\n".join(out)
@@ -4176,29 +7389,75 @@ the width, and drops it altogether when the node id alone fills 80 columns."""
 _SUMMARY_HEADER = "short test summary info"
 
 
-def run_suite() -> dict[str, str | None]:
+class SuiteDidNotRun(Exception):
+    """This suite run is not evidence: killed by a signal, or not isolated (I1)."""
+
+
+def _kill_group(proc: subprocess.Popen) -> None:
+    """SIGKILL pytest's whole process group, then reap pytest.
+
+    Called on EVERY exit from a shard suite, normal or not (review MINOR-2): the
+    real suite spawns grandchildren -- nested stub batteries, ``python -m venv``,
+    experiment ``run.py`` -- and one left alive would keep writing into the shard
+    while the next mutation's suite runs there, or under a teardown's
+    ``git worktree remove``.
+    """
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(proc.pid, signal.SIGKILL)
+    proc.wait()
+
+
+def _spawn(argv: list[str], cwd: Path, env: dict[str, str]):
+    """Run one shard suite as the leader of its own session; group-killed on exit.
+
+    Its own session also means a terminal Ctrl-C reaches only the battery, whose
+    SIGINT handler then stops the suite -- not pytest first, behind its back.
+    """
+    proc = subprocess.Popen(
+        argv,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        out, err = proc.communicate()
+    finally:
+        _kill_group(proc)
+    return subprocess.CompletedProcess(argv, proc.returncode, out, err)
+
+
+def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     """Return ``{failing node id: one-line reason}`` (``None`` if pytest printed none).
+
+    🔴 I1: with a ``shard``, the suite runs there on the shard's own pytest, and
+    raises ``SuiteDidNotRun`` if the suite did not complete -- pytest killed by a
+    signal, or exiting 2/3/4 -- or if its probe does not put ``rsr`` under the shard
+    root (`battery_isolation.suite_problem`). A killed pytest used to become a
+    ``<collection/exit -9>`` "failure" and be scored; a SIGINTed one still was,
+    as ``<collection/exit 2>`` (review MAJOR-1).
 
     📌 I5 (PLAN-v4 §4): this ran ``--tb=no`` until 2026-09-27, so the 09-26 red on
     ``test_submit_launches_the_slot_detached_at_the_pinned_sha`` left only a node
     id. The reason is recorded on the verdict row; it never enters a verdict --
     the node set is parsed exactly as before (`parse_failures`).
     """
-    proc = subprocess.run(
-        [
-            str(PYTEST),
-            "-p",
-            "no:cacheprovider",
-            "-rfE",
-            "--tb=line",
-            "-q",
-            "--no-header",
-        ],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        env={**_suite_env(), "COLUMNS": REASON_COLUMNS},
-    )
+    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    argv = ["-p", "no:cacheprovider", "-rfE", "--tb=line", "-q", "--no-header"]
+    if shard is None:
+        proc = subprocess.run(
+            [str(PYTEST), *argv], cwd=ROOT, capture_output=True, text=True, env=env
+        )
+        return parse_failures(proc.stdout + proc.stderr, proc.returncode)
+    env = iso.shard_env(shard, env)
+    with contextlib.suppress(FileNotFoundError):
+        shard.probe.unlink()
+    proc = _spawn([str(shard.root / ".venv" / "bin" / "pytest"), *argv], shard.root, env)
+    problem = iso.suite_problem(proc.returncode, iso.read_probe(shard.probe), shard.root)
+    if problem:
+        raise SuiteDidNotRun(f"{problem} (in {shard.root})")
     return parse_failures(proc.stdout + proc.stderr, proc.returncode)
 
 
@@ -4254,8 +7513,9 @@ def anchor_problems() -> list[str]:
     return out
 
 
-def apply(mutation: Mutation) -> str:
-    path = ROOT / mutation.path
+def apply(mutation: Mutation, root: Path | None = None) -> str:
+    """Write ``mutation`` into ``root`` (a shard; ``ROOT`` only for the anchor tests)."""
+    path = (ROOT if root is None else root) / mutation.path
     original = path.read_text()
     if mutation.old not in original:
         # 🔴 DID NOT RUN (3), not 1: nothing was mutated, so nothing was tested.
@@ -4268,6 +7528,51 @@ def apply(mutation: Mutation) -> str:
         )
     path.write_text(original.replace(mutation.old, mutation.new, 1))
     return original
+
+
+_HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)
+"""SIGINT too (review MINOR-3): a Ctrl-C tears down exactly as SIGTERM does, and a
+second Ctrl-C during the teardown is ignored rather than cutting it short."""
+
+
+class _Signalled(BaseException):
+    """Raised by the SIGTERM/SIGHUP/SIGINT handler so every ``finally`` runs."""
+
+    def __init__(self, signum: int):
+        super().__init__(signum)
+        self.signum = signum
+
+
+def _raise_signalled(signum, _frame):
+    # One signal is enough: ignore repeats so the teardown is not interrupted too.
+    for s in _HANDLED_SIGNALS:
+        signal.signal(s, signal.SIG_IGN)
+    raise _Signalled(signum)
+
+
+@contextlib.contextmanager
+def signal_handlers():
+    """Defence in depth (I1). The live tree does not depend on these -- no suite
+    ever runs in it. They let a stopped battery kill its pytest child
+    (``subprocess.run`` does on any exception) and tear its shards down. The
+    previous handlers come back on exit, so an in-process ``main()`` (the unit
+    tests) leaves its host's handlers as it found them."""
+    old = {s: signal.signal(s, _raise_signalled) for s in _HANDLED_SIGNALS}
+    try:
+        yield
+    finally:
+        for s, h in old.items():
+            signal.signal(s, h)
+
+
+def open_workspace(args) -> contextlib.AbstractContextManager[list[iso.Shard]]:
+    """The shard(s) every suite run happens in: HEAD of the clean invoking tree."""
+    sha = iso.pinned_sha(ROOT)
+    return iso.open_pool(ROOT, sha, n=1, pool=args.shard_dir, keep=args.keep_shards)
+
+
+def reset(shard: iso.Shard) -> None:
+    iso.reset_shard(shard)
 
 
 def main() -> Exit:
@@ -4288,7 +7593,38 @@ def main() -> Exit:
         default=None,
         help="regenerate docs/mutation-battery.md from this run",
     )
+    ap.add_argument(
+        "--shard-dir",
+        type=Path,
+        default=None,
+        help="where the shard worktrees live (default ~/.cache/rsr-battery/<repo>); "
+        "must be outside this tree",
+    )
+    ap.add_argument(
+        "--keep-shards",
+        action="store_true",
+        help="leave the shard worktrees for reuse instead of removing them",
+    )
+    ap.add_argument(
+        "--prune-shards",
+        action="store_true",
+        help="only remove this repo's shard worktrees under --shard-dir (the cleanup "
+        "after a SIGKILL); exit 3 if any could not be removed",
+    )
     args = ap.parse_args()
+
+    if args.prune_shards:
+        pool = (args.shard_dir or iso.default_pool_dir(ROOT)).resolve()
+        try:
+            errors = iso.prune_shards(ROOT, pool)
+        except iso.Unisolated as e:
+            refuse(Exit.DID_NOT_RUN, f"--prune-shards: {e}; nothing removed")
+        for e in errors:
+            print(e, file=sys.stderr)
+        if errors:
+            return Exit.DID_NOT_RUN
+        print(f"no shard worktrees registered under {pool}")
+        return Exit.OK
 
     if not MUTATIONS:
         # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has no
@@ -4320,58 +7656,116 @@ def main() -> Exit:
             f"{len(problems)} stale anchor(s); nothing was mutated. Fix the anchors "
             f"(`--check-anchors`), do not drop the mutations.",
         )
-    baseline = run_suite()
-    if baseline:
-        # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
-        # `raise SystemExit(msg)` (S0-05).
-        refuse(
-            Exit.DID_NOT_RUN,
-            f"the suite is not green before mutating: {sorted(baseline)}",
-        )
 
-    rows = []
-    for m in MUTATIONS:
-        path = ROOT / m.path
-        original = apply(m)
-        try:
-            failing = run_suite()
-        finally:
-            path.write_text(original)
-        reasons = _reasons(failing)
-        on_gate = sorted(f for f in failing if m.gate in f)
-        off_gate = sorted(f for f in failing if m.gate not in f)
-        declared = {node for node, _reason in m.off_gate_allowed}
-        leaked = [f for f in off_gate if f not in declared]
-        if on_gate and leaked:
-            verdict = "LEAKS"
-        elif on_gate:
-            verdict = "PROVEN"
-        else:
-            verdict = "ADDS NOTHING"
-        rows.append(
-            {
-                "mutation": m.name,
-                "gate": m.gate,
-                "why": m.why,
-                "reddened_gate": bool(on_gate),
-                "n_on_gate": len(on_gate),
-                "off_gate": off_gate,
-                "off_gate_allowed": [list(x) for x in m.off_gate_allowed],
-                "off_gate_undeclared": leaked,
-                "verdict": verdict,
-                # I5: one line per failing node. Data, never a verdict input.
-                "failure_reasons": {f: reasons[f] for f in sorted(reasons)},
-            }
-        )
+    try:
+        with signal_handlers():
+            return status(_run_isolated(args))
+    except iso.Unisolated as e:
+        refuse(Exit.DID_NOT_RUN, f"not isolated: {e}")
+    except _Signalled as e:
+        name = signal.Signals(e.signum).name
         print(
-            f"{rows[-1]['verdict']:13s} {m.name:42s} "
-            f"-> {len(on_gate)} on gate, {len(off_gate)} off "
-            f"({len(leaked)} undeclared)"
+            f"INTERRUPTED by {name}: shards torn down, no verdicts; the invoking "
+            f"tree was never mutated",
+            file=sys.stderr,
         )
+        raise SystemExit(128 + e.signum) from None
 
+
+def _run_isolated(args) -> Exit:
+    with open_workspace(args) as shards:
+        shard = shards[0]
+        print(
+            f"shard: {shard.root} at {shard.sha[:12]} "
+            + " ".join(f"{k}={v:.2f}" for k, v in shard.timings.items())
+        )
+        try:
+            baseline = run_suite(shard)
+        except SuiteDidNotRun as e:
+            refuse(Exit.DID_NOT_RUN, f"the baseline suite did not run: {e}")
+        if baseline:
+            # DID NOT RUN (3): nothing was mutated. Used to exit 1 via a bare
+            # `raise SystemExit(msg)` (S0-05).
+            refuse(
+                Exit.DID_NOT_RUN,
+                f"the suite is not green before mutating: {sorted(baseline)}",
+            )
+
+        rows = []
+        resets: list[float] = []
+        for m in MUTATIONS:
+            path = shard.root / m.path
+            original = apply(m, shard.root)
+            did_not_run = None
+            try:
+                failing = run_suite(shard)
+            except SuiteDidNotRun as e:
+                failing, did_not_run = {}, str(e)
+            finally:
+                path.write_text(original)
+                t0 = time.perf_counter()
+                reset(shard)
+                resets.append(time.perf_counter() - t0)
+            rows.append(_row(m, failing, did_not_run))
+            print(
+                f"{rows[-1]['verdict']:13s} {m.name:42s} "
+                f"-> {rows[-1]['n_on_gate']} on gate, {len(rows[-1]['off_gate'])} off "
+                f"({len(rows[-1]['off_gate_undeclared'])} undeclared)"
+            )
+        if resets:
+            print(
+                f"shard reset: {len(resets)} x, mean {sum(resets) / len(resets):.3f} s, "
+                f"max {max(resets):.3f} s"
+            )
+    return _report(args, rows)
+
+
+def _row(m: Mutation, failing, did_not_run: str | None) -> dict:
+    reasons = _reasons(failing)
+    on_gate = sorted(f for f in failing if m.gate in f)
+    off_gate = sorted(f for f in failing if m.gate not in f)
+    declared = {node for node, _reason in m.off_gate_allowed}
+    leaked = [f for f in off_gate if f not in declared]
+    if did_not_run is not None:
+        # 🔴 I1: not isolated, or killed. Nothing here is evidence either way.
+        verdict = "DID_NOT_RUN"
+    elif on_gate and leaked:
+        verdict = "LEAKS"
+    elif on_gate:
+        verdict = "PROVEN"
+    else:
+        verdict = "ADDS NOTHING"
+    row = {
+        "mutation": m.name,
+        "gate": m.gate,
+        "why": m.why,
+        "reddened_gate": bool(on_gate),
+        "n_on_gate": len(on_gate),
+        "off_gate": off_gate,
+        "off_gate_allowed": [list(x) for x in m.off_gate_allowed],
+        "off_gate_undeclared": leaked,
+        "verdict": verdict,
+        # I5: one line per failing node. Data, never a verdict input.
+        "failure_reasons": {f: reasons[f] for f in sorted(reasons)},
+    }
+    if did_not_run is not None:
+        row["did_not_run"] = did_not_run
+    return row
+
+
+def _report(args, rows: list[dict]) -> Exit:
     if args.json:
+        # A run record: DID_NOT_RUN rows belong in it.
         args.json.write_text(json.dumps(rows, indent=2) + "\n")
-    if args.markdown:
+    did_not_run = [r for r in rows if r["verdict"] == "DID_NOT_RUN"]
+    if args.markdown and did_not_run:
+        # 🔴 The committed table is a record of verdicts; a mutation that did not
+        # run has none (review MINOR-4). Leave the old record in place.
+        print(
+            f"NOT WRITING {args.markdown}: {len(did_not_run)} mutation(s) did not run",
+            file=sys.stderr,
+        )
+    elif args.markdown:
         args.markdown.write_text(_markdown(rows))
 
     bad = unproven(rows)
@@ -4379,7 +7773,11 @@ def main() -> Exit:
     if bad:
         print("UNPROVEN:")
         for r in bad:
-            if not r["reddened_gate"]:
+            if r["verdict"] == "DID_NOT_RUN":
+                print(
+                    f"  {r['gate']}  ({r['mutation']}) -- DID NOT RUN: {r['did_not_run']}"
+                )
+            elif not r["reddened_gate"]:
                 print(f"  {r['gate']}  ({r['mutation']}) -- reddens nothing")
             else:
                 print(
@@ -4394,6 +7792,10 @@ def main() -> Exit:
             "that reddens tests it did not declare has not isolated the defect. "
             "Declare the coupling with a reason, or narrow the mutation."
         )
+    # 🔴 I1: a mutation that did not run is not a table entry, with or without
+    # --check. "Did not run" never becomes exit 0.
+    if any(r["verdict"] == "DID_NOT_RUN" for r in rows):
+        return Exit.DID_NOT_RUN
     # Without --check this is the table renderer and exits 0 once the table is
     # rendered; --check is the gate. Documented in the module docstring, and
     # decided in S0-05's RESULTS.md.

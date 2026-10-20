@@ -96,11 +96,23 @@ from torch import Tensor
 
 from rsr import constants as C
 from rsr.baselines.fifo import FIFOPolicy
+from rsr.metrics.vacuity import partial_correlation_with_age, spearman
 from rsr.retention.instrumentation import EvictionRecord, RankShiftLog, rank_shift
+from rsr.retention.mc import mc_returns
 from rsr.retention.policy import AttentionTrace, MemoryState
-from rsr.retention.value_head import BilinearValueHead
+from rsr.retention.reward import retrieval_demand
+from rsr.retention.targets import (
+    STATUS_NO_DONOR,
+    STATUS_NO_TARGET,
+    STATUS_OK,
+    TARGET_LOO_RESAMPLE,
+    TARGET_R_I,
+    TARGETS,
+)
+from rsr.retention.value_head import AgeOnlyValueHead, BilinearValueHead
 
 __all__ = [
+    "AGE_ONLY",
     "CAPACITY",
     "REDUCTION_SWITCHES",
     "ContextSource",
@@ -156,6 +168,24 @@ class SentPosIndex(StrEnum):
     ABSOLUTE_AGE = "absolute_age"
 
 
+@dataclass(frozen=True)
+class _Obs:
+    """One observed step of one row, for the MC regression (ADR-0009 §1). `r` is
+    target data; `gestalts` and `context` are stored as given and detached in
+    `RSRPolicy.retention_loss`, the one owning site (§2)."""
+
+    step: int
+    keys: Tensor  # [n_live] int64 written_at -- the slot identity
+    gestalts: Tensor  # [n_live, d] s_i
+    context: Tensor  # [d] c_t, the eval gestalt (L2)
+    r: Tensor  # [n_live] the target's per-step term: r_i(t) (run 1) or Delta_i(t) (C3)
+
+
+AGE_ONLY = "age_only"
+"""`psi_override` value of the section 7.1 item 2 **age-only baseline arm**
+(`AgeOnlyValueHead`). Not a section 3.7 switch value: the reduction pins
+`"neg_age"`, so this arm can never be E0b's path."""
+
 CAPACITY = object()
 """Sentinel in `REDUCTION_SWITCHES` for "whatever `M` is in this configuration"."""
 
@@ -170,6 +200,7 @@ REDUCTION_SWITCHES: dict[str, Any] = {
     "a_max": CAPACITY,
     "context_source": ContextSource.CURRENT_SENTENCE_GESTALT,
     "sent_pos_index": SentPosIndex.RANK,
+    "target": TARGET_R_I,
 }
 """Section 3.7's switch set, enumerated once.
 
@@ -179,6 +210,10 @@ mechanical guarantee that section 3.7 stays a reduction.
 
 `t_warm = 0.0`, not `inf`: gauntlet 0.1. With `inf` the dispatch routed every
 eviction to FIFO and the reduction never exercised the score path at all.
+
+`target` is not a term of the eviction score: it selects what `observe` regresses
+`psi_hat` on, and the reduction runs with `observe` off (ADR-0009 T13). It is listed
+because the test requires every field here; its value is the run-1 default.
 """
 
 
@@ -199,12 +234,21 @@ class RSRConfig:
     t_warm: float
     a_max: int
     psi_override: str | None = None
-    """None = use the learned head. "neg_age" = section 3.7's `psi_hat == -a_i`."""
+    """None = use the learned head. "neg_age" = section 3.7's `psi_hat == -a_i`.
+    "age_only" = the section 7.1 item 2 age-only baseline ARM (`AgeOnlyValueHead`,
+    learned on age alone); a separate labelled arm, never an input to `psi_hat`."""
 
     b_enabled: bool = True
     shadow_enabled: bool = True
     context_source: ContextSource = ContextSource.CURRENT_SENTENCE_GESTALT
     sent_pos_index: SentPosIndex = SentPosIndex.RANK
+    target: str = TARGET_R_I
+    """What `psi_hat` regresses on (owner ruling C3, R-2026-10-07-c3-loo-target).
+    `"r_i"` (default): run 1's gated, share-of-M rescaled `r_i`, so run 1 is
+    reproduced unchanged. `"loo_resample"`: E0d's resample-knockout `Delta`,
+    measured on-policy (`rsr.retention.loo_target`). Not an eviction-score term.
+    Set by a labelled `--policy-override target=loo_resample`, so it is in the arm
+    label and the config hash (ADR-0009 L12)."""
 
     @classmethod
     def reduction_to_tg(cls, capacity: int) -> RSRConfig:
@@ -291,6 +335,7 @@ class RSRPolicy:
         value_head: BilinearValueHead | None = None,
         bias: object | None = None,
         generator: torch.Generator | None = None,
+        diagnostics: bool = False,
     ) -> None:
         if config.context_source is not ContextSource.CURRENT_SENTENCE_GESTALT:
             raise NotImplementedError(
@@ -325,16 +370,51 @@ class RSRPolicy:
                 "b_enabled=False and say so -- b == 0 is also the section 3.7 "
                 "reduction condition, so a silently absent b is defect D-1's shape."
             )
+        if config.target not in TARGETS:
+            raise ValueError(
+                f"target={config.target!r} is not a known retention target; the "
+                f"targets are {TARGETS} (owner ruling C3)"
+            )
+        if config.shadow_enabled:
+            # ADR-0009 L6(a), signed 2026-09-30: slice 1 ships WITHOUT the shadow
+            # buffer (`shadow.py` raises; L3-L5 are deferred to slice 2). The same
+            # rule as `sent_pos_index` above: a switch that is set and does nothing
+            # is worse than no switch -- an arm reporting shadow=on would regress
+            # on the censored target (rsr.retention.mc) while claiming otherwise.
+            raise NotImplementedError(
+                "shadow_enabled=True: the shadow buffer is not built (ADR-0009 L6(a); "
+                "L3/L4/L5 are slice 2). Pass shadow_enabled=False explicitly and "
+                "carry the FIFO-censored-target caveat in the RESULTS."
+            )
         self.config = config
         self.d_model = d_model
         self.bias = bias
-        self.head: BilinearValueHead | None = None
+        self.head: BilinearValueHead | AgeOnlyValueHead | None = None
         if config.psi_override is None:
             self.head = value_head or BilinearValueHead(d_model, generator=generator)
+        elif config.psi_override == AGE_ONLY:
+            # Section 7.1 item 2: the age-only ARM. Zero-initialised, so it draws
+            # no RNG; it reads age only, and the content head never does.
+            if value_head is not None:
+                raise ValueError(
+                    "psi_override='age_only' builds its own AgeOnlyValueHead; a "
+                    "content value_head passed with it would be silently unused"
+                )
+            if config.nu != 0.0:
+                # Review MINOR-1: -nu * max cos(s_i, s_j) reads the gestalts, so
+                # with nu != 0 the arm's SCORE depends on content and the arm is
+                # no longer age-only in section 7.1 item 2's sense.
+                raise ValueError(
+                    f"psi_override='age_only' with nu={config.nu}: the redundancy "
+                    "term reads the gestalts, so the arm would not be age-only. "
+                    "The age-only arm requires nu=0.0."
+                )
+            self.head = AgeOnlyValueHead(config.a_max)
         elif config.psi_override != "neg_age":
             raise ValueError(
                 f"psi_override={config.psi_override!r} is not a known override. "
-                f"Section 3.7 defines exactly one: 'neg_age'."
+                f"Section 3.7 defines exactly one: 'neg_age'; section 7.1 item 2 "
+                f"adds the learned age-only baseline arm, {AGE_ONLY!r}."
             )
         self._fifo = FIFOPolicy()
         self.records: list[EvictionRecord] = []
@@ -342,6 +422,56 @@ class RSRPolicy:
         # training loop. None until told -- see `select_eviction`.
         self._train_step: int | None = None
         self.rank_shifts = RankShiftLog()
+        # PREREG-drafter defect 5: the run-level histograms split at §3.4's
+        # boundary, so a RESULTS never mixes FIFO-warmup and scored evictions.
+        self.phase_shifts: dict[str, RankShiftLog] = {
+            "fifo_warmup": RankShiftLog(),
+            "scored": RankShiftLog(),
+        }
+        # Run-level attribution totals, kept apart from `records` so the records
+        # can be drained to disk (defect 2) without losing the counts.
+        self._attribution_totals: dict[str, int] = {}
+        # ADR-0009 §1: the per-stream regression buffer, keyed by batch row (L10).
+        # Detached data only -- no graph is held across the loop. Cleared in reset().
+        self._mc: dict[int, list[_Obs]] = {}
+        self.last_mc_stats: dict[str, Any] = {}
+        # Spec section 7.1 / ADR-0009 L6: run-time diagnostics. Off by default, so
+        # a policy built directly (E0b's path, `tests/test_reduction.py`) collects
+        # nothing; `train()` turns them on for every RSR arm. They read the score
+        # under `no_grad` and never change a decision.
+        self.diagnostics = bool(diagnostics)
+        self._diag: list[tuple[Tensor, Tensor, Tensor]] = []
+        self._diag_from = 0
+        # C3: per-stream counts of the on-policy LOO cells, by status, sentence kind
+        # and fill (E0d C6's floor reads the full-memory cells). Cleared in reset().
+        self._loo_counts: dict[str, int] = {}
+        self._loo_age_gap: list[Tensor] = []
+
+    # -- what the training loop asks of the policy ---------------------------- #
+
+    @property
+    def needs_eval_context(self) -> bool:
+        """ADR-0009 L2: a learned head reads the eval-mode `c_t`, for the decision
+        and the regression alike. `neg_age` reads no context at all (§3.7)."""
+        return self.head is not None
+
+    @property
+    def needs_loo(self) -> bool:
+        """C3: whether the loop must form the on-policy LOO `Delta` for `observe`.
+        Only a learning arm on the LOO target needs it; it costs one knockout
+        forward per occupied rank per step (`rsr.retention.loo_target`)."""
+        return self.learns and self.config.target == TARGET_LOO_RESAMPLE
+
+    @property
+    def learns(self) -> bool:
+        """Whether this arm observes and forms `L_MC` (ADR-0009 L13(a)).
+
+        **`beta = 0` means `L_MC` is not computed** -- not computed-times-zero. Then
+        `phi`'s gradients stay None, AdamW skips `phi` (its decoupled decay too),
+        and `phi` stays at its init: a random-content eviction arm, and "beta = 0"
+        means "no retention learning". With no head there is nothing to learn.
+        """
+        return self.head is not None and self.config.beta != 0.0
 
     # -- the eviction rule --------------------------------------------------- #
 
@@ -375,6 +505,10 @@ class RSRPolicy:
         if self.config.psi_override == "neg_age":
             # Section 3.7: psi_hat == -a_i. argmin(-a) = the oldest slot = FIFO.
             psi = -slots.ages().to(torch.float32)
+        elif self.config.psi_override == AGE_ONLY:
+            # Section 7.1 item 2: the age-only ARM reads age and nothing else.
+            assert self.head is not None
+            psi = self.head(slots.ages())
         else:
             assert self.head is not None
             # Section 3.3: only phi receives gradient. The policy is the caller, so
@@ -394,7 +528,8 @@ class RSRPolicy:
         sd = finite.std(unbiased=False)
         if sd > 0:
             psi = torch.where(live, (psi - finite.mean()) / sd, psi)
-        terms = "neg_age" if self.config.psi_override else "psi"
+        # "psi" (the content head), "neg_age" (section 3.7), "age_only" (7.1 arm).
+        terms = self.config.psi_override or "psi"
 
         score = psi
         if self.config.b_enabled:
@@ -438,9 +573,16 @@ class RSRPolicy:
                 "(correction 31; gauntlet 0.1)."
             )
         warm = self.config.t_warm > 0 and self._train_step < self.config.t_warm
+        score = None
         if warm:
             victim = self._fifo.select_eviction(slots, context, step)
             attribution, margin = "fifo_warmup", None
+            if self.diagnostics and not self.config.b_enabled:
+                # Section 7.1 diagnostics in warmup too: the score the arm WOULD
+                # evict by, read and discarded -- the decision stays FIFO. Not with
+                # `b` on: a bias control loop may be stateful in `b()`.
+                with torch.no_grad():
+                    score, _ = self._score(slots, context)
         else:
             # Section 3.5: `b` never enters psi_hat "or any differentiable path --
             # eviction argmin only". The whole selection is therefore under
@@ -452,6 +594,15 @@ class RSRPolicy:
                 ordered = score[slots.live].sort().values
                 margin = float(ordered[1] - ordered[0]) if ordered.numel() > 1 else None
 
+        if self.diagnostics and score is not None:
+            live = slots.live
+            self._diag.append(
+                (
+                    score[live].detach(),
+                    slots.ages()[live],
+                    slots.gestalts[live].detach(),
+                )
+            )
         victim_rank, shifted = rank_shift(slots, victim)
         record = EvictionRecord(
             step=step,
@@ -464,40 +615,404 @@ class RSRPolicy:
             attribution=attribution,
             score_margin=margin,
             train_step=self._train_step,
+            victim_age=int(slots.ages()[victim].item()),
         )
         self.records.append(record)
         self.rank_shifts.add(record)
+        self.phase_shifts["fifo_warmup" if warm else "scored"].add(record)
+        self._attribution_totals[attribution] = (
+            self._attribution_totals.get(attribution, 0) + 1
+        )
         return victim
 
     # -- bookkeeping --------------------------------------------------------- #
 
     def observe(self, slots: MemoryState, attn: AttentionTrace, step: int) -> None:
-        """Realized `r_i` lands here. Sprint 2 wires it to the MC return.
+        """Realized `r_i(t)` lands here, buffered for the MC return (ADR-0009 §1).
 
-        The trace must be an eval-mode capture (D-F); `rsr.retention.reward`
-        refuses a train-mode one rather than quietly averaging over dropout masks.
+        Called by `run_policy_loop` for every live row at every step, **before**
+        the eviction and the write -- the attention was paid over this memory --
+        and before `T_warm` as after it: §3.4's passive training, where the policy
+        is inert and `psi_hat` still learns. Nothing here branches on `warm`; the
+        stream's `k` and `warm` are recorded with the loss instead.
+
+        * `r_i` is the gated, share-of-M rescaled §3.2.1 target, from an
+          **eval-mode** trace (correction 20 / D-F): `reward._require_eval`
+          refuses a train-mode one.
+        * `c_t` is `attn.context` (L10(a)), the eval gestalt the decision reads
+          too (L2). A trace without it is refused: pairing `r_i(t)` with some
+          other forward's `c_t` is exactly the skew L2 exists to prevent.
+        * Each sample is keyed by **`(slots.row, written_at_i)`**, not slot index:
+          `write_at` compacts the prefix after a middle-slot eviction, so index
+          `i` names different gestalts at different steps. A row writes at most
+          once per step, so `written_at` is unique among a row's slots.
+
+        `s_i` and `c_t` are stored **as given**. In the loop they arrive detached
+        (`memory_state` detaches, the eval forward runs under `no_grad`), so no
+        graph is held across the stream; but the stop-gradient this policy is
+        answerable for lives in ONE place, `retention_loss` -- detaching here as
+        well would make that site an equivalent mutant (ADR-0009 §2, T3). The
+        regression is recomputed once, batched, at the stream end.
         """
-        raise NotImplementedError(
-            "Sprint 2: the MC return and the shadow buffer (sections 3.3-3.4). "
-            "r_i itself is implemented in rsr.retention.reward."
+        if self.head is None:
+            raise ValueError(
+                "observe() on an RSR arm with no learned head (psi_override="
+                f"{self.config.psi_override!r}): there is no phi to train, so a "
+                "target collected here would go nowhere. The section 3.7 reduction "
+                "runs with observe off (ADR-0009 T13)."
+            )
+        if attn.context is None:
+            raise ValueError(
+                "AttentionTrace.context is None: RSR regresses psi_hat(s_i, c_t) on "
+                "the c_t of the SAME eval forward that produced r_i (ADR-0009 L2, "
+                "L10(a)). Run the loop with eval_capture=True."
+            )
+        with torch.no_grad():
+            # The TARGET is data (sg[G] in §3.3): formed without a graph.
+            if self.config.target == TARGET_LOO_RESAMPLE:
+                # C3: the swap site. Delta was formed by the loop, on-policy, in
+                # eval mode under no_grad, against this trace's own eval forward.
+                r = self._loo_term(slots, attn)
+            else:
+                r = retrieval_demand(
+                    attn, n_live=slots.n_live, capacity=slots.capacity, gated=True
+                )
+        live = slots.live.nonzero(as_tuple=True)[0]
+        if live.numel() == 0:
+            return  # step 0: nothing in memory, nothing to regress
+        self._mc.setdefault(int(slots.row), []).append(
+            _Obs(
+                step=int(step),
+                keys=slots.written_at[live].clone(),
+                gestalts=slots.gestalts[live],
+                context=attn.context,
+                r=r[live].clone(),
+            )
         )
 
+    def _loo_term(self, slots: MemoryState, attn: AttentionTrace) -> Tensor:
+        """`[M]` this step's `Delta_i(t)` (C3), NaN cells imputed 0 and counted.
+
+        Choice (b): a cell with no donor or no real target contributes 0 to the
+        return and is counted by status, sentence kind and fill; the run harness
+        applies E0d's C6 floor (>= 0.80 of full-memory cells covered) to the totals.
+        Choice (c): no underfull rescale -- `Delta` is not a share."""
+        loo = attn.loo
+        if loo is None:
+            raise ValueError(
+                "target='loo_resample' but the trace carries no LOO: run the loop "
+                "with loo=LooTarget(...) (owner ruling C3)"
+            )
+        live = slots.live.to("cpu")
+        status = loo["status"].to("cpu")
+        kind = loo["kind"].to("cpu")
+        delta = loo["delta"].to("cpu")
+        if not torch.equal(status >= 0, live):
+            raise RuntimeError(
+                "the LOO status map does not match this memory's live slots: the "
+                "knockouts were not taken over the memory observe() is given"
+            )
+        fill = "full" if slots.n_live == slots.capacity else "underfull"
+        names = {
+            STATUS_OK: "ok",
+            STATUS_NO_DONOR: "no_donor",
+            STATUS_NO_TARGET: "no_target",
+        }
+        for code, name in names.items():
+            for k, kname in enumerate(("filler", "assert", "query")):
+                n = int(((status == code) & (kind == k)).sum())
+                if n:
+                    key = f"{fill}.{name}.{kname}"
+                    self._loo_counts[key] = self._loo_counts.get(key, 0) + n
+        gap = loo["donor_age_gap"].to("cpu")
+        self._loo_age_gap.append(gap[status == STATUS_OK])
+        ok = status == STATUS_OK
+        r = torch.where(ok, delta, torch.zeros_like(delta)).to(torch.float32)
+        return r.to(slots.gestalts.device)
+
+    def loo_coverage(self) -> dict[str, Any]:
+        """This stream's LOO cell counts (C3, choice (b)): `{fill.status.kind: n}`
+        plus E0d C6's full-memory coverage and the donor-age-gap summary."""
+        c = dict(sorted(self._loo_counts.items()))
+        full = {k: v for k, v in c.items() if k.startswith("full.")}
+        n_full = sum(full.values())
+        ok_full = sum(v for k, v in full.items() if k.startswith("full.ok."))
+        gaps = (
+            torch.cat(self._loo_age_gap).double()
+            if self._loo_age_gap
+            else torch.zeros(0, dtype=torch.float64, device="cpu")
+        )
+        return {
+            "counts": c,
+            "full_cells": n_full,
+            "full_covered": ok_full,
+            "full_coverage": (ok_full / n_full) if n_full else None,
+            "donor_age_gap_mean": float(gaps.mean()) if gaps.numel() else None,
+            "donor_age_gap_zero_share": float((gaps == 0).double().mean())
+            if gaps.numel()
+            else None,
+        }
+
+    def mc_targets(self) -> dict[str, Any] | None:
+        """The stream's regression rows, one per `(row, t, live slot)`, or None.
+
+        `s`, `c` (as stored, NOT yet detached -- `retention_loss` owns that),
+        `target` = `G_i(t)`, `r` = realized `r_i(t)`, `t`, `key` = `written_at`,
+        `row`, and `n_groups` = the number of `(row, t)` pairs. Per row, `G` is
+        `mc_returns` over a `[keys, T_b]` grid indexed by **`written_at`** -- a
+        slot that moved index under compaction keeps its row of the grid -- with
+        zeros where the slot was not live (the censoring, ADR-0009 §1) and the
+        horizon ending at the row's last observed step (`run_policy_loop` observes
+        only `t < lengths[b]`).
+        """
+        if not self._mc:
+            return None
+        S, Cx, G, R_, T, K, Rows, n_groups = [], [], [], [], [], [], [], 0
+        for row in sorted(self._mc):
+            obs = self._mc[row]
+            keys = torch.unique(torch.cat([o.keys for o in obs]))
+            horizon = max(o.step for o in obs) + 1
+            grid = torch.zeros(keys.numel(), horizon, device=obs[0].r.device)
+            idx_of = []
+            for o in obs:
+                i = torch.searchsorted(keys, o.keys)
+                grid[i, o.step] = o.r.to(grid.dtype)
+                idx_of.append(i)
+            g_row = mc_returns(grid, self.config.gamma)
+            for o, i in zip(obs, idx_of, strict=True):
+                S.append(o.gestalts)
+                Cx.append(o.context.unsqueeze(0).expand(o.gestalts.shape[0], -1))
+                G.append(g_row[i, o.step])
+                R_.append(o.r)
+                T.append(torch.full_like(o.keys, o.step))
+                K.append(o.keys)
+                Rows.append(torch.full_like(o.keys, row))
+                n_groups += 1
+        return {
+            "s": torch.cat(S),
+            "c": torch.cat(Cx),
+            "target": torch.cat(G),
+            "r": torch.cat(R_),
+            "t": torch.cat(T),
+            "key": torch.cat(K),
+            "row": torch.cat(Rows),
+            "n_groups": n_groups,
+        }
+
+    def _target_diagnostics(self, rows: dict[str, Any]) -> dict[str, Any]:
+        """C3 target diagnostics (logged, never gated), over this stream's rows:
+
+        * `g_by_age`: `{age: [sum G, n]}` by age at observation;
+        * `g_by_evict_age`: `{age at eviction | "kept": [sum G, n]}` -- every
+          observation of a slot, bucketed by the age at which the policy later
+          evicted it (its last observed step before the row's end), or "kept" if it
+          was still live at the row's last observed step. This is where censoring's
+          self-confirmation shows: a slot evicted young has its return cut young;
+        * `rho_g_age`: within-step Spearman rho(G, age) per (row, t) with >= 3 live
+          slots, as `{median, lower_median, n, values_quartiles}` (falsifier-1 watch).
+        """
+        g = rows["target"].detach().to("cpu", torch.float64)
+        t, key, row = rows["t"].cpu(), rows["key"].cpu(), rows["row"].cpu()
+        age = t - key
+        by_age: dict[int, list[float]] = {}
+        for a in torch.unique(age).tolist():
+            m = age == a
+            by_age[int(a)] = [float(g[m].sum()), int(m.sum())]
+        last_obs: dict[tuple[int, int], int] = {}
+        row_end: dict[int, int] = {}
+        for r_, k_, t_ in zip(row.tolist(), key.tolist(), t.tolist(), strict=True):
+            last_obs[(r_, k_)] = max(last_obs.get((r_, k_), -1), t_)
+            row_end[r_] = max(row_end.get(r_, -1), t_)
+        by_ev: dict[str, list[float]] = {}
+        for i, (r_, k_) in enumerate(zip(row.tolist(), key.tolist(), strict=True)):
+            lo = last_obs[(r_, k_)]
+            b = "kept" if lo == row_end[r_] else str(lo - k_)
+            cur = by_ev.setdefault(b, [0.0, 0])
+            cur[0] += float(g[i])
+            cur[1] += 1
+        rhos: list[float] = []
+        grp = row * 100_000 + t
+        for gid in torch.unique(grp).tolist():
+            m = grp == gid
+            if int(m.sum()) < 3:
+                continue
+            rho = spearman(g[m], age[m].double())
+            if rho is not None:
+                rhos.append(rho)
+        rho_stats: dict[str, Any] = {"n": len(rhos)}
+        if rhos:
+            v = torch.tensor(sorted(rhos), dtype=torch.float64, device="cpu")
+            n = v.numel()
+            rho_stats.update(
+                median=float(v.median()),  # torch's median is the lower median
+                mean=float(v.mean()),
+                q25=float(v[(n - 1) // 4]),
+                q75=float(v[(3 * (n - 1)) // 4]),
+            )
+        return {"g_by_age": by_age, "g_by_evict_age": by_ev, "rho_g_age": rho_stats}
+
+    def retention_loss(self) -> Tensor | None:
+        """`L_MC` over the stream just run, or None if nothing was observed.
+
+            L_MC = mean_{(b, t)} sum_{i live at t} ( psi_hat(s_i, c_t) - sg[G_i(t)] )^2
+
+        **Unweighted, sum-then-mean** (ADR-0009 L9, signed): summed over the live
+        slots of one `(row, t)`, then averaged over the `(row, t)` pairs that hold
+        at least one live slot (a step with an empty memory has no regression row
+        and is not counted). No `|memory_t|/M` weight: CLAUDE.md forbids
+        down-weighting as the bias correction, and the target is already rescaled.
+
+        🔴 **The policy owns the stop-gradient** (ADR-0009 §2): `s` and `c` are
+        detached HERE, as `_psi` does for scoring, so `L_MC`'s gradient reaches
+        `phi = {W, u}` and nothing else, whatever the caller handed in. The head
+        itself never detaches, on purpose.
+
+        `G` is keyed per row by `written_at` and truncated at the row's last
+        observed step (`mc_returns`). Diagnostics land in `last_mc_stats`: mean
+        `G` by `t` (the truncation profile), corr(psi_hat, age) (§7.1), and the
+        stream's optimizer step and warm flag, so `L_MC` can be split at §3.4's
+        on/off-policy boundary.
+        """
+        rows = self.mc_targets()
+        if rows is None:
+            self.last_mc_stats = {}
+            return None
+        assert self.head is not None
+        n_groups = rows["n_groups"]
+        target, t_of, age_of = rows["target"], rows["t"], rows["t"] - rows["key"]
+        head_dev = next(self.head.parameters()).device
+        s, c = rows["s"].to(head_dev), rows["c"].to(head_dev)
+        target = target.to(head_dev)
+        if self.config.psi_override == AGE_ONLY:
+            # Section 7.1 item 2: the age-only ARM regresses on age alone.
+            psi = self.head(age_of.to(head_dev))
+        else:
+            # Section 3.3 / ADR-0009 §2: the stop-gradient lives here.
+            psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)
+        loss = (psi - target.detach()).pow(2).sum() / n_groups
+        with torch.no_grad():
+            # CPU before float64: MPS has no float64 (found by the MPS T10 test).
+            p, a = psi.detach().cpu().double(), age_of.cpu().double()
+            corr = None
+            if p.numel() > 1 and p.std() > 0 and a.std() > 0:
+                corr = float(torch.corrcoef(torch.stack([p, a]))[0, 1])
+            tt, gg = t_of.cpu(), target.detach().cpu().double()
+            g_by_t = {
+                int(t): float(gg[tt == t].mean()) for t in torch.unique(tt).tolist()
+            }
+        self.last_mc_stats = {
+            "l_mc": float(loss.detach()),
+            "n_samples": int(target.numel()),
+            "n_groups": n_groups,
+            "g_mean": float(target.mean()),
+            "g_mean_by_t": g_by_t,
+            "corr_psi_age": corr,
+            "train_step": self._train_step,
+            "warm": self.config.t_warm > 0
+            and self._train_step is not None
+            and self._train_step < self.config.t_warm,
+            "gamma": self.config.gamma,
+        }
+        if self.config.target == TARGET_LOO_RESAMPLE:
+            # C3: the target diagnostics and the LOO cell counts ride on the beat.
+            self.last_mc_stats["target"] = self.config.target
+            self.last_mc_stats["loo"] = self.loo_coverage()
+            self.last_mc_stats["target_diag"] = self._target_diagnostics(rows)
+        return loss
+
     def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
-        """No per-slot accumulator yet; the MC return keyed by slot arrives with
-        `observe` in Sprint 2, and it resets here (gauntlet 0.4)."""
+        """No per-slot accumulator: the MC buffer is keyed by `(row, written_at)`
+        (ADR-0009 §1), so a slot's new occupant is a new key by construction and
+        nothing needs invalidating here (gauntlet 0.4)."""
         return None
 
     def reset(self) -> None:
         """Stream boundary. The eviction log persists -- it is the run's record, not
-        per-stream state -- but anything keyed by slot does not."""
+        per-stream state -- but anything keyed by slot does not, and neither does
+        the MC buffer: one `run_policy_loop` call is one stream (ADR-0009 §1)."""
         self._fifo.reset()
+        self._mc = {}
+        self._loo_counts = {}
+        self._loo_age_gap = []
+        self._diag = []
+        self._diag_from = len(self.records)
 
     # -- reporting ----------------------------------------------------------- #
 
-    def attribution_counts(self) -> dict[str, int]:
-        """How many evictions each term selected. **A run that is all
-        `fifo_warmup` is stock TG reporting itself as RSR** (gauntlet 0.2)."""
-        out: dict[str, int] = {}
-        for r in self.records:
-            out[r.attribution] = out.get(r.attribution, 0) + 1
+    def step_diagnostics(self) -> dict[str, Any]:
+        """Spec section 7.1 / ADR-0009 L6, over the stream since the last
+        `reset()` (one `train()` step). **Computed and logged; never a gate.**
+
+        * ADR-0006's displacement distribution (`shift_distribution`, with
+          `fraction_shifting` and `mean_shift`) -- 0 everywhere under FIFO;
+        * the victim **rank** and victim **age** histograms;
+        * `partial_rho_score_age_given_content` -- `rsr.metrics.vacuity`'s
+          `rho(score, age | content)`, the FULL eviction score of every live slot
+          at every decision, content = the slot gestalts `s_i` -- and the raw
+          Spearman `rho(score, age)` beside it. None when undefined (too few
+          samples for `d` covariates, or diagnostics off).
+
+        `warm` lists the warm flags of this stream's evictions: k is constant over
+        one step, so it is `[True]` or `[False]`, and the statistic splits at
+        section 3.4's on/off-policy boundary by itself.
+        """
+        recs = self.records[self._diag_from :]
+        log = RankShiftLog()
+        for r in recs:
+            log.add(r)
+        out: dict[str, Any] = dict(log.summary())
+        out["warm"] = sorted({r.warm for r in recs})
+        out["diagnostics"] = self.diagnostics
+        partial = raw = None
+        n = 0
+        if self._diag:
+            sc = torch.cat([d[0] for d in self._diag]).to("cpu", torch.float64)
+            ag = torch.cat([d[1] for d in self._diag]).to("cpu", torch.float64)
+            ct = torch.cat([d[2] for d in self._diag]).to("cpu", torch.float64)
+            n = int(sc.numel())
+            partial = partial_correlation_with_age(sc, ag, ct)
+            raw = spearman(sc, ag)
+        out["n_score_samples"] = n
+        out["score_covariates"] = "slot gestalts s_i (d columns) + intercept"
+        out["partial_rho_score_age_given_content"] = partial
+        out["spearman_rho_score_age"] = raw
         return out
+
+    def attribution_counts(self) -> dict[str, int]:
+        """How many evictions each term selected, over the whole run (records
+        drained to disk included). **A run that is all `fifo_warmup` is stock TG
+        reporting itself as RSR** (gauntlet 0.2)."""
+        return dict(self._attribution_totals)
+
+    def attribution(self) -> dict[str, float] | None:
+        """The heartbeat's `attribution` (§3.4: per-eviction attribution from the
+        first policy run; RESEARCH-CONTEXT §10.1 defect 4): the FRACTION of this
+        stream's evictions (since the last `reset()`, i.e. one `train()` step)
+        selected by each term -- `fifo_warmup`, `psi`, `psi-nu`, `neg_age`,
+        `age_only`, ... None when the stream evicted nothing: a missing
+        measurement looks like one. `train()` called `policy.attribution()` and
+        RSRPolicy had only `attribution_counts()`, so every RSR beat said null."""
+        recs = self.records[self._diag_from :]
+        if not recs:
+            return None
+        counts: dict[str, int] = {}
+        for r in recs:
+            counts[r.attribution] = counts.get(r.attribution, 0) + 1
+        return {k: v / len(recs) for k, v in sorted(counts.items())}
+
+    def drain_records(self) -> list[EvictionRecord]:
+        """Hand over and forget every record held (PREREG-drafter defect 2).
+
+        `records` grew without bound -- ~1.5M per arm over 3000 run-1 steps --
+        and was pickled into every checkpoint. `train()` drains it to an
+        append-only file after each step, so memory and the checkpoint stay
+        bounded; `attribution_counts()` and the rank-shift logs keep the run's
+        totals. A direct caller that never drains sees today's behaviour."""
+        out, self.records = self.records, []
+        self._diag_from = 0
+        return out
+
+    def phase_summary(self) -> dict[str, dict[str, Any]]:
+        """Run-level ADR-0006 / §7.1 histograms, split into FIFO-warmup and scored
+        evictions (defect 5): the two are never summed in one histogram."""
+        return {k: log.summary() for k, log in self.phase_shifts.items()}

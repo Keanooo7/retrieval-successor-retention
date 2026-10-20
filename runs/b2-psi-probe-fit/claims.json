@@ -1,0 +1,82 @@
+[
+  {
+    "claim": "Phase-A ledger: status ok, git_sha a94b228, seeds 0,1,2, dirty true (untracked outbox file; source roots clean at write)",
+    "command": ".venv/bin/python -c \"import json; d=json.load(open('runs/b2-psi-probe-fit/ledger.json')); print(d['status'], d['provenance']['git_sha'][:7], d['seeds_actually_run'], d['provenance']['dirty'], len(d['rows']))\"",
+    "expected": "ok a94b228 [0, 1, 2] True 258"
+  },
+  {
+    "claim": "All six fit children and the parent exited 0",
+    "command": ".venv/bin/python -c \"import json; d=json.load(open('runs/b2-psi-probe-fit/ledger.json')); print(sorted(((' '.join(c['argv'].split()[3:7]) if 'fit-child' in c['argv'] else 'parent'), c['exit_code']) for c in d['commands']))\"",
+    "expected": "[('--checkpoint 2500 --seed 0', 0), ('--checkpoint 2500 --seed 1', 0), ('--checkpoint 2500 --seed 2', 0), ('--checkpoint 3000 --seed 0', 0), ('--checkpoint 3000 --seed 1', 0), ('--checkpoint 3000 --seed 2', 0), ('parent', 0)]"
+  },
+  {
+    "claim": "Run wall time: started 01:34:19Z, finished 06:47:53Z on 2026-09-28",
+    "command": ".venv/bin/python -c \"import json; d=json.load(open('runs/b2-psi-probe-fit/ledger.json')); print(d['started_utc'], d['finished_utc'])\"",
+    "expected": "2026-09-28T01:34:19Z 2026-09-28T06:47:53Z"
+  },
+  {
+    "claim": "T0 substrate manifest verified at start and end of the run (435 files, 0 bad)",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print([(r[k]['ok'], r[k]['n'], r[k]['n_bad']) for k in ('T0.start','T0.end')])\"",
+    "expected": "[(True, 435, 0), (True, 435, 0)]"
+  },
+  {
+    "claim": "N_E = 1024 (floor binds); not underpowered; raw max 166 from psiU_minus_refU.gap_2_to_M@seed0",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; v=r['N_E.power']; print(v['N_E'], v['underpowered'], v['raw_max'], max(v['per'], key=v['per'].get))\"",
+    "expected": "1024 False 166 psiU_minus_refU.gap_2_to_M@seed0"
+  },
+  {
+    "claim": "delta (gamma 0.9) at ckpt3000 per seed",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print([round(r[f'seed{s}.decisions']['delta']['0.9'],5) for s in (0,1,2)])\"",
+    "expected": "[0.03802, 0.03676, 0.03186]"
+  },
+  {
+    "claim": "ref at ckpt3000 per seed",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print([r[f'seed{s}.decisions']['ref'] for s in (0,1,2)])\"",
+    "expected": "[{'U@0.9': 'age', 'C@0.9': 'fifo', 'U@0.0': 'age', 'C@0.0': 'age'}, {'U@0.9': 'fifo', 'C@0.9': 'fifo', 'U@0.0': 'fifo', 'C@0.0': 'fifo'}, {'U@0.9': 'fifo', 'C@0.9': 'fifo', 'U@0.0': 'fifo', 'C@0.0': 'fifo'}]"
+  },
+  {
+    "claim": "FIT_VAL all-query accuracy at ckpt3000 gamma 0.9: psiU, psiC, fifo per seed",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print([[round(r[f'seed{s}.decisions']['acc']['0.9'][a],4) for a in ('psiU','psiC','fifo')] for s in (0,1,2)])\"",
+    "expected": "[[0.6953, 0.779, 0.77], [0.6869, 0.7754, 0.7663], [0.7731, 0.801, 0.7971]]"
+  },
+  {
+    "claim": "Selected lambda of heads U@0.9 and C@0.9 at ckpt3000 per seed",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print([(r[f'ckpt3000.seed{s}.head.U@0.9']['lam'], r[f'ckpt3000.seed{s}.head.C@0.9']['lam']) for s in (0,1,2)])\"",
+    "expected": "[(1e-05, 1e-06), (1e-06, 1e-06), (0.0001, 1e-06)]"
+  },
+  {
+    "claim": "Worst selected-lambda relative residual over every head, checkpoint and seed is < 1e-12",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print(max(v['resid'] for k,v in r.items() if '.head.' in k) < 1e-12)\"",
+    "expected": "True"
+  },
+  {
+    "claim": "Age-decodability R^2 split (F11), ckpt3000 U rows: i<M and i>=M per seed",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print([(round(r[f'ckpt3000.seed{s}.age_decodability.U']['r2_split']['i_lt_M']['r2'],4), round(r[f'ckpt3000.seed{s}.age_decodability.U']['r2_split']['i_ge_M']['r2'],4)) for s in (0,1,2)])\"",
+    "expected": "[(0.8269, 0.6585), (0.8828, 0.7679), (0.7552, 0.4653)]"
+  },
+  {
+    "claim": "Logged pooled R^2 is off by a factor n_val (run.py fit_heads: 1 - sse*n_val/sst with sse a sum); corrected = 1-(1-logged)/n_val; ckpt3000 age-decodability U per seed",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print([round(1-(1-r[f'ckpt3000.seed{s}.age_decodability.U']['r2'])/r[f'ckpt3000.seed{s}.age_decodability.U']['n_val_rows'],4) for s in (0,1,2)])\"",
+    "expected": "[0.8252, 0.8815, 0.7429]"
+  },
+  {
+    "claim": "The R^2 formula in fit_heads multiplies the summed SSE by n_val",
+    "command": "grep -c '1.0 - float(x) \\* n_val / sst' experiments/b2-psi-probe/run.py",
+    "expected": "1"
+  },
+  {
+    "claim": "corr(psi-hat, age) Pearson on FIT_VAL, ckpt3000, U@0.9 and C@0.9 per seed",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print([(round(r[f'ckpt3000.seed{s}.psi_age_corr_fit_val.U@0.9']['pearson'],4), round(r[f'ckpt3000.seed{s}.psi_age_corr_fit_val.C@0.9']['pearson'],4)) for s in (0,1,2)])\"",
+    "expected": "[(0.2031, -0.3951), (0.0649, -0.5596), (0.1534, -0.2716)]"
+  },
+  {
+    "claim": "Each child ran 4 threads",
+    "command": ".venv/bin/python -c \"import json; r={x['key']:x['value'] for x in json.load(open('runs/b2-psi-probe-fit/ledger.json'))['rows']}; print(sorted({r[k] for k in r if k.endswith('.threads')}))\"",
+    "expected": "[4]"
+  },
+  {
+    "claim": "Every battery anchor occurs exactly once",
+    "command": ".venv/bin/python scripts/mutation_battery.py --check-anchors | tail -1",
+    "expected": "260/260 anchors occur exactly once"
+  }
+]

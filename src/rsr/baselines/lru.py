@@ -39,22 +39,38 @@ from rsr.retention.policy import AttentionTrace, MemoryState
 class LRUPolicy:
     """Evict the slot least recently attended to.
 
-    `_last_used[i]` is the step at which slot `i` last won the attention mass, or
-    the step it was written if it never has. A slot that has never been attended is
-    therefore evicted in write order, which is what makes LRU degrade *gracefully*
-    toward FIFO rather than silently *into* it.
+    `_last_used[row][w]` is the step at which the occupant written at step `w` in
+    batch row `row` last won the attention mass. A slot whose occupant has never
+    been attended falls back to its write step, so a never-attended memory is
+    evicted in write order -- which is what makes LRU degrade *gracefully* toward
+    FIFO rather than silently *into* it.
+
+    ## Why `(row, written_at)` and not slot index (2026-09-29)
+
+    * **Row.** One policy object serves the whole batch and is called once per
+      row. A single dict let row A's attention to its slot 1 protect row B's
+      slot 1.
+    * **Occupant, not index.** `write_at` compacts the prefix behind the victim,
+      so every slot after a mid-memory victim moves one to the left. A record
+      keyed by index stayed where it was while its occupant moved -- after one
+      eviction, the recency of slot `j` described the occupant now at `j - 1`.
+      `written_at` is unique among a row's live slots (a row writes at most once
+      per step) and it moves with the occupant, because the memory owns it.
     """
 
     name = "lru"
 
     def __init__(self) -> None:
-        self._last_used: dict[int, int] = {}
+        self._last_used: dict[int, dict[int, int]] = {}
 
     def select_eviction(self, slots: MemoryState, context: Tensor, step: int) -> int:
+        seen = self._last_used.get(slots.row, {})
         last = slots.written_at.clone()
-        for slot, when in self._last_used.items():
-            if slot < last.shape[0]:
-                last[slot] = max(int(last[slot].item()), when)
+        for i in range(last.shape[0]):
+            if bool(slots.live[i]):
+                when = seen.get(int(slots.written_at[i]))
+                if when is not None:
+                    last[i] = max(int(last[i].item()), when)
         masked = torch.where(slots.live, last, torch.full_like(last, 2**62))
         return int(masked.argmin().item())
 
@@ -64,15 +80,22 @@ class LRUPolicy:
         # a recency baseline and must not quietly become a weak H2O.
         share = attn.alpha.sum(dim=(0, 1))
         winner = int(torch.where(attn.live, share, torch.full_like(share, -1)).argmax())
-        self._last_used[winner] = step
+        occupant = int(slots.written_at[winner])
+        self._last_used.setdefault(slots.row, {})[occupant] = step
 
     def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
-        """A new gestalt took the slot; the previous tenant's history is void.
+        """A new gestalt took `slot`; start its record and drop evicted tenants'.
 
-        Without this the slot inherits the last-used time of whatever used to live
-        there, and a heavily-attended evictee protects its replacement.
+        Keyed by occupant, a stale record cannot attach to the newcomer (its
+        `written_at` is new), so the hook's job is bookkeeping: seed the newcomer
+        at its write step and prune records whose occupant is no longer live, so
+        the per-row dict stays bounded by `M` rather than growing with `S`.
         """
-        self._last_used[slot] = step
+        live = {int(w) for w in slots.written_at[slots.live].tolist()}
+        seen = self._last_used.setdefault(slots.row, {})
+        for w in [w for w in seen if w not in live]:
+            del seen[w]
+        seen[int(slots.written_at[slot])] = step
 
     def reset(self) -> None:
         self._last_used.clear()

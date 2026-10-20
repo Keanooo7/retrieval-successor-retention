@@ -29,6 +29,7 @@ measured on the reference: identical loss, 113 of 206 gradient arrays moved.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 import torch
@@ -40,9 +41,13 @@ from rsr.retention.policy import AttentionTrace, MemoryState
 __all__ = [
     "Q_TOK_COLLAPSE",
     "CrossCapture",
+    "EvalForward",
     "cross_capture",
+    "eval_forward",
     "memory_state",
+    "newcomer_slot",
     "run_policy_loop",
+    "synchronize",
     "trace_for_row",
     "write_at",
 ]
@@ -62,6 +67,22 @@ positions are excluded because their residual stream is discarded.
 changes only the *unnormalised* `contribution()` diagnostic. **EOS-only does not
 cancel** and is the real alternative; ADR-0008 says what would distinguish them.
 """
+
+
+def newcomer_slot(valid: Tensor) -> Tensor:
+    """`[B]` the index `write_at` writes the newcomer to, given the PRE-write mask.
+
+    A full row compacts behind its victim and the newcomer takes the last slot,
+    `M - 1`; an underfull row appends at `k`, its occupied count. This is the
+    single source of that rule -- `write_at` calls it, and `run_policy_loop`
+    passes its value to `policy.on_write`. **Not the victim index**: until
+    2026-09-29 the loop passed `victim[row]`, which after compaction names a slot
+    now holding a *different* occupant (and is the placeholder 0 on an underfull
+    row), so any policy keying state on `slot` updated the wrong slot.
+    """
+    m = valid.shape[-1]
+    k = valid.to(torch.int64).sum(dim=-1)
+    return torch.where(k >= m, torch.full_like(k, m - 1), k)
 
 
 def write_at(
@@ -97,7 +118,7 @@ def write_at(
     valid_base = torch.where(full.unsqueeze(-1), valid_shift, valid)
     step_base = torch.where(full.unsqueeze(-1), step_shift, mem.step)
 
-    slot = torch.where(full, torch.full_like(k, m - 1), k)
+    slot = newcomer_slot(valid)
     onehot = torch.nn.functional.one_hot(slot, m).to(kv.dtype)
     kv_new = kv_base * (1.0 - onehot.unsqueeze(-1)) + srep.unsqueeze(
         1
@@ -125,6 +146,7 @@ def memory_state(mem: Memory, step: int, row: int = 0) -> MemoryState:
         written_at=mem.step[row].clone(),
         live=mem.valid[row].clone(),
         step=step,
+        row=row,
     )
 
 
@@ -260,11 +282,19 @@ def cross_capture(
 
 
 def trace_for_row(
-    cap: CrossCapture, mem_valid: Tensor, row: int, step: int
+    cap: CrossCapture,
+    mem_valid: Tensor,
+    row: int,
+    step: int,
+    context: Tensor | None = None,
+    loo=None,
 ) -> AttentionTrace:
     """One row of a `CrossCapture` as the protocol's `AttentionTrace`.
 
-    `mem_valid` is the **pre-write** validity mask, matching `cap`.
+    `mem_valid` is the **pre-write** validity mask, matching `cap`. `context` is
+    the batch's `[B, D]` `c_t` from the forward that produced `cap` (ADR-0009
+    L10(a)); its row is attached detached. `loo` is the step's on-policy LOO
+    (`rsr.retention.loo_target.LooStep`, C3) or None; its row is attached.
     """
     return AttentionTrace(
         alpha=cap.alpha[:, row],
@@ -273,6 +303,95 @@ def trace_for_row(
         step=step,
         eval_mode=cap.eval_mode,
         gate=cap.gate,
+        context=None if context is None else context[row].detach(),
+        loo=None
+        if loo is None
+        else {
+            "delta": loo.delta[row],
+            "status": loo.status[row],
+            "kind": loo.kind[row],
+            "donor_age_gap": loo.donor_age_gap[row],
+        },
+    )
+
+
+def synchronize(device: torch.device) -> None:
+    """Wait for the accelerator's queued work, so a wall-clock read times the work
+    and not its launch. MPS and CUDA are both asynchronous; CPU is a no-op.
+
+    m-7 (feat/rsr-slice1 review): `eval_forward` synchronised only on MPS, so on
+    CUDA `eval_forward_s` would have timed the launch. CLAUDE.md: all code must
+    run on CUDA without modification -- this path is written, not exercised here
+    (no CUDA on the Mac Studio; `tests/test_run1_ready.py` checks the dispatch)."""
+    if device.type == "mps":
+        torch.mps.synchronize()
+    elif device.type == "cuda":
+        torch.cuda.synchronize(device)
+
+
+@dataclass
+class EvalForward:
+    """ADR-0009 L1(a): one step's second, `no_grad`, eval-mode forward.
+
+    `srep` is the eval sentence gestalt -- `c_t` for **both** the regression and
+    the eviction decision (L2: one tensor, so the head is never fitted on one
+    `c_t` and decided on another). `cap` is the eval-mode capture `r_i` is read
+    from (correction 20 / D-F), or None when `observe` is off. `seconds` is the
+    wall time it cost, kept so L1's unmeasured cost is measured by every run that
+    pays it.
+    """
+
+    srep: Tensor
+    cap: CrossCapture | None
+    seconds: float
+    logits: Tensor | None = None
+    """The eval forward's logits (detached). C3 (R-2026-10-07): the live loss the
+    on-policy LOO `Delta` is measured against comes from THIS forward, the one whose
+    gestalt is `c_t`, so no second live pass is made."""
+
+
+def eval_forward(
+    model: TGModel,
+    ids_t: Tensor,
+    mask_t: Tensor,
+    mem: Memory,
+    bos_ctx: Tensor,
+    bos_valid: Tensor,
+    *,
+    capture: bool,
+) -> EvalForward:
+    """The same step again, over the same PRE-write memory and `bos_ctx`, in
+    `model.eval()` under `no_grad`; the model's mode is restored on the way out.
+
+    🔴 **The capture is taken INSIDE the eval block.** `cross_capture` stamps
+    `eval_mode` from `model.training` at the time it is called, so a capture
+    built after the mode is restored would carry `eval_mode=False` and be refused
+    by `reward._require_eval` -- correctly, because it would be lying.
+
+    Every dropout in `model.py` is an `nn.Dropout`, which in eval mode is the
+    identity and draws nothing, so this forward consumes no RNG: the training
+    forward's masks, the data order and the global stream are where they would be
+    without it (ADR-0009 T6 measures that rather than trusting this sentence).
+    """
+    t0 = time.perf_counter()
+    was_training = model.training
+    with torch.no_grad():
+        model.eval()
+        try:
+            out = model(
+                ids_t, mask_t, mem.kv, mem.valid, bos_ctx, bos_valid, capture=capture
+            )
+            cap = (
+                cross_capture(model, out, mem.kv, mask_t, mem.valid) if capture else None
+            )
+        finally:
+            model.train(was_training)
+    synchronize(out.srep.device)  # m-7: MPS and CUDA alike
+    return EvalForward(
+        srep=out.srep.detach(),
+        cap=cap,
+        seconds=time.perf_counter() - t0,
+        logits=out.logits.detach(),
     )
 
 
@@ -286,8 +405,29 @@ def run_policy_loop(
     step_fn,
     capture: bool = False,
     observe: bool = False,
+    eval_capture: bool = False,
+    timings: dict | None = None,
+    loo=None,
 ):
     """`run_sentence_loop`, with the eviction rule supplied by `policy`.
+
+    `eval_capture=True` is ADR-0009 L1(a) + L2: every step runs a second,
+    `no_grad`, eval-mode forward over the same pre-write memory (`eval_forward`).
+    Its gestalt is the `c_t` handed to `select_eviction` **and** attached to the
+    trace `observe` receives, so the regression and the decision read one tensor;
+    with `observe` on, `r_i` is read from its eval-mode capture (correction 20).
+    The training forward, its loss, its dropout draws and the memory write are
+    unchanged -- the eval forward only feeds the policy. **Off by default**, and
+    off it forms nothing: E0b's path (`test_reduction.py`) does not reach it.
+    `timings`, if given, accumulates `eval_forward_s` (L1's cost, measured).
+
+    `loo` (owner ruling C3, 2026-10-07) is a callable -- in practice
+    `rsr.retention.loo_target.LooTarget` -- that forms the on-policy
+    resample-knockout `Delta` for every row at every step, over the PRE-write
+    memory, against the eval forward's own logits; each row's slice rides on the
+    trace `observe` receives. It needs `eval_capture` and `observe`. **Off by
+    default**: it draws no global RNG and changes no decision, the write or the
+    loss; it only costs forwards (`timings["loo_s"]`).
 
     `policy.select_eviction(slots, context, step)` is consulted **only when the
     row's memory is full**, which is the same condition under which the
@@ -324,10 +464,41 @@ def run_policy_loop(
     # stream. Anything the policy keeps per stream -- LRU's `last_used`, H2O's
     # accumulated attention, §3.5's `b` -- dies here rather than leaking forward.
     policy.reset()
+    # Expire-Span [P7] (spec §5.4) is the one policy that shapes the forward pass:
+    # its soft mask enters cross-attention and its span loss enters the objective.
+    # Every other policy has no `memory_weight`, and the model is then called with
+    # exactly the arguments it always was -- E0b's bit-exact path is untouched.
+    weight_fn = getattr(policy, "memory_weight", None)
+    if eval_capture and weight_fn is not None:
+        # ADR-0009 slice 1 does not wire Expire-Span: its mask enters the forward,
+        # and an eval forward without it would read a different memory than the
+        # training forward attended. Refused rather than half-supported.
+        raise ValueError(
+            "eval_capture is not wired for a policy that shapes the forward pass "
+            "(Expire-Span's memory_weight); ADR-0009 slice 1 is RSR only"
+        )
+    if loo is not None and not (eval_capture and observe):
+        raise ValueError(
+            "loo (C3) needs eval_capture=True and observe=True: Delta is measured "
+            "against the eval forward whose gestalt is c_t (ADR-0009 L2) and is a "
+            "regression target, so with no observe it would go nowhere"
+        )
 
     for t in range(steps):
         ids_t, mask_t = sentences[:, t], masks[:, t]
         row_valid = torch.full((batch,), t, device=device) < lengths
+        extra, span_loss = {}, None
+        if weight_fn is not None:
+            # Pre-write memory, like `observe`: the mask is for what this step's
+            # forward attends over. The MODEL's mode gates structured dropout.
+            extra["mem_weight"], span_loss = weight_fn(
+                mem.kv,
+                mem.valid,
+                mem.step,
+                t,
+                training=model.training,
+                row_valid=row_valid,
+            )
         out = model(
             ids_t,
             mask_t,
@@ -335,40 +506,83 @@ def run_policy_loop(
             mem.valid,
             bos_ctx,
             bos_valid,
-            capture=capture or observe,
+            # With eval_capture the capture comes from the eval forward, so the
+            # training forward is called exactly as an observe-off arm calls it.
+            capture=capture or (observe and not eval_capture),
+            **extra,
         )
         if capture:
             captured.append(out)
+        ev = None
+        if eval_capture:
+            # ADR-0009 L1(a): same step, same pre-write memory and bos_ctx.
+            ev = eval_forward(
+                model, ids_t, mask_t, mem, bos_ctx, bos_valid, capture=observe
+            )
+            if timings is not None:
+                spent = timings.get("eval_forward_s", 0.0)
+                timings["eval_forward_s"] = spent + ev.seconds
+        lstep = None
+        if loo is not None:
+            # C3: the knockouts read the same PRE-write memory and bos context the
+            # eval forward did; `step_delta` returns CPU tensors (synchronised).
+            t1 = time.perf_counter()
+            lstep = loo(model, ids_t, mask_t, mem, bos_ctx, bos_valid, ev.logits, t)
+            if timings is not None:
+                timings["loo_s"] = timings.get("loo_s", 0.0) + (time.perf_counter() - t1)
         if observe:
             # Pre-write memory, deliberately: this is what the forward attended to.
-            cap = cross_capture(model, out, mem.kv, mask_t, mem.valid)
+            if ev is not None:
+                cap, ctx = ev.cap, ev.srep
+            else:
+                cap, ctx = cross_capture(model, out, mem.kv, mask_t, mem.valid), None
             for row in range(batch):
                 if bool(row_valid[row]):
                     policy.observe(
                         memory_state(mem, t, row),
-                        trace_for_row(cap, mem.valid, row, t),
+                        trace_for_row(cap, mem.valid, row, t, ctx, lstep),
                         t,
                     )
         contrib = step_fn(t, out, ids_t, mask_t, row_valid)
+        if span_loss is not None:
+            # [P7]'s auxiliary span loss is part of the objective the arm TRAINS
+            # on. Added here rather than left to the caller: a caller that forgot
+            # it would run `alpha = 0` under a config that says otherwise. The
+            # policy returns None at eval (review MAJOR-1), so an eval loss read
+            # from this loop never carries it.
+            contrib = contrib + span_loss
         acc = contrib if acc is None else acc + contrib
 
         srep_mem = out.srep.detach() if cfg.detach_sreps_for_memory else out.srep
         write = row_valid & out.has_eos
 
+        # ADR-0009 L2: with eval_capture the decision reads the SAME eval-mode
+        # c_t the regression is fitted on; otherwise the training srep, as before.
+        decision_ctx = ev.srep if ev is not None else out.srep.detach()
         victims = []
         for row in range(batch):
             if bool(mem.valid[row].all()):
                 slots = memory_state(mem, t, row)
-                victims.append(policy.select_eviction(slots, out.srep[row].detach(), t))
+                victims.append(policy.select_eviction(slots, decision_ctx[row], t))
             else:
                 victims.append(0)  # unused: the row is not full
         victim = torch.tensor(victims, device=device, dtype=torch.long)
 
         if cfg.use_memory:
+            # The newcomer's slot is fixed by the PRE-write occupancy; after
+            # `write_at` compacts, `victim[row]` holds someone else (§3.1, ADR-0006).
+            landed = newcomer_slot(mem.valid)
             mem = write_at(mem, srep_mem, write, victim, t)
             for row in range(batch):
                 if bool(write[row]):
-                    policy.on_write(memory_state(mem, t, row), int(victim[row]), t)
+                    slot = int(landed[row])
+                    if int(mem.step[row, slot]) != t:  # gauntlet 0.4, one level down
+                        raise RuntimeError(
+                            f"on_write would name slot {slot} in row {row} at step "
+                            f"{t}, which holds the gestalt written at "
+                            f"{int(mem.step[row, slot])}"
+                        )
+                    policy.on_write(memory_state(mem, t, row), slot, t)
 
         if cfg.bos_replacement_mode == "copy":
             bos_ctx = (

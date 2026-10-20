@@ -27,6 +27,8 @@ sys.path.insert(0, str(_REPO / "scripts"))
 
 import mutation_battery as mb  # noqa: E402
 
+from _battery_fakes import use_fake_shard  # noqa: E402
+
 # Real pytest 9.1 output under `-q --no-header -rfE --tb=line`, with the path
 # shortened. Includes a parametrised id with a space in it, a failure whose
 # message pytest dropped, a multi-line message, and a setup error.
@@ -144,7 +146,8 @@ def test_a_mutation_row_carries_the_failure_reasons(tmp_path, monkeypatch):
         "tests/t.py::test_other": "JSONDecodeError: Expecting value: line 1 column 1",
     }
     runs = iter([{}, red])
-    monkeypatch.setattr(mb, "run_suite", lambda: next(runs))
+    use_fake_shard(monkeypatch, mb, tmp_path)
+    monkeypatch.setattr(mb, "run_suite", lambda *a: next(runs))
     out = tmp_path / "v.json"
     monkeypatch.setattr(sys, "argv", ["mutation_battery.py", "--json", str(out)])
     assert mb.main() == mb.Exit.OK

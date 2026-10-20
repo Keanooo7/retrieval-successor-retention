@@ -37,6 +37,14 @@ far enough above zero to catch a suite that has collapsed. The exact count is in
 COUNT_FILE = Path(os.environ.get("RSR_TEST_COUNT", "test-count.json"))
 
 
+def pytest_sessionfinish(session, exitstatus):
+    # I1: under the mutation battery only (RSR_BATTERY_PROBE set), record where
+    # rsr was imported from. The battery, not this file, judges it.
+    from _battery_probe import write_probe
+
+    write_probe(exitstatus)
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     stats = terminalreporter.stats
     counts = {

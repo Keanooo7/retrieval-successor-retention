@@ -1,0 +1,28 @@
+{
+  "status": "ok",
+  "seed": "3e8ae7c187e35ffba99ec1e0fc68dc82d3e29c5e24f315cd49d50ee37c56cfb4",
+  "claims": [
+    {
+      "claim": "seed 0 grace flip shares g=1,2,4",
+      "command": "literal claim command (ledger read) rc=0 -> [0.3011, 0.4797, 0.6883]; independent path: scratchpad rederive.py over runs/newcomer-bakeoff/seed0/units (2048 units), flips recounted both from the stored 'flipped' flag and from argmin(psi) vs victim_pos, rc=0",
+      "expected": "[0.3011, 0.4797, 0.6883]",
+      "observed": "flag [0.3011, 0.4797, 0.6883]; from psi [0.3011, 0.4797, 0.6883]; counts 19730/65536, 31436/65536, 45108/65536",
+      "match": true
+    },
+    {
+      "claim": "seed 0 C6: FIT_VAL accuracies equal B2's",
+      "command": "literal claim command (ledger read) rc=0 -> True; independent path: scratchpad c6_rerun.py 0 at 16f867a under slot cpu-det/4 -- fifo, psiC, psiU re-run on FIT_VAL [936000, 937024) (1024 docs) and compared with decisions.acc[0.9] read directly from B2's pinned phaseA/ckpt3000-seed0.pt (sha256 0227d80a...4846 re-hashed), rc=0",
+      "expected": "True",
+      "observed": "True (fifo 14516/18851 = 0.7700387247360883 == 0.7700387247360883; psiC 14685/18851 = 0.7790037663784415 == 0.7790037663784415; psiU 13107/18851 = 0.6952946793273567 == 0.6952946793273567)",
+      "match": true
+    },
+    {
+      "claim": "seed 2 per-arm §9.5 outcome labels",
+      "command": "literal claim command (ledger read) rc=0; independent path: scratchpad rederive.py (numpy re-implementation of PREREG §6.1 / B2 §9.5+A1.13, bootstrap draws torch.Generator(20260927+2), 2000 x 2048; delta and refs read from B2 phaseA/ckpt3000-seed2.pt and fit-seed2.pt, not the ledger) over seed2/units, rc=0",
+      "expected": "{'psiU': 'EQUIV', 'graceU1': 'EQUIV', 'graceU2': 'EQUIV', 'graceU4': 'EQUIV', 'psiU+': 'EQUIV', 'psiC': 'EQUIV', 'psiC+': 'EQUIV', 'psiR1': 'EQUIV', 'psiR1L1': 'EQUIV'}",
+      "observed": "{'psiU': 'EQUIV', 'graceU1': 'EQUIV', 'graceU2': 'EQUIV', 'graceU4': 'EQUIV', 'psiU+': 'EQUIV', 'psiC': 'EQUIV', 'psiC+': 'EQUIV', 'psiR1': 'EQUIV', 'psiR1L1': 'EQUIV'} (psiU vs fifo: point -0.019298801415069455, lo -0.023292845344642495, hi -0.015460589304847906, delta 0.03185756551141167; max |diff| vs ledger over every outcome/contrast bound, all seeds = 0)",
+      "match": true
+    }
+  ],
+  "verifier_sha": "16f867a3d530e87fe4c59d85b03b9626d32682e6"
+}
