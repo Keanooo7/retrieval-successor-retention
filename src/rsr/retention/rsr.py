@@ -998,8 +998,8 @@ class RSRPolicy:
         _u, counts = torch.unique_consecutive(gid, return_counts=True)
         n_g, width = int(counts.numel()), int(counts.max())
         starts = torch.cumsum(counts, 0) - counts
-        grp = torch.repeat_interleave(torch.arange(n_g), counts)
-        pos = torch.arange(gid.numel()) - starts[grp]
+        grp = torch.repeat_interleave(torch.arange(n_g, device="cpu"), counts)
+        pos = torch.arange(gid.numel(), device="cpu") - starts[grp]
         grp, pos = grp.to(dev), pos.to(dev)
         S_ = torch.zeros(n_g, width, dtype=psi.dtype, device=dev).index_put(
             (grp, pos), psi
