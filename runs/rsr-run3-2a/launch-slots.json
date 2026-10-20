@@ -1,0 +1,257 @@
+{
+ "run_id": "rsr-run3-2a",
+ "stage": "slot-check",
+ "started_utc": "2026-10-20T13:17:29Z",
+ "controls": {
+  "R-SEAL.install": {
+   "run": "2a",
+   "stage": "slot-check",
+   "source": "experiments/post-fails-controls/PREREG.md",
+   "file_ranges": {
+    "TUNE": [
+     997200,
+     997712
+    ],
+    "EVAL2": [
+     984000,
+     986048
+    ]
+   },
+   "sealed": {
+    "TUNE": [
+     997200,
+     997712
+    ],
+    "EVAL2": [
+     984000,
+     986048
+    ]
+   },
+   "opened": {},
+   "rebound": [
+    "rsr.train.loop._generate_document",
+    "rsr.train.loop.generate"
+   ],
+   "ok": true
+  },
+  "R-C3.record_refused": {
+   "replaced": [
+    "rsr.constants.record",
+    "rsr.constants.REGISTRY.record"
+   ],
+   "ok": true
+  },
+  "R-SEAL.leaks": {
+   "leaks": [],
+   "ok": true
+  },
+  "prereg_text": {
+   "values": {
+    "omegas": {
+     "prereg": [
+      2.0,
+      8.0,
+      32.0
+     ],
+     "code": [
+      2.0,
+      8.0,
+      32.0
+     ],
+     "ok": true
+    },
+    "k": {
+     "prereg": 3,
+     "code": 3,
+     "ok": true
+    },
+    "j_every": {
+     "prereg": 250,
+     "code": 250,
+     "ok": true
+    },
+    "conv_min": {
+     "prereg": 2000,
+     "code": 2000,
+     "ok": true
+    },
+    "conv_rel": {
+     "prereg": 0.001,
+     "code": 0.001,
+     "ok": true
+    },
+    "conv_window": {
+     "prereg": 2000,
+     "code": 2000,
+     "ok": true
+    },
+    "cap": {
+     "prereg": 200000,
+     "code": 200000,
+     "ok": true
+    },
+    "save": {
+     "prereg": [
+      3000,
+      10000
+     ],
+     "code": [
+      3000,
+      10000
+     ],
+     "ok": true
+    }
+   },
+   "ok": true
+  },
+  "record_pin": {
+   "path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a-smoke/time-seed0.json",
+   "sha256": "579f8c07d701f275f3774ec3773dc46c188a8816951d04f38693e710f7297b8b",
+   "on_disk": "579f8c07d701f275f3774ec3773dc46c188a8816951d04f38693e710f7297b8b",
+   "sha_ok": "True",
+   "ok": true
+  },
+  "PM-1.slots": {
+   "ok": true
+  },
+  "R-SEAL.census": {
+   "per_seed": {},
+   "sealed_ranges": {
+    "TUNE": [
+     997200,
+     997712
+    ],
+    "EVAL2": [
+     984000,
+     986048
+    ]
+   },
+   "n_sealed_generated": 0,
+   "refused_calls": [],
+   "leaks": [],
+   "ok": true,
+   "stage": [
+    "2a",
+    "slot-check"
+   ]
+  }
+ },
+ "tree": {
+  "head": "8b0d14f09e47360c1e2105498a67bb0e3c705b72",
+  "dirty": []
+ },
+ "lane": {
+  "capacity": 12,
+  "held": [
+   {
+    "slot": 0,
+    "holder": {
+     "pid": 48196,
+     "lane": "cpu-det",
+     "job_id": "20261020T131728-cpu-det-48196",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T13:17:28+00:00"
+    }
+   },
+   {
+    "slot": 1,
+    "holder": {
+     "pid": 5104,
+     "lane": "cpu-det",
+     "job_id": "i2-10817167e270-20261020T070354-5098-s1of8",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T07:03:55+00:00"
+    }
+   },
+   {
+    "slot": 2,
+    "holder": {
+     "pid": 5103,
+     "lane": "cpu-det",
+     "job_id": "i2-10817167e270-20261020T070354-5098-s0of8",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T07:03:55+00:00"
+    }
+   },
+   {
+    "slot": 3,
+    "holder": {
+     "pid": 5105,
+     "lane": "cpu-det",
+     "job_id": "i2-10817167e270-20261020T070354-5098-s2of8",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T07:03:55+00:00"
+    }
+   },
+   {
+    "slot": 4,
+    "holder": {
+     "pid": 5106,
+     "lane": "cpu-det",
+     "job_id": "i2-10817167e270-20261020T070354-5098-s3of8",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T07:03:55+00:00"
+    }
+   },
+   {
+    "slot": 5,
+    "holder": {
+     "pid": 5107,
+     "lane": "cpu-det",
+     "job_id": "i2-10817167e270-20261020T070354-5098-s4of8",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T07:03:55+00:00"
+    }
+   },
+   {
+    "slot": 6,
+    "holder": {
+     "pid": 5108,
+     "lane": "cpu-det",
+     "job_id": "i2-10817167e270-20261020T070354-5098-s5of8",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T07:03:55+00:00"
+    }
+   },
+   {
+    "slot": 7,
+    "holder": {
+     "pid": 5109,
+     "lane": "cpu-det",
+     "job_id": "i2-10817167e270-20261020T070354-5098-s6of8",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T07:03:55+00:00"
+    }
+   },
+   {
+    "slot": 8,
+    "holder": {
+     "pid": 5110,
+     "lane": "cpu-det",
+     "job_id": "i2-10817167e270-20261020T070354-5098-s7of8",
+     "item_id": null,
+     "acquired_utc": "2026-10-20T07:03:55+00:00"
+    }
+   }
+  ],
+  "free": 3,
+  "self_slots": 1,
+  "granted": 4
+ },
+ "projection": {
+  "slots": 4,
+  "recomputed": true,
+  "wall_s": 12537.579245855915,
+  "wall_h": 3.482660901626643,
+  "stop_h": 8.0,
+  "ok": true,
+  "layout_wall_h_2aS": 1.2701648911605783,
+  "serial_h_2aS": 10.476872222753057,
+  "rule": "Amendment PM-1: >= 9 slots launches; fewer -> wall on the granted slots from 2a-S's measured per-fit time must be <= 8 h",
+  "note": "granted = free cpu-det slots probed now + this probe's own; each job then acquires one slot (--wait), so at most this many run at once"
+ },
+ "controls_failed": [],
+ "exit": 0,
+ "status": "ok",
+ "finished_utc": "2026-10-20T13:17:29Z"
+}
