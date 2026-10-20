@@ -15,6 +15,20 @@ R=/Users/keanooo7/retrieval-successor-retention
 GIT=/opt/homebrew/bin/git
 refuse() { print -u2 "DID NOT RUN: $1"; exit 3 }
 [[ -z ${SMOKE:-} || $SMOKE == 1 ]] || refuse "SMOKE must be unset or 1, got '$SMOKE'"
+# Review LB-2: S-2b variants (SMOKE only). SMOKE_STEPS (RSR arms; default 48, §5.3's
+# S-2b), SMOKE_FIFO_STEPS (fifo; default = SMOKE_STEPS) -- unequal exercises the PM-1 /
+# PM-2 per-arm paths on real artefacts; SMOKE_SEEDS (subset of 0 1 2); SMOKE_PAR (at
+# most this many arm processes at once, to stay within a slot budget).
+for v in SMOKE_STEPS SMOKE_FIFO_STEPS SMOKE_SEEDS SMOKE_PAR; do
+  [[ -z ${(P)v:-} || -n ${SMOKE:-} ]] || refuse "SMOKE_* needs SMOKE=1 ($v is set)"
+done
+for v in SMOKE_STEPS SMOKE_FIFO_STEPS SMOKE_PAR; do
+  [[ -z ${(P)v:-} || ${(P)v} == <1-> ]] || refuse "$v must be a positive integer, got '${(P)v}'"
+done
+SEEDS=(${=SMOKE_SEEDS:-0 1 2})
+for s in $SEEDS; do
+  [[ $s == 0 || $s == 1 || $s == 2 ]] || refuse "SMOKE_SEEDS must be seeds from 0 1 2, got '$SMOKE_SEEDS'"
+done
 [[ -z ${STEPS:-} ]] || refuse "STEPS is K_2b from plan.json (or 48 under SMOKE); do not set it"
 [[ -z ${CKPT:-} ]] || refuse "CKPT is derived from STEPS; do not set it"
 if [[ -z ${SMOKE:-} ]]; then
@@ -51,12 +65,12 @@ if [[ -z ${SMOKE:-} ]]; then
   [[ $PLAN_OK == True ]] || refuse "$PLAN is not ok: 2b does not run (see its problems)"
   STEPS=$("${PJ[@]}" $PLAN K_2b)
 else
-  STEPS=48
+  STEPS=${SMOKE_STEPS:-48}
 fi
 [[ $STEPS == <-> ]] || refuse "STEPS must be a non-negative integer, got '$STEPS'"
 (( STEPS >= 1 )) || refuse "STEPS must be >= 1"
 typeset -A OM
-for s in 0 1 2; do
+for s in $SEEDS; do
   OM[$s]=$("${PJ[@]}" $PLAN omega$s)
   [[ -n ${OM[$s]} ]] || refuse "no omega_s for seed $s in $PLAN"
 done
@@ -69,7 +83,7 @@ if (( STEPS > 3000 && EVERY > 0 )); then EVERY=$(gcd $EVERY 3000); fi  # §5.4 p
 # from run 1's owner table), with run 1's cadence, whatever K_2b is.
 FIFO_STEPS=$("${PJ[@]}" $PLAN fifo_iters)
 [[ $FIFO_STEPS == <-> ]] || refuse "no fifo_iters in $PLAN"
-[[ -n ${SMOKE:-} ]] && FIFO_STEPS=$STEPS
+[[ -n ${SMOKE:-} ]] && FIFO_STEPS=${SMOKE_FIFO_STEPS:-$STEPS}
 if (( FIFO_STEPS > 0 && FIFO_STEPS % 3 == 0 )); then FIFO_CKPT=$(( FIFO_STEPS / 3 )); else FIFO_CKPT=$FIFO_STEPS; fi
 if (( FIFO_STEPS >= DIAG_STEP && FIFO_CKPT > 0 )); then FIFO_EVERY=$(gcd $DIAG_STEP $FIFO_CKPT); else FIFO_EVERY=$FIFO_CKPT; fi
 ORCH_REC=${RSR_ORCH_ROOT:-} ; OUT_REC=${OUT:-} ; SUFFIX_REC=${JOB_SUFFIX:-}
@@ -103,7 +117,8 @@ with open(sys.argv[1], "w") as f:
   c1_flags "${C1_FLAGS:-}" c2_flags "" c3_flags "${C3_FLAGS:-}" \
   rsr_orch_root "$ORCH_REC" out "$OUT_REC" job_suffix "$SUFFIX_REC" \
   dry_run "" smoke "${SMOKE:-}" target "loo_resample" loss "rank" rank_k "3" \
-  omega_s0 "${OM[0]}" omega_s1 "${OM[1]}" omega_s2 "${OM[2]}" plan_sha256 "$PLAN_SHA" \
+  omega_s0 "${OM[0]:-}" omega_s1 "${OM[1]:-}" omega_s2 "${OM[2]:-}" plan_sha256 "$PLAN_SHA" \
+  smoke_seeds "$SEEDS" smoke_par "${SMOKE_PAR:-}" \
   launcher "experiments/rsr-run3-ranking/launch_2b.zsh" launched_utc "$LAUNCHED_UTC"; rc_json=$?
 (( rc_json == 0 )) || refuse "writing $OUT/launch-git.json rc=$rc_json"
 
@@ -115,7 +130,8 @@ SLOT=(env PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run
       --lane cpu-det --slots 1 --wait 3600 --pinned-sha $RUN_SHA)
 
 typeset -A pid rcs
-for s in 0 1 2; do
+order=()
+for s in $SEEDS; do
   B=$R/.worktrees/fresh-stream/runs/fresh-stream/B/seed$s
   RSR=(--policy rsr --policy-override b_enabled=false --policy-override shadow_enabled=false
        --policy-override nu=0 --policy-override beta=1 --policy-override gamma=$GAMMA
@@ -142,11 +158,17 @@ for s in 0 1 2; do
         --warm-start-root $R --warm-start-source-config $B/result.json \
         "${P[@]}" --out-dir $OUT/$a/seed$s \
       > $OUT/logs/$k.log 2>&1 &
-    p=$!; pid[$k]=$p
+    p=$!; pid[$k]=$p; order+=($k)
+    if [[ -n ${SMOKE_PAR:-} ]] && (( ${#order} >= SMOKE_PAR )); then
+      j=${order[$(( ${#order} - SMOKE_PAR + 1 ))]}
+      wait ${pid[$j]}; rcs[$j]=$?; print -r -- ${rcs[$j]} > $OUT/logs/$j.rc
+    fi
   done
 done
 for k in ${(ok)pid}; do
-  wait ${pid[$k]}; rcs[$k]=$?
-  print -r -- ${rcs[$k]} > $OUT/logs/$k.rc
+  if [[ -z ${rcs[$k]:-} ]]; then
+    wait ${pid[$k]}; rcs[$k]=$?
+    print -r -- ${rcs[$k]} > $OUT/logs/$k.rc
+  fi
   print -r -- "rc[$k]=${rcs[$k]}"
 done
