@@ -1,0 +1,255 @@
+{
+ "status": "ok",
+ "run_id": "offline-psi-converge",
+ "seed": "4d1cadd88c33123b9f37d4055cc81999cee5108c25d805e1055956c8684eeca1",
+ "draw": {
+  "rule": "sorted(random.Random(int(sha256(run_id),16)).sample(range(n), 3)), n=6 -> [1, 2, 5]; identical to orchestrator.verify.draw_indices",
+  "tool_note": "orchestrator.verify draw exited 1 (ValueError: claims.json is {run_id, claims:[...]} not a bare list); drawn by hand with draw_indices; verify check run against a scratch root holding the bare claims list (same 6 claims, same order)"
+ },
+ "claims": [
+  {
+   "index": 1,
+   "claim": "seed 0 C2 trajectory reproduction (cf_all, step 3000)",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute c2 --seed 0",
+   "expected": "1.6307810744736677",
+   "observed": "1.6307810744736677",
+   "match": true,
+   "rc": 0,
+   "reexecuted_as": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --job-id verify-offline-psi-converge-claim1 --cwd /Users/keanooo7/retrieval-successor-retention/.worktrees/verify-offline-psi-converge -- .venv/bin/python experiments/offline-psi-converge/run.py recompute c2 --seed 0 --out-root runs/offline-psi-converge  (out-root = rsync copy of the run's out-root inside the verify worktree)",
+   "job_record": "/Users/keanooo7/retrieval-successor-retention/.orchestrator/jobs/verify-offline-psi-converge-claim1.json",
+   "independent_rederivation": "offline-psi's own measure-seed0.json fit.cf_all.history[step 3000].val_l_mc = 1.6307810744736677; PREREG C4/C2 literal 1.6307810744736677; run's history[3000] = 1.6307810744736677"
+  },
+  {
+   "index": 2,
+   "claim": "seed 1 cf_all cap at the selected phi",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute cap --seed 1",
+   "expected": "117000 0.40563991323210424",
+   "observed": "117000 0.40563991323210424",
+   "match": true,
+   "rc": 0,
+   "reexecuted_as": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --job-id verify-offline-psi-converge-claim2 --cwd /Users/keanooo7/retrieval-successor-retention/.worktrees/verify-offline-psi-converge -- .venv/bin/python experiments/offline-psi-converge/run.py recompute cap --seed 1 --out-root runs/offline-psi-converge  (out-root = rsync copy of the run's out-root inside the verify worktree)",
+   "job_record": "/Users/keanooo7/retrieval-successor-retention/.orchestrator/jobs/verify-offline-psi-converge-claim2.json",
+   "independent_rederivation": "own replay (own psi formula from phi-cf_all-selected.pt W,u; own oldest-first argmin residency replay, M=16; own FIFO replay, equal to harness FIFO rates; pooled cap (hit-FIFO)/(FF-FIFO), FactFiller rates from harness): f32 0.40563991323210424, f64 0.40563991323210424; selected step from own argmin of history = 117000"
+  },
+  {
+   "index": 5,
+   "claim": "seed 2 C2 trajectory reproduction (cf_all, step 3000)",
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py recompute c2 --seed 2",
+   "expected": "1.790370677418465",
+   "observed": "1.790370677418465",
+   "match": true,
+   "rc": 0,
+   "reexecuted_as": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --job-id verify-offline-psi-converge-claim5 --cwd /Users/keanooo7/retrieval-successor-retention/.worktrees/verify-offline-psi-converge -- .venv/bin/python experiments/offline-psi-converge/run.py recompute c2 --seed 2 --out-root runs/offline-psi-converge  (out-root = rsync copy of the run's out-root inside the verify worktree)",
+   "job_record": "/Users/keanooo7/retrieval-successor-retention/.orchestrator/jobs/verify-offline-psi-converge-claim5.json",
+   "independent_rederivation": "offline-psi's own measure-seed2.json fit.cf_all.history[step 3000].val_l_mc = 1.790370677418465; PREREG C2 literal 1.790370677418465; run's history[3000] = 1.790370677418465"
+  }
+ ],
+ "verifier_sha": "6b030b688e2f56f99a9af8a10eb91530939185dc",
+ "supplementary": {
+  "a_convergence_rule": {
+   "seed0": {
+    "cf_all": {
+     "my_stop": 95500,
+     "recorded_stopped_at": 95500,
+     "recorded_convergence": "CONVERGED",
+     "stop_ok": true,
+     "my_selected": 95500,
+     "recorded_selected": 95500,
+     "select_ok": true,
+     "phi_sha256_file": "5cadfe15b87c1639ddec5eaea9e8c8c9254e983bb769b0db1afa2df4c72c6bc1",
+     "phi_sha256_recorded": "5cadfe15b87c1639ddec5eaea9e8c8c9254e983bb769b0db1afa2df4c72c6bc1",
+     "phi_ok": true
+    },
+    "cf_live": {
+     "my_stop": 124000,
+     "recorded_stopped_at": 124000,
+     "recorded_convergence": "CONVERGED",
+     "stop_ok": true,
+     "my_selected": 124000,
+     "recorded_selected": 124000,
+     "select_ok": true,
+     "phi_sha256_file": "5cd029b3c2b119fa5c9ab28117f1ae1663bd9443bdb78e2b996def0cf05fb7c3",
+     "phi_sha256_recorded": "5cd029b3c2b119fa5c9ab28117f1ae1663bd9443bdb78e2b996def0cf05fb7c3",
+     "phi_ok": true
+    }
+   },
+   "seed1": {
+    "cf_all": {
+     "my_stop": 117500,
+     "recorded_stopped_at": 117500,
+     "recorded_convergence": "CONVERGED",
+     "stop_ok": true,
+     "my_selected": 117000,
+     "recorded_selected": 117000,
+     "select_ok": true,
+     "phi_sha256_file": "b145810fe1891bd2ff037fb2b80b2f0e3703a10e16a6d3b99460d468ffd8da8e",
+     "phi_sha256_recorded": "b145810fe1891bd2ff037fb2b80b2f0e3703a10e16a6d3b99460d468ffd8da8e",
+     "phi_ok": true
+    },
+    "cf_live": {
+     "my_stop": 151500,
+     "recorded_stopped_at": 151500,
+     "recorded_convergence": "CONVERGED",
+     "stop_ok": true,
+     "my_selected": 151500,
+     "recorded_selected": 151500,
+     "select_ok": true,
+     "phi_sha256_file": "f79c91f58104a658084f3c865a561ca2d803dcdbfe5fe3c3ade33ba88cd46586",
+     "phi_sha256_recorded": "f79c91f58104a658084f3c865a561ca2d803dcdbfe5fe3c3ade33ba88cd46586",
+     "phi_ok": true
+    }
+   },
+   "seed2": {
+    "cf_all": {
+     "my_stop": 103500,
+     "recorded_stopped_at": 103500,
+     "recorded_convergence": "CONVERGED",
+     "stop_ok": true,
+     "my_selected": 103500,
+     "recorded_selected": 103500,
+     "select_ok": true,
+     "phi_sha256_file": "0733accde8c73fab1ec437d96117bf6dbbb44b4ac3c07c93c0eb1f05e692a44c",
+     "phi_sha256_recorded": "0733accde8c73fab1ec437d96117bf6dbbb44b4ac3c07c93c0eb1f05e692a44c",
+     "phi_ok": true
+    },
+    "cf_live": {
+     "my_stop": 119500,
+     "recorded_stopped_at": 119500,
+     "recorded_convergence": "CONVERGED",
+     "stop_ok": true,
+     "my_selected": 119500,
+     "recorded_selected": 119500,
+     "select_ok": true,
+     "phi_sha256_file": "b8e4c890193353585c783af68cebb8a3a2f72f51482fae07ac94a4670548baca",
+     "phi_sha256_recorded": "b8e4c890193353585c783af68cebb8a3a2f72f51482fae07ac94a4670548baca",
+     "phi_ok": true
+    }
+   }
+  },
+  "b_selection": "min U-val L_MC, ties earliest, recomputed from each history: equals recorded selected step and value on all 6 (seed, arm); see select_ok above",
+  "c_fit_label": {
+   "points": [
+    0.27385892116182575,
+    0.40563991323210424,
+    0.1482300884955749
+   ],
+   "lowers": [
+    0.19913283094492906,
+    0.34197680073230774,
+    0.0745603491902832
+   ],
+   "mine": "FIT-MISSES",
+   "summary_json": "FIT-MISSES",
+   "match": true
+  },
+  "d_phi_sha256": "sha256 of every phi-<arm>-selected.pt equals result.json selected.phi_sha256 (6/6); see phi_ok above",
+  "e_eval": {
+   "seed0": {
+    "eval_in_gestalt_ids": 0,
+    "eval_in_u_docs": 0,
+    "eval_in_delta_keys": 0,
+    "n_delta_keys": 1088,
+    "u_id_range": [
+     64,
+     4159,
+     1088
+    ]
+   },
+   "seed1": {
+    "eval_in_gestalt_ids": 0,
+    "eval_in_u_docs": 0,
+    "eval_in_delta_keys": 0,
+    "n_delta_keys": 1088,
+    "u_id_range": [
+     64,
+     4159,
+     1088
+    ]
+   },
+   "seed2": {
+    "eval_in_gestalt_ids": 0,
+    "eval_in_u_docs": 0,
+    "eval_in_delta_keys": 0,
+    "n_delta_keys": 1088,
+    "u_id_range": [
+     64,
+     4159,
+     1088
+    ]
+   }
+  },
+  "e_eval_note": "EVAL = [995000, 997048). Inputs: offline-psi gestalts.pt ids, U documents (u_documents), B0-CF Delta keys: 0 EVAL ids each, every seed. result.json C5 records deploy_pass, deploy_policy, docs_by_id sealed.",
+  "independent_cap_all_seeds": {
+   "seed0": {
+    "cap_point_f32": 0.27385892116182575,
+    "cap_point_f64": 0.27385892116182575,
+    "recorded": 0.27385892116182575,
+    "fifo_matches_harness": true
+   },
+   "seed1": {
+    "cap_point_f32": 0.40563991323210424,
+    "cap_point_f64": 0.40563991323210424,
+    "recorded": 0.40563991323210424,
+    "fifo_matches_harness": true
+   },
+   "seed2": {
+    "cap_point_f32": 0.1482300884955749,
+    "cap_point_f64": 0.1482300884955749,
+    "recorded": 0.1482300884955749,
+    "fifo_matches_harness": true
+   }
+  },
+  "input_hashes": {
+   "seed0": {
+    "gestalt_sha256": "211244f1469b90972e3b1d3b6635b3ee9eb095e78b932dc396bba64df3f5562b",
+    "delta_sha256": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+    "equal_to_PREREG_and_offline_psi_pins": true
+   },
+   "seed1": {
+    "gestalt_sha256": "3a18e2917b385a6339ef82e92535953105877cf295bbaf9f6495a4749a6a0c68",
+    "delta_sha256": "bf2753cef826f8d3c1647213d232c65a1e2167160be1a6c262fbea132b838700",
+    "equal_to_PREREG_and_offline_psi_pins": true
+   },
+   "seed2": {
+    "gestalt_sha256": "74e3bec7e5366d631480f9e3ac9a07916926da21ffd60be57568acb3b3723706",
+    "delta_sha256": "c880a2413fa2a4840724c7c005778df8cda77932f9db0fb6081db495514ce9c2",
+    "equal_to_PREREG_and_offline_psi_pins": true
+   }
+  },
+  "finalize_rerun": {
+   "command": ".venv/bin/python experiments/offline-psi-converge/run.py finalize --out-root <scratch copy without RESULTS.md/claims.json/summary.json>",
+   "rc": 0,
+   "job_record": "/Users/keanooo7/retrieval-successor-retention/.orchestrator/jobs/verify-offline-psi-converge-finalize.json",
+   "RESULTS.md": "byte-identical (cmp 0)",
+   "claims.json": "byte-identical (cmp 0)",
+   "summary.json": "byte-identical (cmp 0)",
+   "committed_RESULTS_f7ac595": "byte-identical to runs/offline-psi-converge/RESULTS.md (cmp 0)"
+  },
+  "recorded_controls": "C1-C5 ok on all seeds in result.json (C2 cf_live also equals offline-psi measure-seed{s}.json step-3000 value)"
+ },
+ "provenance": {
+  "run_head": "6b030b6; 6b030b6..7f39bf6 touches only RESULTS.md, launch.zsh, tests/test_offline_psi_converge.py (run.py unchanged)",
+  "prereg": "58783a3 changes only experiments/offline-psi-converge/PREREG.md and is the parent of 6b030b6",
+  "result_json_tree": {
+   "seed0": {
+    "sha": "6b030b688e2f56f99a9af8a10eb91530939185dc",
+    "dirty": false,
+    "porcelain": ""
+   },
+   "seed1": {
+    "sha": "6b030b688e2f56f99a9af8a10eb91530939185dc",
+    "dirty": false,
+    "porcelain": ""
+   },
+   "seed2": {
+    "sha": "6b030b688e2f56f99a9af8a10eb91530939185dc",
+    "dirty": false,
+    "porcelain": ""
+   }
+  },
+  "seed_jobs": "orchestrator job records offline-psi-converge-s{0,1,2}.json: rc 0, status done, lane cpu-det, cmd ['.venv/bin/python','experiments/offline-psi-converge/run.py','run','--seed','<s>','--out-root','runs/offline-psi-converge'], cwd /Users/keanooo7/retrieval-successor-retention/.worktrees/offline-psi-converge, start 2026-10-08T22:59:03Z, end 23:10:27 / 23:12:03 / 23:10:35; pinned_sha null (tree pinned only by result.json tree)",
+  "launcher_deviation": "CONFIRMED: launch.zsh at 6b030b6 line 19 `pid[$s]=$!` (zsh 5.9 stores literal '$!'), so the launcher's wait did not capture seed rc and finalize ran early: logs/finalize.attempt1-launcher-wait-bug.log is FileNotFoundError on seed0/result.json. Seed rc come only from the job records (rc 0 x3). The hand-run finalize's rc 0 has no job record; its outputs are reproduced byte-for-byte here (rc 0). Fixed in 7f39bf6 (after the run).",
+  "no_ledger": "the run has no ledger.json/manifest.json; main-tree runs/offline-psi-converge does not exist. Record committed on verify/offline-psi-converge in the verify worktree.",
+  "run_worktree_untouched": "diff -rq of the verify copy vs the run's runs/offline-psi-converge before writing this record: identical"
+ }
+}
