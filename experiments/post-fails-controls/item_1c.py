@@ -1371,13 +1371,13 @@ def finalize(argv: list[str] | None = None) -> int:
     return int(Exit.OK)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> Exit:
     """``run.py 1c [measure] [options]`` measures and writes the ledger;
     ``run.py 1c finalize`` / ``run.py finalize 1c`` renders; ``run.py 1c recompute
     --what KEY [--seed S]`` re-derives one value (the verifier's entry)."""
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] == ["finalize"]:
-        return finalize(argv[1:])
+        return status(finalize(argv[1:]))
     if argv[:1] == ["recompute"]:
         ap = ArgumentParser(description="recompute one 1c value")
         ap.add_argument("--what", required=True)
@@ -1385,10 +1385,10 @@ def main(argv: list[str] | None = None) -> int:
         a = ap.parse_args(argv[1:])
         common().install_seal()
         print(recompute(a.what, a.seed))
-        return 0
+        return Exit.OK
     if argv[:1] == ["measure"]:
         argv = argv[1:]
-    return int(_run(argv))
+    return status(_run(argv))
 
 
 if __name__ == "__main__":
