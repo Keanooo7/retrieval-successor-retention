@@ -46,10 +46,15 @@ if [[ $rc -eq 0 ]]; then
   echo $rc > $LOGS/slot-check.rc
 fi
 if [[ $rc -eq 0 ]]; then
+  # Review 01b41ea LB-4: select's pre-select gate needs EVERY seed's R-C2, and the slot
+  # runner grants by polling, so all three R-C2 run to completion before anything else.
+  for s in 0 1 2; do
+    (slot 1 $PY $RUN 2a fit --seed $s --rc2 > $LOGS/fit-s$s-rc2.log 2>&1
+     echo $? > $LOGS/fit-s$s-rc2.rc) &
+  done
+  wait
   for s in 0 1 2; do
     (
-      (slot 1 $PY $RUN 2a fit --seed $s --rc2 > $LOGS/fit-s$s-rc2.log 2>&1
-       echo $? > $LOGS/fit-s$s-rc2.rc) &
       for w in 2 8 32; do
         (slot 1 $PY $RUN 2a fit --seed $s --omega $w > $LOGS/fit-s$s-omega$w.log 2>&1
          echo $? > $LOGS/fit-s$s-omega$w.rc) &

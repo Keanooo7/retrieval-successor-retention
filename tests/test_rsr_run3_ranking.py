@@ -1299,6 +1299,19 @@ def test_pm1_launcher_gates_every_fit_on_the_slot_check():
     assert "slot-check.rc" in t and "nothing fitted" in t
 
 
+def test_lb4_every_seeds_rc2_finishes_before_any_fit_or_select():
+    """Review 01b41ea LB-4: select's pre-select gate needs EVERY seed's rc2.json; the
+    slot runner polls, so the launcher runs all three R-C2 to completion (one
+    ``wait``) before any grid fit, select or deploy is started."""
+    t = (EXP / "launch_2a.zsh").read_text()
+    rc2 = t.index("2a fit --seed $s --rc2")
+    first_wait = t.index("wait", rc2)
+    for later in ("2a fit --seed $s --omega", "2a select", "2a deploy"):
+        assert t.index(later) > first_wait, later
+    block = t[t.rindex("for s in 0 1 2", 0, rc2) : first_wait]
+    assert "--omega" not in block and "select" not in block
+
+
 def test_pm1_2b_plan_no_longer_refuses_at_k_above_3000(p2b, tmp_path):
     win = {"0": "WIN", "1": "WIN", "2": "WIN"}
     big = p2b.make_plan(_ledger_2a(tmp_path, [2000, 95_500, 1000], win))
