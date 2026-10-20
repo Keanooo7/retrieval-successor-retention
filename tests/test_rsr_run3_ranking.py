@@ -1538,7 +1538,7 @@ def test_pm2_delta_loss_lm_real_pairs_only_where_fifo_has_a_row(p2b):
     hbs = {
         a: {
             "beats": [
-                {"step": k, "loss_lm": 1.0 if a == "fifo" else 0.5}
+                {"step": k, "loss_lm": 1.0 if a == "fifo" else 0.5, "elapsed_s": float(k)}
                 for k in range(6000 if a != "fifo" else 3000)
             ]
         }
@@ -1574,3 +1574,21 @@ def test_pm2_precheck_before_eval2(p2b, tmp_path):
     assert not r["ok"] and r["problems"]
     make("fifo", 2999, 3000)  # fifo's beats do not cover [0, R-1)
     assert not p2b.pm2_precheck(tmp_path, 0, plan)["ok"]
+
+
+def test_pm2_changes_nothing_at_k_equal_r1(p2b, monkeypatch):
+    R1 = p2b.harness()["R1"]
+    p2b.set_plan({**PM2_PLAN, "K_2b": 3000})
+    calls = []
+    monkeypatch.setattr(
+        p2b,
+        "_C2_ORIG",
+        lambda b, i, c, s, samplings=None: calls.append(sorted(b)) or {"ok": True},
+    )
+    monkeypatch.setattr(
+        p2b, "_C6_ORIG", lambda r, h, c: calls.append(("c6", sorted(r))) or {"ok": True}
+    )
+    cfg = R1.prereg_config(0, 3000)
+    R1.c2_pairing({a: [] for a in R1.ARMS}, {}, cfg, "perm")
+    R1.c6_steps({a: {} for a in R1.ARMS}, {}, cfg)
+    assert calls == [sorted(R1.ARMS), ("c6", sorted(R1.ARMS))]
