@@ -79,6 +79,9 @@ PHASE2_ALLOWED = (
     re.compile(r"^experiments/rsr-run3-ranking/RESULTS[^/]*\.md$"),
     re.compile(r"^runs/rsr-run3-[^/]+/.*\.json$"),
     re.compile(r"^runs/rsr-run3-[^/]+/RESULTS[^/]*\.md$"),
+    # Amendment PM-4: committed review markdown is prose about this work; it
+    # generates, reads and claims nothing.
+    re.compile(r"^docs/reviews/.+\.md$"),
 )
 
 _STATE: dict[str, Any] = {"stage": None, "sealed": None, "opened": None}

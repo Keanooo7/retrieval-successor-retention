@@ -900,6 +900,12 @@ def test_t6_phase2_allowlist_is_narrow(p2a):
     assert SS.allowed("runs/rsr-run3-2a/seed0/select.json")
     assert not SS.allowed("experiments/rsr-run3-ranking/phase2a.py")
     assert not SS.allowed("tests/test_rsr_run3_ranking.py")
+    # Amendment PM-4: committed review markdown is prose, not a read or a claim.
+    assert SS.allowed("docs/reviews/rsr-run3-ranking/66352afbbcde.md")
+    assert SS.allowed("docs/reviews/post-fails-controls/b7461397ce69.md")
+    assert not SS.allowed("docs/reviews/rsr-run3-ranking/fixture.json")
+    assert not SS.allowed("docs/lab-notes/prior-art-eviction-signals.md")
+    assert not SS.allowed("docs/reviewsX/a.md")
 
 
 # --------------------------------------------------------------------------- #

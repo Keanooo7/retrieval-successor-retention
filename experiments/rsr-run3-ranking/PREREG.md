@@ -644,3 +644,22 @@ The review of `66352af` measured 3–4 free slots → 3.49 h.
   slots are granted.
 - The battery's own result is unaffected in kind. Its suites run longer under the extra load, and any
   timeout shows up as a DID_NOT_RUN row, never as a pass.
+
+## Amendment PM-4 (2026-10-20, PM): citations in committed review documents are not new R-SEAL(d) hits. Committed alone, before 2a's second launch
+
+**Trigger.** 2a's first launch at `900b52f` (04:08) exited 3 at `launch-checks`. Control R-SEAL(d)
+found 5 hits that were not allowed, out of 748. All 5 are prose in two committed review files:
+- `docs/reviews/post-fails-controls/b7461397ce69.md`, which cites the TUNE and EVAL2 lower bounds and,
+  in its FU-1 text, one illustrative id inside EVAL2;
+- `docs/reviews/rsr-run3-ranking/66352afbbcde.md`, which cites the two lower bounds.
+
+Nothing was fitted. TUNE, EVAL and EVAL2 were not opened. The seal census and the leaks control
+were clean. The attempt's files are kept in `.worktrees/run3-2a-launch/runs/rsr-run3-2a/`, never
+deleted.
+
+**Ruling.** R-SEAL(d) exists to detect a sealed document being generated or read, or a range claimed
+by other work. A committed **review document** (`docs/reviews/**/*.md`) is prose about this work. It
+generates nothing, reads nothing and claims no range, so its citations are not new hits.
+- Every other hit is still a new hit, exit 3, and goes to the PM. That includes any hit in code,
+  tests, run artefacts other than phase 1's and phase 2's own, lab notes, or any non-review document.
+- R-SEAL (a)–(c), (e) and (f), the guard, the per-stage census and the leaks control are unchanged.
