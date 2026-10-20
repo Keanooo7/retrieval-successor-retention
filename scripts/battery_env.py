@@ -140,6 +140,9 @@ NOT_VARIABLES: dict[str, str] = {
     "RSR_STATUS": "scripts/render_status.py: a JavaScript global, window.RSR_STATUS",
     "RSR_TEST_COUN": f"{_BATTERY}: one half of a split literal in the MUTATIONS table",
     "RSR_ORCH_CMD_": f"{_LOOPCORE} orch_cmd: the f-string prefix of ORCH_CMD_NAMES",
+    # Integration 2026-10-19: names from the run-1 line, which never met this scan.
+    "RSR_ARMS": "experiments/rsr-run1/run.py: a module constant, the tuple of RSR arms",
+    "RSR_THROUGH_TRAIN": f"{_BATTERY}: the tail of the constant _S1_RSR_THROUGH_TRAIN",
 }
 """``RSR_*`` tokens in the tree that are not environment variables. They are not
 declared: set in the environment, either is refused like any other stray."""
