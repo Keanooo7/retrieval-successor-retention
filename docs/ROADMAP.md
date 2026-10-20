@@ -1,5 +1,7 @@
 # Roadmap — sprints, gates, and what blocks what
 
+> **Current plan (2026-10-19): [`docs/PLAN-2026-10-19.md`](PLAN-2026-10-19.md)**, approved by Brendan, with errata at its top. This roadmap is the 2026-09-20 sequencing and is read through that plan.
+
 **Written 2026-09-20 against `1900b3d`.** Sequenced by dependency, not by the spec's §8 calendar —
 that calendar was built around rented GPU windows and ADR-0007 deleted them.
 

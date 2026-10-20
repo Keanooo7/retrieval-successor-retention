@@ -15,30 +15,38 @@ lowest predicted *future* retrieval demand given the current discourse state.
 
 ## Status
 
-Sprint 2, as of 2026-09-30 (`main` at `f7a6b10`; the newest results sit on
-`night/2026-09-30` at `898628a`, and E0d and B5 on their own run branches). **Only
-weeks 1–4 are approved** (spec §16); everything downstream is a projection, not a
-permission.
+As of 2026-10-20. **Only weeks 1–4 are approved** (spec §16); everything downstream
+is a projection, not a permission. The live plan is
+[`docs/PLAN-2026-10-19.md`](docs/PLAN-2026-10-19.md). Every number the paper may cite
+is re-derived from the run records, one row per number with its ledger key, per-seed
+CI, seed count and PREREG status, in [`docs/claims-register.md`](docs/claims-register.md).
 
-**No RSR policy has been trained yet: no ψ̂ has been trained in the loop (by `L_MC`
-in `train()`).** Most results below were measured under FIFO eviction or are
-model-free. The two newest (B2 and the newcomer bake-off) run *offline*, closed-form
-ψ̂ fits as fixed eviction rules through the model. All are on the synthetic corpus at
-`M = 16`, and none is a test of the hypothesis: they establish whether the instrument
-is sound, whether the question has room, and what an untrained-in-the-loop ψ̂ does.
+**Two RSR runs have trained ψ̂ in the loop, and both lose to FIFO on every seed.** Each
+trains the content-only head ψC online by `L_MC` (gradient to `φ` only) on fresh-stream
+arm B's `ckpt3000` with the transformer frozen, on the synthetic corpus at `M = 16`,
+3 seeds (0, 1, 2), and measures held-out all-query answer accuracy on 2048 EVAL
+documents per seed. **Run 2's pre-registered class is FAILS** (LOSS on all 3 seeds).
+Run 1 was descriptive, with no gate and so no class; its CI is below 0 on all 3 seeds.
+The first two rows below give ψC − FIFO per seed with a paired per-document bootstrap
+95% CI (2000 resamples); no interval is pooled across seeds. The other results were
+measured under FIFO eviction, are model-free, or run offline closed-form ψ̂ fits as
+fixed eviction rules (B2, the newcomer bake-off). None is a test of the hypothesis.
 
 **Standing** means a committed test that runs on every commit. **Preliminary** means
 three seeds on the synthetic corpus, read from a verified ledger, and not yet
-replicated or written up. Each number is the ledger's own key, with the run's code
-commit and the date the ledger landed.
+replicated or written up. Each number is the ledger's own key, or a
+[claims-register](docs/claims-register.md) row id, with the run's code commit and the
+date the ledger landed.
 
 | Finding | Number (3 seeds unless stated) | Status | Source · code commit · date |
 |---|---|---|---|
+| RSR run 1: ψC trained in the loop on the `r_i` target loses to FIFO | ψC − FIFO all-query accuracy, per seed [95% CI]: s0 -0.2053 [-0.2096, -0.2007]; s1 -0.2279 [-0.2323, -0.2236]; s2 -0.1683 [-0.1726, -0.1639]. Descriptive, no gate | Preliminary | run `rsr-run1`, row `run1.acc.psiC-fifo` · `ed6302a`; verifier `157f1fb` · 2026-10-06 |
+| RSR run 2: ψC trained in the loop on the on-policy LOO return (ruling C3) loses to FIFO; class **FAILS** | ψC − FIFO all-query accuracy, per seed [95% CI]: s0 -0.0723 [-0.0761, -0.0685]; s1 -0.0453 [-0.0488, -0.0418]; s2 -0.0834 [-0.0872, -0.0794]. Labels LOSS / LOSS / LOSS | Preliminary | run `rsr-run2`, rows `run2.acc.psiC-fifo`, `run2.label` · `728a42f`; verifier `9c432b6` · 2026-10-08 |
 | PyTorch TG matches the pinned JAX reference, gradients included | total loss bit-identical (`125.3105468750`); worst gradient uses 0.006 of a tolerance committed before the fixtures | Standing | `tests/test_fidelity.py` · `d03b37b`; tolerance in [ADR-0002](docs/decisions/ADR-0002-rented-hardware.md) Part B · `083d5e2` · 2026-09-17 |
 | RSR reduces to TG when its terms are off (E0b, spec §3.7) | bit-exact | Standing | `tests/test_reduction.py` · `3e19dcb` · 2026-09-17 |
 | An oracle beats FIFO on the synthetic corpus (E-feas, model-free) | `headroom_oracle_minus_fifo` 0.1807 ± 0.0123 at `M = 16` | Preliminary | run `efeas-synthetic` · `1fc8199` · 2026-09-20 |
-| The memory is live under the masked objective, but training from scratch does not retrieve | `armB.ratio` 9.33 ± 4.68 (unmasked: 0.0030); held-out answer NLL 2.90 ± 0.06 against chance ln 16 ≈ 2.77 | Preliminary | run `decisive-shuffle` · `90438f3` · 2026-09-21 |
-| Memorise-then-stream retrieves on unseen documents; a fresh start does not by step 9000 | `classification` SCAFFOLD; `classification_reported_as` NO_ESCAPE by 9000 | Preliminary | runs `fresh-stream` · `e45e4fe` · 2026-09-25; `fresh-escape` · `cdaa871` · 2026-09-26 |
+| The memory is live under the masked objective, but training from scratch does not retrieve | `armB.ratio` per seed 6.7423 / 14.7307 / 6.5024 (row `ds.ratio.B`; unmasked arm A 4.66e-04 / 0.0036 / 0.0049, `ds.ratio.A`); arm B held-out answer NLL per seed 2.8697 / 2.8732 / 2.9702 nats against chance ln 16 ≈ 2.77 (`ds.answer_nll.B.answer_all`) | Preliminary | run `decisive-shuffle` · `90438f3` · 2026-09-21 |
+| Memorise-then-stream retrieves on unseen documents; a fresh start does not by step 9000 | `classification` SCAFFOLD: R(3000) per seed, arm B 0.8598 / 0.8532 / 0.8799, arm A 0.0085 / 0.0000 / -0.0014, against δ 0.03 on every seed (rows `fs.R3000.B`, `fs.R3000.A`); `classification_reported_as` NO_ESCAPE by 9000: arm A R(9000) 0.0014 / 0.0014 / 0.0014 (`fe.R_at_P`) | Preliminary | runs `fresh-stream` · `e45e4fe` · 2026-09-25; `fresh-escape` · `cdaa871` · 2026-09-26 |
 | The retention target `r_i` barely separates pending facts from filler (FIFO-world, hindsight proxy; no RSR head trained) | mean demand 0.071 / 0.069 / 0.079 (pending) vs 0.057 / 0.061 / 0.054 (filler); a `γ = 0` rule on it hits 0.79–0.85 against FIFO's 0.81 and a causal fact/filler rule's 0.97 | Preliminary | run `lookahead-room-r2`, keys `B.ckpt3000.*` · `a0cc85a` · 2026-09-26 |
 | `r_i` agrees with leave-one-out Δloss **at the moment of retrieval** (E0d, spec §3.2.1). It does not show that `r_i` predicts later demand | `e0d.class` AGREE; `primary.AUROC_strat_pct` 0.9423 / 0.9313 / 0.9433 against A\* = 0.85 | Preliminary | run `e0d` · `2fd9368` · 2026-09-29 |
 | An offline ψ̂ eviction rule is harmful through the model (B2; closed-form ridge fit, not a trained head) | `classification` row 1, HARMFUL: ψ̂-U LOSS / LOSS / EQUIV, ψ̂-C EQUIV ×3 | Preliminary | run `b2-psi-probe` · `80c1cd7` · 2026-09-29 |
@@ -51,10 +59,10 @@ Ledgers are at `runs/<run id>/ledger.json`, beside the verifier's
 verifier verdicts and review records, in
 [`docs/results/2026-09-30-verified.md`](docs/results/2026-09-30-verified.md)
 (`scripts/verified_results.py`; a test fails if that file and the ledgers disagree).
-The open question has narrowed but not closed. The headroom exists; `r_i` ranks the
-slot being retrieved *now* above its same-age peers (E0d); and an offline ψ̂ eviction
-rule was harmful through the model (B2). Nothing here measures what connects those
-facts. Whether a ψ̂ trained in the loop behaves differently has not been measured.
+The headroom exists; `r_i` ranks the slot being retrieved *now* above its same-age
+peers (E0d); an offline ψ̂ eviction rule was harmful through the model (B2); and ψ̂
+trained in the loop lost to FIFO in both RSR runs. Why it loses is not established, and
+nothing here measures what connects those facts.
 
 **Where to find the audit trail**
 
