@@ -1,0 +1,1363 @@
+"""Phase 2b (on-policy run 3): run 2's harness, changed only in the loss.
+
+PREREG ``experiments/rsr-run3-ranking/PREREG.md`` (committed alone at 32475b5) §5, run
+id ``rsr-run3-2b``. **Only if 2a is WIN on all 3 seeds** (§4.5); the step count is
+§5.3's rule applied to 2a's ledger; ``omega_s`` per seed is machine-read from it.
+
+**Run 2's harness is reused by import, never copied.** ``experiments/rsr-run2/run.py``
+is loaded as a private instance ``R2`` against its own fresh private run-1 instance
+``R1`` (phase 1's 1a pattern), and exactly these names of that private ``R1`` are
+rebound -- nothing in run 1's or run 2's files, or in their own module instances,
+changes:
+
+* ``R1.RUN_ID = "rsr-run3-2b"`` -- the job ids the controls read
+  (``rsr-run3-2b-<arm>-s<seed>``);
+* ``R1.cli_argv`` -- run 2's command (run 1's plus ``target=loo_resample``) plus §0.3's
+  switch on both RSR arms, right after the target override:
+  ``--policy-override loss=rank --policy-override rank_k=3
+  --policy-override rank_omega=<omega_s>``; fifo untouched (run 1's command);
+* ``R1.derive_every`` -- run 1's cadence ``gcd(160, CKPT)``, further gcd'd with 3000 so
+  that phi exists on disk at k = 3000 for §5.4's psiR@3000 (training is bitwise
+  unaffected by the cadence: ``R1.derive_every``'s own proof). Equal to run 1's rule
+  whenever 3000 is already on it (K_2b = 3000 included).
+
+``measure`` runs run 2's ``measure_seed`` (run 1's C0-C10 and every held-out pass, run
+2's C2'/C9/C11/C12/C13 and §4/§5 additions) with ``cfg.eval_range = EVAL2`` and
+``iters = K_2b``, under the measure stage's seal (EVAL2 open, TUNE sealed), after every
+training process has exited with a completed footer; then §5.4's descriptive passes,
+§5.6's contrasts and §5.7's added controls (C11', C-K, C-omega, C-pair, C-res, C-ES).
+
+**K_2b > 3000 (Amendment PM-1, c7f63ea).** fifo stays run 1's 3000-step command (C12
+holds as registered); C10 runs once per view -- fifo against R-1, psiR/ageR against
+K_2b, every other field unchanged (``c10_per_arm``); C-F (fifo frozen, no optimizer,
+tensors = the substrate's) is added. ``plan`` no longer refuses for this. Run 1's C6,
+C2, C4, the held-out read of fifo's checkpoint and the training Δloss_lm read fifo at
+its own iters (R-1) and each RSR arm at K_2b (Amendment PM-2, f9eeb48: the ``pm2_*``
+wrappers call run 1's functions unchanged on per-arm views; C2 compares the RSR arms
+over [0, K_2b) and each with fifo over [0, R-1); Δloss_lm is matched steps only,
+labelled). ``measure`` still refuses before EVAL2 is opened if any of them cannot be
+computed as stated (``pm2_precheck``).
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import json
+import math
+import re
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+for _p in (ROOT / "src", ROOT / "scripts"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
+import importlib.util  # noqa: E402
+
+
+def _load_here(name: str, file: str):
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, HERE / file)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[name] = mod
+        spec.loader.exec_module(mod)
+    return sys.modules[name]
+
+
+SS = _load_here("run3_stage_seal", "stage_seal.py")
+C = SS.C
+
+import torch  # noqa: E402
+
+from rsr.exit_codes import Exit  # noqa: E402
+from rsr.retention.rank_loss import LOSS_RANK  # noqa: E402
+
+RUN_ID = "rsr-run3-2b"
+RUN_2A = "rsr-run3-2a"
+EXPERIMENT = "experiments/rsr-run3-ranking/run.py"
+LAUNCHER = "experiments/rsr-run3-ranking/launch_2b.zsh"
+PREREG_REL = "experiments/rsr-run3-ranking/PREREG.md"
+PREREG_PATH = ROOT / PREREG_REL
+PREREG_COMMIT = "32475b5"
+OUT_DEFAULT = ROOT / "runs" / RUN_ID
+OUT_2A = ROOT / "runs" / RUN_2A
+
+# 🔒 PREREG §5.3, checked against the committed text by `prereg_check`.
+K_BLOCK = 1500
+K_MIN = 3000
+RANK_K = 3
+PSIR_AT = 3000  # §5.4: psiR@3000 if K_2b > 3000
+SMOKE_STEPS = 48  # §5.3 S-2b
+STOP_LINE_H = 24.0  # §5.3
+CONV_BLOCK = 16  # §5.6 item 7
+CONV_FRACTION = 0.10  # §5.6 item 7
+N_BOOT = 2000
+ES_REPRO = 32  # §5.7 C-ES: EVAL[0:32]
+GAMMA, WD, O5 = 0.9, 0.01, "eval"  # run 2's owner values (§0.2)
+
+# --------------------------------------------------------------------------- #
+# the harness: run 2 against a fresh private run 1, rebound
+# --------------------------------------------------------------------------- #
+
+_H: dict[str, Any] = {}
+_PLAN: dict[str, Any] = {"omega": {}}
+
+
+def prereg_check(path: Path = PREREG_PATH) -> dict:
+    t = Path(path).read_text()
+    m = re.search(
+        r"K_2b = the smallest multiple of (\d+) that is ≥ max\((\d+), max_s K_conv", t
+    )
+    got = None if m is None else (int(m.group(1)), int(m.group(2)))
+    ok = got == (K_BLOCK, K_MIN)
+    m2 = re.search(r"for \*\*(\d+) optimizer steps\*\* \(16 warm \+ 32 on-policy\)", t)
+    ok2 = m2 is not None and int(m2.group(1)) == SMOKE_STEPS
+    m3 = re.search(r"\*\*Stop line: (\d+) h\*\*", t)
+    ok3 = m3 is not None and float(m3.group(1)) == STOP_LINE_H
+    return {"k_rule": got, "smoke_steps": ok2, "stop_line": ok3, "ok": ok and ok2 and ok3}
+
+
+def harness() -> dict[str, Any]:
+    """``{"R1", "R2"}``: run 2 loaded against a FRESH private run-1 instance, so the
+    rebinding below never reaches run 2's own instance or any other caller's."""
+    if _H:
+        return _H
+    key = "_rsr_run2_r1"
+    saved = sys.modules.pop(key, None)
+    try:
+        R2 = C.load_module("_run3_2b_r2", "experiments/rsr-run2/run.py")
+    finally:
+        if saved is not None:
+            sys.modules[key] = saved
+        else:
+            sys.modules.pop(key, None)
+    R1 = R2.R1
+    _r2_cli = R2.cli_argv
+    _every = R1.derive_every
+
+    def cli_argv(cfg, arm: str, owner, out_dir: Path) -> list[str]:
+        """Run 2's command plus §0.3's switch on both RSR arms (after the target
+        override); fifo is run 1's command byte for byte, at R-1 = 3000 steps
+        whatever K_2b is (Amendment PM-1 item 2)."""
+        if arm == "fifo":
+            cfg = dataclasses.replace(cfg, iters=fifo_iters())
+        argv = list(_r2_cli(cfg, arm, owner, out_dir))
+        if arm in R1.RSR_ARMS:
+            om = _PLAN["omega"].get(int(cfg.seed))
+            if om is None:
+                raise R1.Refused(f"no omega_s for seed {cfg.seed}: run `plan` first")
+            i = argv.index(f"target={R2.TARGET}") + 1
+            argv[i:i] = rank_tokens(om)
+        return argv
+
+    def derive_every(steps: int, ckpt: int, diag: int = R1.DIAG_STEP) -> int:
+        e = _every(steps, ckpt, diag)
+        return math.gcd(e, PSIR_AT) if steps > PSIR_AT and e > 0 else e
+
+    R1.RUN_ID = RUN_ID
+    R1.cli_argv = cli_argv
+    R1.derive_every = derive_every
+    globals()["_C10_ORIG"] = R1.c10_launch_values
+    R1.c10_launch_values = c10_per_arm
+    # Amendment PM-2: every fifo read at R-1, every RSR read at K_2b.
+    g = globals()
+    g["_CKPT_ORIG"], R1.checkpoint_path = R1.checkpoint_path, pm2_checkpoint_path
+    g["_C6_ORIG"], R1.c6_steps = R1.c6_steps, pm2_c6_steps
+    g["_C2_ORIG"], R1.c2_pairing = R1.c2_pairing, pm2_c2_pairing
+    g["_C4_ORIG"], R1.c4_measure = R1.c4_measure, pm2_c4_measure
+    g["_TRAIN_ORIG"], R1.analyse_training = R1.analyse_training, pm2_analyse_training
+    _H.update(R1=R1, R2=R2, cli_argv=cli_argv, derive_every=derive_every)
+    return _H
+
+
+_C10_ORIG = None  # run 1's c10_launch_values, kept by harness() before rebinding
+_CKPT_ORIG = _C6_ORIG = _C2_ORIG = _C4_ORIG = _TRAIN_ORIG = None  # likewise (PM-2)
+
+
+# --------------------------------------------------------------------------- #
+# Amendment PM-2 (f9eeb48): fifo is read at its own iters (R-1), each RSR arm at its
+# own (K_2b). Run 1's functions are called UNCHANGED on per-arm views; nothing is
+# reimplemented. Identity when K_2b == R-1.
+# --------------------------------------------------------------------------- #
+
+
+def _k2b() -> int | None:
+    k = _PLAN.get("K_2b")
+    return None if k is None else int(k)
+
+
+def _fifo_cfg(cfg):
+    return dataclasses.replace(cfg, iters=fifo_iters())
+
+
+def pm2_checkpoint_path(out_dir: Path, step: int) -> Path:
+    """A read of fifo's checkpoint at the RSR step count is a read at R-1."""
+    k, fi = _k2b(), fifo_iters()
+    if Path(out_dir).parent.name == "fifo" and k is not None and step == k != fi:
+        step = fi
+    return _CKPT_ORIG(out_dir, step)
+
+
+def pm2_c6_steps(results: dict, hbs: dict, cfg) -> dict:
+    """C6 per arm against its own iters: fifo vs R-1, psiR / ageR vs K_2b."""
+    if _k2b() in (None, fifo_iters()):  # K_2b = R-1: run 1's C6 exactly
+        return _C6_ORIG(results, hbs, cfg)
+    views = {}
+    f = {a: r for a, r in results.items() if a == "fifo"}
+    o = {a: r for a, r in results.items() if a != "fifo"}
+    if f:
+        views["fifo"] = _C6_ORIG(f, hbs, _fifo_cfg(cfg))
+    if o:
+        views["rsr"] = _C6_ORIG(o, hbs, cfg)
+    per = {}
+    for v in views.values():
+        per.update(v.get("per_arm") or {})
+    return {
+        "views": views,
+        "per_arm": per,
+        "pm2": "C6 per arm (Amendment PM-2)",
+        "ok": bool(views) and all(v.get("ok") for v in views.values()),
+    }
+
+
+def pm2_c2_pairing(beats: dict, ids: dict, cfg, sampling, *, samplings=None) -> dict:
+    """C2: psiR and ageR with each other over [0, K_2b) (cfg as given); each with fifo
+    over the common steps [0, R-1) (fifo's cfg). Run 1's c2_pairing on each view."""
+    fi = fifo_iters()
+    if _k2b() in (None, fi):  # K_2b = R-1: run 1's C2 exactly
+        return _C2_ORIG(beats, ids, cfg, sampling, samplings=samplings)
+    sam = samplings or {}
+
+    def sub(d, arms, below=None):
+        out = {}
+        for a in arms:
+            v = d.get(a)
+            if isinstance(v, dict):
+                out[a] = {k: x for k, x in v.items() if below is None or k < below}
+            else:
+                out[a] = [b for b in (v or []) if below is None or b["step"] < below]
+        return out
+
+    rsr = [a for a in beats if a != "fifo"]
+    sam_r = {a: sam.get(a) for a in rsr} if sam else None
+    views = {
+        "rsr": _C2_ORIG(sub(beats, rsr), sub(ids, rsr), cfg, sampling, samplings=sam_r)
+    }
+    if "fifo" in beats:
+        for a in rsr:
+            arms = [a, "fifo"]
+            views[f"{a}+fifo"] = _C2_ORIG(
+                sub(beats, arms, fi),
+                sub(ids, arms, fi),
+                _fifo_cfg(cfg),
+                sampling,
+                samplings={x: sam.get(x) for x in arms} if sam else None,
+            )
+    warm = [v.get("warm_steps_compared") for v in views.values()]
+    mism = [
+        x for v in views.values() for x in v.get("c_loss_lm_warm_mismatch_steps") or []
+    ]
+    return {
+        "views": views,
+        "warm_steps_compared": min(w for w in warm if w is not None)
+        if all(w is not None for w in warm)
+        else None,
+        "c_loss_lm_warm_mismatch_steps": mism,
+        "pm2": "C2: RSR arms over [0, K_2b); each with fifo over [0, R-1) (PM-2)",
+        "ok": all(v.get("ok") for v in views.values()),
+    }
+
+
+def pm2_c4_measure(fifo_dir: Path, cfg) -> dict:
+    """C4 on fifo's checkpoint at its own iters (R-1)."""
+    return _C4_ORIG(fifo_dir, _fifo_cfg(cfg))
+
+
+def pm2_analyse_training(hbs: dict, diags: dict, cfg) -> dict:
+    """§7.3/§7.4 for the RSR arms at their own iters; the Δloss_lm against fifo over
+    the matched steps [T_warm, R-1) only (fifo's cfg), labelled; nothing beyond R-1."""
+    out = _TRAIN_ORIG(hbs, diags, cfg)
+    fi = fifo_iters()
+    if int(cfg.iters) != fi:
+        d = _TRAIN_ORIG(hbs, diags, _fifo_cfg(cfg))["delta_loss_lm"]
+        out["delta_loss_lm"] = {
+            **d,
+            "label": f"matched steps <= R-1 ({fi}); Amendment PM-2",
+        }
+    return out
+
+
+def pm2_precheck(out_root: Path, seed: int, plan: dict) -> dict:
+    """Before EVAL2 is opened: the five PM-2 reads can be computed as stated -- fifo's
+    checkpoint at R-1 and each RSR arm's at K_2b exist, and the heartbeats cover
+    [0, R-1) for fifo and [0, K_2b) for the RSR arms. Reads files only."""
+    R1 = harness()["R1"]
+    fi, k = int(plan["fifo_iters"]), int(plan["K_2b"])
+    problems = []
+    for a in R1.ARMS:
+        n = fi if a == "fifo" else k
+        d = R1.arm_dir(out_root, a, seed)
+        if not _CKPT_ORIG(d, n).exists():
+            problems.append(f"{a}: no checkpoint at {n}")
+        steps = {b["step"] for b in R1.read_heartbeat(d)["beats"]}
+        if not set(range(n)) <= steps:
+            problems.append(f"{a}: heartbeats do not cover [0, {n})")
+    return {"fifo_iters": fi, "K_2b": k, "problems": problems, "ok": not problems}
+
+
+def fifo_iters() -> int:
+    """R-1, machine-read from run 1's owner table (A4.1): fifo's step count."""
+    if _PLAN.get("fifo_iters") is not None:
+        return int(_PLAN["fifo_iters"])
+    R1 = harness()["R1"]
+    reg = R1.owner_table(R1.prereg_config(0, K_MIN))
+    if reg.get("status") != "filled":
+        raise R1.Refused(f"run 1's owner table is not filled: {reg.get('problems')}")
+    return int(reg["values"]["iters"])
+
+
+def c10_per_arm(
+    cfg, owner, launch, results, hbs, jobs, out_root, *, rcs=None, registered=None
+):
+    """Amendment PM-1 item 2: run 1's C10, UNCHANGED, called on two views and merged.
+    fifo: ``iters`` (config, command, launch steps / ckpt / cadence) against R-1 =
+    3000, the registered owner table as is. psiR and ageR: ``iters`` against
+    ``K_2b`` (the registered R-1 replaced by K_2b, which C-K checks against §5.3's
+    rule on 2a's ledger). Every other C10 field is checked unchanged in both."""
+    H = harness()
+    R1 = H["R1"]
+    reg = R1.owner_table(cfg) if registered is None else registered
+    fi = fifo_iters()
+    views = {}
+    f_res = {a: r for a, r in results.items() if a == "fifo"}
+    if f_res:
+        f_launch = {
+            **launch,
+            "steps": launch.get("fifo_steps"),
+            "ckpt": launch.get("fifo_ckpt"),
+            "ckpt_every": launch.get("fifo_ckpt_every"),
+        }
+        views["fifo"] = _C10_ORIG(
+            dataclasses.replace(cfg, iters=fi),
+            dataclasses.replace(owner, iters=fi),
+            f_launch,
+            f_res,
+            hbs,
+            jobs,
+            out_root,
+            rcs=rcs,
+            registered=reg,
+        )
+    r_res = {a: r for a, r in results.items() if a != "fifo"}
+    if r_res:
+        r_reg = json.loads(json.dumps(reg, default=str))
+        if r_reg.get("status") == "filled":
+            r_reg["values"]["iters"] = int(owner.iters)
+            r_reg["iters_is_K_2b"] = "Amendment PM-1 item 2"
+        views["rsr"] = _C10_ORIG(
+            cfg, owner, launch, r_res, hbs, jobs, out_root, rcs=rcs, registered=r_reg
+        )
+    per = {}
+    for v in views.values():
+        per.update(v.get("per_arm") or {})
+    probs = [
+        f"{k}: {x}" for k, v in views.items() for x in v.get("launch_problems") or []
+    ]
+    return {
+        "views": views,
+        "per_arm": per,
+        "launch_problems": probs,
+        "pm1": "C10 per arm (Amendment PM-1 item 2): fifo vs R-1, psiR/ageR vs K_2b",
+        "ok": bool(views) and all(v.get("ok") for v in views.values()),
+    }
+
+
+def c_f(payload: dict, substrate_model: dict) -> dict:
+    """C-F (Amendment PM-1): the fifo arm under the frozen transformer has no trainable
+    parameter -- its recorded config is fifo with ``freeze_transformer`` and no head --
+    its checkpoint holds no optimizer, and its transformer and ``W_sent`` tensors (the
+    whole model state) equal the substrate's bit for bit (run 1's ``c3_frozen``)."""
+    R1 = harness()["R1"]
+    conf = (payload.get("meta") or {}).get("config") or {}
+    pol = payload.get("policy") or {}
+    no_train = (
+        conf.get("policy") == "fifo"
+        and conf.get("freeze_transformer") is True
+        and set(pol) <= {"__policy_name__"}
+    )
+    no_opt = payload.get("optimizer") is None
+    eq = R1.c3_frozen({"fifo": payload}, substrate_model)
+    return {
+        "no_trainable_parameter": no_train,
+        "optimizer_holds_none": no_opt,
+        "tensors_equal_substrate": eq,
+        "ok": bool(no_train and no_opt and eq["ok"]),
+    }
+
+
+def rank_tokens(omega: float) -> list[str]:
+    return [
+        "--policy-override",
+        f"loss={LOSS_RANK}",
+        "--policy-override",
+        f"rank_k={RANK_K}",
+        "--policy-override",
+        f"rank_omega={float(omega):g}",
+    ]
+
+
+def k_2b(kconvs) -> int:
+    """§5.3: the smallest multiple of 1500 that is >= max(3000, max_s K_conv)."""
+    ks = [int(k) for k in kconvs]
+    if not ks:
+        raise ValueError("no K_conv")
+    m = max(K_MIN, *ks)
+    return ((m + K_BLOCK - 1) // K_BLOCK) * K_BLOCK
+
+
+def ckpt_every(steps: int) -> int:
+    H = harness()
+    R1 = H["R1"]
+    return H["derive_every"](steps, R1.derive_ckpt(steps), R1.DIAG_STEP)
+
+
+# --------------------------------------------------------------------------- #
+# plan: omega_s and K_2b, machine-read from 2a's ledger (C-K, C-omega inputs)
+# --------------------------------------------------------------------------- #
+
+
+def read_2a(ledger_path: Path) -> dict:
+    """2a's ledger: the summary row (exit, gate, labels) and each seed's selection
+    row; the file's sha256."""
+    p = Path(ledger_path)
+    sha = C.sha256_file(p)
+    rows = C.ledger_rows(p)
+    sm = rows["summary"]["value"]
+    sel = {}
+    for s in sm.get("per_seed", {}):
+        r = rows.get(f"seed{s}.selection")
+        sel[int(s)] = None if r is None else r["value"]
+    return {"path": str(p), "sha256": sha, "summary": sm, "selection": sel}
+
+
+def make_plan(ledger_path: Path) -> dict:
+    a = read_2a(ledger_path)
+    sm = a["summary"]
+    seeds = sorted(a["selection"])
+    out: dict[str, Any] = {
+        "run_id": RUN_ID,
+        "ledger_2a": {"path": a["path"], "sha256": a["sha256"]},
+        "seeds": seeds,
+        "rule": "K_2b = the smallest multiple of 1500 >= max(3000, max_s K_conv(s, w_s))",
+    }
+    problems = []
+    if sm.get("exit") != 0:
+        problems.append(f"2a exit {sm.get('exit')}: 2b does not run (§4.5)")
+    if sm.get("gate_to_2b") is not True:
+        problems.append("2a is not WIN on all 3 seeds: 2b does not run (§4.5, §7)")
+    if any(
+        sm.get("labels", {}).get(str(s), sm.get("labels", {}).get(s)) != "WIN"
+        for s in seeds
+    ):
+        problems.append(f"2a labels {sm.get('labels')}: not WIN on every seed")
+    omega, kconv = {}, {}
+    for s in seeds:
+        r = a["selection"][s] or {}
+        omega[s], kconv[s] = r.get("omega_s"), r.get("k_conv")
+        if omega[s] is None or kconv[s] is None:
+            problems.append(f"seed {s}: no selection row in 2a's ledger")
+    out.update(omega_s=omega, k_conv=kconv)
+    if not problems:
+        K = k_2b(kconv.values())
+        out.update(K_2b=K, ckpt=harness()["R1"].derive_ckpt(K), ckpt_every=ckpt_every(K))
+        out["psiR_at_3000"] = K > PSIR_AT
+        fi = fifo_iters()
+        R1 = harness()["R1"]
+        out.update(
+            fifo_iters=fi,
+            fifo_ckpt=R1.derive_ckpt(fi),
+            fifo_ckpt_every=ckpt_every(fi),
+            pm1="Amendment PM-1: fifo is run 1's 3000-step command; C10 per arm; C-F",
+        )
+        k2 = int(K)
+        out["unruled_at_K_gt_3000"] = list(UNRULED) if k2 > fi else []
+    out["problems"] = problems
+    out["ok"] = not problems
+    return out
+
+
+def set_plan(plan: dict) -> None:
+    _PLAN["omega"] = {int(k): float(v) for k, v in plan["omega_s"].items()}
+    _PLAN["fifo_iters"] = plan.get("fifo_iters")
+    _PLAN["K_2b"] = plan.get("K_2b")
+
+
+#: Run 1's reads of fifo at the RSR step count (C6, C2, C4, the held-out read, the
+#: training Δloss_lm) were left open by PM-1; Amendment PM-2 rules on all five (see the
+#: pm2_* wrappers), so nothing is unruled. ``pm2_precheck`` still refuses before EVAL2
+#: if any of them cannot be computed as stated.
+UNRULED: list[str] = []  # Amendment PM-2 (f9eeb48) rules on all five
+
+
+def measure_precheck(plan: dict) -> dict:
+    """Before EVAL2 is opened: the plan is ok and nothing it needs is unruled."""
+    un = plan.get("unruled_at_K_gt_3000") or []
+    return {
+        "plan_ok": bool(plan.get("ok")),
+        "unruled": un,
+        "ok": bool(plan.get("ok")) and not un,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Amendment 2b-S (C-omega's pin)
+# --------------------------------------------------------------------------- #
+
+
+def amendment_2bS(path: Path = PREREG_PATH) -> dict | None:
+    """The committed Amendment 2b-S, machine-read: a heading ``## Amendment 2b-S``
+    (any case; review LB-1: the file's own convention), whose section carries the lines
+    ``- 2a ledger sha256: `<64 hex>``` and ``- K_2b: <int>``. None if absent."""
+    t = Path(path).read_text()
+    m = re.search(r"^## amendment 2b-s(?![\w-]).*?(?=^## |\Z)", t, re.S | re.M | re.I)
+    if m is None:
+        return None
+    sec = m.group(0)
+    sha = re.search(r"^- 2a ledger sha256: `([0-9a-f]{64})`", sec, re.M)
+    k = re.search(r"^- K_2b: (\d+)\s*$", sec, re.M)
+    return {
+        "ledger_2a_sha256": None if sha is None else sha.group(1),
+        "K_2b": None if k is None else int(k.group(1)),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# §5.7 controls added to run 2's, and §5.6 item 7 (pure; tested on fixtures)
+# --------------------------------------------------------------------------- #
+
+
+def _finite(x) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+
+
+def c11_prime(results: dict, hbs: dict, launch: dict | None, c11: dict | None) -> dict:
+    """C11': run 2's C11 (labels carry ``target=loo_resample``; every beat
+    ``mc.target`` and a finite ``loo_s``) AND both RSR arms' labels carry
+    ``loss=rank``; every beat has ``mc.loss == "rank"`` and a finite ``l_rank``."""
+    R1 = harness()["R1"]
+    per = {}
+    for a in R1.RSR_ARMS:
+        label = ((results.get(a) or {}).get("config") or {}).get("arm_label") or ""
+        beats = (hbs.get(a) or {}).get("beats") or []
+        bad = [
+            b.get("step")
+            for b in beats
+            if (b.get("mc") or {}).get("loss") != LOSS_RANK
+            or not _finite((b.get("mc") or {}).get("l_rank"))
+            or not _finite(b.get("loo_s"))
+        ]
+        per[a] = {
+            "label": label,
+            "n_beats": len(beats),
+            "bad_steps": bad[:20],
+            "ok": f"loss={LOSS_RANK}" in label and bool(beats) and not bad,
+        }
+    fifo_label = ((results.get("fifo") or {}).get("config") or {}).get("arm_label") or ""
+    per["fifo"] = {"label": fifo_label, "ok": "loss=" not in fifo_label}
+    launch_ok = (launch or {}).get("loss") == LOSS_RANK
+    return {
+        "C11": c11,
+        "per_arm": per,
+        "launch_loss": (launch or {}).get("loss"),
+        "ok": bool((c11 or {}).get("ok"))
+        and launch_ok
+        and all(v["ok"] for v in per.values()),
+    }
+
+
+def c_k(plan: dict, launch: dict | None, steps_done: dict, kconv_2a: dict) -> dict:
+    """C-K: K_2b in the launch record equals §5.3's rule applied to 2a's ledger;
+    ``steps_done == K_2b`` for both RSR arms."""
+    want = k_2b(kconv_2a.values())
+    got = None if launch is None else launch.get("steps")
+    ok = (
+        str(got) == str(want)
+        and plan.get("K_2b") == want
+        and all(steps_done.get(a) == want for a in ("psiC", "age"))
+    )
+    return {
+        "rule": want,
+        "launch": got,
+        "plan": plan.get("K_2b"),
+        "steps_done": steps_done,
+        "ok": bool(ok),
+    }
+
+
+def c_omega(plan: dict, ledger_2a: dict, amendment: dict | None) -> dict:
+    """C-omega: each seed's omega_s equals 2a's selection row; 2a's ledger sha256
+    equals the one pinned in Amendment 2b-S."""
+    sel = ledger_2a["selection"]
+    rows = {s: (sel.get(s) or {}).get("omega_s") for s in plan["seeds"]}
+    same = all(float(plan["omega_s"][s]) == float(rows[s]) for s in plan["seeds"])
+    pinned = None if amendment is None else amendment.get("ledger_2a_sha256")
+    return {
+        "plan": plan["omega_s"],
+        "ledger": rows,
+        "ledger_sha256": ledger_2a["sha256"],
+        "pinned": pinned,
+        "ok": bool(same) and pinned is not None and pinned == ledger_2a["sha256"],
+    }
+
+
+def convergence_label(losses: list[float], seed: int, n_boot: int = N_BOOT) -> dict:
+    """§5.6 item 7: the mean per-step rank loss over the last 10% of steps minus that
+    over the preceding 10%, 95% CI from a block bootstrap over 16-step blocks
+    (``torch.Generator().manual_seed(seed)``, 2000 replicates): STILL-IMPROVING iff
+    the CI upper bound < 0, else PLATEAU. Descriptive; gates nothing."""
+    x = torch.tensor([float(v) for v in losses], dtype=torch.float64)
+    n = x.numel()
+    w = int(n * CONV_FRACTION)
+    if w < CONV_BLOCK or not bool(torch.isfinite(x).all()):
+        return {"label": None, "why": f"{n} steps: too few for two {CONV_BLOCK}-blocks"}
+    last, prev = x[n - w :], x[n - 2 * w : n - w]
+    point = float(last.mean() - prev.mean())
+    g = torch.Generator().manual_seed(int(seed))
+
+    def blocks(v):
+        nb = v.numel() // CONV_BLOCK
+        return v[: nb * CONV_BLOCK].reshape(nb, CONV_BLOCK)
+
+    bl, bp = blocks(last), blocks(prev)
+    il = torch.randint(0, bl.shape[0], (n_boot, bl.shape[0]), generator=g)
+    ip = torch.randint(0, bp.shape[0], (n_boot, bp.shape[0]), generator=g)
+    rep = bl[il].mean((1, 2)) - bp[ip].mean((1, 2))
+    lo, hi = float(torch.quantile(rep, 0.025)), float(torch.quantile(rep, 0.975))
+    return {
+        "point": point,
+        "lo": lo,
+        "hi": hi,
+        "window_steps": w,
+        "label": "STILL-IMPROVING" if hi < 0 else "PLATEAU",
+    }
+
+
+def training_footers(out_root: Path, seeds) -> dict:
+    """§5.4's precondition: every training process (3 arms x seeds) exited rc 0 with a
+    completed footer (the CLI's result dict) before EVAL2 is opened."""
+    R1 = harness()["R1"]
+    rows, ok = {}, True
+    for s in seeds:
+        for a in R1.ARMS:
+            k = f"{a}-s{s}"
+            rcp = Path(out_root) / "logs" / f"{k}.rc"
+            rc = rcp.read_text().strip() if rcp.exists() else None
+            res = R1.read_cli_result(Path(out_root) / "logs" / f"{k}.log")
+            good = rc == "0" and res is not None
+            rows[k] = {"rc": rc, "footer": res is not None, "ok": good}
+            ok = ok and good
+    return {"jobs": rows, "ok": ok}
+
+
+# --------------------------------------------------------------------------- #
+# stages
+# --------------------------------------------------------------------------- #
+
+
+def utc() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def plan_stage(out_root: Path, ledger_2a: Path) -> int:
+    """``plan``: omega_s and K_2b from 2a's ledger, written to ``plan.json``. Exit 3
+    (2b does not run) unless 2a is WIN on all 3 seeds and the plan is implementable
+    as written (see the module docstring)."""
+    SS.install("2b", "plan")
+    out_root = Path(out_root)
+    out_root.mkdir(parents=True, exist_ok=True)
+    p = make_plan(ledger_2a)
+    p["prereg_text"] = prereg_check()
+    p["ok"] = p["ok"] and p["prereg_text"]["ok"]
+    p["written_utc"] = utc()
+    p["exit"] = 0 if p["ok"] else 3
+    (out_root / "plan.json").write_text(json.dumps(p, indent=1, default=str) + "\n")
+    if not p["ok"]:
+        print("DID NOT RUN:", *p["problems"], sep="\n  ", file=sys.stderr)
+    return p["exit"]
+
+
+def owner_values(K: int):
+    R1 = harness()["R1"]
+    seeds = tuple(SS.C.registered_seeds(PREREG_PATH))
+    return R1.OwnerValues(GAMMA, WD, int(K), O5, seeds)
+
+
+def measure_cfg(seed: int, K: int):
+    """Run 1's config for the seed at ``iters = K_2b``, held-out range EVAL2 (machine-
+    read from the phase-1 front matter)."""
+    R1 = harness()["R1"]
+    ev2 = SS.sealed_ranges()["EVAL2"]
+    return dataclasses.replace(R1.prereg_config(seed, K), eval_range=ev2)
+
+
+def read_arms(cfg, out_root: Path) -> dict:
+    """The training artefacts run 1's measure_seed reads per arm (no EVAL2): the
+    launch record, CLI results, heartbeats, job records and rcs."""
+    R1 = harness()["R1"]
+    out_root = Path(out_root)
+    lg = out_root / "launch-git.json"
+    out: dict[str, Any] = {
+        "launch": json.loads(lg.read_text()) if lg.exists() else None,
+        "results": {},
+        "hbs": {},
+        "jobs": {},
+        "rcs": {},
+    }
+    for a in R1.ARMS:
+        k = R1.job_key(a, cfg.seed)
+        rcf = out_root / "logs" / f"{k}.rc"
+        out["rcs"][a] = int(rcf.read_text().strip()) if rcf.exists() else None
+        out["results"][a] = R1.read_cli_result(out_root / "logs" / f"{k}.log")
+        out["hbs"][a] = R1.read_heartbeat(R1.arm_dir(out_root, a, cfg.seed))
+        out["jobs"][a] = R1.job_record(cfg, a)
+    return out
+
+
+def c_f_at_r1(cfg, out_root: Path) -> dict:
+    """C-F on fifo's checkpoint at its own iters (R-1) against the substrate."""
+    R1 = harness()["R1"]
+    fpay = R1.read_checkpoint(
+        R1.checkpoint_path(R1.arm_dir(out_root, "fifo", cfg.seed), fifo_iters())
+    )
+    sub, _ = R1.load_substrate_model(cfg)
+    return c_f(fpay, sub)
+
+
+def pre_eval2_controls(
+    cfg,
+    owner,
+    out_root: Path,
+    plan: dict,
+    *,
+    ledger_2a: Path | None,
+    footer_seeds=None,
+) -> dict:
+    """Review LB-1 / LB-2: every control that needs no EVAL2 document, through the real
+    PM-1/PM-2 wrappers, BEFORE EVAL2 is opened; any failure refuses the seed there
+    (so a C10 or C2 failure stops it before its held-out passes):
+    footers -> PM-2 precheck -> C6, C10 (per arm), C2 / C8 / C3 (run 1's cheap
+    controls), C4, C-F, C11 / C11', C-K, C-omega. ``ledger_2a`` None = the S-2b
+    smoke (no 2a ledger, no Amendment 2b-S: C-K and C-omega not applicable)."""
+    H = harness()
+    R1, R2 = H["R1"], H["R2"]
+    ctl: dict[str, Any] = {}
+
+    def run(name, fn):
+        try:
+            ctl[name] = fn()
+        except Exception as e:  # did not run: recorded, never a pass
+            ctl[name] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
+        return bool(ctl[name].get("ok"))
+
+    def done():
+        failed = [k for k, v in ctl.items() if not v.get("ok")]
+        return {"controls": ctl, "failed": failed, "ok": not failed}
+
+    seeds = plan["seeds"] if footer_seeds is None else footer_seeds
+    if not run("footers", lambda: training_footers(out_root, seeds)):
+        return done()
+    if not run("PM-2.precheck", lambda: pm2_precheck(out_root, cfg.seed, plan)):
+        return done()
+    arms = read_arms(cfg, out_root)
+    res, hbs, launch = arms["results"], arms["hbs"], arms["launch"] or {}
+    if any(v is None for v in res.values()):
+        ctl["results"] = {
+            "ok": False,
+            "missing": [a for a, v in res.items() if v is None],
+        }
+        return done()
+    run("C6", lambda: R1.c6_steps(res, hbs, cfg))
+    run(
+        "C10",
+        lambda: R1.c10_launch_values(
+            cfg, owner, launch, res, hbs, arms["jobs"], out_root, rcs=arms["rcs"]
+        ),
+    )
+
+    def cheap():
+        d = {"controls": {}}
+        R1._cheap_controls(d, cfg, out_root, res, hbs)
+        ctl.update({k: d["controls"][k] for k in ("C8", "C3") if k in d["controls"]})
+        return d["controls"]["C2"]
+
+    run("C2", cheap)
+    run("C4", lambda: R1.c4_measure(R1.arm_dir(out_root, "fifo", cfg.seed), cfg))
+    run("C-F", lambda: c_f_at_r1(cfg, out_root))
+    run("C11", lambda: R2.c11_target(res, hbs, launch))
+    run("C11prime", lambda: c11_prime(res, hbs, launch, ctl.get("C11")))
+    steps_done = {a: (res.get(a) or {}).get("steps_done") for a in res}
+    if ledger_2a is None:
+        na = {"ok": False, "not_applicable": "S-2b smoke: no 2a ledger / 2b-S yet"}
+        ctl["C-K"], ctl["C-omega"] = dict(na), dict(na)
+    else:
+        a2 = read_2a(ledger_2a)
+        kc = {sd: a2["selection"][sd]["k_conv"] for sd in plan["seeds"]}
+        run("C-K", lambda: c_k(plan, launch, steps_done, kc))
+        run("C-omega", lambda: c_omega(plan, a2, amendment_2bS()))
+    return done()
+
+
+def eval2_closure(cfg) -> dict:
+    """Review F6 / R-SEAL (e): run 1's C0 on the held-out range (EVAL2 at measure)
+    BEFORE any model loads -- the ES model included."""
+    R1 = harness()["R1"]
+    try:
+        return R1.check_c0(cfg)
+    except R1.ControlFailure as e:
+        return {"ok": False, "error": str(e)}
+
+
+def refuse_before_eval2(out_root: Path, seed: int, ctl: dict, why: str) -> int:
+    doc = {
+        "run_id": RUN_ID,
+        "seed": seed,
+        "refused_before_eval2": True,
+        "why": why,
+        "controls": {**ctl, "R-SEAL.census": SS.census()},
+    }
+    doc["controls_failed"] = [
+        k for k, v in doc["controls"].items() if not (isinstance(v, dict) and v.get("ok"))
+    ]
+    doc.update(exit=int(Exit.DID_NOT_RUN), status="did_not_run", finished_utc=utc())
+    (Path(out_root) / f"measure-seed{seed}.json").write_text(
+        json.dumps(doc, indent=2, default=str) + "\n"
+    )
+    print(f"DID NOT RUN (before EVAL2): {why}", file=sys.stderr)
+    return int(Exit.DID_NOT_RUN)
+
+
+def measure_stage(seed: int, out_root: Path, *, ledger_2a: Path = OUT_2A / "ledger.json"):
+    """§5.4-§5.7 for one seed, in this order (review LB-1/LB-2/F6): the measure
+    stage's seal; plan precheck; every check that needs no EVAL2 document
+    (``pre_eval2_controls``, real wrappers; any failure refuses here, so C10 / C2 stop
+    the seed before its held-out passes and EVAL2 is not spent); EVAL2's closure (C0)
+    before any model loads; C-ES on EVAL[0:32]; run 2's ``measure_seed`` on EVAL2 at
+    K_2b; §5.4's descriptive passes and §5.6's contrasts."""
+    out_root = Path(out_root)
+    seal = SS.install("2b", "measure")
+    H = harness()
+    R1, R2 = H["R1"], H["R2"]
+    SS.rebind()
+    C.forbid_constants_record()
+    base = {"R-SEAL.install": {**seal, "ok": True}}
+    plan = json.loads((out_root / "plan.json").read_text())
+    pre = measure_precheck(plan)
+    if not pre["ok"]:
+        return refuse_before_eval2(out_root, seed, {**base, "plan": pre}, "plan")
+    set_plan(plan)
+    K = int(plan["K_2b"])
+    cfg = measure_cfg(seed, K)
+    owner = owner_values(K)
+    foot = training_footers(out_root, plan["seeds"])  # every process, every seed
+    if not foot["ok"]:
+        return refuse_before_eval2(
+            out_root, seed, {**base, "footers": foot}, "a training footer is missing"
+        )
+    pe = pre_eval2_controls(cfg, owner, out_root, plan, ledger_2a=ledger_2a)
+    if not pe["ok"]:
+        return refuse_before_eval2(
+            out_root, seed, {**base, **pe["controls"]}, f"failed {pe['failed']}"
+        )
+    clo = eval2_closure(cfg)
+    if not clo.get("ok"):
+        ctl = {**base, **pe["controls"], "R-SEAL.closure_EVAL2": clo}
+        return refuse_before_eval2(out_root, seed, ctl, "EVAL2 closure failed")
+    es = c_es(seed, cfg)  # after the closure (F6), before EVAL2's documents are read
+    doc = R2.measure_seed(cfg, owner, out_root, threads=1)
+    hbs = {a: R1.read_heartbeat(R1.arm_dir(out_root, a, seed)) for a in R1.ARMS}
+    ctl = doc["controls"]
+    ctl.update(base)
+    ctl["R-SEAL.closure_EVAL2"] = clo
+    for k in ("footers", "PM-2.precheck", "C-F", "C11prime", "C-K", "C-omega"):
+        ctl[k] = pe["controls"][k]
+    doc["pre_eval2_controls"] = pe
+    doc.setdefault("scoped_controls", {})["C-ES"] = {
+        k: v for k, v in es.items() if not k.startswith("_")
+    }
+    if doc.get("heldout") is not None:
+        ex = extra_passes(seed, out_root, cfg, plan, es)
+        ctl["C-pair"] = {
+            "passes": {k: v.get("C-pair") for k, v in ex.items() if "C-pair" in v},
+            "ok": all(v["C-pair"]["ok"] for v in ex.values() if "C-pair" in v),
+        }
+        ctl["C-res"] = {
+            "passes": {k: v.get("C-res") for k, v in ex.items() if "C-res" in v},
+            "ok": all(v["C-res"]["ok"] for v in ex.values() if "C-res" in v),
+        }
+        dl = (ctl.get("Cdelta") or {}).get("delta")
+        doc["run3_extra"] = {
+            "passes": ex,
+            "contrasts": contrasts_5_6(seed, out_root, cfg, dl),
+        }
+    beats = (hbs.get("psiC") or {}).get("beats") or []
+    doc["run3"] = {
+        "plan": plan,
+        "convergence_psiR": convergence_label(
+            [b.get("loss_mc") for b in sorted(beats, key=lambda b: b["step"])], seed
+        ),
+    }
+    ctl["R-SEAL.census"] = SS.census({"POOL": tuple(R1.POOL)})
+    failed = [k for k, v in ctl.items() if not (isinstance(v, dict) and v.get("ok"))]
+    doc["controls_failed"] = failed
+    if failed and int(doc.get("exit", 3)) == 0:
+        doc.update(exit=int(Exit.DID_NOT_RUN), status="did_not_run")
+    (out_root / f"measure-seed{seed}.json").write_text(
+        json.dumps(doc, indent=2, default=str) + "\n"
+    )
+    return int(doc["exit"])
+
+
+# --------------------------------------------------------------------------- #
+# §5.4 descriptive passes, §5.6 contrasts, §5.7 C-ES / C-pair / C-res
+# --------------------------------------------------------------------------- #
+
+ES_PINNED = Path("/Users/keanooo7/rsr-substrate/2026-10-07-es-pinned")
+ES_CKPT = "L48-k1e-2-seed{s}-ckpt-003000.pt"
+
+
+def es_module():
+    return C.load_module("_run3_2b_es", "experiments/expire-span-referendum/run.py")
+
+
+def c_es(seed: int, model_cfg) -> dict:
+    """C-ES (scoped to §5.6 item 1): run 2's C14 (the pinned manifest, ``shasum -c`` rc
+    read directly; the referendum's records' sha256) and ``es_pass`` on EVAL[0:32]
+    reproducing the referendum's saved records record for record -- BEFORE EVAL2 is
+    read. On failure the ES contrast is omitted and printed; the class stands."""
+    R1, R2 = harness()["R1"], harness()["R2"]
+    ES = es_module()
+    out: dict[str, Any] = {"C14": R2.c14_es_source(seed)}
+    try:
+        payload = R1.read_checkpoint(ES_PINNED / ES_CKPT.format(s=seed))
+        model = R1.model_from_payload(payload).to(model_cfg.device)
+        pol = ES.es_policy_from_payload(payload)
+        cfg = R1.prereg_config(seed, 3000)
+        docs = R1.docs_by_id(cfg, range(R1.EVAL[0], R1.EVAL[0] + ES_REPRO))
+        got = ES.es_pass(model, pol, docs, R1.vocab_map(cfg), cfg)
+        ref = R1.read_pass(Path(R2.REFS.es_out) / "eval" / f"seed{seed}", "es")[:ES_REPRO]
+        out["repro"] = {"n": len(got), "equal": got == ref}
+        out["ok"] = bool(out["C14"].get("ok")) and got == ref and len(got) == ES_REPRO
+        out["_payload"] = payload
+    except Exception as e:
+        out.update(ok=False, error=f"{type(e).__name__}: {e}")
+    return out
+
+
+def run_pass(model, make_policy, docs: list, vmap, cfg) -> list[dict]:
+    """Run 1's held-out procedure for a policy not among run 1's arms: blocks of
+    ``cfg.eval_batch``, ``R1.run_batch``, a fresh policy per block."""
+    R1 = harness()["R1"]
+    recs: list[dict] = []
+    for i in range(0, len(docs), cfg.eval_batch):
+        chunk = docs[i : i + cfg.eval_batch]
+        recs += R1.run_batch(model, make_policy(chunk), chunk, vmap, cfg)
+    return recs
+
+
+def extra_passes(seed: int, out_root: Path, cfg, plan: dict, es: dict) -> dict:
+    """§5.4: psiR@3000 (if K_2b > 3000), run 2's psiC final phi, 2a's selected head
+    (T_warm = 0 deploy path), pinned ES (only if C-ES passed); each with C-pair (its
+    ``(doc, [(t, gap)])`` equals the fifo pass's, all documents) and C-res (run 1's
+    C7 residency). Written under ``heldout/seed<s>/``."""
+    R1, R2 = harness()["R1"], harness()["R2"]
+    hd = Path(out_root) / "heldout" / f"seed{seed}"
+    fifo = R1.read_pass(hd, "fifo")
+    docs = R1.docs_by_id(cfg, list(cfg.eval_ids()))
+    vmap = R1.vocab_map(cfg)
+    K = int(plan["K_2b"])
+    fp = R1.read_checkpoint(R1.checkpoint_path(R1.arm_dir(out_root, "fifo", seed), K))
+    model = R1.model_from_payload(fp)
+    passes: dict[str, Any] = {}
+    if K > PSIR_AT:
+        p3 = R1.read_checkpoint(
+            R1.checkpoint_path(R1.arm_dir(out_root, "psiC", seed), PSIR_AT)
+        )
+        passes["psiR@3000"] = lambda chunk, p3=p3: R1.eval_policy("psiC", p3, cfg)
+    OP = C.load_module("_run3_2b_op", "experiments/offline-psi/run.py")
+    r2c = OP.run2_psic_config(OP.REFS, seed)  # run 2's psiC ckpt-003000 (sha in doc)
+    r2p = r2c["payload"]
+    passes["psiC_run2"] = lambda chunk: R1.eval_policy("psiC", r2p, cfg)
+    sel = json.loads((OUT_2A / f"seed{seed}" / "selection.json").read_text())
+    st = torch.load(sel["phi_path"], weights_only=True)
+    conf = r2c["conf"]
+    ov = {
+        **conf["policy_overrides"],
+        "loss": LOSS_RANK,
+        "rank_k": RANK_K,
+        "rank_omega": float(sel["omega_s"]),
+    }
+    spe = float(conf["epoch"]["steps_per_epoch"])
+    passes["head_2a"] = lambda chunk: OP.deploy_policy(st, seed, ov, spe)
+    out: dict[str, Any] = {}
+    for name, mk in passes.items():
+        recs = run_pass(model, mk, docs, vmap, cfg)
+        sha = OP.write_records(hd / f"{name}.jsonl.gz", recs)
+        bad = [
+            r["doc"]
+            for r, d in zip(recs, docs, strict=True)
+            if not R1.residency_ok(d, r, cfg.memory_slots)
+        ]
+        out[name] = {
+            "records_sha256": sha,
+            "C-pair": {
+                "n": [len(recs), len(fifo)],
+                "ok": len(recs) == len(fifo) and R2._tg(recs) == R2._tg(fifo),
+            },
+            "C-res": {"n_mismatched": len(bad), "ok": not bad},
+        }
+    if es.get("ok"):
+        ES = es_module()
+        pol = ES.es_policy_from_payload(es["_payload"])
+        recs = ES.es_pass(R1.model_from_payload(es["_payload"]), pol, docs, vmap, cfg)
+        OP.write_records(hd / "es.jsonl.gz", recs)
+        out["es"] = {
+            "C-pair": {"ok": R2._tg(recs) == R2._tg(fifo)},
+            "C-res": {"ok": True},
+        }
+    else:
+        out["es"] = {"omitted": "C-ES failed: the ES contrast is omitted (§5.7)"}
+    out["ff"] = {"hits": "run 2's factfiller_hits in run2_heldout (model-free)"}
+    return out
+
+
+def contrasts_5_6(seed: int, out_root: Path, cfg, delta) -> dict:
+    """§5.6 items 1-4 (descriptive, unadjusted): psiR - pinned ES (labelled with run
+    2's rule against delta_seed), psiR - psiC(run 2), psiR@3000 - psiC(run 2),
+    psiR - 2a's head; all-query and by bucket."""
+    R1, R2 = harness()["R1"], harness()["R2"]
+    hd = Path(out_root) / "heldout" / f"seed{seed}"
+    names = ["psiC", "fifo", "psiC_run2", "head_2a", "psiR@3000", "es"]
+    recs = {n: R1.read_pass(hd, n) for n in names if (hd / f"{n}.jsonl.gz").exists()}
+    W = R1.boot_weights(len(recs["fifo"]), seed, N_BOOT)
+    bk = R1.buckets_for(cfg.memory_slots)
+    out: dict[str, Any] = {}
+    pairs = {
+        "psiR_minus_es": ("psiC", "es"),
+        "psiR_minus_psiC_run2": ("psiC", "psiC_run2"),
+        "psiR3000_minus_psiC_run2": ("psiR@3000", "psiC_run2"),
+        "psiR_minus_head_2a": ("psiC", "head_2a"),
+    }
+    for key, (a, b) in pairs.items():
+        if a not in recs or b not in recs:
+            out[key] = {"omitted": f"{a if a not in recs else b} not run"}
+            continue
+        row = {}
+        for bucket in ("all", "gap_2_to_M", "gap_gt_M"):
+            per = {
+                a: R1.answer_counts(recs[a], bk[bucket]),
+                b: R1.answer_counts(recs[b], bk[bucket]),
+            }
+            c = R1.contrast(per, a, b, W)
+            row[bucket] = R2.label_contrast(c, delta) if key == "psiR_minus_es" else c
+        out[key] = row
+    out["note"] = (
+        "descriptive, unadjusted; gates nothing; falsifier 6 stays deferred to E1"
+    )
+    return out
+
+
+def smoke_measure(out: Path) -> dict:
+    """S-2b's numbers (§5.3) from a ``SMOKE=1`` launch at ``out``: per RSR process the
+    median ``step_s``, ``loo_s``, ``eval_forward_s`` and rank-loss time over the
+    on-policy steps ``k in [16, 48)``; one held-out pass of 64 already-used EVAL
+    documents through the psiR payload (never EVAL2)."""
+    SS.install("2b", "smoke")
+    R1 = harness()["R1"]
+    rows: dict[str, Any] = {}
+    plan = json.loads((Path(out) / "plan.json").read_text())
+    for s in plan["seeds"]:
+        for a in R1.RSR_ARMS:
+            hb = R1.read_heartbeat(R1.arm_dir(out, a, s))
+            beats = [
+                b for b in hb.get("beats") or [] if 16 <= b.get("step", -1) < SMOKE_STEPS
+            ]
+
+            def med(key, beats=beats):
+                v = [
+                    b.get(key) if key != "rank_s" else (b.get("mc") or {}).get("rank_s")
+                    for b in beats
+                ]
+                v = [x for x in v if _finite(x)]
+                return float(torch.tensor(v).median()) if v else None
+
+            rows[f"{a}-s{s}"] = {
+                k: med(k) for k in ("step_s", "loo_s", "eval_forward_s", "rank_s")
+            }
+    s0 = plan["seeds"][0]
+    cfg = R1.prereg_config(s0, SMOKE_STEPS)
+    payload = R1.read_checkpoint(
+        R1.checkpoint_path(R1.arm_dir(out, "psiC", s0), SMOKE_STEPS)
+    )
+    model = R1.model_from_payload(payload)
+    docs = R1.docs_by_id(cfg, range(R1.EVAL[0], R1.EVAL[0] + 64))
+    t0 = time.perf_counter()
+    run_pass(
+        model,
+        lambda chunk: R1.eval_policy("psiC", payload, cfg),
+        docs,
+        R1.vocab_map(cfg),
+        cfg,
+    )
+    held = time.perf_counter() - t0
+    med_step = max(v["step_s"] for v in rows.values() if v["step_s"] is not None)
+    res = {
+        "per_process": rows,
+        "heldout_64_eval_s": held,
+        "max_median_step_s": med_step,
+        "census": SS.census({"EVAL": tuple(R1.EVAL)}),
+    }
+    (Path(out) / "smoke-measure.json").write_text(
+        json.dumps(res, indent=1, default=str) + "\n"
+    )
+    return res
+
+
+def smoke_pre(out: Path, standin: tuple[int, int]) -> dict:
+    """Review LB-2: on an S-2b variant with fifo steps != RSR steps (launch_2b.zsh,
+    SMOKE=1 SMOKE_STEPS / SMOKE_FIFO_STEPS), push measure's pre-held-out controls
+    through the REAL PM-1/PM-2 wrappers (C10 split, C6, C2, C4 views, C-F, the PM-2
+    precheck, C11') and the closure, with the held-out range replaced by an already-used
+    non-sealed stand-in (never EVAL2). Writes ``smoke-pre.json``; a smoke is never the
+    run (exit 3). C10 fails by design on a smoke launch (out / job_suffix / smoke, and
+    the registered R-1 != the smoke's steps); its problems are listed per view."""
+    SS.install("2b", "smoke")
+    H = harness()
+    R1 = H["R1"]
+    SS.rebind()
+    out = Path(out)
+    launch = json.loads((out / "launch-git.json").read_text())
+    plan0 = json.loads((out / "plan.json").read_text())
+    K, fi = int(launch["steps"]), int(launch["fifo_steps"])
+    seeds = [int(x) for x in str(launch.get("smoke_seeds") or "0 1 2").split()]
+    plan = {**plan0, "K_2b": K, "fifo_iters": fi, "seeds": seeds}
+    set_plan(plan)
+    rows: dict[str, Any] = {}
+    for sd in seeds:
+        cfg = dataclasses.replace(
+            R1.prereg_config(sd, K),
+            eval_range=tuple(standin),
+            job_suffix=launch.get("job_suffix") or "",
+        )
+        pe = pre_eval2_controls(
+            cfg, owner_values(K), out, plan, ledger_2a=None, footer_seeds=seeds
+        )
+        rows[str(sd)] = {
+            "pre_eval2": pe,
+            "closure_standin": eval2_closure(cfg),
+            "c10_problems": {
+                k: (
+                    v.get("launch_problems"),
+                    {a: r.get("problems") for a, r in (v.get("per_arm") or {}).items()},
+                )
+                for k, v in ((pe["controls"].get("C10") or {}).get("views") or {}).items()
+            },
+        }
+    res = {
+        "K": K,
+        "fifo_iters": fi,
+        "standin": list(standin),
+        "seeds": rows,
+        "census": SS.census({"STANDIN": tuple(standin)}),
+        "exit": 3,
+    }
+    (out / "smoke-pre.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    return res
+
+
+# --------------------------------------------------------------------------- #
+# launch-checks and finalize
+# --------------------------------------------------------------------------- #
+
+QUESTION = (
+    "PREREG rsr-run3-ranking §5 (2b): trained on-policy with run 2's harness, changed "
+    "only in the loss, does run 2's content-only bilinear psi_hat beat FIFO on the "
+    "fresh sealed EVAL2?"
+)
+
+
+def launch_checks(out_root: Path, *, suite_log: Path, suite_rc: Path, suite_head: Path):
+    """G-C3 (the suite at the launch head, rc read by the launcher), R-SEAL (d) (the
+    branch search), and the frozen manifest (plan, K_2b, omega_s, sealed source)."""
+    SS.install("2b", "launch-checks")
+    out_root = Path(out_root)
+    rep: dict[str, Any] = {"run_id": RUN_ID, "launched_utc": utc()}
+    rep["head"], rep["dirty"] = C.git_head(), C.git_dirty_paths()
+    try:
+        rc_txt = Path(suite_rc).read_text().strip()
+        rc = int(rc_txt) if rc_txt.lstrip("-").isdigit() else None
+        cen = C.suite_census(Path(suite_log).read_text(), rc)
+        sh = Path(suite_head).read_text().strip()
+        cen.update(head=sh, head_is_launch_head=sh == rep["head"])
+        cen["ok"] = bool(cen["ok"]) and cen["head_is_launch_head"]
+    except OSError as e:
+        cen = {"ok": False, "error": f"{type(e).__name__}: {e}"}
+    rep["G-C3"] = cen
+    rep["R-SEAL.search"] = SS.branch_search()
+    plan = json.loads((out_root / "plan.json").read_text())
+    rep["plan_ok"] = bool(plan.get("ok"))
+    L = C.ledger_mod()
+    led = L.Ledger(RUN_ID, question=QUESTION, runs_root=out_root.parent)
+    led.manifest(
+        {
+            "run_id": RUN_ID,
+            "prereg": PREREG_REL,
+            "prereg_commit": PREREG_COMMIT,
+            "plan": plan,
+            "sealed_source": SS.SEALED_SOURCE,
+            "sealed": {k: list(v) for k, v in SS.sealed_ranges().items()},
+            "stage_seals": {k: list(v) for k, v in SS.STAGES["2b"].items()},
+            "owner": {"gamma": GAMMA, "wd": WD, "o5": O5},
+            "launcher": LAUNCHER,
+        }
+    )
+    rep["manifest"] = {
+        "config_hash": led.doc["config_hash"],
+        "manifest_written_utc": led.doc["manifest_written_utc"],
+    }
+    rep["ok"] = bool(
+        cen.get("ok")
+        and rep["R-SEAL.search"]["ok"]
+        and rep["plan_ok"]
+        and rep["dirty"] == []
+    )
+    rep["exit"] = 0 if rep["ok"] else 3
+    (out_root / "launch.json").write_text(json.dumps(rep, indent=1, default=str) + "\n")
+    return rep["exit"]
+
+
+def finalize(out_root: Path) -> int:
+    """§5.5: run 2's class rule over the per-seed labels (run 2's ``summarize``); any
+    failed run-level control is exit 3 and the class is NOT READ."""
+    SS.install("2b", "finalize")
+    R2 = harness()["R2"]
+    out_root = Path(out_root)
+    seeds = list(SS.C.registered_seeds(PREREG_PATH))
+    docs = []
+    for sd in seeds:
+        f = out_root / f"measure-seed{sd}.json"
+        if f.exists():
+            docs.append(json.loads(f.read_text()))
+    sm = R2.summarize(docs) if docs else {}
+    failed = {
+        d["seed"]: d.get("controls_failed") for d in docs if d.get("controls_failed")
+    }
+    exits = [int(d.get("exit", 3)) for d in docs]
+    code = 3 if (len(docs) != len(seeds) or failed or any(e != 0 for e in exits)) else 0
+    run = {
+        "run_id": RUN_ID,
+        "exit": code,
+        "status": {0: "ok", 3: "did_not_run"}[code],
+        "class": sm.get("class") if code == 0 else "NOT READ",
+        "labels": sm.get("labels") if code == 0 else {s: "NOT READ" for s in seeds},
+        "labels_raw_not_read": None if code == 0 else sm.get("labels"),
+        "controls_failed": failed,
+        "summary_run2_form": sm,
+        "convergence_psiR": {
+            d["seed"]: (d.get("run3") or {}).get("convergence_psiR") for d in docs
+        },
+        "contrasts_5_6": {
+            d["seed"]: (d.get("run3_extra") or {}).get("contrasts") for d in docs
+        },
+        "route": "Gate A (PREREG §5.5, §7), whatever the class",
+    }
+    (out_root / "run.json").write_text(json.dumps(run, indent=1, default=str) + "\n")
+    L = C.ledger_mod()
+    led = L.Ledger(RUN_ID, question=QUESTION, runs_root=out_root.parent)
+    lj = out_root / "launch.json"
+    if lj.exists():
+        m = json.loads(lj.read_text()).get("manifest") or {}
+        led.doc["config_hash"] = m.get("config_hash")
+        led.doc["manifest_written_utc"] = m.get("manifest_written_utc")
+    for d in docs:
+        for a, r in (d.get("arms") or {}).items():
+            led.command(
+                r["argv"], exit_code=r.get("rc"), note=f"arm {a} seed {d['seed']}"
+            )
+    led.command([".venv/bin/python", EXPERIMENT, "2b", "finalize"], exit_code=code)
+    plan = json.loads((out_root / "plan.json").read_text())
+    led.run_meta(
+        device="cpu",
+        seeds_actually_run=[d["seed"] for d in docs],
+        steps_requested=plan.get("K_2b"),
+    )
+    led.note("summary", run, how=f"{EXPERIMENT} 2b finalize")
+    for d in docs:
+        for k, v in C.flatten(f"seed{d['seed']}", d, max_depth=4):
+            led.note(k, v, how=f"runs/{RUN_ID}/measure-seed{d['seed']}.json")
+    led.status(run["status"])
+    led.write()
+    lines = [
+        f"# RESULTS: {RUN_ID} (RSR run 3, phase 2b)\n",
+        f"Generated by `{EXPERIMENT} 2b finalize`; no number is typed. Written by a "
+        "model; not by Brendan.\n",
+        f"- exit `{code}`; class **{run['class']}**; labels {run['labels']}",
+        f"- controls failed: {failed or 'none'}",
+        f"- route: {run['route']}\n",
+        "Descriptive (§5.6, never gates): convergence "
+        f"{run['convergence_psiR']}; contrasts in run.json `contrasts_5_6`.\n",
+    ]
+    (out_root / "RESULTS.md").write_text("\n".join(lines) + "\n")
+    return code
+
+
+def main(argv: list[str]) -> int:
+    from rsr.exit_codes import ArgumentParser
+
+    torch.set_num_threads(1)
+    p = ArgumentParser(prog="run.py 2b", description="PREREG rsr-run3-ranking §5")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    pp = sub.add_parser("plan")
+    pp.add_argument("--out-root", default=str(OUT_DEFAULT))
+    pp.add_argument("--ledger-2a", default=str(OUT_2A / "ledger.json"))
+    pm = sub.add_parser("measure")
+    pm.add_argument("--seed", type=int, required=True)
+    pm.add_argument("--out-root", default=str(OUT_DEFAULT))
+    pm.add_argument("--ledger-2a", default=str(OUT_2A / "ledger.json"))
+    psm = sub.add_parser("smoke-measure")
+    psm.add_argument("--out", required=True)
+    psp = sub.add_parser("smoke-pre")
+    psp.add_argument("--out", required=True)
+    psp.add_argument("--standin", type=int, nargs=2, required=True)
+    plc = sub.add_parser("launch-checks")
+    plc.add_argument("--out-root", default=str(OUT_DEFAULT))
+    pfz = sub.add_parser("finalize")
+    pfz.add_argument("--out-root", default=str(OUT_DEFAULT))
+    a = p.parse_args(argv)
+    if a.cmd == "launch-checks":
+        logs = Path(a.out_root) / "logs"
+        return launch_checks(
+            Path(a.out_root),
+            suite_log=logs / "suite.log",
+            suite_rc=logs / "suite.rc",
+            suite_head=logs / "suite.head",
+        )
+    if a.cmd == "finalize":
+        return finalize(Path(a.out_root))
+    if a.cmd == "smoke-pre":
+        r = smoke_pre(Path(a.out), tuple(a.standin))
+        failed = {s: v["pre_eval2"]["failed"] for s, v in r["seeds"].items()}
+        print(json.dumps({"failed": failed, "census_ok": r["census"]["ok"]}, indent=1))
+        return 3  # a smoke is never the run
+    if a.cmd == "smoke-measure":
+        r = smoke_measure(Path(a.out))
+        print(json.dumps({k: v for k, v in r.items() if k != "census"}, indent=1))
+        return 3  # a smoke is never the run
+    if a.cmd == "plan":
+        return plan_stage(Path(a.out_root), Path(a.ledger_2a))
+    if a.cmd == "measure":
+        return measure_stage(a.seed, Path(a.out_root), ledger_2a=Path(a.ledger_2a))
+    return 3

@@ -87,6 +87,7 @@ reduction and E0b stops testing what it claims to test."
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -100,6 +101,7 @@ from rsr.metrics.vacuity import partial_correlation_with_age, spearman
 from rsr.retention.instrumentation import EvictionRecord, RankShiftLog, rank_shift
 from rsr.retention.mc import mc_returns
 from rsr.retention.policy import AttentionTrace, MemoryState
+from rsr.retention.rank_loss import LOSS_MC, LOSS_RANK, LOSSES, rank_loss_groups
 from rsr.retention.reward import retrieval_demand
 from rsr.retention.targets import (
     STATUS_NO_DONOR,
@@ -201,6 +203,9 @@ REDUCTION_SWITCHES: dict[str, Any] = {
     "context_source": ContextSource.CURRENT_SENTENCE_GESTALT,
     "sent_pos_index": SentPosIndex.RANK,
     "target": TARGET_R_I,
+    "loss": LOSS_MC,
+    "rank_k": None,
+    "rank_omega": None,
 }
 """Section 3.7's switch set, enumerated once.
 
@@ -214,6 +219,11 @@ eviction to FIFO and the reduction never exercised the score path at all.
 `target` is not a term of the eviction score: it selects what `observe` regresses
 `psi_hat` on, and the reduction runs with `observe` off (ADR-0009 T13). It is listed
 because the test requires every field here; its value is the run-1 default.
+
+`loss`, `rank_k`, `rank_omega` (PREREG rsr-run3-ranking §0.3) are not eviction-score
+terms either: they select the RETENTION LOSS `observe`'s rows feed (`"mc"`, ADR-0009
+L9's squared error, or `"rank"`, §2's pairwise loss). Their off values are `"mc"` and
+None, None -- run 1's and run 2's path, bit for bit.
 """
 
 
@@ -249,6 +259,22 @@ class RSRConfig:
     measured on-policy (`rsr.retention.loo_target`). Not an eviction-score term.
     Set by a labelled `--policy-override target=loo_resample`, so it is in the arm
     label and the config hash (ADR-0009 L12)."""
+
+    loss: str = LOSS_MC
+    """The retention loss (PREREG rsr-run3-ranking §0.3; R-2026-10-19-l9-ranking-loss,
+    for that test only). `"mc"` (default, the off-switch): ADR-0009 L9's squared error,
+    run 1's and run 2's path bit for bit. `"rank"`: §2's within-step pairwise logistic
+    loss over the same rows (`rsr.retention.rank_loss`). Not an eviction-score term.
+    Set by labelled overrides `loss=rank`, `rank_k=<k>`, `rank_omega=<omega>`, so it is
+    in the arm label and the config hash (ADR-0009 L12)."""
+
+    rank_k: int | None = None
+    """`"rank"` only: the bottom-k of the pair weighting (PREREG §2.2: 3). None under
+    `"mc"` -- a value set there would be a switch that does nothing, and is refused."""
+
+    rank_omega: float | None = None
+    """`"rank"` only: the up-weight `omega` of pairs touching the bottom-k (PREREG §2.2
+    grid {2, 8, 32}). None under `"mc"`, refused otherwise."""
 
     @classmethod
     def reduction_to_tg(cls, capacity: int) -> RSRConfig:
@@ -374,6 +400,29 @@ class RSRPolicy:
             raise ValueError(
                 f"target={config.target!r} is not a known retention target; the "
                 f"targets are {TARGETS} (owner ruling C3)"
+            )
+        if config.loss not in LOSSES:
+            raise ValueError(
+                f"loss={config.loss!r} is not a known retention loss; the losses are "
+                f"{LOSSES} (PREREG rsr-run3-ranking §0.3)"
+            )
+        if config.loss == LOSS_RANK:
+            k, om = config.rank_k, config.rank_omega
+            if k is None or om is None:
+                raise ValueError(
+                    "loss='rank' needs rank_k and rank_omega as labelled overrides "
+                    "(PREREG rsr-run3-ranking §2.2); neither has a default"
+                )
+            if isinstance(k, bool) or float(k) != int(k) or int(k) < 1:
+                raise ValueError(f"rank_k={k!r}: a positive integer")
+            if isinstance(om, bool) or not (float(om) == float(om) and float(om) >= 1):
+                raise ValueError(f"rank_omega={om!r}: a finite number >= 1")
+        elif config.rank_k is not None or config.rank_omega is not None:
+            # The `sent_pos_index` rule: a switch that is set and does nothing is
+            # worse than no switch -- an arm labelled rank_omega=8 under L9.
+            raise ValueError(
+                f"rank_k={config.rank_k!r} / rank_omega={config.rank_omega!r} under "
+                f"loss={config.loss!r}: they configure loss='rank' only"
             )
         if config.shadow_enabled:
             # ADR-0009 L6(a), signed 2026-09-30: slice 1 ships WITHOUT the shadow
@@ -889,7 +938,16 @@ class RSRPolicy:
         else:
             # Section 3.3 / ADR-0009 §2: the stop-gradient lives here.
             psi = self.head(s.detach().unsqueeze(1), c.detach()).squeeze(1)
-        loss = (psi - target.detach()).pow(2).sum() / n_groups
+        rank_stats: dict[str, Any] | None = None
+        if self.config.loss == LOSS_RANK:
+            # PREREG rsr-run3-ranking §0.3: the one change. Same rows, same detach
+            # site (above), same psi; only the per-(row, t) functional differs.
+            loss, rank_stats = self._rank_loss(psi, target, rows)
+            if loss is None:
+                self.last_mc_stats = {"loss": LOSS_RANK, **rank_stats}
+                return None
+        else:
+            loss = (psi - target.detach()).pow(2).sum() / n_groups
         with torch.no_grad():
             # CPU before float64: MPS has no float64 (found by the MPS T10 test).
             p, a = psi.detach().cpu().double(), age_of.cpu().double()
@@ -913,12 +971,59 @@ class RSRPolicy:
             and self._train_step < self.config.t_warm,
             "gamma": self.config.gamma,
         }
+        if rank_stats is not None:
+            # PREREG rsr-run3-ranking §5.7 C11': the beat says which loss ran. `l_mc`
+            # is None under "rank" (no squared error was formed); the train loop's
+            # `loss_mc` beat field carries the active retention loss, i.e. `l_rank`.
+            self.last_mc_stats.update(l_mc=None, loss=LOSS_RANK, **rank_stats)
         if self.config.target == TARGET_LOO_RESAMPLE:
             # C3: the target diagnostics and the LOO cell counts ride on the beat.
             self.last_mc_stats["target"] = self.config.target
             self.last_mc_stats["loo"] = self.loo_coverage()
             self.last_mc_stats["target_diag"] = self._target_diagnostics(rows)
         return loss
+
+    def _rank_loss(
+        self, psi: Tensor, target: Tensor, rows: dict[str, Any]
+    ) -> tuple[Tensor | None, dict[str, Any]]:
+        """PREREG rsr-run3-ranking §2.1 on `mc_targets`' rows: one group per
+        `(row, t)` (the rows of one `_Obs`, contiguous by construction), pair set =
+        that step's live memory, `G` = the same `G_i(t)` L9 regresses. Padded with
+        zeros (finite) to the widest group; `rank_loss_groups` does the rest."""
+        t0 = time.perf_counter()
+        dev = psi.device
+        gid = rows["row"].to("cpu", torch.int64) * 1_000_003 + rows["t"].to(
+            "cpu", torch.int64
+        )
+        _u, counts = torch.unique_consecutive(gid, return_counts=True)
+        n_g, width = int(counts.numel()), int(counts.max())
+        starts = torch.cumsum(counts, 0) - counts
+        grp = torch.repeat_interleave(torch.arange(n_g, device="cpu"), counts)
+        pos = torch.arange(gid.numel(), device="cpu") - starts[grp]
+        grp, pos = grp.to(dev), pos.to(dev)
+        S_ = torch.zeros(n_g, width, dtype=psi.dtype, device=dev).index_put(
+            (grp, pos), psi
+        )
+        G_ = torch.zeros(n_g, width, dtype=target.dtype, device=dev).index_put(
+            (grp, pos), target.detach()
+        )
+        V_ = torch.zeros(n_g, width, dtype=torch.bool, device=dev).index_put(
+            (grp, pos), torch.ones_like(pos, dtype=torch.bool)
+        )
+        r = rank_loss_groups(
+            S_, G_, V_, k=int(self.config.rank_k), omega=float(self.config.rank_omega)
+        )
+        stats = {
+            "l_rank": None if r.loss is None else float(r.loss.detach()),
+            "rank_k": int(self.config.rank_k),
+            "rank_omega": float(self.config.rank_omega),
+            "rank_groups": r.n_groups,
+            "rank_groups_with_pair": r.n_groups_with_pair,
+            "rank_groups_no_pair": r.n_groups_no_pair,
+            "rank_pairs": r.n_pairs,
+            "rank_s": time.perf_counter() - t0,
+        }
+        return r.loss, stats
 
     def on_write(self, slots: MemoryState, slot: int, step: int) -> None:
         """No per-slot accumulator: the MC buffer is keyed by `(row, written_at)`

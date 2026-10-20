@@ -1,0 +1,1124 @@
+{
+ "K": 96,
+ "fifo_iters": 48,
+ "standin": [
+  995000,
+  995032
+ ],
+ "seeds": {
+  "0": {
+   "pre_eval2": {
+    "controls": {
+     "footers": {
+      "jobs": {
+       "psiC-s0": {
+        "rc": "0",
+        "footer": true,
+        "ok": true
+       },
+       "fifo-s0": {
+        "rc": "0",
+        "footer": true,
+        "ok": true
+       },
+       "age-s0": {
+        "rc": "0",
+        "footer": true,
+        "ok": true
+       }
+      },
+      "ok": true
+     },
+     "PM-2.precheck": {
+      "fifo_iters": 48,
+      "K_2b": 96,
+      "problems": [],
+      "ok": true
+     },
+     "C6": {
+      "views": {
+       "fifo": {
+        "per_arm": {
+         "fifo": {
+          "steps_requested": 48,
+          "steps_done": 48,
+          "status": "completed",
+          "n_beats": 48,
+          "ok": true
+         }
+        },
+        "ok": true
+       },
+       "rsr": {
+        "per_arm": {
+         "psiC": {
+          "steps_requested": 96,
+          "steps_done": 96,
+          "status": "completed",
+          "n_beats": 96,
+          "ok": true
+         },
+         "age": {
+          "steps_requested": 96,
+          "steps_done": 96,
+          "status": "completed",
+          "n_beats": 96,
+          "ok": true
+         }
+        },
+        "ok": true
+       }
+      },
+      "per_arm": {
+       "fifo": {
+        "steps_requested": 48,
+        "steps_done": 48,
+        "status": "completed",
+        "n_beats": 48,
+        "ok": true
+       },
+       "psiC": {
+        "steps_requested": 96,
+        "steps_done": 96,
+        "status": "completed",
+        "n_beats": 96,
+        "ok": true
+       },
+       "age": {
+        "steps_requested": 96,
+        "steps_done": 96,
+        "status": "completed",
+        "n_beats": 96,
+        "ok": true
+       }
+      },
+      "pm2": "C6 per arm (Amendment PM-2)",
+      "ok": true
+     },
+     "C10": {
+      "views": {
+       "fifo": {
+        "derived_ckpt": 16,
+        "derived_every": 16,
+        "registered": {
+         "file": "/Users/keanooo7/retrieval-successor-retention/.worktrees/run3-build/experiments/rsr-run1/PREREG.md",
+         "heading": "### A4.1 Owner values (fills A2.8's slots)",
+         "values": {
+          "gamma": 0.9,
+          "phi_weight_decay": 0.01,
+          "iters": 3000,
+          "o5": "eval"
+         },
+         "raw": {
+          "O1": "0.9",
+          "O4": "0.01",
+          "R-1": "3000",
+          "O5": "eval"
+         },
+         "problems": [],
+         "status": "filled"
+        },
+        "launch": {
+         "run_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+         "dirty": false,
+         "gamma": "0.9",
+         "wd": "0.01",
+         "steps": "48",
+         "ckpt": "16",
+         "ckpt_every": "16",
+         "ckpt_every_rule": "gcd(160, CKPT) if STEPS>=160 and CKPT>0 else CKPT (A4.2)",
+         "diag_step": "160",
+         "o5": "eval",
+         "c1_flags": "--frozen-model-mode eval",
+         "c2_flags": "",
+         "c3_flags": "",
+         "rsr_orch_root": "",
+         "out": "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out",
+         "job_suffix": "-lb2smoke3",
+         "dry_run": ""
+        },
+        "launch_env": null,
+        "jobs_read_from": {
+         "orch_root": "/Users/keanooo7/retrieval-successor-retention",
+         "job_suffix": "-lb2smoke3"
+        },
+        "launch_problems": [
+         "registered R-1 3000 != given 48",
+         "registered R-1 3000 != launch steps '48'",
+         "launch out '/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out': a dry-run launch",
+         "launch job_suffix '-lb2smoke3': a dry-run launch",
+         "job records read from '/Users/keanooo7/retrieval-successor-retention' with suffix '-lb2smoke3', not the shared root under the exact ids"
+        ],
+        "per_arm": {
+         "fifo": {
+          "frozen_model_mode": "eval (dropout off)",
+          "weight_decay": 0.01,
+          "iters": 48,
+          "label": "fifo+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+          "gamma_override": null,
+          "srep_norm_reg_weight": 0.0,
+          "checkpoint_steps": [
+           16,
+           32,
+           48
+          ],
+          "heartbeat_git_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+          "job_pinned_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+          "job_threads": 1,
+          "job_rc": 0,
+          "logs_rc": 0,
+          "cmd_source": "job record",
+          "cmd": [
+           ".venv/bin/python",
+           "-m",
+           "rsr.train.loop",
+           "--d",
+           "128",
+           "--batch",
+           "16",
+           "--iters",
+           "48",
+           "--steps-per-stream",
+           "48",
+           "--memory-slots",
+           "16",
+           "--lr",
+           "0.001",
+           "--seed",
+           "0",
+           "--beat-every",
+           "1",
+           "--ckpt-every",
+           "16",
+           "--device",
+           "cpu",
+           "--freeze-transformer",
+           "--frozen-model-mode",
+           "eval",
+           "--srep-norm-reg-weight",
+           "0.0",
+           "--pool-offset",
+           "993000",
+           "--pool-length",
+           "256",
+           "--pool-vocab-documents",
+           "64",
+           "--warm-start",
+           "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+           "--warm-start-sha256",
+           "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+           "--warm-start-manifest",
+           "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+           "--warm-start-root",
+           "/Users/keanooo7/retrieval-successor-retention",
+           "--warm-start-source-config",
+           "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/result.json",
+           "--policy",
+           "fifo",
+           "--out-dir",
+           "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out/fifo/seed0"
+          ],
+          "cmd_iters": "48",
+          "cmd_seed": "0",
+          "cmd_ckpt_every": "16",
+          "cmd_frozen_model_mode": "eval",
+          "cmd_gamma": [],
+          "cmd_srep_norm_reg_weight": "0.0",
+          "problems": [],
+          "ok": true
+         }
+        },
+        "ok": false
+       },
+       "rsr": {
+        "derived_ckpt": 32,
+        "derived_every": 32,
+        "registered": {
+         "file": "/Users/keanooo7/retrieval-successor-retention/.worktrees/run3-build/experiments/rsr-run1/PREREG.md",
+         "heading": "### A4.1 Owner values (fills A2.8's slots)",
+         "values": {
+          "gamma": 0.9,
+          "phi_weight_decay": 0.01,
+          "iters": 96,
+          "o5": "eval"
+         },
+         "raw": {
+          "O1": "0.9",
+          "O4": "0.01",
+          "R-1": "3000",
+          "O5": "eval"
+         },
+         "problems": [],
+         "status": "filled",
+         "iters_is_K_2b": "Amendment PM-1 item 2"
+        },
+        "launch": {
+         "run_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+         "dirty": false,
+         "gamma": "0.9",
+         "wd": "0.01",
+         "steps": "96",
+         "ckpt": "32",
+         "ckpt_every": "32",
+         "ckpt_every_rule": "gcd(160, CKPT) if STEPS>=160 and CKPT>0 else CKPT (A4.2)",
+         "diag_step": "160",
+         "o5": "eval",
+         "c1_flags": "--frozen-model-mode eval",
+         "c2_flags": "",
+         "c3_flags": "",
+         "rsr_orch_root": "",
+         "out": "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out",
+         "job_suffix": "-lb2smoke3",
+         "dry_run": ""
+        },
+        "launch_env": null,
+        "jobs_read_from": {
+         "orch_root": "/Users/keanooo7/retrieval-successor-retention",
+         "job_suffix": "-lb2smoke3"
+        },
+        "launch_problems": [
+         "launch out '/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out': a dry-run launch",
+         "launch job_suffix '-lb2smoke3': a dry-run launch",
+         "job records read from '/Users/keanooo7/retrieval-successor-retention' with suffix '-lb2smoke3', not the shared root under the exact ids"
+        ],
+        "per_arm": {
+         "psiC": {
+          "frozen_model_mode": "eval (dropout off)",
+          "weight_decay": 0.01,
+          "iters": 96,
+          "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+          "gamma_override": 0.9,
+          "srep_norm_reg_weight": 0.0,
+          "checkpoint_steps": [
+           32,
+           64,
+           96
+          ],
+          "heartbeat_git_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+          "job_pinned_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+          "job_threads": 1,
+          "job_rc": 0,
+          "logs_rc": 0,
+          "cmd_source": "job record",
+          "cmd": [
+           ".venv/bin/python",
+           "-m",
+           "rsr.train.loop",
+           "--d",
+           "128",
+           "--batch",
+           "16",
+           "--iters",
+           "96",
+           "--steps-per-stream",
+           "48",
+           "--memory-slots",
+           "16",
+           "--lr",
+           "0.001",
+           "--seed",
+           "0",
+           "--beat-every",
+           "1",
+           "--ckpt-every",
+           "32",
+           "--device",
+           "cpu",
+           "--freeze-transformer",
+           "--frozen-model-mode",
+           "eval",
+           "--srep-norm-reg-weight",
+           "0.0",
+           "--pool-offset",
+           "993000",
+           "--pool-length",
+           "256",
+           "--pool-vocab-documents",
+           "64",
+           "--warm-start",
+           "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+           "--warm-start-sha256",
+           "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+           "--warm-start-manifest",
+           "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+           "--warm-start-root",
+           "/Users/keanooo7/retrieval-successor-retention",
+           "--warm-start-source-config",
+           "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/result.json",
+           "--policy",
+           "rsr",
+           "--policy-override",
+           "b_enabled=false",
+           "--policy-override",
+           "shadow_enabled=false",
+           "--policy-override",
+           "nu=0",
+           "--policy-override",
+           "beta=1",
+           "--policy-override",
+           "gamma=0.9",
+           "--policy-override",
+           "target=loo_resample",
+           "--policy-override",
+           "loss=rank",
+           "--policy-override",
+           "rank_k=3",
+           "--policy-override",
+           "rank_omega=8",
+           "--out-dir",
+           "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out/psiC/seed0"
+          ],
+          "cmd_iters": "96",
+          "cmd_seed": "0",
+          "cmd_ckpt_every": "32",
+          "cmd_frozen_model_mode": "eval",
+          "cmd_gamma": [
+           "0.9"
+          ],
+          "cmd_srep_norm_reg_weight": "0.0",
+          "problems": [],
+          "ok": true
+         },
+         "age": {
+          "frozen_model_mode": "eval (dropout off)",
+          "weight_decay": 0.01,
+          "iters": 96,
+          "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,psi=age_only,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+          "gamma_override": 0.9,
+          "srep_norm_reg_weight": 0.0,
+          "checkpoint_steps": [
+           32,
+           64,
+           96
+          ],
+          "heartbeat_git_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+          "job_pinned_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+          "job_threads": 1,
+          "job_rc": 0,
+          "logs_rc": 0,
+          "cmd_source": "job record",
+          "cmd": [
+           ".venv/bin/python",
+           "-m",
+           "rsr.train.loop",
+           "--d",
+           "128",
+           "--batch",
+           "16",
+           "--iters",
+           "96",
+           "--steps-per-stream",
+           "48",
+           "--memory-slots",
+           "16",
+           "--lr",
+           "0.001",
+           "--seed",
+           "0",
+           "--beat-every",
+           "1",
+           "--ckpt-every",
+           "32",
+           "--device",
+           "cpu",
+           "--freeze-transformer",
+           "--frozen-model-mode",
+           "eval",
+           "--srep-norm-reg-weight",
+           "0.0",
+           "--pool-offset",
+           "993000",
+           "--pool-length",
+           "256",
+           "--pool-vocab-documents",
+           "64",
+           "--warm-start",
+           "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+           "--warm-start-sha256",
+           "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+           "--warm-start-manifest",
+           "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+           "--warm-start-root",
+           "/Users/keanooo7/retrieval-successor-retention",
+           "--warm-start-source-config",
+           "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/result.json",
+           "--policy",
+           "rsr",
+           "--policy-override",
+           "b_enabled=false",
+           "--policy-override",
+           "shadow_enabled=false",
+           "--policy-override",
+           "nu=0",
+           "--policy-override",
+           "beta=1",
+           "--policy-override",
+           "gamma=0.9",
+           "--policy-override",
+           "target=loo_resample",
+           "--policy-override",
+           "loss=rank",
+           "--policy-override",
+           "rank_k=3",
+           "--policy-override",
+           "rank_omega=8",
+           "--policy-override",
+           "psi_override=age_only",
+           "--out-dir",
+           "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out/age/seed0"
+          ],
+          "cmd_iters": "96",
+          "cmd_seed": "0",
+          "cmd_ckpt_every": "32",
+          "cmd_frozen_model_mode": "eval",
+          "cmd_gamma": [
+           "0.9"
+          ],
+          "cmd_srep_norm_reg_weight": "0.0",
+          "problems": [],
+          "ok": true
+         }
+        },
+        "ok": false
+       }
+      },
+      "per_arm": {
+       "fifo": {
+        "frozen_model_mode": "eval (dropout off)",
+        "weight_decay": 0.01,
+        "iters": 48,
+        "label": "fifo+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "gamma_override": null,
+        "srep_norm_reg_weight": 0.0,
+        "checkpoint_steps": [
+         16,
+         32,
+         48
+        ],
+        "heartbeat_git_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+        "job_pinned_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+        "job_threads": 1,
+        "job_rc": 0,
+        "logs_rc": 0,
+        "cmd_source": "job record",
+        "cmd": [
+         ".venv/bin/python",
+         "-m",
+         "rsr.train.loop",
+         "--d",
+         "128",
+         "--batch",
+         "16",
+         "--iters",
+         "48",
+         "--steps-per-stream",
+         "48",
+         "--memory-slots",
+         "16",
+         "--lr",
+         "0.001",
+         "--seed",
+         "0",
+         "--beat-every",
+         "1",
+         "--ckpt-every",
+         "16",
+         "--device",
+         "cpu",
+         "--freeze-transformer",
+         "--frozen-model-mode",
+         "eval",
+         "--srep-norm-reg-weight",
+         "0.0",
+         "--pool-offset",
+         "993000",
+         "--pool-length",
+         "256",
+         "--pool-vocab-documents",
+         "64",
+         "--warm-start",
+         "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+         "--warm-start-sha256",
+         "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+         "--warm-start-manifest",
+         "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+         "--warm-start-root",
+         "/Users/keanooo7/retrieval-successor-retention",
+         "--warm-start-source-config",
+         "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/result.json",
+         "--policy",
+         "fifo",
+         "--out-dir",
+         "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out/fifo/seed0"
+        ],
+        "cmd_iters": "48",
+        "cmd_seed": "0",
+        "cmd_ckpt_every": "16",
+        "cmd_frozen_model_mode": "eval",
+        "cmd_gamma": [],
+        "cmd_srep_norm_reg_weight": "0.0",
+        "problems": [],
+        "ok": true
+       },
+       "psiC": {
+        "frozen_model_mode": "eval (dropout off)",
+        "weight_decay": 0.01,
+        "iters": 96,
+        "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "gamma_override": 0.9,
+        "srep_norm_reg_weight": 0.0,
+        "checkpoint_steps": [
+         32,
+         64,
+         96
+        ],
+        "heartbeat_git_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+        "job_pinned_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+        "job_threads": 1,
+        "job_rc": 0,
+        "logs_rc": 0,
+        "cmd_source": "job record",
+        "cmd": [
+         ".venv/bin/python",
+         "-m",
+         "rsr.train.loop",
+         "--d",
+         "128",
+         "--batch",
+         "16",
+         "--iters",
+         "96",
+         "--steps-per-stream",
+         "48",
+         "--memory-slots",
+         "16",
+         "--lr",
+         "0.001",
+         "--seed",
+         "0",
+         "--beat-every",
+         "1",
+         "--ckpt-every",
+         "32",
+         "--device",
+         "cpu",
+         "--freeze-transformer",
+         "--frozen-model-mode",
+         "eval",
+         "--srep-norm-reg-weight",
+         "0.0",
+         "--pool-offset",
+         "993000",
+         "--pool-length",
+         "256",
+         "--pool-vocab-documents",
+         "64",
+         "--warm-start",
+         "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+         "--warm-start-sha256",
+         "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+         "--warm-start-manifest",
+         "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+         "--warm-start-root",
+         "/Users/keanooo7/retrieval-successor-retention",
+         "--warm-start-source-config",
+         "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/result.json",
+         "--policy",
+         "rsr",
+         "--policy-override",
+         "b_enabled=false",
+         "--policy-override",
+         "shadow_enabled=false",
+         "--policy-override",
+         "nu=0",
+         "--policy-override",
+         "beta=1",
+         "--policy-override",
+         "gamma=0.9",
+         "--policy-override",
+         "target=loo_resample",
+         "--policy-override",
+         "loss=rank",
+         "--policy-override",
+         "rank_k=3",
+         "--policy-override",
+         "rank_omega=8",
+         "--out-dir",
+         "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out/psiC/seed0"
+        ],
+        "cmd_iters": "96",
+        "cmd_seed": "0",
+        "cmd_ckpt_every": "32",
+        "cmd_frozen_model_mode": "eval",
+        "cmd_gamma": [
+         "0.9"
+        ],
+        "cmd_srep_norm_reg_weight": "0.0",
+        "problems": [],
+        "ok": true
+       },
+       "age": {
+        "frozen_model_mode": "eval (dropout off)",
+        "weight_decay": 0.01,
+        "iters": 96,
+        "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,psi=age_only,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "gamma_override": 0.9,
+        "srep_norm_reg_weight": 0.0,
+        "checkpoint_steps": [
+         32,
+         64,
+         96
+        ],
+        "heartbeat_git_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+        "job_pinned_sha": "e4fedc6e868af51e251cf3649e035da457a2eb35",
+        "job_threads": 1,
+        "job_rc": 0,
+        "logs_rc": 0,
+        "cmd_source": "job record",
+        "cmd": [
+         ".venv/bin/python",
+         "-m",
+         "rsr.train.loop",
+         "--d",
+         "128",
+         "--batch",
+         "16",
+         "--iters",
+         "96",
+         "--steps-per-stream",
+         "48",
+         "--memory-slots",
+         "16",
+         "--lr",
+         "0.001",
+         "--seed",
+         "0",
+         "--beat-every",
+         "1",
+         "--ckpt-every",
+         "32",
+         "--device",
+         "cpu",
+         "--freeze-transformer",
+         "--frozen-model-mode",
+         "eval",
+         "--srep-norm-reg-weight",
+         "0.0",
+         "--pool-offset",
+         "993000",
+         "--pool-length",
+         "256",
+         "--pool-vocab-documents",
+         "64",
+         "--warm-start",
+         "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+         "--warm-start-sha256",
+         "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+         "--warm-start-manifest",
+         "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+         "--warm-start-root",
+         "/Users/keanooo7/retrieval-successor-retention",
+         "--warm-start-source-config",
+         "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/result.json",
+         "--policy",
+         "rsr",
+         "--policy-override",
+         "b_enabled=false",
+         "--policy-override",
+         "shadow_enabled=false",
+         "--policy-override",
+         "nu=0",
+         "--policy-override",
+         "beta=1",
+         "--policy-override",
+         "gamma=0.9",
+         "--policy-override",
+         "target=loo_resample",
+         "--policy-override",
+         "loss=rank",
+         "--policy-override",
+         "rank_k=3",
+         "--policy-override",
+         "rank_omega=8",
+         "--policy-override",
+         "psi_override=age_only",
+         "--out-dir",
+         "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out/age/seed0"
+        ],
+        "cmd_iters": "96",
+        "cmd_seed": "0",
+        "cmd_ckpt_every": "32",
+        "cmd_frozen_model_mode": "eval",
+        "cmd_gamma": [
+         "0.9"
+        ],
+        "cmd_srep_norm_reg_weight": "0.0",
+        "problems": [],
+        "ok": true
+       }
+      },
+      "launch_problems": [
+       "fifo: registered R-1 3000 != given 48",
+       "fifo: registered R-1 3000 != launch steps '48'",
+       "fifo: launch out '/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out': a dry-run launch",
+       "fifo: launch job_suffix '-lb2smoke3': a dry-run launch",
+       "fifo: job records read from '/Users/keanooo7/retrieval-successor-retention' with suffix '-lb2smoke3', not the shared root under the exact ids",
+       "rsr: launch out '/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out': a dry-run launch",
+       "rsr: launch job_suffix '-lb2smoke3': a dry-run launch",
+       "rsr: job records read from '/Users/keanooo7/retrieval-successor-retention' with suffix '-lb2smoke3', not the shared root under the exact ids"
+      ],
+      "pm1": "C10 per arm (Amendment PM-1 item 2): fifo vs R-1, psiR/ageR vs K_2b",
+      "ok": false
+     },
+     "C8": {
+      "per_arm": {
+       "psiC": {
+        "n_steps": 96,
+        "nonfinite_steps": [],
+        "ok": true
+       },
+       "age": {
+        "n_steps": 96,
+        "nonfinite_steps": [],
+        "ok": true
+       }
+      },
+      "ok": true
+     },
+     "C3": {
+      "per_checkpoint": {
+       "psiC": {
+        "n_tensors": 206,
+        "keys_equal": true,
+        "differ": [],
+        "ok": true
+       },
+       "fifo": {
+        "n_tensors": 206,
+        "keys_equal": true,
+        "differ": [],
+        "ok": true
+       },
+       "age": {
+        "n_tensors": 206,
+        "keys_equal": true,
+        "differ": [],
+        "ok": true
+       },
+       "psiC@32": {
+        "n_tensors": 206,
+        "keys_equal": true,
+        "differ": [],
+        "ok": true
+       },
+       "age@32": {
+        "n_tensors": 206,
+        "keys_equal": true,
+        "differ": [],
+        "ok": true
+       },
+       "psiC@64": {
+        "n_tensors": 206,
+        "keys_equal": true,
+        "differ": [],
+        "ok": true
+       },
+       "age@64": {
+        "n_tensors": 206,
+        "keys_equal": true,
+        "differ": [],
+        "ok": true
+       }
+      },
+      "n_substrate_tensors": 206,
+      "ok": true,
+      "substrate_sha256": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60"
+     },
+     "C2": {
+      "views": {
+       "rsr": {
+        "steps_compared": 96,
+        "warm_steps_compared": 16,
+        "a_pool_ids": {
+         "present": true,
+         "required": true,
+         "cross_arm_mismatch_steps": [],
+         "epochs_not_exactly_the_pool": []
+        },
+        "b_fingerprint": {
+         "cross_arm_mismatch_steps": [],
+         "replay_mismatch_steps": [],
+         "sampling": "per-epoch permutation (each document once per epoch)",
+         "sampling_per_arm": {
+          "psiC": "per-epoch permutation (each document once per epoch)",
+          "age": "per-epoch permutation (each document once per epoch)"
+         },
+         "sampling_agrees": true
+        },
+        "c_loss_lm_warm_mismatch_steps": [],
+        "same_step_sets": true,
+        "ok": true
+       },
+       "psiC+fifo": {
+        "steps_compared": 48,
+        "warm_steps_compared": 16,
+        "a_pool_ids": {
+         "present": true,
+         "required": true,
+         "cross_arm_mismatch_steps": [],
+         "epochs_not_exactly_the_pool": []
+        },
+        "b_fingerprint": {
+         "cross_arm_mismatch_steps": [],
+         "replay_mismatch_steps": [],
+         "sampling": "per-epoch permutation (each document once per epoch)",
+         "sampling_per_arm": {
+          "psiC": "per-epoch permutation (each document once per epoch)",
+          "fifo": "per-epoch permutation (each document once per epoch)"
+         },
+         "sampling_agrees": true
+        },
+        "c_loss_lm_warm_mismatch_steps": [],
+        "same_step_sets": true,
+        "ok": true
+       },
+       "age+fifo": {
+        "steps_compared": 48,
+        "warm_steps_compared": 16,
+        "a_pool_ids": {
+         "present": true,
+         "required": true,
+         "cross_arm_mismatch_steps": [],
+         "epochs_not_exactly_the_pool": []
+        },
+        "b_fingerprint": {
+         "cross_arm_mismatch_steps": [],
+         "replay_mismatch_steps": [],
+         "sampling": "per-epoch permutation (each document once per epoch)",
+         "sampling_per_arm": {
+          "age": "per-epoch permutation (each document once per epoch)",
+          "fifo": "per-epoch permutation (each document once per epoch)"
+         },
+         "sampling_agrees": true
+        },
+        "c_loss_lm_warm_mismatch_steps": [],
+        "same_step_sets": true,
+        "ok": true
+       }
+      },
+      "warm_steps_compared": 16,
+      "c_loss_lm_warm_mismatch_steps": [],
+      "pm2": "C2: RSR arms over [0, K_2b); each with fifo over [0, R-1) (PM-2)",
+      "ok": true
+     },
+     "C4": {
+      "R_quantity": 0.8597733527421951,
+      "reference": 0.8597733527421951,
+      "abs_diff": 0.0,
+      "tolerance": 1e-06,
+      "seconds": 27.618969417002518,
+      "torch_threads": 1,
+      "ok": true
+     },
+     "C-F": {
+      "no_trainable_parameter": true,
+      "optimizer_holds_none": true,
+      "tensors_equal_substrate": {
+       "per_checkpoint": {
+        "fifo": {
+         "n_tensors": 206,
+         "keys_equal": true,
+         "differ": [],
+         "ok": true
+        }
+       },
+       "n_substrate_tensors": 206,
+       "ok": true
+      },
+      "ok": true
+     },
+     "C11": {
+      "per_arm": {
+       "psiC": {
+        "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "n_beats": 96,
+        "bad_steps": [],
+        "ok": true
+       },
+       "fifo": {
+        "label": "fifo+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "ok": true
+       },
+       "age": {
+        "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,psi=age_only,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "n_beats": 96,
+        "bad_steps": [],
+        "ok": true
+       }
+      },
+      "launch_problems": [
+       "launch smoke '1': a smoke is never the run"
+      ],
+      "ok": false
+     },
+     "C11prime": {
+      "C11": {
+       "per_arm": {
+        "psiC": {
+         "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+         "n_beats": 96,
+         "bad_steps": [],
+         "ok": true
+        },
+        "fifo": {
+         "label": "fifo+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+         "ok": true
+        },
+        "age": {
+         "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,psi=age_only,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+         "n_beats": 96,
+         "bad_steps": [],
+         "ok": true
+        }
+       },
+       "launch_problems": [
+        "launch smoke '1': a smoke is never the run"
+       ],
+       "ok": false
+      },
+      "per_arm": {
+       "psiC": {
+        "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "n_beats": 96,
+        "bad_steps": [],
+        "ok": true
+       },
+       "age": {
+        "label": "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,psi=age_only,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "n_beats": 96,
+        "bad_steps": [],
+        "ok": true
+       },
+       "fifo": {
+        "label": "fifo+frozen[eval]+warm[ckpt-003000.pt@0ee3f8a69b50,src_seed=0]",
+        "ok": true
+       }
+      },
+      "launch_loss": "rank",
+      "ok": false
+     },
+     "C-K": {
+      "ok": false,
+      "not_applicable": "S-2b smoke: no 2a ledger / 2b-S yet"
+     },
+     "C-omega": {
+      "ok": false,
+      "not_applicable": "S-2b smoke: no 2a ledger / 2b-S yet"
+     }
+    },
+    "failed": [
+     "C10",
+     "C11",
+     "C11prime",
+     "C-K",
+     "C-omega"
+    ],
+    "ok": false
+   },
+   "closure_standin": {
+    "pool_overlaps": [],
+    "pool_below_K": true,
+    "eval_overlaps": [],
+    "eval_below_K": true,
+    "pool_eval_disjoint": true,
+    "vocab_sha256": "afbaf994e9d1f617fdc2e68579bf5f55622ee17aee056d33d8667d218d245031",
+    "pool_closure": true,
+    "eval_closure": true,
+    "ok": true,
+    "failed": []
+   },
+   "c10_problems": {
+    "fifo": [
+     [
+      "registered R-1 3000 != given 48",
+      "registered R-1 3000 != launch steps '48'",
+      "launch out '/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out': a dry-run launch",
+      "launch job_suffix '-lb2smoke3': a dry-run launch",
+      "job records read from '/Users/keanooo7/retrieval-successor-retention' with suffix '-lb2smoke3', not the shared root under the exact ids"
+     ],
+     {
+      "fifo": []
+     }
+    ],
+    "rsr": [
+     [
+      "launch out '/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/lb2/out': a dry-run launch",
+      "launch job_suffix '-lb2smoke3': a dry-run launch",
+      "job records read from '/Users/keanooo7/retrieval-successor-retention' with suffix '-lb2smoke3', not the shared root under the exact ids"
+     ],
+     {
+      "psiC": [],
+      "age": []
+     }
+    ]
+   }
+  }
+ },
+ "census": {
+  "per_seed": {
+   "0": {
+    "STANDIN": {
+     "range": [
+      995000,
+      995032
+     ],
+     "count": 32,
+     "min": 995000,
+     "max": 995031
+    },
+    "TUNE": {
+     "range": [
+      997200,
+      997712
+     ],
+     "count": 0,
+     "min": null,
+     "max": null
+    },
+    "EVAL2": {
+     "range": [
+      984000,
+      986048
+     ],
+     "count": 0,
+     "min": null,
+     "max": null
+    },
+    "other": {
+     "count": 4416,
+     "min": 0,
+     "max": 993255
+    }
+   }
+  },
+  "sealed_ranges": {
+   "TUNE": [
+    997200,
+    997712
+   ],
+   "EVAL2": [
+    984000,
+    986048
+   ]
+  },
+  "n_sealed_generated": 0,
+  "refused_calls": [],
+  "leaks": [],
+  "ok": true,
+  "stage": [
+   "2b",
+   "smoke"
+  ]
+ },
+ "exit": 3
+}
