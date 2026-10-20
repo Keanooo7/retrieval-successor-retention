@@ -1,0 +1,42 @@
+[
+ {
+  "claim": "run status ok, seeds 0-2, no control failed, C1 ok at start and end, exit 0",
+  "command": "uv run python -c \"import json; d=json.load(open('runs/gamma-ceiling/ledger.json')); r={x['key']:x for x in d['rows']}; print(d['status'], d['seeds_actually_run'], r['controls_failed']['value'], r['C1.start']['value']['ok'], r['C1.end']['value']['ok'], d['commands'][0]['exit_code'])\"",
+  "expected": "ok [0, 1, 2] [] True True 0"
+ },
+ {
+  "claim": "every gamma is MISSES at ckpt3000; sweep class SIGNAL",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling/ledger.json'))['rows']}; print(sorted(set(r['B.ckpt3000.label']['value'].values())), r['sweep_class']['value'])\"",
+  "expected": "['MISSES'] SIGNAL"
+ },
+ {
+  "claim": "ckpt3000 cap point per gamma (0,0.5,0.8,0.9,0.95,0.99,1.0) x seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt3000.'+g+'.cap.point']['samples']] for g in ['g0', 'g05', 'g08', 'g09', 'g095', 'g099', 'g1']])\"",
+  "expected": "[[-0.039, -0.136, 0.234], [0.331, 0.116, 0.512], [0.406, 0.21, 0.609], [0.184, 0.134, 0.537], [-0.077, -0.032, 0.433], [-0.308, -0.265, 0.322], [-0.359, -0.329, 0.3]]"
+ },
+ {
+  "claim": "ckpt3000 cap CI lower per gamma x seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt3000.'+g+'.cap.lo']['samples']] for g in ['g0', 'g05', 'g08', 'g09', 'g095', 'g099', 'g1']])\"",
+  "expected": "[[-0.073, -0.164, 0.204], [0.304, 0.092, 0.488], [0.379, 0.186, 0.584], [0.147, 0.103, 0.508], [-0.125, -0.073, 0.401], [-0.361, -0.311, 0.286], [-0.413, -0.378, 0.263]]"
+ },
+ {
+  "claim": "C3 independently: gamma 0 and 0.9 hit and cap point/lo/hi at both ckpts equal B0's ledger exactly",
+  "command": "uv run python -c \"import json; a={x['key']:x['samples'] for x in json.load(open('runs/gamma-ceiling/ledger.json'))['rows'] if 'samples' in x}; b={x['key']:x['samples'] for x in json.load(open('runs/b0-ceilings/ledger.json'))['rows'] if 'samples' in x}; pairs=[(f'B.ckpt{k}.{g}.hit.all', f'B.ckpt{k}.hit.{r}') for k in (2500,3000) for g,r in (('g0','rule_g0'),('g09','rule_g09'))]+[(f'B.ckpt{k}.{g}.cap.{f}', f'B.ckpt{k}.cap.{r}.{f}') for k in (2500,3000) for g,r in (('g0','rule_g0'),('g09','rule_g09')) for f in ('point','lo','hi')]; print(len(pairs), all(a[x]==b[y] for x,y in pairs))\"",
+  "expected": "16 True"
+ },
+ {
+  "claim": "FIFO and factfiller all-query hit equal B0's",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling/ledger.json'))['rows']}; print([round(x,4) for x in r['U.hit.fifo.all']['samples']], [round(x,4) for x in r['U.hit.factfiller.all']['samples']])\"",
+  "expected": "[0.8059, 0.8093, 0.8088] [0.9655, 0.9653, 0.9666]"
+ },
+ {
+  "claim": "ckpt2500 cap point per gamma x seed (secondary, unlabelled)",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt2500.'+g+'.cap.point']['samples']] for g in ['g0', 'g05', 'g08', 'g09', 'g095', 'g099', 'g1']])\"",
+  "expected": "[[-0.02, -0.208, 0.219], [0.317, 0.074, 0.492], [0.35, 0.146, 0.504], [0.109, 0.027, 0.355], [-0.147, -0.142, 0.175], [-0.349, -0.324, 0.02], [-0.402, -0.376, -0.014]]"
+ },
+ {
+  "claim": "the gamma-ceiling unit tests pass, none skipped",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python -m pytest -q tests/test_gamma_ceiling.py 2>&1 | tail -1",
+  "expected": "passed=19 failed=0 skipped=0 errors=0"
+ }
+]

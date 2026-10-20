@@ -1,0 +1,58 @@
+# command: PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 --job-id cf-ceiling-probe -- .venv/bin/python experiments/cf-ceiling/probe.py > probe1.log 2>&1; rc=$?
+# rc=0 (read directly); run 2026-10-06 ~00:35 PDT while RSR run 1 training held 9 of 12 cpu-det slots
+{
+ "docs": [
+  0,
+  19
+ ],
+ "n_docs": 20,
+ "threads": 1,
+ "ckpt": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+ "ckpt_sha256": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+ "wall_seconds": 34.93380483298097,
+ "timing": {
+  "loo_seconds": 18.94174216699321,
+  "probe_forwards": 32,
+  "probe_rows": 10560,
+  "probe_seconds": 14.608094956027344,
+  "fifo_probe_seconds": 15.94071829202585,
+  "total_seconds": 34.933765750029124
+ },
+ "forwards": {
+  "live_passes": 96,
+  "resident_knockout_forwards": 632,
+  "resident_knockout_rows": 12640,
+  "evicted_probe_forwards": 32,
+  "evicted_probe_rows": 10560
+ },
+ "per_document_seconds": 1.7466902416490484,
+ "per_resident_forward_seconds": 0.02785550318675472,
+ "per_probe_row_seconds": 0.0013833423253813773,
+ "coverage_by_kind": {
+  "assert": {
+   "cells": 5475,
+   "missing": 3,
+   "coverage": 0.9994520547945206
+  },
+  "filler": {
+   "cells": 2566,
+   "missing": 128,
+   "coverage": 0.9501169134840218
+  },
+  "query": {
+   "cells": 4599,
+   "missing": 16,
+   "coverage": 0.9965209828223527
+  }
+ },
+ "checks": {
+  "live_loss_equal_loo": true,
+  "slot_sentence_equal_loo": true,
+  "fifo_memory_ok": true,
+  "identity_worst": 0.0,
+  "n_resident_cells": 12640,
+  "n_missing_donor": 147,
+  "n_evicted_cells": 9920
+ },
+ "pid": 58901
+}

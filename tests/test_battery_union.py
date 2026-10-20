@@ -212,6 +212,33 @@ def test_cli_one_sided_tail_exits_0_and_writes_the_union(repo):
     assert out.read_text() == _src(("m1", "m2", "m3", "m4"), tail=_TAIL_THEIRS)
 
 
+# -- the git binary (review 7d90e27a400b MINOR-3) ---------------------------------
+
+
+def test_git_falls_back_to_path_git_where_homebrew_git_is_absent(monkeypatch):
+    """`GIT` was hard-coded to /opt/homebrew/bin/git, so on the ubuntu CI runner the
+    `repo` fixture and `_have()` raised FileNotFoundError and four tests ERRORed.
+    Homebrew git stays first where it exists (Apple's git can block on a licence
+    prompt, CLAUDE.md); elsewhere the git on PATH is used."""
+    import importlib
+    import shutil
+
+    real_exists = Path.exists
+    monkeypatch.setattr(
+        Path,
+        "exists",
+        lambda self, *a, **k: (
+            False if str(self) == "/opt/homebrew/bin/git" else real_exists(self, *a, **k)
+        ),
+    )
+    monkeypatch.setattr(shutil, "which", lambda name, *a, **k: f"/usr/bin/{name}")
+    try:
+        assert importlib.reload(bu).GIT == "/usr/bin/git"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(bu)
+
+
 # -- the two real merges of 2026-09-29 ------------------------------------------
 
 _MERGES_0929 = ("13ea9ae", "74dec77")
@@ -290,6 +317,37 @@ def test_a_constant_new_in_theirs_lands_where_theirs_put_it():
     assert res.text.index("_R:") < res.text.index("_A_COUPLING")
 
 
+# un-annotated on purpose: these placement tests must not also depend on _CONST
+# matching annotations (that has its own mutation)
+_PLAIN = '_P_COUPLING = (\n    "p",\n)\n'
+
+
+def test_a_new_constant_is_anchored_on_its_successors_definition():
+    """Review 66d1dfa5c440 MINOR-1: the successor was found by the first column-0
+    line starting with its name, so a head-code line such as an annotation-only
+    `_A_COUPLING: tuple[str, ...]` above the definition got the new constant
+    inserted above it -- silently, since the output still parses and counts."""
+    decl = "_A_COUPLING: tuple[str, ...]\n\n"
+    head_b = _HEAD.replace("_A_COUPLING = (", decl + "_A_COUPLING = (")
+    head_t = head_b.replace("_A_COUPLING = (", _PLAIN + "_A_COUPLING = (")
+    head_o = head_b.replace("import os", "import os\nimport signal")
+    res = bu.union(_src(head=head_b), _src(head=head_o), _src(head=head_t))
+    assert res.new_consts == ["_P_COUPLING"]
+    assert res.text == _src(head=head_t.replace("import os", "import os\nimport signal"))
+
+
+def test_a_constant_new_in_ours_lands_where_ours_put_it_when_theirs_head_is_taken():
+    """Review 66d1dfa5c440 MINOR-3: on the take-theirs'-head path (only theirs
+    changed head code) an ours-only constant was appended to the end of the head,
+    so the placement rule was one-sided. It now mirrors theirs-new placement."""
+    head_o = _HEAD.replace("_A_COUPLING = (", _PLAIN + "_A_COUPLING = (")
+    head_t = _HEAD.replace("import os", "import os\nimport json")
+    res = bu.union(_src(), _src(("m1", "m2", "o"), head=head_o), _src(head=head_t))
+    assert res.text == _src(
+        ("m1", "m2", "o"), head=head_o.replace("import os", "import os\nimport json")
+    )
+
+
 # -- constant deletions (review MINOR-1) ------------------------------------------
 
 _HEAD_NO_A = _HEAD.replace('_A_COUPLING = (\n    "a",\n)\n\n', "")
@@ -332,6 +390,46 @@ def test_a_union_that_does_not_parse_is_refused():
     theirs = _HEAD + _entry("m1") + _entry("m2") + broken + _TAIL
     with pytest.raises(bu.Refused, match="does not parse"):
         bu.union(_src(), _src(), theirs)
+
+
+_HEAD_B = _HEAD.replace("MUTATIONS:", '_B_COUPLING = (\n    "b",\n)\n\nMUTATIONS:')
+
+
+@pytest.mark.parametrize(
+    "corrupt",
+    [
+        lambda v: v.replace("_B_COUPLING", "_C_COUPLING"),  # a different constant
+        lambda v: v.replace('"b"', '"changed"'),  # the same name, another value
+    ],
+    ids=["renamed", "revalued"],
+)
+def test_the_output_check_compares_constants_not_counts(monkeypatch, corrupt):
+    """Review 66d1dfa5c440 MINOR-2: `_check_output` compared counts, so a union
+    that lost one constant and gained another (or changed a value) passed. The
+    corruption is injected at the one insertion point; the count is unchanged."""
+    monkeypatch.setattr(
+        bu, "_insert_new_const", lambda h, k, t, o: h + corrupt(t.consts[k]) + "\n"
+    )
+    ho = _HEAD.replace("import os", "import os\nimport signal")
+    with pytest.raises(bu.Refused, match="the union holds"):
+        bu.union(_src(), _src(head=ho), _src(head=_HEAD_B))
+
+
+def test_the_output_check_compares_entries_not_counts(monkeypatch):
+    """Review 66d1dfa5c440 MINOR-2, for entries: the re-split union is made to hold
+    a different body for one entry, same count; the check must refuse."""
+    real = bu._split
+
+    def split(side, src):
+        p = real(side, src)
+        if side == "the union":
+            k = p.order[0]
+            p.entries[k] = p.entries[k].replace('"y"', '"tampered"')
+        return p
+
+    monkeypatch.setattr(bu, "_split", split)
+    with pytest.raises(bu.Refused, match="the union holds"):
+        bu.union(_src(), _src(("m1", "m2", "o")), _src(("m1", "m2", "t")))
 
 
 def test_cli_malformed_entry_exits_3_and_writes_nothing(repo):

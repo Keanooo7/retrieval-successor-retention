@@ -1,0 +1,356 @@
+"""I6 (PLAN-v4 §4; red-team m-2): the battery's ``RSR_*`` environment, recorded and gated.
+
+The mutation battery hands its whole environment to pytest. Until this module it
+recorded one fact about that environment -- where the thread cap came from -- and
+on 2026-09-26/27 its verdicts changed with an ambient ``RSR_BATTERY_THREADS``. A
+gate whose answer depends on state nobody wrote down is a gap. So, at start:
+
+1. **Record.** Two environments, both printed and both on every row of the
+   ``--json`` record (`stamp`):
+
+   * ``rsr_env`` -- every ``RSR_*`` variable of the battery process itself, as
+     `check` passed it (stdout: `header`, at start);
+   * ``rsr_env_suite`` -- every ``RSR_*`` variable of the environment the shard's
+     pytest receives: `mutation_battery._run_isolated` builds that environment
+     once and passes the same object to every ``run_suite`` (second review,
+     MINOR-3). On the row the shard's own paths are replaced by ``<shard>`` and
+     ``<probe>`` (`portable`; second review, MAJOR-2), so a row does
+     not depend on where the shard lives; stdout (`suite_header`) prints the real
+     paths and marks each name the battery set, replaced or removed. Fix round 1
+     (review MAJOR-3): the first version recorded only the battery's own
+     environment, so an ambient ``RSR_TORCH_THREADS=14`` was recorded while the
+     suite ran with ``2``.
+
+   Per row, not once per file: the record stays a list of rows, which is what
+   `scripts/battery_subset.py` and every reader of it expects. `stamp` never
+   replaces an environment a row already carries (review MAJOR-4): rows merged
+   from several batteries each keep the one they ran in.
+2. **Refuse.** A variable that starts with ``RSR_`` and is not *declared* makes the
+   battery exit 3 (``DID NOT RUN``) before any suite runs, naming it (`check`).
+
+**What "declared" means.** A name is declared when it is a key of `DECLARED`, or
+``RSR_ORCH_CMD_<MODULE>`` for a module that exists in ``scripts/orchestrator/``
+(`ORCH_CMD_NAMES`; ``loopcore.orch_cmd`` reads exactly those): a name that code in
+this repository reads or sets, written down here next to who reads it.
+``tests/test_battery_env.py`` holds the list to the tree -- every ``RSR_*`` token in
+`SCANNED` (`inventory`) must be declared -- so it cannot go stale in the direction
+that matters. An undeclared name is therefore one nothing in this tree
+is known to read: a typo of a real control (``RSR_BATTERY_THREAD=4`` caps nothing
+while its author believes it does) or a leftover of another tool. Neither is
+something a verdict should be issued under.
+
+Declared is **not** "harmless": ``RSR_LEDGER`` moves the constants registry's
+ledger and ``RSR_FRESH_STREAM_RUNS`` moves an experiment's inputs, and a suite run
+under either may differ. They are allowed because refusing them would also refuse
+every legitimate launch, and they are recorded so that a verdict that depends on
+one can be seen to.
+
+Two groups must be declared or the battery refuses its own launches:
+
+* **What the battery sets for a shard's suite** -- ``RSR_ORCH_ROOT``,
+  ``RSR_BATTERY_PROBE``, ``RSR_TEST_COUNT``, and ``RSR_TORCH_THREADS`` when the
+  suite is thread-capped (always on the Studio: ``ops/lanes.json`` exists). The
+  suite runs the battery again, nested (``tests/test_battery_isolation.py`` drives
+  the real ``main`` on a stub repository), and the nested battery inherits them.
+* **What the launcher sets** -- ``orchestrator.slot run`` forces ``RSR_TORCH_THREADS``
+  on its child (``lanes.THREAD_ENV_VARS``); ``orchestrator.dispatch`` exports
+  ``RSR_ITEM_ID``, ``RSR_RUN_ID`` and ``RSR_BASE_SHA`` into a researcher session,
+  from which a subset battery is run; ``tick`` and launchd export ``RSR_ORCH_ROOT``.
+"""
+
+from __future__ import annotations
+
+import difflib
+import os
+import re
+import subprocess
+from collections.abc import Mapping
+from pathlib import Path
+
+import battery_isolation as iso
+
+from rsr.exit_codes import Exit, refuse
+
+PREFIX = "RSR_"
+
+_BATTERY = "scripts/mutation_battery.py"
+_ISOLATION = "scripts/battery_isolation.py"
+_LOOPCORE = "scripts/orchestrator/loopcore.py"
+_CONFIG = f"{_LOOPCORE} load_config: ops/orchestrator.env, overlaid by the environment"
+
+DECLARED: dict[str, str] = {
+    # --- the battery's own controls
+    "RSR_BATTERY_THREADS": f"{_BATTERY} suite_threads: the suite's thread cap",
+    "RSR_GIT": f"{_ISOLATION} _git_bin, orchestrator lanes/lint_brief: the git binary",
+    # --- set by the battery for each shard's suite (recorded as rsr_env_suite)
+    "RSR_BATTERY_PROBE": f"{_ISOLATION} shard_env -> tests/_battery_probe.py",
+    "RSR_ORCH_ROOT": f"{_ISOLATION} shard_env -> orchestrator lanes.orch_root et al.",
+    "RSR_TEST_COUNT": f"{_BATTERY} _suite_env -> tests/conftest.py: the census file",
+    # --- set by the launcher
+    "RSR_TORCH_THREADS": "orchestrator lanes.thread_env: forced by slot.run_job and "
+    "by the battery's own thread cap",
+    "RSR_ITEM_ID": "orchestrator dispatch: exported into a researcher session",
+    "RSR_RUN_ID": "orchestrator dispatch -> hooks: the session's run id",
+    "RSR_BASE_SHA": "orchestrator dispatch: exported into a researcher session",
+    "RSR_PROFILE": "orchestrator hooks: manager | researcher, set in the hook command",
+    # --- the orchestrator's own configuration and test seams
+    "RSR_CYCLE_CAP": _CONFIG,
+    "RSR_NIGHT_CAP": _CONFIG,
+    "RSR_WINDOW_OPENS": _CONFIG,
+    "RSR_LAST_DISPATCH": _CONFIG,
+    "RSR_PARK_BY": _CONFIG,
+    "RSR_DIGEST_BY": _CONFIG,
+    "RSR_MAX_SESSIONS": _CONFIG,
+    "RSR_MAX_ATTEMPTS": _CONFIG,
+    "RSR_MANAGER_INTERVAL_MIN": _CONFIG,
+    "RSR_ORCH_ENV": f"{_LOOPCORE} env_file: where orchestrator.env is",
+    "RSR_NOW": f"{_LOOPCORE} now: pins the clock",
+    "RSR_GIT_BIN": f"{_LOOPCORE} git_bin: the git binary",
+    "RSR_CLAUDE_BIN": f"{_LOOPCORE}: the claude binary",
+    "RSR_GH_BIN": "scripts/orchestrator/notify.py: the gh binary",
+    "RSR_UV_BIN": "scripts/orchestrator/submit.py, dispatch.py: the uv binary",
+    "RSR_PYTHON": "scripts/orchestrator/tick.zsh: the interpreter",
+    "RSR_NO_CAFFEINATE": "scripts/orchestrator/tick.py",
+    "RSR_NIGHT_JSON": "scripts/orchestrator/hooks.py: where night.json is",
+    "RSR_REPO_ROOT": "scripts/orchestrator/hooks.py: the project root",
+    # --- src and experiments: these change what a suite or a run computes
+    "RSR_LEDGER": "src/rsr/constants.py: the constants registry's measurement ledger",
+    "RSR_FRESH_STREAM_RUNS": "experiments/lookahead-room, retention-readability run.py",
+    "RSR_B2_THREADS": "experiments/b2-psi-probe/run.py: threads per child",
+    "RSR_LOOKAHEAD_THREADS": "experiments/lookahead-room/run.py: threads per child",
+    "RSR_READABILITY_THREADS": "experiments/retention-readability/run.py: threads",
+    "RSR_NB_THREADS": "experiments/newcomer-bakeoff/run.py: threads per child",
+    "RSR_NB_B2_FITS": "experiments/newcomer-bakeoff/run.py: where B2's fits are",
+}
+"""Every ``RSR_*`` environment variable this repository reads or sets -> who reads it."""
+
+ORCH_CMD_PREFIX = "RSR_ORCH_CMD_"
+ORCH_CMD_NAMES: frozenset[str] = frozenset(
+    ORCH_CMD_PREFIX + p.stem.upper()
+    for p in (Path(__file__).resolve().parent / "orchestrator").glob("*.py")
+    if p.stem != "__init__"
+)
+"""``RSR_ORCH_CMD_<MODULE>``: `loopcore.orch_cmd` reads ``RSR_ORCH_CMD_`` +
+``module.upper()`` to replace an orchestrator CLI (how tests stub a module). Only
+names for a module that exists are declared (review MINOR-5): a misspelled module
+is the typo this gate exists for. A correctly spelled one replaces an orchestrator
+CLI inside the suite, so it is recorded, not neutral."""
+
+NOT_VARIABLES: dict[str, str] = {
+    "RSR_STATUS": "scripts/render_status.py: a JavaScript global, window.RSR_STATUS",
+    "RSR_TEST_COUN": f"{_BATTERY}: one half of a split literal in the MUTATIONS table",
+    "RSR_ORCH_CMD_": f"{_LOOPCORE} orch_cmd: the f-string prefix of ORCH_CMD_NAMES",
+}
+"""``RSR_*`` tokens in the tree that are not environment variables. They are not
+declared: set in the environment, either is refused like any other stray."""
+
+SCANNED = ("src", "scripts", "experiments", "tests", "ops", ".claude")
+"""Where `inventory` looks (``git ls-files``): tracked files in all of these, plus
+new not-yet-added files that git does not ignore in `CODE_DIRS` only. In ``tests/``
+only files whose name does not start with ``test_`` (conftest, ``_battery_*``
+helpers): test files hold made-up names on purpose. Review MINOR-7 widened the
+scan (``tests/conftest.py``, ``ops/launchd/*.plist`` and ``.claude/settings.*.json``
+read or set names too); the second review's MAJOR-1 found that a filesystem walk
+of ``.claude/`` also read the git-ignored agent checkouts under
+``.claude/worktrees/`` -- whole trees of other branches' code -- so the result
+depended on machine-local state. ``.claude/`` is where Claude Code writes
+machine-local runtime state (``settings.local.json`` and others); whether git
+ignores those depends on each machine's excludes file and ``info/exclude`` -- the
+repository's ``.gitignore`` ignores only ``/.claude/worktrees/`` -- so untracked
+files there are never read (fourth review, MINOR-1). What is read is then the same
+set on every machine, in a checkout and in a shard, apart from the author's own
+not-yet-added files in `CODE_DIRS`."""
+
+CODE_DIRS = ("src", "scripts", "experiments", "tests", "ops")
+"""Where a NEW file that reads an ``RSR_*`` name would land: untracked, not-ignored
+files here are inventoried before they are committed (third review, MINOR-3)."""
+_SUFFIXES = (".py", ".zsh", ".sh", ".json", ".plist", ".env")
+_NAME = re.compile(r"RSR_[A-Z0-9_]+")
+_SELF = "scripts/battery_env.py"
+
+
+def is_declared(name: str) -> bool:
+    return name in DECLARED or name in ORCH_CMD_NAMES
+
+
+def _role(name: str) -> str:
+    if name in DECLARED:
+        return DECLARED[name]
+    if name in ORCH_CMD_NAMES:
+        return f"{_LOOPCORE} orch_cmd: replaces orchestrator.{name[13:].lower()}"
+    return "UNDECLARED"
+
+
+def present(environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Every ``RSR_*`` variable in ``environ`` (default: this process's), sorted."""
+    environ = os.environ if environ is None else environ
+    return {k: environ[k] for k in sorted(environ) if k.startswith(PREFIX)}
+
+
+def undeclared(environ: Mapping[str, str] | None = None) -> list[str]:
+    return [name for name in present(environ) if not is_declared(name)]
+
+
+def check(environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """The ``RSR_*`` environment, or DID NOT RUN (3) if any of it is undeclared."""
+    env = present(environ)
+    stray = [name for name in env if not is_declared(name)]
+    if stray:
+        named = []
+        for name in stray:
+            near = difflib.get_close_matches(
+                name, [*DECLARED, *ORCH_CMD_NAMES], n=1, cutoff=0.8
+            )
+            hint = f" (did you mean {near[0]}?)" if near else ""
+            named.append(f"{name}={env[name]!r}{hint}")
+        refuse(
+            Exit.DID_NOT_RUN,
+            f"{len(stray)} undeclared {PREFIX}* variable(s) in the environment: "
+            f"{', '.join(named)}. Nothing in this tree is declared to read them "
+            f"({_SELF}), so each is a typo of a real control -- which then did not "
+            f"apply -- or a leftover. Unset it, or declare it with the code that "
+            f"reads it. No suite ran.",
+        )
+    return env
+
+
+def header(env: Mapping[str, str]) -> str:
+    """The record's stdout form: one line per variable, name, value and reader."""
+    if not env:
+        return f"{PREFIX}* environment: none set"
+    lines = [f"{PREFIX}* environment: {len(env)} set, all declared ({_SELF})"]
+    for name, value in env.items():
+        lines.append(f"  {name}={value!r} -- {_role(name)}")
+    return "\n".join(lines)
+
+
+def suite_header(own: Mapping[str, str], suite: Mapping[str, str]) -> str:
+    """What the shard's pytest receives, each difference from ``own`` marked."""
+    lines = [f"{PREFIX}* environment of each shard's suite: {len(suite)} set"]
+    for name, value in suite.items():
+        if name not in own:
+            note = " [set by the battery]"
+        elif own[name] != value:
+            note = f" [replaced by the battery; its own value is {own[name]!r}]"
+        else:
+            note = ""
+        lines.append(f"  {name}={value!r}{note}")
+    for name in own:
+        if name not in suite:
+            lines.append(
+                f"  {name} [removed by the battery; its own value is {own[name]!r}]"
+            )
+    return "\n".join(lines)
+
+
+SHARD_TOKEN = "<shard>"
+PROBE_TOKEN = "<probe>"
+
+
+def portable(suite: Mapping[str, str], root: Path, probe: Path) -> dict[str, str]:
+    """``suite`` with the shard's own paths replaced by fixed tokens.
+
+    Second review, MAJOR-2 (the manager's decision): a verdict row must not depend
+    on where the shard lives. ``RSR_ORCH_ROOT`` is the shard root and
+    ``RSR_BATTERY_PROBE`` a file in the shard pool, so without this two batteries
+    at one SHA -- a serial run and I2's shards, or two serial runs on different
+    pools -- never produce equal rows. The real paths are printed in the stdout
+    header (`suite_header`), not recorded on the row.
+    """
+    # The probe first: it is a file in the pool, which may contain the shard. No
+    # token for the pool itself: no other value holds a pool path today, and a
+    # pool token would also swallow the shard root (pool/shard-k) and make the
+    # root's own token untestable (fix round 2 by-hand proof).
+    subs = [
+        (str(probe), PROBE_TOKEN),
+        (str(root), SHARD_TOKEN),
+    ]
+    out = {}
+    for name, value in suite.items():
+        for path, token in subs:
+            value = value.replace(path, token)
+        out[name] = value
+    return out
+
+
+def stamp(row: dict, own: Mapping[str, str], suite: Mapping[str, str]) -> dict:
+    """``row`` with ``rsr_env`` (the battery's) and ``rsr_env_suite`` (pytest's).
+
+    A new dict. A key the row already has is kept, never replaced (review MAJOR-4):
+    a row is stamped where it is produced, and a driver that merges rows from
+    several batteries must not overwrite each one's environment with its own.
+    """
+    out = dict(row)
+    out.setdefault("rsr_env", dict(own))
+    out.setdefault("rsr_env_suite", dict(suite))
+    return out
+
+
+def _git_out(root: Path, *args: str) -> str:
+    proc = subprocess.run(
+        [iso._git_bin(), "-C", str(root), *args], capture_output=True, text=True
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"git {' '.join(args[:2])} in {root} -> rc={proc.returncode}: "
+            f"{proc.stderr.strip()}"
+        )
+    return proc.stdout
+
+
+def tracked(root: Path) -> list[str]:
+    """The tracked files under `SCANNED`, plus the untracked files git does not
+    ignore under `CODE_DIRS`, in the git checkout whose top level is ``root`` (a main
+    checkout or a worktree, whose ``.git`` is a file).
+
+    Raises ``RuntimeError`` when ``root`` is not the top of a checkout: not in one at
+    all, or a directory inside one (a subdirectory, or a copy of the tree under an
+    ignored path), where ``ls-files`` exits 0 and lists nothing (third review,
+    MINOR-2). An inventory of an unknown file set is not a measurement.
+
+    ``--others --exclude-standard`` in `CODE_DIRS` only (third review MINOR-3,
+    fourth review MINOR-1): a new source file is inventoried before it is committed,
+    git-ignored files are not, and nothing untracked under ``.claude/`` is read --
+    the repository ignores only ``/.claude/worktrees/`` there, and the rest of what
+    is ignored there (``settings.local.json`` and other runtime files) is ignored by
+    per-machine excludes, so reading untracked ``.claude/`` files made the result
+    depend on the machine.
+
+    ``os.path.samefile`` (fourth review, MINOR-2): the same directory by inode, so
+    a root spelled with different case on a case-insensitive filesystem, or through
+    a symlink, is accepted.
+    """
+    top = _git_out(root, "rev-parse", "--show-toplevel").strip()
+    if not os.path.samefile(top, root):
+        raise RuntimeError(
+            f"git ls-files: {root} is not the top of a checkout (its checkout's top "
+            f"is {top}); the inventory would read nothing"
+        )
+    listed = _git_out(root, "ls-files", "-z", "--cached", "--", *SCANNED)
+    listed += _git_out(
+        root, "ls-files", "-z", "--others", "--exclude-standard", "--", *CODE_DIRS
+    )
+    return sorted({f for f in listed.split("\0") if f})
+
+
+def inventory(root: Path) -> dict[str, list[str]]:
+    """``{RSR_* token: ["path:line", ...]}`` over the files `tracked` lists.
+
+    Not this file, which would find every name it declares; not ``test_*`` files.
+    Ignored files are never read (second review, MAJOR-1).
+    """
+    found: dict[str, list[str]] = {}
+    for rel in tracked(root):
+        path = root / rel
+        if (
+            path.suffix not in _SUFFIXES
+            or rel == _SELF
+            or path.name.startswith("test_")
+            or not path.is_file()
+        ):
+            continue
+        text = path.read_text(errors="replace")
+        for n, line in enumerate(text.splitlines(), 1):
+            for name in _NAME.findall(line):
+                found.setdefault(name, []).append(f"{rel}:{n}")
+    return dict(sorted(found.items()))

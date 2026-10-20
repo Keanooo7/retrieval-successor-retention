@@ -32,7 +32,9 @@ Rules (``ours`` = the checked-out side, ``theirs`` = the side being merged in):
 * constants: the same one-sided rule, deletions included (a constant either side
   deleted and the other kept is REFUSED; review 7d90e27a400b MINOR-1); a constant
   new in theirs is inserted before the constant that follows it in theirs, if ours
-  has that one, else appended to the head;
+  has that one, else appended to the head; when theirs' head is the template, an
+  ours-only constant is placed the same way, mirrored (review 66d1dfa5c440
+  MINOR-3);
 * head code: taken from theirs only if ours == base; both changed -> REFUSE;
 * tail: taken from theirs only if ours == base; both changed -> REFUSE
   (`_merge_tail`; the one-sided rule was added 2026-09-30);
@@ -57,6 +59,7 @@ from __future__ import annotations
 
 import ast
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -68,7 +71,11 @@ sys.path.insert(0, str(ROOT / "src"))
 from rsr.exit_codes import ArgumentParser, Exit, run_main  # noqa: E402
 
 PATH = "scripts/mutation_battery.py"
-GIT = "/opt/homebrew/bin/git"
+# Homebrew git where it exists (Apple's git can block on a licence prompt and look
+# like an empty answer, CLAUDE.md); the git on PATH elsewhere, e.g. the ubuntu CI
+# runner (review docs/reviews/eng-battery-union/7d90e27a400b.md MINOR-3).
+_HOMEBREW_GIT = "/opt/homebrew/bin/git"
+GIT = _HOMEBREW_GIT if Path(_HOMEBREW_GIT).exists() else shutil.which("git") or "git"
 OPEN = "MUTATIONS: tuple[Mutation, ...] = (\n"
 # `_NAME = (` or `_NAME: <annotation> = (`, through the `)` at column 0.
 _CONST = re.compile(r"^(_[A-Z0-9_]+)(?:: [^\n=]+)? = \(\n.*?^\)\n", re.S | re.M)
@@ -273,7 +280,9 @@ def union(base: str, ours: str, theirs: str) -> Result:
                 if t.consts[k] != v:
                     h = h.replace(t.consts[k], v)
             else:
-                h = h + v + "\n"  # ours-only constant
+                # ours-only: where ours put it, the mirror of theirs-new below
+                # (review 66d1dfa5c440 MINOR-3; it used to be appended)
+                h = _insert_new_const(h, k, o, t)
     else:
         h = o.head
         for k, v in consts.items():
@@ -283,38 +292,64 @@ def union(base: str, ours: str, theirs: str) -> Result:
             h = _insert_new_const(h, k, t, o)
     body = "".join(entries[k] for k in order) + o.trailing
     text = h + OPEN + body + tail
-    _check_output(text, len(o.entries) + len(added), len(consts))
+    _check_output(text, {k: entries[k] for k in order}, consts)
     return Result(text, added, updated, new_consts, tail_from)
 
 
-def _insert_new_const(h: str, k: str, t: Parts, o: Parts) -> str:
-    """Put theirs-only constant `k` where theirs put it: before the first constant
-    that follows it in theirs and that ours also has, with theirs' whitespace gap.
-    With no such constant, append it to the head (the pre-09-30 behaviour)."""
+def _insert_new_const(h: str, k: str, src: Parts, dst: Parts) -> str:
+    """Put constant `k`, which only `src` has, where `src` put it: before the first
+    constant that follows it in `src` and that `dst` (whose head `h` is) also has,
+    with `src`'s whitespace gap. With no such constant, append it to the head (the
+    pre-09-30 behaviour). Called (theirs, ours) for a theirs-new constant in ours'
+    head, and (ours, theirs) for an ours-only constant in theirs' head."""
+    t, o = src, dst
     later = t.const_order[t.const_order.index(k) + 1 :]
     succ = next((s for s in later if s in o.consts), None)
     if succ is None:
         return h + t.consts[k] + "\n"
-    m = re.search(rf"^{re.escape(succ)}\b", h, re.M)
+    # the definition line itself, not any column-0 line that starts with the name
+    # (review 66d1dfa5c440 MINOR-1); the same shape _CONST keys on
+    m = re.search(rf"^{re.escape(succ)}(?:: [^\n=]+)? = \(\n", h, re.M)
     if m is None:  # cannot happen for a constant split() found; refuse, don't guess
         raise Refused([f"constant {succ} not found in the merged head"])
     text = t.consts[k] + t.const_gap.get(k, "\n")
     return h[: m.start()] + text + h[m.start() :]
 
 
-def _check_output(text: str, n_entries: int, n_consts: int) -> None:
-    """MINOR-2: the union must parse and hold exactly the entries and constants
-    the merge computed, or nothing is written."""
+def _check_output(text: str, entries: dict[str, str], consts: dict[str, str]) -> None:
+    """MINOR-2 (7d90e27a400b): the union must parse and hold exactly the entries and
+    constants the merge computed, or nothing is written. Compared by name and by
+    text, entries in order -- not by count (review 66d1dfa5c440 MINOR-2: a union
+    that lost one and gained another passed a count check)."""
     try:
         ast.parse(text)
     except SyntaxError as e:
         raise Refused([f"the union does not parse: {e.msg} (line {e.lineno})"]) from None
     got = _split("the union", text)
-    if len(got.entries) != n_entries or len(got.consts) != n_consts:
+    problems = []
+    if got.order != list(entries):
+        lost = [k for k in entries if k not in got.entries]
+        extra = [k for k in got.order if k not in entries]
+        problems.append(f"entries lost {lost}, extra {extra}, or out of order")
+    problems += [
+        f"entry {k} differs from the merge"
+        for k, v in entries.items()
+        if k in got.entries and got.entries[k] != v
+    ]
+    if set(got.consts) != set(consts):
+        lost = sorted(set(consts) - set(got.consts))
+        extra = sorted(set(got.consts) - set(consts))
+        problems.append(f"constants lost {lost}, extra {extra}")
+    problems += [
+        f"constant {k} differs from the merge"
+        for k, v in consts.items()
+        if k in got.consts and got.consts[k] != v
+    ]
+    if problems:
         raise Refused(
             [
                 f"the union holds {len(got.entries)} entries and {len(got.consts)} "
-                f"constants; the merge computed {n_entries} and {n_consts}"
+                f"constants, not what the merge computed: " + "; ".join(problems)
             ]
         )
 

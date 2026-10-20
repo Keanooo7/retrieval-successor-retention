@@ -5,7 +5,8 @@ review record. The record format and the gate are specified in
 `docs/review-records.md`; in short, merging `branch@head` needs
 `docs/reviews/<branch-slug>/<reviewed_head[:12]>.md` on the branch, whose
 `reviewed_head` is `head` or an ancestor of it with only exempt paths
-(`docs/reviews/`, `runs/<id>/verification.json`, `.orchestrator/outbox/`) changed
+(`docs/reviews/<branch-slug>/*.md`, the merging run's own
+`runs/<id>/verification.json`, `.orchestrator/outbox/`) changed
 since, a reviewer who is not the author, and a verdict of MERGE (or MERGE WITH
 FIXES with `fixes_verified_at` an ancestor of head). Missing / stale / malformed
 -> 3 naming what is missing; DO NOT MERGE -> 1.
@@ -99,17 +100,43 @@ def test_a_record_older_than_head_with_a_code_change_since_is_refused(orch):
 def test_exempt_paths_after_the_reviewed_head_do_not_stale_the_record(orch):
     wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
     orch.review(wt, "run/a", head)
+    record = f"docs/reviews/run-a/{head[:12]}.md"
     orch.commit(
         wt,
         {
             "runs/a/verification.json": json.dumps({"status": "ok"}),
             ".orchestrator/outbox/a.md": "status: RETURNED\n",
-            "docs/reviews/run-a/notes.txt": "follow-up\n",
+            # this branch's own record, amended (review MINOR-3 narrowed the
+            # exemption to docs/reviews/<this slug>/*.md; a notes.txt here stales)
+            record: (wt / record).read_text() + "\nFollow-up note.\n",
         },
         "exempt follow-ups",
     )
     proc = orch.run("merge", "a")
     assert proc.returncode == 0, proc.stderr
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "docs/reviews/eng-victim/0123456789ab.md",  # another branch's record
+        "docs/reviews/payload.py",  # not a record, not in any slug
+        "docs/reviews/run-a/payload.py",  # not a record, in this slug
+        "docs/reviews/run-a/notes.txt",
+        "docs/reviews/run-a/sub/0123456789ab.md",  # not read as a record
+    ],
+)
+def test_only_this_branchs_own_review_records_are_exempt(orch, path):
+    """Review MINOR-3 (docs/reviews/eng-t5b-review-gate/defe2dd7c489.md, probe N9):
+    every path under docs/reviews/ was exempt, so after review a branch could add
+    another branch's record, or a non-record file such as docs/reviews/payload.py,
+    and both rode into the night branch unreviewed. Only
+    docs/reviews/<this branch's slug>/*.md is exempt now."""
+    wt, head = _branch(orch, "run/a", {"runs/a/ledger.json": "{}\n"})
+    orch.review(wt, "run/a", head)
+    orch.commit(wt, {path: "rides in after review\n"}, "after review")
+    _verify(orch)
+    _refused(orch, "a", 3, "review is stale", path)
 
 
 def test_do_not_merge_is_refused_as_a_failure(orch):
@@ -247,6 +274,86 @@ def test_an_unknown_verdict_is_refused(orch):
     orch.review(wt, "run/a", head, "LGTM")
     _verify(orch)
     _refused(orch, "a", 3, "verdict")
+
+
+# --- review MINOR-1 (docs/reviews/eng-t5b-review-gate/defe2dd7c489.md) ------- #
+
+
+def _record(branch: str, reviewed_head: str, verdict: str, reviewer: str) -> str:
+    return "\n".join(
+        [
+            "---",
+            f"branch: {branch}",
+            f"reviewed_head: {reviewed_head}",
+            "author: author-session",
+            f"reviewer: {reviewer}",
+            f"verdict: {verdict}",
+            "---",
+            "",
+            "Adversarial review body.",
+            "",
+        ]
+    )
+
+
+def _two_parallel_reviewed_lines(orch: Orch, verdict_a: str, verdict_b: str):
+    """Two empty commits A and B on parallel lines from the same code, merged, then
+    one commit adding a record for each: both are the same distance from head, and
+    the tree the two records cover is identical (probes N8/N8b)."""
+    wt, code = _branch(orch, "eng/x", {"notes/x.md": "x\n"})
+    orch.git("commit", "-q", "--allow-empty", "-m", "line A", cwd=wt)
+    a = orch.git("rev-parse", "HEAD", cwd=wt)
+    orch.git("checkout", "-q", "--detach", code, cwd=wt)
+    orch.git("commit", "-q", "--allow-empty", "-m", "line B", cwd=wt)
+    b = orch.git("rev-parse", "HEAD", cwd=wt)
+    orch.git("checkout", "-q", "eng/x", cwd=wt)
+    orch.git("merge", "-q", "--no-ff", "--no-edit", b, cwd=wt)
+    orch.commit(
+        wt,
+        {
+            f"docs/reviews/eng-x/{a[:12]}.md": _record("eng/x", a, verdict_a, "rev-a"),
+            f"docs/reviews/eng-x/{b[:12]}.md": _record("eng/x", b, verdict_b, "rev-b"),
+        },
+        "two reviews",
+    )
+    head = orch.git("rev-parse", "HEAD", cwd=wt)
+    dist = {r: orch.git("rev-list", "--count", f"{r}..{head}", cwd=wt) for r in (a, b)}
+    assert dist[a] == dist[b], dist  # the tie the finding is about
+    return a, b
+
+
+@pytest.mark.parametrize(
+    "verdicts", [("DO NOT MERGE", "MERGE"), ("MERGE", "DO NOT MERGE")]
+)
+def test_records_at_equal_distance_with_different_verdicts_are_refused(orch, verdicts):
+    """Review MINOR-1: `min(usable)` broke a distance tie on the file name, i.e. on
+    the reviewed sha's hex prefix, so DO NOT MERGE vs MERGE on the same code was
+    decided by sha order (probe N8: each verdict won at least once in 4 runs). The
+    gate now fails closed, whichever record sorts first."""
+    _two_parallel_reviewed_lines(orch, *verdicts)
+    _refused(orch, "eng/x", 3, "conflicting review records")
+
+
+def test_records_at_equal_distance_with_the_same_verdict_merge(orch):
+    _two_parallel_reviewed_lines(orch, "MERGE", "MERGE")
+    proc = orch.run("merge", "eng/x")
+    assert proc.returncode == 0, proc.stderr
+
+
+# --- review MINOR-2 (docs/reviews/eng-t5b-review-gate/defe2dd7c489.md) ------- #
+
+
+@pytest.mark.parametrize("key", ["verdict", "reviewer"])
+def test_a_repeated_front_matter_key_is_malformed(orch, key):
+    """Review MINOR-2 (probe N6): `verdict: DO NOT MERGE` then `verdict: MERGE`
+    merged -- the last line won silently while a reader of the top of the record
+    saw DO NOT MERGE. A repeated key is now malformed, and malformed fails closed."""
+    wt, head = _branch(orch, "eng/x", {"notes/x.md": "x\n"})
+    text = _record("eng/x", head, "MERGE", "reviewer-session")
+    first = {"verdict": "verdict: DO NOT MERGE", "reviewer": "reviewer: author-session"}
+    text = text.replace(f"{key}:", f"{first[key]}\n{key}:", 1)
+    orch.commit(wt, {f"docs/reviews/eng-x/{head[:12]}.md": text}, "review record")
+    _refused(orch, "eng/x", 3, "malformed", f"repeated key {key!r}")
 
 
 # --- run/ still needs verification ------------------------------------------ #

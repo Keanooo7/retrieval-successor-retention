@@ -1,0 +1,46 @@
+{
+  "amendment_commit": "c4c1a25",
+  "bootstrap": {
+    "n": 2000,
+    "seed_base": 20260927
+  },
+  "checkpoints": [
+    "B.ckpt3000",
+    "B.ckpt2500"
+  ],
+  "device": "cpu",
+  "expected": "none registered (Amendment 1: caps already seen)",
+  "falsifier": "NONE: diagnostic only (PREREG Amendment 1); never gating, no threshold on rho, does not change the class rule",
+  "gammas": {
+    "g0": 0.0,
+    "g05": 0.5,
+    "g08": 0.8,
+    "g09": 0.9,
+    "g095": 0.95,
+    "g099": 0.99,
+    "g1": 1.0
+  },
+  "inputs": {
+    "B.ckpt2500.seed0": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed0.D.pt",
+    "B.ckpt2500.seed1": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed1.D.pt",
+    "B.ckpt2500.seed2": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt2500-seed2.D.pt",
+    "B.ckpt3000.seed0": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed0.D.pt",
+    "B.ckpt3000.seed1": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed1.D.pt",
+    "B.ckpt3000.seed2": ".worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed2.D.pt"
+  },
+  "main_ledger": "runs/gamma-ceiling/ledger.json",
+  "main_ledger_sha256": "dcf1c4a737ce21993cd869adf5114e07744628400da3bad80d8d134ff7039120",
+  "pooling": "lower median over defined steps; weighted lower median per rep",
+  "prereg": "experiments/gamma-ceiling/PREREG.md (Amendment 1)",
+  "question": "Amendment 1 (DIAGNOSTIC): how age-ranked is each hindsight target G_gamma across the rule's own resident slots at its eviction steps (median per-step Spearman rho with slot age)?",
+  "resident_slots": "the hindsight rule's own 16 live slots at each eviction",
+  "rho": "Spearman (average ranks) of G_gamma vs age = t - written_at",
+  "run_id": "gamma-ceiling-ageshape",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "t0_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+  "written_after_main_run": "c186ac6"
+}

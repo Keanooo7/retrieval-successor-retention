@@ -483,6 +483,20 @@ def _i1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
     return tuple((f"tests/test_battery_isolation.py::{n}", reason) for n in nodes)
 
 
+#: `tests/test_verified_results.py::DOCTORED` case ids; one refusal each (review M-1).
+_VR_DOCTORED = (
+    "B2-table-line-matched-0-times",
+    "B2-table-line-matched-2-times",
+    "duplicated-ledger-key",
+    "missing-ledger-key",
+    "null-row-value",
+    "null-top-level-value",
+    "null-value-in-a-committed-json-file",
+    "row-without-a-value-field",
+    "scope-quote-absent-from-its-file",
+)
+
+
 def _s1_declare(reason: str, *nodes: str) -> tuple[tuple[str, str], ...]:
     """Declared couplings on tests/test_rsr_learning_path.py nodes, one reason."""
     return tuple((f"tests/test_rsr_learning_path.py::{n}", reason) for n in nodes)
@@ -501,11 +515,13 @@ _S1_RSR_THROUGH_TRAIN = (
     "AttributeError where it stamps T_warm. The same defect -- the stamped name "
     "and the built policy disagree -- observed from each RSR-arm test."
 )
+
 _S1_ITERS_EPOCH_ZERO = (
     "these tests build an RSR arm with iters=0; `float(iters)` = 0 is refused by "
     "the registry's `steps_per_epoch > 0` constraint (ConstraintViolation). The "
     "iters-as-epoch defect surfacing loudly instead of as a FIFO-forever warmup."
 )
+
 _S1_TRAIN_MODE_TRACE = (
     "every learning path reads r_i from the eval forward's capture; with "
     "model.eval() dropped it is stamped eval_mode=False and reward._require_eval "
@@ -513,31 +529,35 @@ _S1_TRAIN_MODE_TRACE = (
     "tests that red instead see the 'eval' forward draw dropout RNG, which shifts "
     "the training forward's masks or the global RNG state."
 )
+
 _S1_MODE_NOT_RESTORED = (
     "the same restore, seen from train() (model.training after the loop) and "
     "from the FIFO loss: left in eval mode, every later training forward runs "
     "without dropout, so the loss with the eval forward differs from without."
 )
+
 _S1_RETURN_ARITHMETIC = (
     "both tests read G from mc_returns: one step of gamma short changes every "
     "multi-term target (the keying test's (3, 0)) and makes G(T_b - 1) = gamma * r "
     "instead of r (the truncation test)."
 )
+
 _S1_ROWS_MERGED = (
     "the per-row tests index mc_targets by row: merged into row 0, row 1 has no "
     "samples (max() over an empty selection) and the (row, t) group count no "
     "longer matches n_groups."
 )
+
 _S1_PHI_FROM_GEN = (
     "phi drawn from `gen` is no longer the phi_generator(seed) head (the init and "
     "beta=0 tests compare against it), and on MPS the CPU-built head raises on the "
     "MPS generator -- L11's two defects, one per test."
 )
+
 _S1_NO_VALUE_HEAD_GROUP = (
     "phi out of the optimizer never moves: T4's 'L_MC acted' check fails, and a "
     "frozen arm has no trainable parameter left (build_param_groups raises)."
 )
-
 
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
@@ -796,6 +816,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_linear_multiplier_is_one_over_fan_in_in_the_output",
                 _MUP_COUPLING,
             ),
+            (
+                "tests/test_b1_beta_inertness.py::"
+                "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+                "b1-beta-inertness: train_one trains the real BilinearValueHead and "
+                "takes the pre-clip grad norm over every psi-hat parameter (run.py "
+                "_grad_norm, p.grad.double()); with the linear term dropped `u` gets no "
+                "gradient, so its grad is None and the run raises AttributeError: the "
+                "head's two terms, seen from B1's trainer. Found by the night/2026-09-30 "
+                "pre-readout screen.",
+            ),
         ),
     ),
     Mutation(
@@ -882,6 +912,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_reduction_displaces_no_ranks_on_the_real_model",
                 _DISPLACEMENT_COUPLING + " Added 2026-09-18: the on-the-real-model "
                 "variant post-dates docs/mutation-battery.md's table.",
+            ),
+            (
+                "tests/test_b2_psi_probe.py::"
+                "test_the_probe_evicts_the_argmin_ties_to_the_oldest_and_logs_it",
+                "b2-psi-probe: ProbeArgminPolicy logs rank_shift imported from "
+                "rsr.retention.instrumentation (run.py imports it), and the test pins "
+                "the ADR-0006 displacement on a hand-built state ([2, 1]); the "
+                "window-counting shift logs [2, 2]: one metric, seen from B2's eviction "
+                "log. Found by the night/2026-09-30 pre-readout screen.",
             ),
             *_r1_declare(
                 "the §7.1 histograms are built from EvictionRecord.rank_shift: counting "
@@ -1339,6 +1378,91 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "lookahead-room records r_i and runs its probes and online_g0 rule from "
                 "observe(); never reached, no demand is recorded: the same call site, "
                 "seen from W10.",
+            ),
+            *(
+                (
+                    n,
+                    "b2-psi-probe captures its rows through the policy's observe() hook "
+                    "(run.py capture policies run with observe=True; policy_loop calls "
+                    "policy.observe with the pre-write memory), and b1-beta-inertness "
+                    "and newcomer-bakeoff load B2's harness and read those rows; with "
+                    "the call never reached every capture is empty, so features and "
+                    "targets are NaN or empty (FloatingPointError non-finite, IndexError "
+                    "on empty index tensors): the capture bridge, seen from B2 and its "
+                    "two readers. Found by the night/2026-09-30 pre-readout screen.",
+                )
+                for n in (
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_full_memory_steps_are_those_with_m_resident",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_pack_refuses_inputs_that_carry_graph",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_psi_all_is_the_head_at_every_t_and_i",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_rows_are_b2_rowset_c_and_target_is_c_at_09",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_failed_logit_control_is_e0h_exit_3_and_b2_still_completes",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_rank_r_probe_reads_the_swapped_in_sentence_at_rank_r",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_restart_skips_completed_units_and_reproduces_the_result",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_unit_from_another_configuration_is_refused",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_class_means_use_fit_train_u_rows_at_full_memory",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_e0h_rows_pair_each_slot_with_its_own_sentence",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_eval_units_reach_disk_before_the_next_document_runs",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_one_document_one_policy_and_residency_equals_the_replay",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_a_core_fits_decides_on_fit_val_and_passes_its_controls",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_a_rows_carry_lambda_residual_age_split_and_threads",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_b_core_runs_every_tier_and_streams_e0h",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_b_summary_reads_ref_and_delta_from_phase_a",
+                    "tests/test_b2_psi_probe.py::test_row_counts_are_u_and_c",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_age_head_fits_one_hot_age_with_the_same_rule",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_attribution_source_has_row_1s_fields",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_capture_fills_every_row_and_every_control_holds",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_censored_target_is_zero_after_fifo_evicts",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_fit_selects_on_demeaned_val_mse_and_reports_raw",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_log_alpha_fallback_when_the_hook_cannot_be_built",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_prehook_source_is_recorded_when_the_hook_builds",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_val_r2_raw_is_one_minus_sse_over_sst",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_a_joint_fit_reproduces_b2_s_own_c_fit",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_r1_at_half_weight_is_resident_plus_half_the_shadow",
+                    "tests/test_newcomer_bakeoff.py::test_r1_window_truncates_at_k",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_the_r1l1_target_equals_u_s_target_on_c_rows",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_units_are_atomic_resumable_and_keyed",
+                )
             ),
             *_r1_declare(
                 "with observe never called L_MC is None, so phi (the frozen warm-start "
@@ -2113,6 +2237,105 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "el",
                 _CARRY_FORWARD_S003_COUPLING,
             ),
+            *(
+                (
+                    n,
+                    "b2-psi-probe builds its documents with the S0-03 generator and "
+                    "encodes them through loop.answer_targets, which refuses a query "
+                    "that does not end in its answer ('The answer is out of band'); "
+                    "b1-beta-inertness and newcomer-bakeoff load B2's harness and its "
+                    "documents. A corpus with no in-stream answer cannot be encoded: "
+                    "_S003_REFUSAL_COUPLING, seen from B2 and its two readers. Found by "
+                    "the night/2026-09-30 pre-readout screen.",
+                )
+                for n in (
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_full_memory_steps_are_those_with_m_resident",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_pack_refuses_inputs_that_carry_graph",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_psi_all_is_the_head_at_every_t_and_i",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_rows_are_b2_rowset_c_and_target_is_c_at_09",
+                    "tests/test_b1_beta_inertness.py::"
+                    "test_train_one_is_deterministic_and_beta_inert_without_eps_but_p_is_not",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_failed_logit_control_is_e0h_exit_3_and_b2_still_completes",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_rank_r_probe_reads_the_swapped_in_sentence_at_rank_r",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_restart_skips_completed_units_and_reproduces_the_result",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_a_unit_from_another_configuration_is_refused",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_age_decodability_is_raw_mse_lambda_and_r2_on_fit_val",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_age_decodability_split_by_index_partitions_the_fit_val_rows",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_captured_s_and_c_are_stop_grad_and_nothing_reaches_the_model",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_class_means_use_fit_train_u_rows_at_full_memory",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_e0h_rows_pair_each_slot_with_its_own_sentence",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_eval_units_reach_disk_before_the_next_document_runs",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_lambda_is_chosen_on_fit_val_and_never_on_eval",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_one_document_one_policy_and_residency_equals_the_replay",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_a_core_fits_decides_on_fit_val_and_passes_its_controls",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_a_rows_carry_lambda_residual_age_split_and_threads",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_b_core_runs_every_tier_and_streams_e0h",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_phase_b_summary_reads_ref_and_delta_from_phase_a",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_probes_never_feed_back_into_the_fifo_rollout",
+                    "tests/test_b2_psi_probe.py::test_row_counts_are_u_and_c",
+                    "tests/test_b2_psi_probe.py::test_target_matrices_by_arm",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_age_head_fits_one_hot_age_with_the_same_rule",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_attribution_source_has_row_1s_fields",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_capture_fills_every_row_and_every_control_holds",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_censored_target_is_zero_after_fifo_evicts",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_fit_selects_on_demeaned_val_mse_and_reports_raw",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_log_alpha_fallback_when_the_hook_cannot_be_built",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_the_prehook_source_is_recorded_when_the_hook_builds",
+                    "tests/test_b2_psi_probe.py::"
+                    "test_val_r2_raw_is_one_minus_sse_over_sst",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_a_joint_fit_reproduces_b2_s_own_c_fit",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_install_keeps_every_b2_target_and_puts_r1_on_c_rows",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_r1_at_full_weight_and_open_window_is_u_s_demand",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_r1_at_half_weight_is_resident_plus_half_the_shadow",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_r1_at_zero_weight_is_the_censored_target",
+                    "tests/test_newcomer_bakeoff.py::test_r1_window_truncates_at_k",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_the_r1l1_target_equals_u_s_target_on_c_rows",
+                    "tests/test_newcomer_bakeoff.py::"
+                    "test_units_are_atomic_resumable_and_keyed",
+                )
+            ),
             *_r1_declare(
                 "answer_targets() raises in every train() call, including the "
                 "module-scoped substrate fixture's FIFO run, so every run-1 test that "
@@ -2432,6 +2655,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    # "preregistration/*",\n',
         "an unattended branch that edits a signed threshold merges into the night "
         "branch -- 'a threshold registered after seeing the data is not a threshold'.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_the_frozen_guard_trips_even_without_a_review",
+                "T5(b): the review-gate file re-asserts that the frozen-path guard HALTs "
+                "a preregistration/ edit with no review on record, through the same "
+                "FROZEN_GLOBS entry this mutation comments out: one glob, seen from the "
+                "review gate's side (the review gate must not weaken the guard). Found "
+                "by the night/2026-09-30 review.",
+            ),
+        ),
     ),
     Mutation(
         "merge: a changed FROZEN definition is not compared",
@@ -2450,6 +2684,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    if rec is None and False:\n        return Exit.DID_NOT_RUN,",
         "the verification gate stops being a gate: with no record the merge crashes "
         "(1) instead of refusing (3) -- 'did not run' collapsing into 'real failure'.",
+        off_gate_allowed=(
+            (
+                "tests/test_orch_merge_review.py::"
+                "test_run_prefix_still_needs_verification_even_with_a_review",
+                "T5(b): the review-gate file re-asserts that a run/ branch WITH a review "
+                "but no verification record is refused 3 'no verification record', "
+                "through the same `rec is None` branch of _verification_gate: one "
+                "refusal, seen from the review side (a review never replaces "
+                "verification for run/). Found by the night/2026-09-30 review.",
+            ),
+        ),
     ),
     Mutation(
         "tick: HALT ignored",
@@ -4595,6 +4840,21 @@ MUTATIONS: tuple[Mutation, ...] = (
             "test_a_stopped_battery_leaves_the_live_tree_and_git_clean[SIGINT]",
             "test_a_stopped_battery_kills_its_suites_grandchildren",
             "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's end-to-end runs call this main() once per shard, all on one "
+                "stub tree: a shard that mutates the invoking tree leaves it dirty "
+                "for the others, whose pinned-SHA check then refuses. The same "
+                "defect, seen from the sharded driver.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+            )
         ),
     ),
     Mutation(
@@ -4713,6 +4973,38 @@ MUTATIONS: tuple[Mutation, ...] = (
             _I1_E2E_WIRING,
             "test_markdown_is_not_written_while_a_row_did_not_run",
             "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the sharded driver's exit code IS `_report`'s, on the merged rows "
+                "-- by construction, so it cannot drift from the serial rule. Every "
+                "I2 test that expects 3 for a DID_NOT_RUN row reddens with it.",
+            )
+            for t in (
+                "test_a_missing_row_is_did_not_run_never_a_pass",
+                "test_a_row_for_another_gate_is_did_not_run",
+                "test_a_row_for_another_mutation_is_did_not_run",
+                "test_a_row_with_a_field_of_the_wrong_type_is_did_not_run",
+                "test_a_row_without_the_serial_rows_fields_is_did_not_run",
+                "test_a_shard_process_that_dies_makes_its_mutations_did_not_run",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-index]",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-n]",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-run]",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-sha]",
+                "test_a_shard_record_from_another_run_is_did_not_run[another-table]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[137]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[143]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[1]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[2]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[False]",
+                "test_a_shard_that_exited_outside_0_and_3_is_did_not_run[None]",
+                "test_a_shard_that_wrote_no_rows_is_did_not_run",
+                "test_a_shard_with_no_done_record_is_did_not_run",
+                "test_a_shards_own_did_not_run_row_is_kept_with_its_reason",
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+            )
         ),
     ),
     Mutation(
@@ -4763,6 +5055,16 @@ MUTATIONS: tuple[Mutation, ...] = (
             "test_check_still_fails_on_an_unproven_gate",
             "test_an_ignored_file_one_mutation_writes_cannot_change_the_next_verdict",
             "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's end-to-end sharded run resets each shard between mutations "
+                "with this same reset; broken, a shard battery refuses and the "
+                "sharded run is not 0.",
+            )
+            for t in ("test_sharded_verdicts_equal_the_serial_ones_on_the_stub",)
         ),
     ),
     Mutation(
@@ -4822,6 +5124,30 @@ MUTATIONS: tuple[Mutation, ...] = (
             "test_prune_refuses_while_a_battery_holds_the_pool",
             "test_a_baseline_that_did_not_run_exits_3",
             "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's end-to-end runs require no shard worktree registration to "
+                "outlive the driver; each shard's teardown is this one.",
+            )
+            for t in (
+                "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+            )
+        )
+        # I2 fix round 1 (tests/test_battery_worktree_admin.py): shown red by hand.
+        + tuple(
+            (
+                f"tests/test_battery_worktree_admin.py::{t}",
+                "the teardown test asserts the pool's teardown ran and reported the "
+                "prune it could not do; a pool that is never torn down reports nothing.",
+            )
+            for t in (
+                "test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts",
+                "test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts",
+            )
         ),
     ),
     Mutation(
@@ -4881,6 +5207,16 @@ MUTATIONS: tuple[Mutation, ...] = (
             "test_verdicts_come_from_the_shard_and_the_live_tree_is_untouched",
             "test_check_still_fails_on_an_unproven_gate",
             "test_bytecode_from_one_mutation_cannot_run_under_the_next",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's end-to-end sharded run resets each shard between mutations "
+                "with this same reset; broken, a shard battery refuses and the "
+                "sharded run is not 0.",
+            )
+            for t in ("test_sharded_verdicts_equal_the_serial_ones_on_the_stub",)
         ),
     ),
     Mutation(
@@ -4931,6 +5267,16 @@ MUTATIONS: tuple[Mutation, ...] = (
             _I1_GROUP,
             "test_a_killed_pytest_child_is_did_not_run_and_the_tree_stays_clean",
             "test_a_sigint_to_the_pytest_child_alone_is_did_not_run",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "I2's stopped-driver test requires the slow suite's grandchild "
+                "gone; each shard battery kills its suite's group exactly as the "
+                "serial one does.",
+            )
+            for t in ("test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",)
         ),
     ),
     Mutation(
@@ -4985,6 +5331,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         off_gate_allowed=_i1_declare(
             _I1_E2E_WIRING,
             "test_a_stopped_battery_kills_its_suites_grandchildren",
+        )
+        # I2 (tests/test_battery_shards.py): shown red by hand, 2026-09-30.
+        + tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "a stopped sharded driver stops its shards with SIGTERM, which each "
+                "shard battery must handle to kill its suite and tear its pool "
+                "down.",
+            )
+            for t in ("test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",)
         ),
     ),
     Mutation(
@@ -5026,7 +5382,31 @@ MUTATIONS: tuple[Mutation, ...] = (
         "no adversarial review on record.",
         off_gate_allowed=tuple(
             (f"tests/test_orch_merge_review.py::{t}", _REVIEW_GATE_COUPLING)
-            for t in _REVIEW_GATE_REFUSALS
+            for t in (
+                *_REVIEW_GATE_REFUSALS,
+                # the round-2 minors' refusals (docs/reviews/eng-t5b-review-gate/
+                # defe2dd7c489.md MINOR-1..3), listed here because
+                # fix/review-minors-0930 was scoped to the MUTATIONS table
+                *(
+                    "test_records_at_equal_distance_with_different_verdicts_are_"
+                    f"refused[{v}]"
+                    for v in ("verdicts0", "verdicts1")
+                ),
+                *(
+                    f"test_a_repeated_front_matter_key_is_malformed[{k}]"
+                    for k in ("verdict", "reviewer")
+                ),
+                *(
+                    f"test_only_this_branchs_own_review_records_are_exempt[{p}]"
+                    for p in (
+                        "docs/reviews/eng-victim/0123456789ab.md",
+                        "docs/reviews/payload.py",
+                        "docs/reviews/run-a/payload.py",
+                        "docs/reviews/run-a/notes.txt",
+                        "docs/reviews/run-a/sub/0123456789ab.md",
+                    )
+                ),
+            )
         ),
     ),
     Mutation(
@@ -5035,7 +5415,7 @@ MUTATIONS: tuple[Mutation, ...] = (
         "scripts/orchestrator/merge.py",
         "    unreviewed = [\n"
         "        p for p in diff.stdout.splitlines() if p and not review_exempt(p, "
-        "run_item)\n"
+        "rdir, run_item)\n"
         "    ]\n",
         "    unreviewed = []\n",
         "a review of an early head waves through every commit made after it -- "
@@ -5050,6 +5430,22 @@ MUTATIONS: tuple[Mutation, ...] = (
             for t in (
                 "test_only_the_merging_runs_own_verification_is_exempt",
                 "test_no_verification_json_is_exempt_on_other_prefixes",
+            )
+        )
+        + tuple(
+            (
+                "tests/test_orch_merge_review.py::"
+                f"test_only_this_branchs_own_review_records_are_exempt[{p}]",
+                "review MINOR-3 (defe2dd7c489.md): a path under docs/reviews/ that is "
+                "not this branch's own record is refused by the same staleness diff; "
+                "no diff, no refusal.",
+            )
+            for p in (
+                "docs/reviews/eng-victim/0123456789ab.md",
+                "docs/reviews/payload.py",
+                "docs/reviews/run-a/payload.py",
+                "docs/reviews/run-a/notes.txt",
+                "docs/reviews/run-a/sub/0123456789ab.md",
             )
         ),
     ),
@@ -7218,6 +7614,1056 @@ MUTATIONS: tuple[Mutation, ...] = (
         "Review MINOR-4(b), HM-F: a negative nu reads the gestalts as much as a "
         "positive one.",
     ),
+    # T5(b) round-2 minors, 2026-09-30 (docs/reviews/eng-t5b-review-gate/
+    # defe2dd7c489.md). Proven by hand on tests/test_orch_merge*.py only (the
+    # integration battery holds the CPU; branch fix/review-minors-0930).
+    Mutation(
+        "merge: review records tied in distance are decided by sha order",
+        "test_records_at_equal_distance_with_different_verdicts_are_refused",
+        "scripts/orchestrator/merge.py",
+        '    if len({fm["verdict"] for _, _, fm in tied}) > 1:\n',
+        "    if False:\n",
+        "review MINOR-1 (probes N8/N8b): a DO NOT MERGE and a MERGE record at the "
+        "same distance from head, on parallel lines over identical code, resolve by "
+        "which reviewed sha sorts first -- the verdict is a coin flip.",
+    ),
+    Mutation(
+        "merge: a repeated front-matter key is accepted, last wins",
+        "test_a_repeated_front_matter_key_is_malformed",
+        "scripts/orchestrator/merge.py",
+        "        if k in out:\n            if repeated is not None:\n",
+        "        if False:\n            if repeated is not None:\n",
+        "review MINOR-2 (probe N6): a record that reads `verdict: DO NOT MERGE` at "
+        "the top and `verdict: MERGE` below it merges.",
+    ),
+    Mutation(
+        "merge: every path under docs/reviews/ is staleness-exempt",
+        "test_only_this_branchs_own_review_records_are_exempt",
+        "scripts/orchestrator/merge.py",
+        '    if name != path and "/" not in name and name.endswith(".md"):\n',
+        '    if path.startswith("docs/reviews/"):\n',
+        "review MINOR-3 (probe N9): after review, another branch's record or a "
+        "non-record file such as docs/reviews/payload.py rides into the night "
+        "branch without staling the record.",
+    ),
+    # battery-union review minors, 2026-09-30 (docs/reviews/eng-battery-union/
+    # 7d90e27a400b.md, docs/reviews/eng-battery-union-annotated/66d1dfa5c440.md).
+    # Proven by hand on tests/test_battery_union.py (fix/review-minors-0930).
+    Mutation(
+        "battery-union: git is hard-coded to the homebrew path",
+        "test_git_falls_back_to_path_git_where_homebrew_git_is_absent",
+        "scripts/battery_union.py",
+        'GIT = _HOMEBREW_GIT if Path(_HOMEBREW_GIT).exists() else shutil.which("git") '
+        'or "git"\n',
+        "GIT = _HOMEBREW_GIT\n",
+        "review 7d90e27a400b MINOR-3: on the ubuntu CI runner there is no "
+        "/opt/homebrew/bin/git, so the repo fixture and _have() raise "
+        "FileNotFoundError and four tests ERROR instead of running.",
+    ),
+    Mutation(
+        "battery-union: a new constant is anchored on any line naming its successor",
+        "test_a_new_constant_is_anchored_on_its_successors_definition",
+        "scripts/battery_union.py",
+        r'    m = re.search(rf"^{re.escape(succ)}(?:: [^\n=]+)? = \(\n", h, re.M)',
+        r'    m = re.search(rf"^{re.escape(succ)}\b", h, re.M)',
+        "review 66d1dfa5c440 MINOR-1: a column-0 head-code line that starts with the "
+        "successor's name (an annotation-only declaration, `_A[0] = ...`) above its "
+        "definition gets the new constant inserted above it, silently.",
+    ),
+    Mutation(
+        "battery-union: the output check does not compare entries and constants",
+        "test_the_output_check_compares_",
+        "scripts/battery_union.py",
+        "    if problems:\n        raise Refused(\n",
+        "    if False:\n        raise Refused(\n",
+        "review 66d1dfa5c440 MINOR-2: a union that loses one entry or constant and "
+        "gains another, or changes a value, is written as if it were the merge.",
+    ),
+    Mutation(
+        "battery-union: an ours-only constant is appended to theirs' head",
+        "test_a_constant_new_in_ours_lands_where_ours_put_it_when_theirs_head_is_taken",
+        "scripts/battery_union.py",
+        "                h = _insert_new_const(h, k, o, t)\n",
+        '                h = h + v + "\\n"\n',
+        "review 66d1dfa5c440 MINOR-3: when only theirs changed head code, a constant "
+        "only ours has moves to the end of the head instead of where ours put it -- "
+        "the placement rule applied to one side only.",
+    ),
+    # --- I6: RSR_* environment (PLAN-v4 §4; red-team m-2) ---
+    Mutation(
+        "battery-env: a stray RSR_* variable is not refused",
+        "test_stray_variable",
+        "scripts/battery_env.py",
+        "    if stray:\n        named = []",
+        "    if False:\n        named = []",
+        "red-team m-2: the battery hands its whole environment to pytest. An "
+        "RSR_* name nothing declares is a typo of a real control or a leftover; "
+        "on 09-26/27 the verdicts moved with ambient state nobody recorded.",
+    ),
+    Mutation(
+        "battery: main() records the RSR_* environment without checking it",
+        "test_stray_variable_stops_main",
+        "scripts/mutation_battery.py",
+        # split literals: this row must not be the occurrence apply() replaces
+        "    print(battery_env.header(battery_env.che" + "ck()))",
+        "    print(battery_env.header(battery_env.present()))",
+        "I6: the refusal is one call in main(). Without it battery_env.check is "
+        "correct and unused, and a stray override runs every suite.",
+    ),
+    Mutation(
+        "battery: a driver that skips main() is not checked",
+        "test_stray_variable_stops_a_driver",
+        "scripts/mutation_battery.py",
+        "        own = battery_env.che" + "ck()",
+        "        own = battery_env.present()",
+        "I6 fix round 1, defence in depth: a driver that bypasses main() and "
+        "calls _run_isolated directly would otherwise run every suite under a "
+        "stray override. (No driver does so today; I2's run_shard calls main().)",
+    ),
+    Mutation(
+        "battery-env: RSR_ORCH_CMD_ with any suffix is declared",
+        "test_stray_variable_orch_cmd",
+        "scripts/battery_env.py",
+        "    return name in DECLARED or name in ORCH_CMD_NAMES",
+        "    return name in DECLARED or name.startswith(ORCH_CMD_PREFIX)",
+        "review MINOR-5: orch_cmd reads RSR_ORCH_CMD_<module.upper()>; a misspelled "
+        "module stubs nothing, the typo class the gate exists for.",
+    ),
+    Mutation(
+        "battery: the --json rows drop the RSR_* environment",
+        "test_declared_variable_is_recorded",
+        "scripts/mutation_battery.py",
+        "rows.append(battery_env.sta" + "mp(_row(m, failing, did_not_run), own, suite))",
+        "rows.append(_row(m, failing, did_not_run))",
+        "I6: the json record is what a later reader has. Until 09-30 it carried "
+        "nothing of the environment the verdicts were issued under.",
+    ),
+    Mutation(
+        "battery-env: the json record carries names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '    out.setdefault("rsr_env", dict(own))',
+        '    out.setdefault("rsr_env", sorted(own))',
+        "I6: RSR_BATTERY_THREADS=2 and =14 are the same name; the 09-26/27 "
+        "verdicts differed by the value.",
+    ),
+    Mutation(
+        "battery-env: the json record carries the suite's names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '    out.setdefault("rsr_env_suite", dict(suite))',
+        '    out.setdefault("rsr_env_suite", sorted(suite))',
+        "review MAJOR-3: the suite's values are the ones pytest ran under.",
+    ),
+    Mutation(
+        "battery-env: the header prints names without values",
+        "test_declared_variable_is_recorded",
+        "scripts/battery_env.py",
+        '        lines.append(f"  {name}={value!r} -- {_role(name)}")',
+        '        lines.append(f"  {name} -- {_role(name)}")',
+        "I6: the stdout header is the record of a battery run without --json.",
+    ),
+    Mutation(
+        "battery-env: the suite header does not mark a replaced value",
+        "test_suite_header_marks",
+        "scripts/battery_env.py",
+        '            note = f" [replaced by the battery; its own value is '
+        '{own[name]!r}]"',
+        '            note = ""',
+        "review MAJOR-3/MINOR-6: ambient RSR_TORCH_THREADS=14 under a cap of 2 was "
+        "recorded as 14 with nothing to say the suite ran with 2.",
+    ),
+    Mutation(
+        "battery-env: stamp overwrites a row's recorded environment",
+        "test_stamp_keeps",
+        "scripts/battery_env.py",
+        '    out.setdefault("rsr_env", dict(own))',
+        '    out["rsr_env"] = dict(own)',
+        "review MAJOR-4: a driver merging per-shard rows would record its own "
+        "environment on every row instead of each shard's.",
+    ),
+    Mutation(
+        "battery-env: a name the tree reads is not declared",
+        "test_inventory_every_rsr_name",
+        "scripts/battery_env.py",
+        '    "RSR_NB_B2_FITS": "experiments/newcomer-bakeoff/run.py: where B2\'s '
+        'fits are",\n',
+        "    # (declaration removed)\n",
+        "I6: the red team counted twelve RSR_* names; this tree has 36 and a "
+        "family of per-module names. A declared list nothing holds to the tree is "
+        "stale the day after it is written, and a legitimate launch is then "
+        "refused. (The mutation replaces the line with a comment rather than "
+        "renaming the key: a renamed key would itself be a new RSR_* token in "
+        "this file.)",
+    ),
+    Mutation(
+        "battery-env: rows carry the shard's root path",
+        "test_rows_do_not_depend_on_where_the_shard_lives",
+        "scripts/battery_env.py",
+        "        (str(root), SHARD_TOKEN),\n",
+        "        # (shard root not replaced)\n",
+        "I6 second review MAJOR-2: a row that carries its shard's path is never "
+        "equal to the same verdict from another pool, so a serial and a sharded "
+        "run at one SHA cannot be compared row by row.",
+    ),
+    Mutation(
+        "battery: each mutation's suite rebuilds its own environment",
+        "test_declared_variable_is_recorded_as_the_env_the_suite_got",
+        "scripts/mutation_battery.py",
+        "                failing = run_suite(shard, e" + "nv)",
+        "                failing = run_suite(shard)",
+        "I6 second review MINOR-3: a rebuilt env re-reads ops/lanes.json and "
+        "os.environ, and was measured to drift from the recorded one mid-run.",
+    ),
+    Mutation(
+        "battery-env: the inventory reads ignored files",
+        "test_inventory_skips_ignored",
+        "scripts/battery_env.py",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--others", "--", *CODE_DIRS',
+        "I6 second review MAJOR-1: git-ignored agent checkouts under "
+        ".claude/worktrees/ made the inventory test red on a machine-local file.",
+    ),
+    Mutation(
+        "battery-env: the inventory misses a new untracked file",
+        "test_inventory_reads_a_new_untracked",
+        "scripts/battery_env.py",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--cached", "--", *CODE_DIRS',
+        "I6 third review MINOR-3: a new file reading an RSR_* name was invisible "
+        "until committed, so the author's run was green and CI red.",
+    ),
+    Mutation(
+        "battery-env: the inventory accepts a directory inside a checkout",
+        "test_inventory_refuses_a_directory_inside",
+        "scripts/battery_env.py",
+        "    if not os.path.samefile(top, root):",
+        "    if False:",
+        "I6 third review MINOR-2: inside a checkout ls-files exits 0 and lists "
+        "nothing, so an empty inventory passed as a measurement.",
+    ),
+    Mutation(
+        "battery-env: the inventory reads untracked .claude files",
+        "test_inventory_skips_untracked_claude_files",
+        "scripts/battery_env.py",
+        '"--others", "--exclude-standard", "--", *CODE_DIRS',
+        '"--others", "--exclude-standard", "--", *SCANNED',
+        "I6 fourth review MINOR-1: whether git ignores .claude/settings.local.json "
+        "depends on each machine's excludes file; reading untracked .claude/ files "
+        "made the inventory red on one machine and green on another.",
+    ),
+    Mutation(
+        "battery-env: the checkout-top check compares path strings",
+        "test_tracked_accepts_a_differently_cased_root",
+        "scripts/battery_env.py",
+        "    if not os.path.samefile(top, root):",
+        "    if Path(top) != Path(root):",
+        "I6 fourth review MINOR-2: on case-insensitive APFS a differently-cased "
+        "root is the same checkout, and a string comparison refused it.",
+    ),
+    Mutation(
+        "battery-env: rows carry the probe's path",
+        "test_rows_do_not_depend_on_where_the_shard_lives",
+        "scripts/battery_env.py",
+        "        (str(probe), PROBE_TOKEN),\n",
+        "        # (probe not replaced)\n",
+        "I6 third review MAJOR-1: the probe lives in the pool, outside the shard "
+        "root (battery_isolation.make_shard); without its token a row carries the "
+        "pool's absolute path, which differs between a serial and a sharded run.",
+    ),
+    # ------------------------------------------------------------------ I2
+    # PLAN-v4 §4 I2 (red-team M-13): the sharded driver, scripts/battery_shards.py.
+    # One entry per check of the driver; gates are in tests/test_battery_shards.py.
+    # Each was shown red by hand on 2026-09-30 (apply, run the test file, restore):
+    # no battery has run these entries yet.
+    Mutation(
+        "i2: the stride stops short of the table's end",
+        "test_the_slices_cover_every_mutation_exactly_once",
+        "scripts/battery_shards.py",
+        "    parts = [list(range(k, total, n)) for k in range(n)]",
+        "    parts = [list(range(k, min(total, 300), n)) for k in range(n)]",
+        "I2: every mutation is in exactly one shard's slice. A slice rule that "
+        "leaves some out runs a smaller battery and reports it as the whole one.",
+    ),
+    Mutation(
+        "i2: a slice list that is not a partition is accepted",
+        "test_a_partition_that_is_not_exactly_once_is_refused",
+        "scripts/battery_shards.py",
+        "    if flat != list(range(total)):",
+        "    if False:",
+        "I2: the driver refuses to start, and to merge, unless the slices cover "
+        "every mutation exactly once -- asserted, not assumed from the slice rule.",
+    ),
+    Mutation(
+        "i2: a shard with no mutations is accepted",
+        "test_more_shards_than_mutations_is_refused",
+        "scripts/battery_shards.py",
+        '    if empty:\n        raise Refused(\n            f"shard(s)',
+        '    if False:\n        raise Refused(\n            f"shard(s)',
+        "I2: a shard with an empty slice is a battery with zero mutations, which "
+        "exits 2; more shards than mutations is refused before anything starts.",
+    ),
+    Mutation(
+        "i2: every shard shares one pool",
+        "test_every_shard_has_its_own_pool",
+        "scripts/battery_shards.py",
+        'd / "done.json", d / "pool", d / "log.txt")',
+        'd / "done.json", Path(work) / "pool", d / "log.txt")',
+        "I2: an I1 pool admits one battery (flock). Shards on one pool are one "
+        "battery and N-1 refusals -- or, unlocked, N batteries in one worktree.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the end-to-end runs start two real shard batteries at once; on one "
+                "pool the second is refused by I1's lock, so its mutations did not "
+                "run. The same defect, seen from the real driver.",
+            )
+            for t in (
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+            )
+        ),
+    ),
+    Mutation(
+        "i2: a shard does not pass its --shard-dir",
+        "test_a_shard_passes_its_own_shard_dir_to_the_battery",
+        "scripts/battery_shards.py",
+        '    argv += ["--shard-dir", str(paths.pool)]\n',
+        "    pass\n",
+        "I2: each shard battery gets its own --shard-dir; without it every shard "
+        "takes the repository's default pool, which admits one battery.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the end-to-end runs start two real shard batteries at once; with "
+                "no --shard-dir both take the default pool (under the test's own "
+                "HOME) and I1's lock refuses the second. The same defect, seen from "
+                "the real driver.",
+            )
+            for t in (
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+            )
+        ),
+    ),
+    Mutation(
+        "i2: a shard runs the whole table",
+        "test_a_shard_runs_only_its_own_slice",
+        "scripts/battery_shards.py",
+        "    mb.MUTATIONS = tuple(table[i] for i in parts[args.index])\n",
+        "    mb.MUTATIONS = table\n",
+        "I2: shard k runs MUTATIONS[k::N] and nothing else; N shards each running "
+        "everything is N serial batteries, and rows the merge cannot place.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "every shard of a real (or faked) run returns rows for the whole "
+                "table where the merge expects its slice, so the end-to-end runs "
+                "and the shards-then-merge test see DID_NOT_RUN rows, and in the "
+                "SIGKILL run the surviving shard also runs the slow mutation. The "
+                "same defect, seen from the merge.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "test_merged_rows_are_in_table_order_with_the_serial_schema",
+                "test_sharded_verdicts_equal_the_serial_ones_on_the_stub",
+            )
+        ),
+    ),
+    Mutation(
+        "i2: a shard does not cap its suite threads",
+        "test_a_shard_suite_runs_at_one_thread_by_default",
+        "scripts/battery_shards.py",
+        '    os.environ["RSR_BATTERY_THREADS"] = str(args.threads)\n',
+        "    pass\n",
+        "I2: each shard's suite runs at --threads (default 1); N uncapped suites "
+        "on one machine each spawn a BLAS pool per core (the battery's thread cap).",
+    ),
+    Mutation(
+        "i2: the done record is written before the battery runs",
+        "test_a_shard_whose_battery_crashed_leaves_no_done_record",
+        "scripts/battery_shards.py",
+        "    sys.argv, iso.pinned_sha = argv, pin\n    try:\n        try:\n",
+        "    sys.argv, iso.pinned_sha = argv, pin\n"
+        '    _write_json(paths.done, {"run_id": args.run_id, "index": args.index, '
+        '"of": args.of, "sha": real_pin(mb.ROOT), "table": table_fingerprint(table), '
+        '"rc": 0})\n'
+        "    try:\n        try:\n",
+        "I2: the done record says the shard's battery RETURNED. Written at the "
+        "start, a killed or crashed shard would look finished to the merge.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_shards.py::"
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+                "the SIGKILL end-to-end run asserts its killed shard is DID_NOT_RUN "
+                "for having no done record; written early, the record exists and "
+                "the reason changes.",
+            ),
+            (
+                "tests/test_battery_shards.py::"
+                "test_a_shard_records_the_sha_its_battery_pinned",
+                "review 2 MINOR-3: the early record names the real SHA, so its extra "
+                "read of HEAD takes the first pinned value the SHA test hands out and "
+                "the battery pins the second (observed red, fix round 1 pass A).",
+            ),
+        ),
+    ),
+    Mutation(
+        "i2: a refused battery is recorded as exit 0",
+        "test_a_shard_whose_battery_refused_records_the_refusal",
+        "scripts/battery_shards.py",
+        "            rc = e.code if isinstance(e.code, int) else int(Exit.FAIL)\n",
+        "            rc = int(Exit.OK)\n",
+        "I2: a shard whose battery refused (red baseline, not isolated) exits 3 "
+        "and records 3 -- 'did not run' must not become 0 at the shard boundary.",
+    ),
+    Mutation(
+        "i2: a shard overwrites an earlier result",
+        "test_a_shard_never_overwrites_an_earlier_result",
+        "scripts/battery_shards.py",
+        "        if old.exists():\n            raise Refused(\n"
+        '                f"{old} exists: shard',
+        "        if False:\n            raise Refused(\n"
+        '                f"{old} exists: shard',
+        "I2: a shard refuses a directory that already holds rows or a done "
+        "record; a result is never replaced by a later run's.",
+    ),
+    Mutation(
+        "i2: run starts over an earlier result",
+        "test_run_refuses_a_work_dir_holding_an_earlier_result",
+        "scripts/battery_shards.py",
+        "            if old.exists():\n                raise Refused(\n"
+        '                    f"{old} exists: --work-dir',
+        "            if False:\n                raise Refused(\n"
+        '                    f"{old} exists: --work-dir',
+        "I2: `run` needs a work dir with no earlier shard result, so a shard that "
+        "never starts cannot be answered for by an old file.",
+    ),
+    Mutation(
+        "i2: a work dir inside the invoking tree is accepted",
+        "test_a_work_dir_inside_the_invoking_tree_is_refused",
+        "scripts/battery_shards.py",
+        "    if iso.is_under(work, mb.ROOT):",
+        "    if False:",
+        "I2: shard pools and logs live outside the invoking tree, which every "
+        "shard requires to be clean (I1: the tree the battery runs from is never "
+        "written).",
+    ),
+    Mutation(
+        "i2: a work dir inside the default pool is accepted",
+        "test_a_work_dir_inside_the_default_pool_is_refused",
+        "scripts/battery_shards.py",
+        "    if iso.is_under(work, default):",
+        "    if False:",
+        "I2: a serial battery's teardown and --prune-shards remove every worktree "
+        "registered under the default pool; shard pools must not be under it.",
+    ),
+    Mutation(
+        "i2: a dirty invoking tree is a traceback",
+        "test_a_dirty_invoking_tree_is_did_not_run_not_a_traceback",
+        "scripts/battery_shards.py",
+        "    except iso.Unisolated as e:\n        raise Refused(",
+        "    except KeyError as e:\n        raise Refused(",
+        "I2: a precondition the driver cannot meet is DID NOT RUN (3). An uncaught "
+        "exception exits 1 -- 'did not run' reported as a real failure (S0-05).",
+    ),
+    Mutation(
+        "i2: a shard with no done record is read anyway",
+        "test_a_shard_with_no_done_record_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    done = _read_json(paths.done)\n    if not isinstance(done, dict):",
+        '    done = _read_json(paths.done) or {**want, "rc": 0}\n'
+        "    if not isinstance(done, dict):",
+        "I2: a shard that was killed leaves no done record, and whatever rows "
+        "file is in its directory is not a finished battery's.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the SIGKILL end-to-end run asserts its killed shard is DID_NOT_RUN "
+                "for having no done record; the same check, seen from the real "
+                "driver.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+            )
+        ),
+    ),
+    Mutation(
+        "i2: a done record from another run is accepted",
+        "test_a_shard_record_from_another_run_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if got != want:",
+        "    if False:",
+        "I2: rows count only from THIS run, shard, pinned SHA and table; an old "
+        "file in the work dir must never answer for a shard that did not run.",
+    ),
+    Mutation(
+        "i2: a shard that exited outside 0 and 3 is read",
+        "test_a_shard_that_exited_outside_0_and_3_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if isinstance(rc, bool) or rc not in ROWS_EXIT:",
+        "    if False:",
+        "I2: a battery that exited 1, 2 or 128+N did not finish its slice; its "
+        "rows are not evidence.",
+    ),
+    Mutation(
+        "i2: a shard that exited 3 loses its finished rows",
+        "test_a_shards_own_did_not_run_row_is_kept_with_its_reason",
+        "scripts/battery_shards.py",
+        "ROWS_EXIT = (int(Exit.OK), int(Exit.DID_NOT_RUN))",
+        "ROWS_EXIT = (int(Exit.OK),)",
+        "I2: a shard exits 3 when ONE of its mutations did not run; the battery's "
+        "own reason for that row, and the shard's other verdicts, are kept.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "a shard whose battery refused exits 3 with no rows; the test "
+                "asserts the reason names the missing rows, which it reaches only "
+                "when 3 is a readable exit status.",
+            )
+            for t in ("test_a_shard_that_wrote_no_rows_is_did_not_run",)
+        ),
+    ),
+    Mutation(
+        "i2: a missing rows file is not checked",
+        "test_a_shard_that_wrote_no_rows_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if not isinstance(rows, list) or len(rows) != n_rows:",
+        "    if len(rows) != n_rows:",
+        "I2: a shard whose battery refused wrote no rows; each of its mutations "
+        "is DID_NOT_RUN with that reason, not a crash of the merge.",
+    ),
+    Mutation(
+        "i2: a short rows file is accepted",
+        "test_a_missing_row_is_did_not_run_never_a_pass",
+        "scripts/battery_shards.py",
+        "    if not isinstance(rows, list) or len(rows) != n_rows:",
+        "    if not isinstance(rows, list) or len(rows) > n_rows:",
+        "I2: a missing row never reads as a pass -- a rows file with fewer rows "
+        "than the shard's slice makes the slice DID_NOT_RUN.",
+    ),
+    Mutation(
+        "i2: a row for another mutation is accepted",
+        "test_a_row_for_another_mutation_is_did_not_run",
+        "scripts/battery_shards.py",
+        '    if got.get("mutation") != m.name or got.get("gate") != m.gate:',
+        "    if False:",
+        "I2: a row is this mutation's only if it names it and its gate; another "
+        "mutation's verdict in its place would be reported under the wrong name.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_shards.py::test_a_row_for_another_gate_is_did_not_run",
+                "name and gate are one condition in row_problem; disabling it accepts a "
+                "row for another gate too.",
+            ),
+        ),
+    ),
+    Mutation(
+        "i2: a row without the serial row's fields is accepted",
+        "test_a_row_without_the_serial_rows_fields_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if absent:",
+        "    if False:",
+        "I2: the merged JSON has the serial --json row schema, so a serial and a "
+        "sharded run can be compared field by field.",
+    ),
+    Mutation(
+        "i2: merged rows come out in shard order",
+        "test_merged_rows_are_in_table_order_with_the_serial_schema",
+        "scripts/battery_shards.py",
+        "    return [merged[i] for i in range(len(mutations))], problems",
+        "    return [merged[i] for p in parts for i in p], problems",
+        "I2: the merged JSON is in MUTATIONS order, as the serial one is, whatever "
+        "the partition.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the end-to-end run compares the merged JSON with the serial one, "
+                "which is in MUTATIONS order; the same property, end to end.",
+            )
+            for t in ("test_sharded_verdicts_equal_the_serial_ones_on_the_stub",)
+        ),
+    ),
+    Mutation(
+        "i2: zero mutations is a pass",
+        "test_zero_mutations_is_unknown_not_a_pass",
+        "scripts/battery_shards.py",
+        '        return Exit.UNKNOWN\n    try:\n        if args.action == "shard":',
+        '        return Exit.OK\n    try:\n        if args.action == "shard":',
+        "I2: a merged result with zero mutations has no unproven gate in it; it "
+        "is NOTHING TO COMPARE (2), as in the serial battery (S0-05).",
+    ),
+    Mutation(
+        "i2: --check is dropped from the merged report",
+        "test_check_fails_on_an_unproven_merged_gate",
+        "scripts/battery_shards.py",
+        "check=args.check)",
+        "check=False)",
+        "I2: under --check an unproven merged gate exits 1, as the serial battery "
+        "does; the sharded run is the same gate.",
+    ),
+    Mutation(
+        "i2: run exits 0 whatever the merged rows say",
+        "test_a_shard_process_that_dies_makes_its_mutations_did_not_run",
+        "scripts/battery_shards.py",
+        "    args.work_dir = work\n    return report(args, rows)\n\n\ndef _stop(",
+        "    args.work_dir = work\n    report(args, rows)\n    return Exit.OK\n\n\n"
+        "def _stop(",
+        "I2: the driver's exit code is the merged rows' -- a shard that died makes "
+        "it 3. 'Did not run' must not become 0 at the driver's exit.",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_battery_shards.py::{t}",
+                "the SIGKILL end-to-end run asserts the real driver exits 3 when "
+                "one shard was killed; the same exit rule, end to end.",
+            )
+            for t in (
+                "test_a_sigkilled_shard_is_did_not_run_and_the_other_shards_verdicts_stand",
+            )
+        ),
+    ),
+    Mutation(
+        "i2: shards are launched in the battery lane",
+        "test_a_shard_is_launched_under_one_cpu_det_slot",
+        "scripts/battery_shards.py",
+        '    slot += ["--lane", "cpu-det", "--slots", str(threads)',
+        '    slot += ["--lane", "battery", "--slots", str(threads)',
+        "I2: each shard takes ONE cpu-det slot. The battery lane has capacity 1 "
+        "(ops/lanes.json), so N shards there are one shard and N-1 refusals.",
+    ),
+    Mutation(
+        "i2: every shard has the same slot job id",
+        "test_every_shard_gets_its_own_slot_job_id",
+        "scripts/battery_shards.py",
+        'f"{run_id}-s{k}of{n}"',
+        'f"{run_id}"',
+        "I2: orchestrator.slot refuses a job id whose record exists, so shards "
+        "sharing one id are one shard and N-1 refusals.",
+    ),
+    Mutation(
+        "i2: plan prints a merge for one shard",
+        "test_plan_prints_one_command_per_shard_and_the_merge",
+        "scripts/battery_shards.py",
+        '    merge = [*SHARD_PREFIX, "merge", "--shards", str(args.shards)]',
+        '    merge = [*SHARD_PREFIX, "merge", "--shards", str(1)]',
+        "I2: `plan` prints the commands a measurement launches by hand; the merge "
+        "it prints must be the merge of those N shards.",
+    ),
+    Mutation(
+        "i2: shards run one after another",
+        "test_run_starts_every_shard_before_waiting_on_any",
+        "scripts/battery_shards.py",
+        "                            start_new_session=True,\n"
+        "                        )\n                    )\n",
+        "                            start_new_session=True,\n"
+        "                        )\n                    )\n"
+        "                    procs[-1].wait()\n",
+        "I2: the shards run CONCURRENTLY -- that is the whole of I2. Waiting on "
+        "each before starting the next is the serial battery with extra venvs.",
+    ),
+    Mutation(
+        "i2: a stopped driver leaves its shards running",
+        "test_a_stopped_driver_stops_its_shards_and_writes_no_verdict",
+        "scripts/battery_shards.py",
+        "        with mb.signal_handlers(), contextlib.ExitStack() as logs:",
+        "        with contextlib.ExitStack() as logs:",
+        "I2: SIGTERM/SIGHUP/SIGINT to the driver stops every shard battery, each "
+        "of which tears its own pool down (I1), and no merged verdict is written.",
+    ),
+    # ---------------------------------------------------- I2 fix round 1
+    # docs/reviews/eng-i2-sharding/c4a2dc065a41.md: BLOCKER-1 (the worktree admin
+    # lock and the teardown), MAJOR-1 (compare), MINOR-1/2/3/5. Shown red by hand
+    # on 2026-09-30; no battery has run these entries yet.
+    Mutation(
+        "i2: the worktree admin lock is a no-op",
+        "test_worktree_admin_",
+        "scripts/battery_isolation.py",
+        "        fcntl.flock(f, fcntl.LOCK_EX)\n        yield",
+        "        yield",
+        "review BLOCKER-1: git worktree add/list/remove are not concurrency-safe "
+        "(an in-flight add's empty commondir kills a concurrent one); unserialized, "
+        "N shards lose shards at start and a teardown discards scored rows.",
+    ),
+    Mutation(
+        "i2: worktree list runs outside the admin lock",
+        "test_worktree_admin_list_waits_for_an_add_in_flight",
+        "scripts/battery_isolation.py",
+        '_ok(admin_git(source, "worktree", "list", "--porcelain")',
+        '_ok(git(source, "worktree", "list", "--porcelain")',
+        "review BLOCKER-1: the teardown's worktree list died on another shard's "
+        "in-flight worktree operation; the battery then refused with its rows unwritten.",
+    ),
+    Mutation(
+        "i2: worktree add runs outside the admin lock",
+        "test_worktree_admin_add_waits_for_an_add_in_flight",
+        "scripts/battery_isolation.py",
+        '            admin_git(source, "worktree", "add", "--detach", str(path), sha),',
+        '            git(source, "worktree", "add", "--detach", str(path), sha),',
+        "review BLOCKER-1: 6 shards adding worktrees at once lost one in 2-7% of "
+        "rounds (fatal: failed to read .git/worktrees/<id>/commondir).",
+    ),
+    Mutation(
+        "i2: worktree remove runs outside the admin lock",
+        "test_worktree_admin_remove_waits_for_an_add_in_flight",
+        "scripts/battery_isolation.py",
+        '    proc = admin_git(source, "worktree", "remove", "--force", str(path))',
+        '    proc = git(source, "worktree", "remove", "--force", str(path))',
+        "review BLOCKER-1: a remove racing an add reads its half-written admin entry; "
+        "and a remove that empties .git/worktrees kills a concurrent list.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_worktree_admin.py::test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts",
+                "the teardown test asserts the remove reports the admin lock it "
+                "could not take; a remove that takes no lock reports nothing "
+                "(observed red, I2-fix2 pass B).",
+            ),
+        ),
+    ),
+    Mutation(
+        "i2: a pool teardown that cannot list worktrees discards the verdicts",
+        "test_a_teardown_that_cannot_list_worktrees_keeps_the_verdicts",
+        "scripts/battery_isolation.py",
+        '    except (Unisolated, OSError) as e:\n        problems.append(f"prune: {e}")',
+        '    except KeyError as e:\n        problems.append(f"prune: {e}")',
+        "review BLOCKER-1 (second fix): the teardown runs after every verdict is "
+        "scored and before _report writes them; a failed prune must be reported, "
+        "not raised over finished rows.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_worktree_admin.py::test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts",
+                "review 2 MINOR-1's test breaks common_dir(), which the prune's "
+                "worktree list needs too; with the prune's catch gone that "
+                "Unisolated escapes (observed red, I2-fix2 pass A).",
+            ),
+        ),
+    ),
+    Mutation(
+        "i2: the done record names a second read of HEAD",
+        "test_a_shard_records_the_sha_its_battery_pinned",
+        "scripts/battery_shards.py",
+        "    sha = pinned[-1] if pinned else None\n",
+        "    sha = pinned_sha()\n",
+        "review MINOR-5: the SHA recorded is the one the battery pinned; a second "
+        "read can see a commit that landed after it.",
+    ),
+    Mutation(
+        "i2: the slot request is one slot whatever --threads",
+        "test_a_shards_slot_request_equals_its_thread_count",
+        "scripts/battery_shards.py",
+        '"--slots", str(threads), "--wait"',
+        '"--slots", "1", "--wait"',
+        "review MINOR-1: one slot reserved for a suite that runs --threads threads "
+        "oversubscribes the lane.",
+    ),
+    Mutation(
+        "i2: stale anchors are left to the shards",
+        "test_run_refuses_a_stale_anchor_before_any_shard_starts",
+        "scripts/battery_shards.py",
+        "    stale = mb.anchor_problems()\n",
+        "    stale = []\n",
+        "review MINOR-2: a stale anchor refuses only the shard whose slice holds it; "
+        "the other N-1 run for hours toward a merged exit 3.",
+    ),
+    Mutation(
+        "i2: a row for another gate is accepted",
+        "test_a_row_for_another_gate_is_did_not_run",
+        "scripts/battery_shards.py",
+        '    if got.get("mutation") != m.name or got.get("gate") != m.gate:',
+        '    if got.get("mutation") != m.name:',
+        "review MINOR-3: a row is this mutation's only if its gate matches too.",
+    ),
+    Mutation(
+        "i2: a done record's rc of false reads as 0",
+        "test_a_shard_that_exited_outside_0_and_3_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    if isinstance(rc, bool) or rc not in ROWS_EXIT:",
+        "    if rc not in ROWS_EXIT:",
+        "review MINOR-3: False == 0 in Python; a bool is never an exit status "
+        "(rsr.exit_codes.status refuses one).",
+    ),
+    Mutation(
+        "i2: compare reads whole rows",
+        "test_compare_reads_only_the_verdict_fields",
+        "scripts/battery_shards.py",
+        "        for f in VERDICT_FIELDS\n        if a[n][f] != b[n][f]",
+        "        for f in sorted(set(a[n]) | set(b[n]))\n"
+        "        if a[n].get(f) != b[n].get(f)",
+        "review MAJOR-1: whole rows differ between any two real batteries "
+        "(failure_reasons' tmp paths, env stamps); the equivalence is on the "
+        "verdict fields.",
+    ),
+    Mutation(
+        "i2: compare exits 0 on a difference",
+        "test_compare_exits_1_on_a_verdict_field_difference",
+        "scripts/battery_shards.py",
+        "    code = Exit.FAIL if diffs else (",
+        "    code = Exit.OK if diffs else (",
+        "review MAJOR-1: a serial/sharded verdict difference is the failure the "
+        "equivalence run exists to catch (1).",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_shards.py::test_compare_reports_a_difference_even_beside_a_row_that_did_not_run",
+                "the precedence test's difference must exit 1; with differences "
+                "scored 0 it exits 0 (observed red, I2-fix2 pass A). One exit rule, "
+                "two readers.",
+            ),
+        ),
+    ),
+    Mutation(
+        "i2: compare accepts different mutation sets",
+        "test_compare_refuses_mismatched_mutation_sets",
+        "scripts/battery_shards.py",
+        "    if sorted(a) != sorted(b) or len(a) != len(serial) "
+        "or len(b) != len(sharded):",
+        "    if False:",
+        "review MAJOR-1: comparing different mutation sets proves nothing about the "
+        "missing ones; it is not a comparison (3).",
+    ),
+    Mutation(
+        "i2: compare accepts an unreadable record",
+        "test_compare_refuses_an_unreadable_record",
+        "scripts/battery_shards.py",
+        "        if not isinstance(rows, list):",
+        "        if False:",
+        "review MAJOR-1: an unreadable or non-battery record is DID NOT RUN (3), "
+        "not a crash (1).",
+    ),
+    Mutation(
+        "i2: compare passes a mutation that did not run",
+        "test_compare_of_a_mutation_that_did_not_run_is_not_a_pass",
+        "scripts/battery_shards.py",
+        "(Exit.DID_NOT_RUN if dnr else Exit.OK)",
+        "(Exit.OK)",
+        "review MAJOR-1: two DID_NOT_RUN rows are identical and prove nothing; "
+        "'did not run' never becomes 0.",
+    ),
+    Mutation(
+        "i2: compare of nothing is a pass",
+        "test_compare_of_zero_mutations_is_unknown",
+        "scripts/battery_shards.py",
+        "    if not a:\n        return Exit.UNKNOWN",
+        "    if False:\n        return Exit.UNKNOWN",
+        "review MAJOR-1: zero mutations compared is NOTHING TO COMPARE (2), as in "
+        "the battery itself (S0-05).",
+    ),
+    # ---------------------------------------------------- I2 fix round 2
+    # docs/reviews/eng-i2-sharding/1b358d7af981.md: MAJOR-1, MINOR-1, MINOR-2.
+    Mutation(
+        "i2: compare accepts rows without the verdict fields",
+        "test_compare_refuses_rows_that_are_not_battery_rows",
+        "scripts/battery_shards.py",
+        '    if bad:\n        return f"its verdict fields',
+        '    if False:\n        return f"its verdict fields',
+        "review 2 MAJOR-1: records of [{'mutation': 'a'}] compared None == None on "
+        "every field and exited 0 -- a 3 collapsing to 0; and True compared equal "
+        "to 1.",
+        off_gate_allowed=(
+            (
+                "tests/test_battery_shards.py::"
+                "test_a_row_with_a_field_of_the_wrong_type_is_did_not_run",
+                "the merge's row_problem calls the same field check (one "
+                "validator), so disabling it admits the merge's odd row too.",
+            ),
+        ),
+    ),
+    Mutation(
+        "i2: the merge skips the verdict-field check",
+        "test_a_row_with_a_field_of_the_wrong_type_is_did_not_run",
+        "scripts/battery_shards.py",
+        "    return verdict_field_problem(got)\n",
+        "    return None\n",
+        "review 2 MAJOR-1: the merge shares compare's field check; a shard row whose "
+        "reddened_gate is 1, not True, is not a verdict.",
+    ),
+    Mutation(
+        "i2: compare hides a difference behind a DID_NOT_RUN row",
+        "test_compare_reports_a_difference_even_beside_a_row_that_did_not_run",
+        "scripts/battery_shards.py",
+        "    code = Exit.FAIL if diffs else (Exit.DID_NOT_RUN if dnr else Exit.OK)",
+        "    code = Exit.DID_NOT_RUN if dnr else (Exit.FAIL if diffs else Exit.OK)",
+        "review 2 MINOR-2 (manager's decision): a verdict difference found among the "
+        "mutations that ran in both arms exits 1 even beside a DID_NOT_RUN row; the "
+        "rows that did not run are what races and kills produce.",
+    ),
+    Mutation(
+        "i2: a teardown whose admin lock fails discards the verdicts",
+        "test_a_teardown_whose_admin_lock_cannot_be_resolved_keeps_the_verdicts",
+        "scripts/battery_isolation.py",
+        "        except (Unisolated, OSError) as exc:",
+        "        except KeyError as exc:",
+        "review 2 MINOR-1: remove_shard takes the admin lock, whose common_dir() "
+        "raises; outside the teardown's catch that raise escaped over scored rows.",
+    ),
+    # verified-results table (docs/results/2026-09-30-verified.md), 2026-09-30
+    Mutation(
+        "verified-results: a changed number still matches the committed file",
+        "test_the_committed_file_is_the_generators_output",
+        "scripts/verified_results.py",
+        '    return f"{x:.4f}"\n',
+        '    return f"{x:.5f}"\n',
+        "every value is ledger-read at a pinned commit; any drift between the "
+        "generator and the committed Markdown must redden, not pass.",
+    ),
+    Mutation(
+        "verified-results: a timestamp makes two renders differ",
+        "test_two_runs_are_byte_identical",
+        "scripts/verified_results.py",
+        '        "# Verified results, 2026-09-29/30",\n',
+        "        f\"# Verified results {__import__('time').time_ns()}\",\n",
+        "the brief's determinism requirement: two runs are byte-identical.",
+        off_gate_allowed=(
+            (
+                "tests/test_verified_results.py::"
+                "test_the_committed_file_is_the_generators_output",
+                "a nondeterministic header also differs from the committed file; the "
+                "same defect seen from the diff test",
+            ),
+            (
+                "tests/test_verified_results.py::test_a_hand_edited_file_exits_1",
+                "its unedited copy is the fixture's render, which the next render "
+                "no longer equals; the same defect seen from --check",
+            ),
+        ),
+    ),
+    Mutation(
+        "verified-results: a missing source is reported as UNKNOWN",
+        "test_a_missing_source_exits_3",
+        "scripts/verified_results.py",
+        "        return did_not_run(str(e))\n",
+        "        return Exit.UNKNOWN\n",
+        "rsr.exit_codes: a source that cannot be read did not run (3); it is not "
+        "'ran, nothing to compare' (2).",
+        off_gate_allowed=tuple(
+            (
+                f"tests/test_verified_results.py::test_a_doctored_source_exits_3[{case}]",
+                "every doctored-source refusal exits through this one return; mapping "
+                "it to 2 turns each of them into UNKNOWN. The coupling is the design.",
+            )
+            for case in _VR_DOCTORED
+        ),
+    ),
+    Mutation(
+        "verified-results: --check passes a hand-edited file",
+        "test_a_hand_edited_file_exits_1",
+        "scripts/verified_results.py",
+        "        return Exit.FAIL\n",
+        "        return Exit.OK\n",
+        "a committed table that differs from the ledgers is a real failure (1).",
+    ),
+    Mutation(
+        "verified-results: a missing ledger key is taken as a row",
+        "test_a_doctored_source_exits_3[missing-ledger-key]",
+        "scripts/verified_results.py",
+        "    if not rows:\n",
+        "    if False:\n",
+        "review M-1: a key the table names is absent -> 3, never a crash or a blank.",
+    ),
+    Mutation(
+        "verified-results: a duplicated ledger key takes the first row",
+        "test_a_doctored_source_exits_3[duplicated-ledger-key]",
+        "scripts/verified_results.py",
+        "    if len(rows) > 1:\n",
+        "    if False:\n",
+        "review M-1: two rows with one key are ambiguous; neither may be printed.",
+    ),
+    Mutation(
+        "verified-results: a null value is printed as None",
+        "test_a_doctored_source_exits_3[null-",
+        "scripts/verified_results.py",
+        "    if val is None:\n",
+        "    if False:\n",
+        "review M-1: a null is refused for every ref kind, never printed as `None`. "
+        "The gate substring covers all three null cases (row, top-level, json file).",
+    ),
+    Mutation(
+        "verified-results: a row without a value prints the whole row",
+        "test_a_doctored_source_exits_3[row-without-a-value-field]",
+        "scripts/verified_results.py",
+        '    elif row.get("kind") == "statistic" and ref.sub:\n',
+        "    elif True:\n",
+        "review M-1: only a named field of a statistic row may stand in for `value`.",
+    ),
+    Mutation(
+        "verified-results: a scope quote absent from its file is printed anyway",
+        "test_a_doctored_source_exits_3[scope-quote-absent-from-its-file]",
+        "scripts/verified_results.py",
+        "    if not n:\n",
+        "    if False:\n",
+        "review M-1: a scope statement is quoted from the file, never paraphrased.",
+    ),
+    Mutation(
+        "verified-results: a B2 table line matched 0 times is not refused",
+        "test_a_doctored_source_exits_3[B2-table-line-matched-0-times]",
+        "scripts/verified_results.py",
+        "        if not hits:\n",
+        "        if False:\n",
+        "review M-1: a RESULTS line that is not there cannot be a value.",
+    ),
+    Mutation(
+        "verified-results: a B2 table line matched 2 times takes the first",
+        "test_a_doctored_source_exits_3[B2-table-line-matched-2-times]",
+        "scripts/verified_results.py",
+        "        if len(hits) > 1:\n",
+        "        if False:\n",
+        "review M-1: an ambiguous RESULTS line is refused, not guessed.",
+    ),
+    # --- b5-convergence (experiments/b5-convergence/PREREG.md, dfda530) ---
+    Mutation(
+        "b5-convergence: the T0 protection guard dropped",
+        "test_output_dir_inside_protected_dir_refused",
+        "experiments/b5-convergence/run.py",
+        "        if p == d or d in p.parents:\n",
+        "        if False:\n",
+        "B5 PREREG control 1: the run never writes into a directory the T0 manifest "
+        "names or into .worktrees/fresh-stream; the guard refuses such a target.",
+    ),
+    Mutation(
+        "b5-convergence: the start-checkpoint sha256 comparison dropped",
+        "test_start_copy_refuses_sha_mismatch",
+        "experiments/b5-convergence/run.py",
+        "    if sha != expected_sha:\n",
+        "    if False:\n",
+        "B5 PREREG control 2: each start checkpoint has the sha256 of its T0 manifest "
+        "line before it is copied.",
+    ),
+    Mutation(
+        "b5-convergence: E* read on any seed",
+        "test_common_step_needs_every_seed",
+        "experiments/b5-convergence/run.py",
+        '        if all(s in row and row[s]["holds"] for s in SEEDS):\n',
+        '        if any(s in row and row[s]["holds"] for s in SEEDS):\n',
+        "B5 PREREG common step: E* is the first E at which the rule holds on EVERY "
+        "seed -- one common step.",
+        off_gate_allowed=(
+            (
+                "tests/test_b5_convergence.py::test_common_step_is_the_first_common_E",
+                "it asserts the rule holds on every seed at E* and not at E* - 250; an "
+                "any-seed E* lands earlier, where one seed is still steep.",
+            ),
+        ),
+    ),
+    Mutation(
+        "b5-convergence: the rule reads the point slope, not its CI",
+        "test_rule_reads_the_confidence_interval_not_the_point",
+        "experiments/b5-convergence/run.py",
+        '        "holds": bool(rel[0] > -REL_BOUND and rel[1] < REL_BOUND),\n',
+        '        "holds": bool(-REL_BOUND < 100 * b / my < REL_BOUND),\n',
+        "B5 PREREG plateau rule: the 95 % CI of the slope over the mean lies strictly "
+        "inside (-1, +1) % per 1000 steps; the point estimate alone is not the rule.",
+    ),
+    Mutation(
+        "b5-convergence: resume from the earliest own checkpoint",
+        "test_resume_picks_the_latest_own_checkpoint",
+        "experiments/b5-convergence/run.py",
+        '    return max(found, key=lambda p: int(p.stem.split("-")[1])) '
+        "if found else None\n",
+        '    return min(found, key=lambda p: int(p.stem.split("-")[1])) '
+        "if found else None\n",
+        "B5 brief: a killed run resumes from its LATEST own checkpoint and loses at "
+        "most one window.",
+    ),
 )
 
 
@@ -7429,7 +8875,9 @@ def _spawn(argv: list[str], cwd: Path, env: dict[str, str]):
     return subprocess.CompletedProcess(argv, proc.returncode, out, err)
 
 
-def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
+def run_suite(
+    shard: iso.Shard | None = None, env: dict[str, str] | None = None
+) -> dict[str, str | None]:
     """Return ``{failing node id: one-line reason}`` (``None`` if pytest printed none).
 
     🔴 I1: with a ``shard``, the suite runs there on the shard's own pytest, and
@@ -7443,15 +8891,18 @@ def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     ``test_submit_launches_the_slot_detached_at_the_pinned_sha`` left only a node
     id. The reason is recorded on the verdict row; it never enters a verdict --
     the node set is parsed exactly as before (`parse_failures`).
+
+    I6: ``env``, when given, is the suite's whole environment, used as is:
+    `_run_isolated` builds it once and records that same object.
     """
-    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    if env is None:
+        env = suite_env(shard)
     argv = ["-p", "no:cacheprovider", "-rfE", "--tb=line", "-q", "--no-header"]
     if shard is None:
         proc = subprocess.run(
             [str(PYTEST), *argv], cwd=ROOT, capture_output=True, text=True, env=env
         )
         return parse_failures(proc.stdout + proc.stderr, proc.returncode)
-    env = iso.shard_env(shard, env)
     with contextlib.suppress(FileNotFoundError):
         shard.probe.unlink()
     proc = _spawn([str(shard.root / ".venv" / "bin" / "pytest"), *argv], shard.root, env)
@@ -7459,6 +8910,13 @@ def run_suite(shard: iso.Shard | None = None) -> dict[str, str | None]:
     if problem:
         raise SuiteDidNotRun(f"{problem} (in {shard.root})")
     return parse_failures(proc.stdout + proc.stderr, proc.returncode)
+
+
+def suite_env(shard: iso.Shard | None = None) -> dict[str, str]:
+    """The environment a suite runs under: ``_suite_env`` and ``COLUMNS``, then the
+    shard's own (``battery_isolation.shard_env``) when there is a shard."""
+    env = {**_suite_env(), "COLUMNS": REASON_COLUMNS}
+    return env if shard is None else iso.shard_env(shard, env)
 
 
 def parse_failures(text: str, returncode: int) -> dict[str, str | None]:
@@ -7575,6 +9033,12 @@ def reset(shard: iso.Shard) -> None:
     iso.reset_shard(shard)
 
 
+# I6 (PLAN-v4 §4). Imported here, not with the imports above MUTATIONS, so that the
+# whole I6 diff outside the table is in this file's tail: `battery_union` refuses a
+# merge in which both sides changed the head.
+import battery_env  # noqa: E402
+
+
 def main() -> Exit:
     ap = ArgumentParser()
     ap.add_argument(
@@ -7625,6 +9089,10 @@ def main() -> Exit:
             return Exit.DID_NOT_RUN
         print(f"no shard worktrees registered under {pool}")
         return Exit.OK
+
+    # 🔴 I6: every RSR_* variable is recorded, and an undeclared one is DID NOT RUN
+    # (3) here -- before the anchor check and before any suite.
+    print(battery_env.header(battery_env.check()))
 
     if not MUTATIONS:
         # Zero mutations is NOTHING TO COMPARE (2), not a pass: "0/0 proven" has no
@@ -7679,8 +9147,17 @@ def _run_isolated(args) -> Exit:
             f"shard: {shard.root} at {shard.sha[:12]} "
             + " ".join(f"{k}={v:.2f}" for k, v in shard.timings.items())
         )
+        # 🔴 I6: the environment every suite below runs under, built ONCE and passed
+        # to run_suite, so the record is what the suite got. check() again only as
+        # defence in depth, for a driver that bypasses main(). The row carries the
+        # suite env with the shard's paths as tokens: it must not depend on where
+        # the shard lives (battery_env.portable).
+        own = battery_env.check()
+        env = suite_env(shard)
+        print(battery_env.suite_header(own, battery_env.present(env)))
+        suite = battery_env.portable(battery_env.present(env), shard.root, shard.probe)
         try:
-            baseline = run_suite(shard)
+            baseline = run_suite(shard, env)
         except SuiteDidNotRun as e:
             refuse(Exit.DID_NOT_RUN, f"the baseline suite did not run: {e}")
         if baseline:
@@ -7698,7 +9175,7 @@ def _run_isolated(args) -> Exit:
             original = apply(m, shard.root)
             did_not_run = None
             try:
-                failing = run_suite(shard)
+                failing = run_suite(shard, env)
             except SuiteDidNotRun as e:
                 failing, did_not_run = {}, str(e)
             finally:
@@ -7706,7 +9183,7 @@ def _run_isolated(args) -> Exit:
                 t0 = time.perf_counter()
                 reset(shard)
                 resets.append(time.perf_counter() - t0)
-            rows.append(_row(m, failing, did_not_run))
+            rows.append(battery_env.stamp(_row(m, failing, did_not_run), own, suite))
             print(
                 f"{rows[-1]['verdict']:13s} {m.name:42s} "
                 f"-> {rows[-1]['n_on_gate']} on gate, {len(rows[-1]['off_gate'])} off "

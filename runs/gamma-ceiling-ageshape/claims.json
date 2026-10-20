@@ -1,0 +1,27 @@
+[
+ {
+  "claim": "age-shape run status ok, seeds 0-2, no control failed (C1, A1-C pass-through), exit 0",
+  "command": "uv run python -c \"import json; d=json.load(open('runs/gamma-ceiling-ageshape/ledger.json')); r={x['key']:x for x in d['rows']}; print(d['status'], d['seeds_actually_run'], r['controls_failed']['value'], r['C1.start']['value']['ok'], r['C1.end']['value']['ok'], d['commands'][0]['exit_code'])\"",
+  "expected": "ok [0, 1, 2] [] True True 0"
+ },
+ {
+  "claim": "ckpt3000 median per-step Spearman rho(G_gamma, age) per gamma x seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling-ageshape/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt3000.'+g+'.age_rho.median']['samples']] for g in ['g0', 'g05', 'g08', 'g09', 'g095', 'g099', 'g1']])\"",
+  "expected": "[[0.318, -0.076, 0.1], [0.338, 0.009, 0.126], [0.338, 0.165, 0.168], [0.321, 0.224, 0.176], [0.294, 0.247, 0.174], [0.268, 0.247, 0.171], [0.262, 0.247, 0.171]]"
+ },
+ {
+  "claim": "ckpt3000 age_rho CI lower / upper per gamma x seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling-ageshape/ledger.json'))['rows']}; print([[[round(x,3) for x in r['B.ckpt3000.'+g+'.age_rho.'+f]['samples']] for f in ('lo','hi')] for g in ['g0', 'g05', 'g08', 'g09', 'g095', 'g099', 'g1']])\"",
+  "expected": "[[[0.312, -0.088, 0.094], [0.326, -0.068, 0.109]], [[0.329, -0.003, 0.118], [0.344, 0.018, 0.135]], [[0.329, 0.156, 0.159], [0.347, 0.174, 0.176]], [[0.312, 0.215, 0.168], [0.332, 0.232, 0.188]], [[0.282, 0.238, 0.165], [0.306, 0.256, 0.185]], [[0.253, 0.238, 0.159], [0.279, 0.256, 0.182]], [[0.247, 0.238, 0.159], [0.274, 0.256, 0.182]]]"
+ },
+ {
+  "claim": "34816 defined steps and none undefined in every cell",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling-ageshape/ledger.json'))['rows']}; print(sorted({v for g in ['g0', 'g05', 'g08', 'g09', 'g095', 'g099', 'g1'] for c in (2500,3000) for f in ('n_steps','n_steps_undefined') for v in r['B.ckpt%d.%s.age_rho.%s' % (c,g,f)]['samples']}))\"",
+  "expected": "[0.0, 34816.0]"
+ },
+ {
+  "claim": "ckpt2500 median rho per gamma x seed",
+  "command": "uv run python -c \"import json; r={x['key']:x for x in json.load(open('runs/gamma-ceiling-ageshape/ledger.json'))['rows']}; print([[round(x,3) for x in r['B.ckpt2500.'+g+'.age_rho.median']['samples']] for g in ['g0', 'g05', 'g08', 'g09', 'g095', 'g099', 'g1']])\"",
+  "expected": "[[0.362, 0.018, 0.088], [0.382, 0.074, 0.106], [0.391, 0.203, 0.162], [0.371, 0.256, 0.176], [0.341, 0.268, 0.176], [0.318, 0.265, 0.174], [0.312, 0.265, 0.168]]"
+ }
+]

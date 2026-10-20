@@ -1,0 +1,97 @@
+{
+  "arm": "B",
+  "batch": 16,
+  "bucket": "gap_2_to_M",
+  "c_threshold": 0.8875,
+  "cap": 9000,
+  "child": "experiments/fresh-stream/run.py::single('B'), resume = latest ckpt in own dir",
+  "ckpt_every": 250,
+  "corpus": "synthetic S0-03, SyntheticConfig(sentences_per_document=48, seed=<seed>), answer_in_stream=True (the default)",
+  "d": 128,
+  "decision_rule": "A failed control or a measurement that raised makes the result inconclusive (exit 3). E* is the first evaluation step E in {7000, 7250, ..., 9000} at which the plateau rule holds on every seed. PLATEAU at E* if E* exists and R(E*) holds on every seed; PLATEAU_WITHOUT_RETRIEVAL at E* if E* exists and R(E*) fails on some seed; NO_PLATEAU by 9000 if no E* exists by the cap. In every case ckpt3000 stays primary; making another checkpoint the substrate is D2, owner-only.",
+  "delta": 0.03,
+  "device": "cpu",
+  "eval_steps": [
+    7000,
+    7250,
+    7500,
+    7750,
+    8000,
+    8250,
+    8500,
+    8750,
+    9000
+  ],
+  "expected": "NO_PLATEAU by 9000 about 55 %; PLATEAU about 40 % (most likely late, E* >= 8000); PLATEAU_WITHOUT_RETRIEVAL about 5 %.",
+  "heldout_documents": [
+    4096,
+    4160
+  ],
+  "instrument": "experiments/corpus-size-curve/run.py::measure_checkpoint (imported, identity), n=64",
+  "iters": 300,
+  "lr": 0.001,
+  "masked_loss": true,
+  "max_tokens": 64,
+  "measure_heldout": "generate(SyntheticConfig(n_documents=128, seed=<seed>))[64:]",
+  "measure_train": "generate(SyntheticConfig(seed=<seed>))  # docs 0..63",
+  "memory_slots": 16,
+  "n_windows": 16,
+  "parent_torch_num_threads": 12,
+  "policy": "fifo",
+  "prereg": "experiments/b5-convergence/PREREG.md",
+  "prereg_commit": "dfda530",
+  "probe_documents": [
+    0,
+    64
+  ],
+  "python": "3.12.13",
+  "question": "Does fresh-stream arm B's stream answer loss reach a plateau after its ckpt 3000 if the same run is continued on the same never-repeating stream, and if so at which common step, and does that checkpoint still retrieve through memory?",
+  "reading": {
+    "IN_PROGRESS": "the run has not reached the cap and no measured E* exists yet",
+    "NO_PLATEAU": "no common plateau by the cap; this is itself the result",
+    "PLATEAU": "the stream answer loss is flat within +/-1 %/1000 steps on every seed from E*, and that checkpoint still retrieves through memory",
+    "PLATEAU_WITHOUT_RETRIEVAL": "flat, but not a retrieval substrate"
+  },
+  "reference_ledger": "runs/fresh-stream/ledger.json",
+  "reference_ledger_sha256": "56d065caa8b22a48fccf4a3e1124d26ffd2d92e17c6bab588218f1da6ad93782",
+  "rel_bound_pct_per_1000": 1.0,
+  "reproduction_tolerance": 1e-06,
+  "resume_step": 3000,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seeds_trained_in_parallel": true,
+  "source_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream",
+  "srep_norm_reg_weight": 0.0,
+  "start_checkpoint_sha256": {
+    "seed0": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+    "seed1": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+    "seed2": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8"
+  },
+  "steps_per_stream": 48,
+  "stream": {
+    "offset": 4160,
+    "stride": 16,
+    "vocab_documents": 64
+  },
+  "stream_documents": [
+    52160,
+    148160
+  ],
+  "t0_manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+  "t_975_14": 2.1447866879,
+  "threads_per_seed": 4,
+  "torch": "2.14.0",
+  "trajectory_checkpoints": [
+    4000,
+    5000,
+    6000,
+    7000,
+    8000,
+    9000
+  ],
+  "vocab": "derived from the corpus",
+  "window": 250
+}
