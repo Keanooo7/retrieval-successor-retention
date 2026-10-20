@@ -1751,3 +1751,190 @@ def test_f3_rank_pairs_keep_only_finite_g(p2a):
     assert not bool(m[4:41, 3].any()) and bool(m[41:, 3].all())
     assert not bool(m[6:31, 5].any()) and bool(m[31:, 5].all())
     assert int((low & ~m).sum()) == t["n_nonfinite_excluded"] == (41 - 4) + (31 - 6)
+
+
+# --------------------------------------------------------------------------- #
+# Tier G review 66352af, stage B (2b): LB-1, LB-2, footers, F6
+# --------------------------------------------------------------------------- #
+
+
+def test_lb1_amendment_2bS_heading_in_the_file_s_own_convention(p2b, tmp_path):
+    body = "- 2a ledger sha256: `" + "b" * 64 + "`\n- K_2b: 4500\n"
+    for head in (
+        "## Amendment 2b-S (2026-10-21, PM): the 2b smoke and projection",
+        "## AMENDMENT 2b-S (2026-10-21)",
+        "## amendment 2b-s",
+    ):
+        pr = tmp_path / "P.md"
+        pr.write_text(f"x\n\n{head}\n\nprose\n{body}\n## Amendment PM-9\n- K_2b: 1\n")
+        assert p2b.amendment_2bS(pr) == {"ledger_2a_sha256": "b" * 64, "K_2b": 4500}, head
+    pr.write_text("x\n\n## Amendment 2b-Sx\n" + body)
+    assert p2b.amendment_2bS(pr) is None
+
+
+def test_lb1_f6_measure_order_before_eval2():
+    """Every check that needs no EVAL2 document, then EVAL2's closure, then the ES
+    model, then run 2's measure_seed (EVAL2 read)."""
+    src = (EXP / "phase2b.py").read_text()
+    tree = ast.parse(src)
+    fn = next(
+        n
+        for n in tree.body
+        if isinstance(n, ast.FunctionDef) and n.name == "measure_stage"
+    )
+    body = ast.get_source_segment(src, fn)
+    order = [
+        body.index(x)
+        for x in (
+            "training_footers(",
+            "pre_eval2_controls(",
+            "eval2_closure(",
+            "c_es(",
+            "R2.measure_seed(",
+        )
+    ]
+    assert order == sorted(order), order
+    pre = next(
+        n
+        for n in tree.body
+        if isinstance(n, ast.FunctionDef) and n.name == "pre_eval2_controls"
+    )
+    seg = ast.get_source_segment(src, pre)
+    for name in (
+        "c6_steps(",
+        "c10_launch_values(",
+        "_cheap_controls(",
+        "c4_measure(",
+        "c_f(",
+        "pm2_precheck(",
+        "c11_prime(",
+        "c_k(",
+        "c_omega(",
+    ):
+        assert name in seg, name
+    sm = next(
+        n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "smoke_pre"
+    )
+    assert "pre_eval2_controls(" in ast.get_source_segment(src, sm)
+
+
+def _pre_world(p2b, monkeypatch, *, c10=True, c2=True):
+    H = p2b.harness()
+    R1 = H["R1"]
+    res = {a: {"steps_done": 3000, "config": {"arm_label": "x"}} for a in R1.ARMS}
+    hbs = {a: {"beats": []} for a in R1.ARMS}
+    monkeypatch.setattr(
+        p2b,
+        "read_arms",
+        lambda cfg, out: {
+            "launch": {"loss": "rank"},
+            "results": res,
+            "hbs": hbs,
+            "jobs": dict.fromkeys(R1.ARMS),
+            "rcs": dict.fromkeys(R1.ARMS, 0),
+        },
+    )
+    monkeypatch.setattr(p2b, "training_footers", lambda out, seeds: {"ok": True})
+    monkeypatch.setattr(p2b, "pm2_precheck", lambda out, s, plan: {"ok": True})
+    monkeypatch.setattr(R1, "c6_steps", lambda r, h, c: {"ok": True})
+    monkeypatch.setattr(R1, "c10_launch_values", lambda *a, **k: {"ok": c10})
+
+    def cheap(doc, cfg, out, r, h):
+        doc["controls"].update(C2={"ok": c2}, C8={"ok": True}, C3={"ok": True})
+        return {}
+
+    monkeypatch.setattr(R1, "_cheap_controls", cheap)
+    monkeypatch.setattr(R1, "c4_measure", lambda d, c: {"ok": True})
+    monkeypatch.setattr(p2b, "c_f_at_r1", lambda cfg, out: {"ok": True})
+    monkeypatch.setattr(p2b, "c11_prime", lambda *a: {"ok": True})
+    monkeypatch.setattr(p2b, "c_k", lambda *a: {"ok": True})
+    monkeypatch.setattr(p2b, "c_omega", lambda *a: {"ok": True})
+    monkeypatch.setattr(p2b, "read_2a", lambda p: {"selection": {0: {"k_conv": 1}}})
+    plan = {"seeds": [0], "K_2b": 3000, "fifo_iters": 3000, "omega_s": {"0": 2.0}}
+    return R1, plan
+
+
+@pytest.mark.parametrize("c10,c2", [(True, True), (False, True), (True, False)])
+def test_lb2_a_c10_or_c2_failure_stops_the_seed_before_eval2(p2b, monkeypatch, c10, c2):
+    R1, plan = _pre_world(p2b, monkeypatch, c10=c10, c2=c2)
+    p2b.set_plan(plan)
+    cfg = R1.prereg_config(0, 3000)
+    out = p2b.pre_eval2_controls(
+        cfg, p2b.owner_values(3000), Path("x"), plan, ledger_2a=Path("l.json")
+    )
+    assert out["ok"] == (c10 and c2)
+    if not c10:
+        assert "C10" in out["failed"]
+    if not c2:
+        assert "C2" in out["failed"]
+
+
+def test_lb2_footers_incomplete_measure_refuses_with_no_eval2_id(p2b, tmp_path):
+    plan = {
+        "ok": True,
+        "unruled_at_K_gt_3000": [],
+        "seeds": [0, 1, 2],
+        "omega_s": {"0": 2.0, "1": 8.0, "2": 32.0},
+        "K_2b": 3000,
+        "fifo_iters": 3000,
+    }
+    (tmp_path / "plan.json").write_text(json.dumps(plan))
+    r = subprocess.run(
+        [
+            str(PY),
+            str(EXP / "run.py"),
+            "2b",
+            "measure",
+            "--seed",
+            "0",
+            "--out-root",
+            str(tmp_path),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert r.returncode == 3, r.stderr[-2000:]
+    d = json.loads((tmp_path / "measure-seed0.json").read_text())
+    assert d["refused_before_eval2"] is True
+    assert "footers" in d["controls_failed"]
+    cen = d["controls"]["R-SEAL.census"]
+    assert cen["n_sealed_generated"] == 0
+    for rows in cen["per_seed"].values():
+        assert all(v["count"] == 0 for k, v in rows.items() if k.startswith("EVAL2"))
+    assert not (tmp_path / "heldout").exists()
+
+
+@pytest.mark.parametrize(
+    ("env", "msg"),
+    [
+        ({"SMOKE_FIFO_STEPS": "48"}, "SMOKE_* needs SMOKE=1"),
+        (
+            {"SMOKE": "1", "OUT": "/tmp/x", "JOB_SUFFIX": "-s", "SMOKE_STEPS": "9x"},
+            "SMOKE_STEPS must be a positive integer",
+        ),
+        (
+            {"SMOKE": "1", "OUT": "/tmp/x", "JOB_SUFFIX": "-s", "SMOKE_SEEDS": "0 7"},
+            "SMOKE_SEEDS must be seeds from 0 1 2",
+        ),
+    ],
+)
+def test_lb2_smoke_variant_refusals(tmp_path, env, msg):
+    base = {
+        "PATH": "/usr/bin:/bin",
+        "HOME": str(tmp_path),
+        "GAMMA": "0.9",
+        "WD": "0.01",
+        "O5": "eval",
+        "C1_FLAGS": "--frozen-model-mode eval",
+    }
+    p = subprocess.run(
+        ["/bin/zsh", str(EXP / "launch_2b.zsh")],
+        env={**base, **env},
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert p.returncode == 3, p.stderr
+    assert msg in p.stderr
