@@ -1,0 +1,28 @@
+{
+ "status": "ok",
+ "seed": "a0bbbf1502db5360404c63ade10000888287b779e311d9e5775fe41e1e7bfd30",
+ "claims": [
+  {
+   "claim": "seed 2 p0.3_w0.35.contrast.factfiller_minus_fifo.all.point = 0.15567184691827884",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 2 --what p0.3_w0.35.contrast.factfiller_minus_fifo.all.point",
+   "expected": 0.15567184691827884,
+   "observed": "0.15567184691827884 (claim command, rc 0). Independent path (pure-Python list residency, FactFiller re-implemented from its rule, docs from SyntheticConfig(S=48, seed=2, geometric_p=0.3, heavy_tail_weight=0.35) on ids [995000, 997048) under the seal, rc 0): n_queries 37836, fifo_hits 30623 (analytic gap<=M: 30623), ff_hits 36513, hit.fifo.all 0.8093614546992283, hit.factfiller.all 0.9650333016175071, factfiller_minus_fifo 0.15567184691827884",
+   "match": true
+  },
+  {
+   "claim": "seed 0 p0.8_w0.hit.fifo.all = 1.0",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 0 --what p0.8_w0.hit.fifo.all",
+   "expected": 1.0,
+   "observed": "1.0 (claim command, rc 0). Independent path (seed 0, geometric_p 0.8, heavy_tail_weight 0.0, rc 0): n_queries 45356, fifo_hits 45356 (analytic gap<=M: 45356), hit.fifo.all 1.0",
+   "match": true
+  },
+  {
+   "claim": "seed 1 p0.8_w0.hit.fifo.all = 1.0",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 1 --what p0.8_w0.hit.fifo.all",
+   "expected": 1.0,
+   "observed": "1.0 (claim command, rc 0). Independent path (seed 1, geometric_p 0.8, heavy_tail_weight 0.0, rc 0): n_queries 45311, fifo_hits 45311 (analytic gap<=M: 45311), hit.fifo.all 1.0",
+   "match": true
+  }
+ ],
+ "verifier_sha": "c905c98b841cb1c76ef1d3ce5586e9f0d31bcdb6"
+}

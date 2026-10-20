@@ -1,0 +1,92 @@
+[
+ {
+  "claim": "seed 0 p0.3_w0.35.hit.fifo.all = 0.8082846802102872",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 0 --what p0.3_w0.35.hit.fifo.all",
+  "expected": 0.8082846802102872
+ },
+ {
+  "claim": "seed 0 p0.3_w0.35.contrast.factfiller_minus_fifo.all.point = 0.157319102845217",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 0 --what p0.3_w0.35.contrast.factfiller_minus_fifo.all.point",
+  "expected": 0.157319102845217
+ },
+ {
+  "claim": "seed 1 p0.3_w0.35.hit.fifo.all = 0.8095326115658833",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 1 --what p0.3_w0.35.hit.fifo.all",
+  "expected": 0.8095326115658833
+ },
+ {
+  "claim": "seed 1 p0.3_w0.35.contrast.factfiller_minus_fifo.all.point = 0.15603379984156318",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 1 --what p0.3_w0.35.contrast.factfiller_minus_fifo.all.point",
+  "expected": 0.15603379984156318
+ },
+ {
+  "claim": "seed 2 p0.3_w0.35.hit.fifo.all = 0.8093614546992283",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 2 --what p0.3_w0.35.hit.fifo.all",
+  "expected": 0.8093614546992283
+ },
+ {
+  "claim": "seed 2 p0.3_w0.35.contrast.factfiller_minus_fifo.all.point = 0.15567184691827884",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 2 --what p0.3_w0.35.contrast.factfiller_minus_fifo.all.point",
+  "expected": 0.15567184691827884
+ },
+ {
+  "claim": "seed 0 p0.1_w0.7.hit.fifo.all = 0.4656387120697114",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 0 --what p0.1_w0.7.hit.fifo.all",
+  "expected": 0.4656387120697114
+ },
+ {
+  "claim": "seed 0 p0.1_w0.7.contrast.factfiller_minus_fifo.all.point = 0.5021939311538224",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 0 --what p0.1_w0.7.contrast.factfiller_minus_fifo.all.point",
+  "expected": 0.5021939311538224
+ },
+ {
+  "claim": "seed 1 p0.1_w0.7.hit.fifo.all = 0.4624765189542081",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 1 --what p0.1_w0.7.hit.fifo.all",
+  "expected": 0.4624765189542081
+ },
+ {
+  "claim": "seed 1 p0.1_w0.7.contrast.factfiller_minus_fifo.all.point = 0.5029101099374866",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 1 --what p0.1_w0.7.contrast.factfiller_minus_fifo.all.point",
+  "expected": 0.5029101099374866
+ },
+ {
+  "claim": "seed 2 p0.1_w0.7.hit.fifo.all = 0.4597067340274783",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 2 --what p0.1_w0.7.hit.fifo.all",
+  "expected": 0.4597067340274783
+ },
+ {
+  "claim": "seed 2 p0.1_w0.7.contrast.factfiller_minus_fifo.all.point = 0.5062226603413221",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 2 --what p0.1_w0.7.contrast.factfiller_minus_fifo.all.point",
+  "expected": 0.5062226603413221
+ },
+ {
+  "claim": "seed 0 p0.8_w0.hit.fifo.all = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 0 --what p0.8_w0.hit.fifo.all",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 0 p0.8_w0.contrast.factfiller_minus_fifo.all.point = -0.005732427903695214",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 0 --what p0.8_w0.contrast.factfiller_minus_fifo.all.point",
+  "expected": -0.005732427903695214
+ },
+ {
+  "claim": "seed 1 p0.8_w0.hit.fifo.all = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 1 --what p0.8_w0.hit.fifo.all",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 1 p0.8_w0.contrast.factfiller_minus_fifo.all.point = -0.005120169495266058",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 1 --what p0.8_w0.contrast.factfiller_minus_fifo.all.point",
+  "expected": -0.005120169495266058
+ },
+ {
+  "claim": "seed 2 p0.8_w0.hit.fifo.all = 1.0",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 2 --what p0.8_w0.hit.fifo.all",
+  "expected": 1.0
+ },
+ {
+  "claim": "seed 2 p0.8_w0.contrast.factfiller_minus_fifo.all.point = -0.004863984505678265",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1d recompute --seed 2 --what p0.8_w0.contrast.factfiller_minus_fifo.all.point",
+  "expected": -0.004863984505678265
+ }
+]
