@@ -1546,7 +1546,8 @@ def summarize(out_root: Path, seeds) -> dict:
                         (st["seeds"][s]["fits"][wtag(w)] or {}).get("descriptive") or {}
                     )
                     .get("kconv", {})
-                    .get("U_val"),
+                    .get("U_val", {})
+                    .get("cap"),
                 }
                 for w in OMEGAS
             },
