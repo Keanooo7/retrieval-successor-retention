@@ -1,0 +1,28 @@
+{
+ "status": "ok",
+ "seed": "fe00b510ad84ba72aeaee37ca372499bbb53705c7cf4b16d7e9aa41f7c822556",
+ "claims": [
+  {
+   "claim": "seed 0 cf_all U-val and U-train caps of the saved LS phi",
+   "command": ".venv/bin/python experiments/psi-ls-capacity/run.py recompute cap --seed 0",
+   "expected": "0.38589211618257263 0.409457478005865",
+   "observed": "0.38589211618257263 0.409457478005865",
+   "match": true
+  },
+  {
+   "claim": "seed 0 cf_all LS re-solved from the inputs: train and U-val L_MC, U-val cap",
+   "command": ".venv/bin/python experiments/psi-ls-capacity/run.py recompute solve --seed 0",
+   "expected": "1.2209696423420429 1.2468908153534253 0.38589211618257263",
+   "observed": "1.2209696423420429 1.2468908153534253 0.38589211618257263",
+   "match": true
+  },
+  {
+   "claim": "seed 1 cf_all U-val and U-train caps of the saved LS phi",
+   "command": ".venv/bin/python experiments/psi-ls-capacity/run.py recompute cap --seed 1",
+   "expected": "0.527114967462039 0.5488077496274218",
+   "observed": "0.527114967462039 0.5488077496274218",
+   "match": true
+  }
+ ],
+ "verifier_sha": "90c27203ea5c01fdbe5993b0025a0a9f8fe93c5c"
+}
