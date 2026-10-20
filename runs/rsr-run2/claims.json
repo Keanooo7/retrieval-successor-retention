@@ -1,0 +1,67 @@
+[
+ {
+  "claim": "seed 0 headline psiC - FIFO and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 headline --seed 0",
+  "expected": "-0.072253 -0.076135 -0.068519 LOSS"
+ },
+ {
+  "claim": "seed 0 psiC age-1 eviction share",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 age1 --seed 0",
+  "expected": "10623 65536"
+ },
+ {
+  "claim": "seed 0 C14 ES source sha256 and config",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 c14 --seed 0",
+  "expected": "True f6a3d97f25c520c84091562002e719c489d5824ba53b484f2ad892ff12d194e1"
+ },
+ {
+  "claim": "seed 0 psiC - pinned ES (secondary) and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 es --seed 0",
+  "expected": "-0.078092 -0.081980 -0.074258 LOSS"
+ },
+ {
+  "claim": "seed 1 headline psiC - FIFO and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 headline --seed 1",
+  "expected": "-0.045260 -0.048777 -0.041772 LOSS"
+ },
+ {
+  "claim": "seed 1 psiC age-1 eviction share",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 age1 --seed 1",
+  "expected": "9920 65536"
+ },
+ {
+  "claim": "seed 1 C14 ES source sha256 and config",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 c14 --seed 1",
+  "expected": "True d647767927b7c3655a8d473fdef990c534315ed461271c1a109d466dcd3f8db2"
+ },
+ {
+  "claim": "seed 1 psiC - pinned ES (secondary) and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 es --seed 1",
+  "expected": "0.000713 -0.002796 0.004315 EQUIV"
+ },
+ {
+  "claim": "seed 2 headline psiC - FIFO and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 headline --seed 2",
+  "expected": "-0.083413 -0.087160 -0.079412 LOSS"
+ },
+ {
+  "claim": "seed 2 psiC age-1 eviction share",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 age1 --seed 2",
+  "expected": "12235 65536"
+ },
+ {
+  "claim": "seed 2 C14 ES source sha256 and config",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 c14 --seed 2",
+  "expected": "True 6ded09f44abdefd90d68c9dfcd2c8d904f7f1e8dc07c6f934078b4425ab5a74a"
+ },
+ {
+  "claim": "seed 2 psiC - pinned ES (secondary) and label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 es --seed 2",
+  "expected": "-0.079924 -0.083889 -0.075752 LOSS"
+ },
+ {
+  "claim": "the class and the newcomer label",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 -- .venv/bin/python experiments/rsr-run2/run.py recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2 class",
+  "expected": "FAILS NEWCOMER-REDUCED"
+ }
+]
