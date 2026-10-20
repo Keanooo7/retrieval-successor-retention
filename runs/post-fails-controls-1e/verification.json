@@ -1,0 +1,38 @@
+{
+ "status": "ok",
+ "seed": "328bb9bcc989c89eea1109ac8aceec2d9834a48e34cea4c90dafc214afa3b62f",
+ "claims": [
+  {
+   "claim": "seed 2 G1_dup_fillers.other.interaction_share.point = 0.05880362758906987",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G1_dup_fillers.other.interaction_share.point",
+   "expected": 0.05880362758906987,
+   "observed": "0.05880362758906987 (stdout last line; slot-runner exit 0, read as rc=$? without a pipe)",
+   "match": true,
+   "exit_code": 0,
+   "independent_command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python -I <scratchpad>/indep/indep_1e.py <verify-worktree> 2  (verifier's own code: singles from B0-CF's stored Delta blob, donors re-derived from the registered rule, push_memory rollout, direct index-assignment knockout, log_softmax+gather loss, own group enumeration, non-query steps only, math.fsum share); exit 0",
+   "independent_observed": "0.05880362758906987 (G1 seed 2: n_groups 863 = ledger 863; donor/missing-flag mismatches 0; resident-rank mismatches 0; exact)"
+  },
+  {
+   "claim": "seed 1 G2_fact_pairs.other.interaction_share.point = 0.16037710231354996",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G2_fact_pairs.other.interaction_share.point",
+   "expected": 0.16037710231354996,
+   "observed": "0.16037710231354996 (stdout last line; slot-runner exit 0, read as rc=$? without a pipe)",
+   "match": true,
+   "exit_code": 0,
+   "independent_command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python -I <scratchpad>/indep/indep_1e.py <verify-worktree> 1  (verifier's own code: singles from B0-CF's stored Delta blob, donors re-derived from the registered rule, push_memory rollout, direct index-assignment knockout, log_softmax+gather loss, own group enumeration, non-query steps only, math.fsum share); exit 0",
+   "independent_observed": "0.16037710231354999 (G2 seed 1: n_groups 4757 = ledger 4757; donor/missing-flag mismatches 0; resident-rank mismatches 0; differs from expected by 3e-17, summation order: fsum vs per-document torch sums)"
+  },
+  {
+   "claim": "seed 1 G4_random_sets.other.interaction_share.point = 0.22212835027365985",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G4_random_sets.other.interaction_share.point",
+   "expected": 0.22212835027365985,
+   "observed": "0.22212835027365985 (stdout last line; slot-runner exit 0, read as rc=$? without a pipe)",
+   "match": true,
+   "exit_code": 0,
+   "independent_command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python -I <scratchpad>/indep/indep_1e.py <verify-worktree> 1  (verifier's own code: singles from B0-CF's stored Delta blob, donors re-derived from the registered rule, push_memory rollout, direct index-assignment knockout, log_softmax+gather loss, own group enumeration, non-query steps only, math.fsum share); exit 0",
+   "independent_observed": "0.22212835027365985 (G4 seed 1: n_groups 3577 = ledger 3577; donor/missing-flag mismatches 0; resident-rank mismatches 0; exact)"
+  }
+ ],
+ "verifier_sha": "c905c98b841cb1c76ef1d3ce5586e9f0d31bcdb6",
+ "notes": "Researcher head c905c98b841cb1c76ef1d3ce5586e9f0d31bcdb6 from ledger provenance.git_sha (dirty false) = spawn prompt sha. Run artefacts copied byte-identical (sha256) from .worktrees/pfc-1bcde/runs/post-fails-controls-1e/. Delta blob sha256 seed1 bf2753ce..., seed2 c880a241... (= offline-psi DELTA_SHA pins). Seal installed in every process; only U ids [64,128) generated. Report prose not read."
+}

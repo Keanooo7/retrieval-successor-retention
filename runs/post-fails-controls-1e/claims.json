@@ -1,0 +1,122 @@
+[
+ {
+  "claim": "seed 0 G1_dup_fillers.Q.interaction_share.point = 0.043987519568515925",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 0 --what G1_dup_fillers.Q.interaction_share.point",
+  "expected": 0.043987519568515925
+ },
+ {
+  "claim": "seed 1 G1_dup_fillers.Q.interaction_share.point = 0.032622870875236236",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G1_dup_fillers.Q.interaction_share.point",
+  "expected": 0.032622870875236236
+ },
+ {
+  "claim": "seed 2 G1_dup_fillers.Q.interaction_share.point = 0.11971148390696454",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G1_dup_fillers.Q.interaction_share.point",
+  "expected": 0.11971148390696454
+ },
+ {
+  "claim": "seed 0 G1_dup_fillers.other.interaction_share.point = 0.02943449230429801",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 0 --what G1_dup_fillers.other.interaction_share.point",
+  "expected": 0.02943449230429801
+ },
+ {
+  "claim": "seed 1 G1_dup_fillers.other.interaction_share.point = 0.0271796023822322",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G1_dup_fillers.other.interaction_share.point",
+  "expected": 0.0271796023822322
+ },
+ {
+  "claim": "seed 2 G1_dup_fillers.other.interaction_share.point = 0.05880362758906987",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G1_dup_fillers.other.interaction_share.point",
+  "expected": 0.05880362758906987
+ },
+ {
+  "claim": "seed 0 G2_fact_pairs.Q.interaction_share.point = 0.5771200013760712",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 0 --what G2_fact_pairs.Q.interaction_share.point",
+  "expected": 0.5771200013760712
+ },
+ {
+  "claim": "seed 1 G2_fact_pairs.Q.interaction_share.point = 0.427617937957483",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G2_fact_pairs.Q.interaction_share.point",
+  "expected": 0.427617937957483
+ },
+ {
+  "claim": "seed 2 G2_fact_pairs.Q.interaction_share.point = 0.4701246577437782",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G2_fact_pairs.Q.interaction_share.point",
+  "expected": 0.4701246577437782
+ },
+ {
+  "claim": "seed 0 G2_fact_pairs.other.interaction_share.point = 0.2048717327859456",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 0 --what G2_fact_pairs.other.interaction_share.point",
+  "expected": 0.2048717327859456
+ },
+ {
+  "claim": "seed 1 G2_fact_pairs.other.interaction_share.point = 0.16037710231354996",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G2_fact_pairs.other.interaction_share.point",
+  "expected": 0.16037710231354996
+ },
+ {
+  "claim": "seed 2 G2_fact_pairs.other.interaction_share.point = 0.31838910357879835",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G2_fact_pairs.other.interaction_share.point",
+  "expected": 0.31838910357879835
+ },
+ {
+  "claim": "seed 0 G3_random_pairs.Q.interaction_share.point = 0.07339035244587372",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 0 --what G3_random_pairs.Q.interaction_share.point",
+  "expected": 0.07339035244587372
+ },
+ {
+  "claim": "seed 1 G3_random_pairs.Q.interaction_share.point = 0.06389124322726634",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G3_random_pairs.Q.interaction_share.point",
+  "expected": 0.06389124322726634
+ },
+ {
+  "claim": "seed 2 G3_random_pairs.Q.interaction_share.point = 0.08256638674812403",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G3_random_pairs.Q.interaction_share.point",
+  "expected": 0.08256638674812403
+ },
+ {
+  "claim": "seed 0 G3_random_pairs.other.interaction_share.point = 0.07591523225094804",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 0 --what G3_random_pairs.other.interaction_share.point",
+  "expected": 0.07591523225094804
+ },
+ {
+  "claim": "seed 1 G3_random_pairs.other.interaction_share.point = 0.07286692658496002",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G3_random_pairs.other.interaction_share.point",
+  "expected": 0.07286692658496002
+ },
+ {
+  "claim": "seed 2 G3_random_pairs.other.interaction_share.point = 0.11279643118068071",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G3_random_pairs.other.interaction_share.point",
+  "expected": 0.11279643118068071
+ },
+ {
+  "claim": "seed 0 G4_random_sets.Q.interaction_share.point = 0.1802023230871715",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 0 --what G4_random_sets.Q.interaction_share.point",
+  "expected": 0.1802023230871715
+ },
+ {
+  "claim": "seed 1 G4_random_sets.Q.interaction_share.point = 0.16888891487996802",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G4_random_sets.Q.interaction_share.point",
+  "expected": 0.16888891487996802
+ },
+ {
+  "claim": "seed 2 G4_random_sets.Q.interaction_share.point = 0.20521046019834963",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G4_random_sets.Q.interaction_share.point",
+  "expected": 0.20521046019834963
+ },
+ {
+  "claim": "seed 0 G4_random_sets.other.interaction_share.point = 0.2577873085061444",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 0 --what G4_random_sets.other.interaction_share.point",
+  "expected": 0.2577873085061444
+ },
+ {
+  "claim": "seed 1 G4_random_sets.other.interaction_share.point = 0.22212835027365985",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 1 --what G4_random_sets.other.interaction_share.point",
+  "expected": 0.22212835027365985
+ },
+ {
+  "claim": "seed 2 G4_random_sets.other.interaction_share.point = 0.36634865314370796",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1e recompute --seed 2 --what G4_random_sets.other.interaction_share.point",
+  "expected": 0.36634865314370796
+ }
+]

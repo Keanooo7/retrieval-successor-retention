@@ -1,0 +1,50 @@
+{
+  "args": {
+    "branch_search": "True",
+    "n_batches": "None",
+    "n_boot": "2000",
+    "run_id": "post-fails-controls-1e",
+    "runs_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1bcde/runs",
+    "seeds": "[0, 1, 2]",
+    "suite_head": "c905c98b841cb1c76ef1d3ce5586e9f0d31bcdb6",
+    "suite_log": "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/pfc/suite1/log",
+    "suite_rc": "0"
+  },
+  "bootstrap": {
+    "fn": "R1.boot_weights(64, seed, 2000)",
+    "n": 2000
+  },
+  "device": "cpu",
+  "donors": "loo_delta_loss(mode='resample', seed) donor_row (_ROLE_E0D + rank)",
+  "expected": "PREREG \u00a710: interaction share small for G3/G4; G2 not distinguishable from G3.",
+  "falsifier": "NONE: descriptive (PREREG \u00a77): the interaction share with CIs; gates nothing.",
+  "groups": {
+    "G1": "every pair of filler slots with identical text",
+    "G2": "every (assert, its query) pair, both resident, q < t",
+    "G3": "8 pairs, rng.sample(all unordered pairs, 8) (distinct)",
+    "G4": "sizes [4, 4, 8], each rng.sample(range(16), k), after G3",
+    "rng": "random.Random(f\"grp:{seed}:{doc_id}:{t}\")"
+  },
+  "item": "1e",
+  "prereg": "experiments/post-fails-controls/PREREG.md",
+  "prereg_commit": "9f22d87",
+  "question": "Does single leave-one-out mis-value slots whose value is shared: the interaction share of group knockout against the sum of singles (PREREG \u00a77)?",
+  "run_id": "post-fails-controls-1e",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "steps": [
+    16,
+    48
+  ],
+  "subset": {
+    "U_positions": [
+      0,
+      64
+    ],
+    "batch": 32
+  },
+  "threads": 1
+}
