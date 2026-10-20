@@ -7937,8 +7937,10 @@ MUTATIONS: tuple[Mutation, ...] = (
         "slice1: value_head=None into build_param_groups again",
         "test_the_value_head_lands_in_its_own_mup_group",
         "src/rsr/train/loop.py",
-        "build_param_groups(model, head, base_lr=lr, d_model=d, base_width=128)",
-        "build_param_groups(model, None, base_lr=lr, d_model=d, base_width=128)",
+        # Re-anchored 2026-10-19 (integ): Expire-Span (dade81d) renamed the argument
+        # to `retention_params` (phi's head, or the ES policy); same mutation.
+        "model, retention_params, base_lr=lr, d_model=d, base_width=128",
+        "model, None, base_lr=lr, d_model=d, base_width=128",
         "ADR-0009 T9 / §4.3, S0-01's old strict xfail: psi-hat outside its own "
         "muP group -- here, outside the optimizer altogether, so phi never moves.",
         off_gate_allowed=(
