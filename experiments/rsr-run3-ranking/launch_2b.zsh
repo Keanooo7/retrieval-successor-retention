@@ -81,9 +81,12 @@ if (( STEPS >= DIAG_STEP && CKPT > 0 )); then EVERY=$(gcd $DIAG_STEP $CKPT); els
 if (( STEPS > 3000 && EVERY > 0 )); then EVERY=$(gcd $EVERY 3000); fi  # §5.4 psiR@3000 on disk
 # Amendment PM-1: fifo is run 1's command at R-1 (plan.json's fifo_iters, machine-read
 # from run 1's owner table), with run 1's cadence, whatever K_2b is.
-FIFO_STEPS=$("${PJ[@]}" $PLAN fifo_iters)
-[[ $FIFO_STEPS == <-> ]] || refuse "no fifo_iters in $PLAN"
-[[ -n ${SMOKE:-} ]] && FIFO_STEPS=${SMOKE_FIFO_STEPS:-$STEPS}
+if [[ -n ${SMOKE:-} ]]; then
+  FIFO_STEPS=${SMOKE_FIFO_STEPS:-$STEPS}  # a smoke's fifo steps are its own, never R-1
+else
+  FIFO_STEPS=$("${PJ[@]}" $PLAN fifo_iters)
+fi
+[[ $FIFO_STEPS == <1-> ]] || refuse "no fifo_iters in $PLAN"
 if (( FIFO_STEPS > 0 && FIFO_STEPS % 3 == 0 )); then FIFO_CKPT=$(( FIFO_STEPS / 3 )); else FIFO_CKPT=$FIFO_STEPS; fi
 if (( FIFO_STEPS >= DIAG_STEP && FIFO_CKPT > 0 )); then FIFO_EVERY=$(gcd $DIAG_STEP $FIFO_CKPT); else FIFO_EVERY=$FIFO_CKPT; fi
 ORCH_REC=${RSR_ORCH_ROOT:-} ; OUT_REC=${OUT:-} ; SUFFIX_REC=${JOB_SUFFIX:-}
