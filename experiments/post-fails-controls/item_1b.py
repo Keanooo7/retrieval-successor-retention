@@ -855,6 +855,56 @@ def _ci3(rows, base, i):
     return f"{_fmt(p[i])} [{_fmt(lo[i])}, {_fmt(hi[i])}]"
 
 
+def labels_section(labs: dict, read: bool, failed: list) -> list[str]:
+    """RESULTS lines for the registered labels. PREREG §0: on exit 3 the numbers are
+    written, marked NOT READ, and the reading rule is NOT applied -- so when
+    ``labels_read`` is false no label value is printed at all (review LB-1)."""
+    if not read:
+        return [
+            "## Registered labels: NOT READ (control failure)",
+            "",
+            f"A control failed (exit 3): {failed}. PREREG §0: the reading rule (§4) "
+            "is not applied, so no label is reported. The numbers below are "
+            "written as registered and are NOT READ.",
+            "",
+        ]
+    return [
+        "## Registered labels",
+        "",
+        f"- kind probe (from s, threshold 0.95 on the CI): **{labs.get('kind_s')}**",
+        f"- status probe (from [s; c; s(x)c], threshold 0.80 on the CI): "
+        f"**{labs.get('status_scx')}**",
+        "- The s-only and c-only status probes are descriptive.",
+        "",
+    ]
+
+
+def label_claim(labs: dict, read: bool, failed: list, exit_code) -> dict:
+    """Claim 0. When the labels are NOT READ it carries no label value: it claims the
+    exit code, ``labels_read: false`` and the failed controls, checkable from the
+    ledger (review LB-1)."""
+    if read:
+        return {"claim": f"1b labels are {labs}", "command": "", "expected": labs}
+    led = f"runs/{RUN_ID}/ledger.json"
+    probe = (
+        ".venv/bin/python -c \"import json; d=json.load(open('" + led + "')); "
+        "r={x['key']: x for x in d['rows']}; "
+        "print(json.dumps({'exit_code': d['commands'][-1]['exit_code'], "
+        "'labels_read': r['labels_read']['value'], "
+        "'controls_failed': r['controls_failed']['value']}))\""
+    )
+    return {
+        "claim": f"1b exited {exit_code}; its labels are NOT READ (control failure(s): "
+        f"{failed}); the reading rule is not applied (PREREG §0)",
+        "command": probe,
+        "expected": {
+            "exit_code": exit_code,
+            "labels_read": False,
+            "controls_failed": failed,
+        },
+    }
+
+
 def render(out_root: Path = OUT_DEFAULT) -> Path:
     led = json.loads((Path(out_root) / "ledger.json").read_text())
     rows = {r["key"]: r for r in led["rows"]}
@@ -875,13 +925,7 @@ def render(out_root: Path = OUT_DEFAULT) -> Path:
         f"- config hash: `{led['config_hash']}`",
         f"- controls failed: {failed if failed else 'none'}",
         "",
-        "## Registered labels" + ("" if read else " (NOT READ: a control failed)"),
-        "",
-        f"- kind probe (from s, threshold 0.95 on the CI): **{labs.get('kind_s')}**",
-        f"- status probe (from [s; c; s(x)c], threshold 0.80 on the CI): "
-        f"**{labs.get('status_scx')}**",
-        "- The s-only and c-only status probes are descriptive.",
-        "",
+        *labels_section(labs, read, failed),
         "## Held-out (P-test) balanced accuracy, point [95% CI], per seed",
         "",
         "| probe | lambda | seed 0 | seed 1 | seed 2 | converged |",
@@ -960,13 +1004,7 @@ def render(out_root: Path = OUT_DEFAULT) -> Path:
     ]
     p = Path(out_root) / "RESULTS.md"
     p.write_text("\n".join(L) + "\n")
-    claims = [
-        {
-            "claim": f"1b labels are {labs}",
-            "command": "see ledger rows 'labels'",
-            "expected": labs,
-        }
-    ]
+    claims = [label_claim(labs, read, failed, cmd.get("exit_code"))]
     base = (
         "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det "
         f"--slots 1 --wait 3600 -- .venv/bin/python {RUN_PY} {ITEM} recompute"
@@ -984,7 +1022,8 @@ def render(out_root: Path = OUT_DEFAULT) -> Path:
                             "expected": v[s],
                         }
                     )
-    claims[0]["command"] = f"{base} --what labels"
+    if read:
+        claims[0]["command"] = f"{base} --what labels"
     (Path(out_root) / "claims.json").write_text(json.dumps(claims, indent=1) + "\n")
     return p
 

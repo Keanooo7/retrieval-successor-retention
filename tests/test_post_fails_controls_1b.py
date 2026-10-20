@@ -153,3 +153,51 @@ def test_class_means_pool_rows_row_weighted():
     want = (32 * 5 + n18 + n25) / (32 + n18 + n25)
     assert abs(mu["kind"]["assert"] - want) < 1e-12
     assert mu["n_class"]["assert_querying"] == 3  # (20, 2), (30, 18), (40, 25)
+
+
+def _ledger(tmp_path, read: bool):
+    labs = {"kind_s": "DECODABLE", "status_scx": "UNRESOLVED"}
+    rows = [
+        {"key": "labels", "value": labs},
+        {"key": "labels_read", "value": read},
+        {"key": "controls_failed", "value": [] if read else ["B-C5 seed0"]},
+    ]
+    doc = {
+        "rows": rows,
+        "provenance": {"git_sha": "x"},
+        "device": "cpu",
+        "seeds_actually_run": [0, 1, 2],
+        "status": "ok" if read else "did_not_run",
+        "commands": [{"argv": "a", "exit_code": 0 if read else 3}],
+        "config_hash": "h",
+    }
+    (tmp_path / "ledger.json").write_text(__import__("json").dumps(doc))
+    return labs
+
+
+def test_not_read_labels_are_never_emitted(tmp_path):
+    """PREREG §0 / review LB-1: after exit 3 the reading rule is not applied, so
+    neither RESULTS.md nor claims.json carries a label value."""
+    import json
+
+    labs = _ledger(tmp_path, read=False)
+    B.render(tmp_path)
+    text = (tmp_path / "RESULTS.md").read_text()
+    claims = json.loads((tmp_path / "claims.json").read_text())
+    for v in labs.values():
+        assert v not in text
+        assert v not in json.dumps(claims[0])
+    assert "NOT READ (control failure)" in text
+    assert claims[0]["expected"] == {
+        "exit_code": 3,
+        "labels_read": False,
+        "controls_failed": ["B-C5 seed0"],
+    }
+    assert "NOT READ" in claims[0]["claim"]
+
+
+def test_read_labels_are_emitted(tmp_path):
+    labs = _ledger(tmp_path, read=True)
+    B.render(tmp_path)
+    text = (tmp_path / "RESULTS.md").read_text()
+    assert f"**{labs['kind_s']}**" in text and "NOT READ" not in text
