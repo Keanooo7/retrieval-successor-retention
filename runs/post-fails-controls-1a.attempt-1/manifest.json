@@ -1,0 +1,75 @@
+{
+  "boot_seed_base": 20260927,
+  "decision_context": "eval_forward",
+  "device": "cpu",
+  "eval_batch": 16,
+  "eval_range": [
+    995000,
+    997048
+  ],
+  "expected": "- 1a: FactFiller WIN on all seeds (the SEEN U numbers above make this the likely outcome), so Gate\n  P2 lets phase 2a run; the kind-oracle WIN on seeds 0 and 2 and LOSS on seed 1.",
+  "falsifier": "PLAN \u00a72 / Gate P2 input: FactFiller LOSS on any seed would place the failure reader-side (D2); WIN on all seeds learning-side. Gate P2 is applied by the PM.",
+  "item": "1a",
+  "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+  "memory_slots": 16,
+  "n_boot": 2000,
+  "passes": [
+    "fifo",
+    "oracle",
+    "factfiller",
+    "kindoracle"
+  ],
+  "prereg": "experiments/post-fails-controls/PREREG.md",
+  "prereg_commit": "9f22d87",
+  "reader": "run 2 fifo arm ckpt-003000.pt, payload key fifo",
+  "refs": {
+    "acc_key": "seed{s}.heldout.accuracy.all.{arm}",
+    "b0_key": "B.ckpt3000.g09.E_G.kind.{k}",
+    "b0_ledger": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/b0-ceilings/ledger.json",
+    "ckpt_step": 3000,
+    "hit_key": "seed{s}.run2.heldout.hit_rate.all.hit",
+    "run2_ledger": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1a/runs/rsr-run2/ledger.json",
+    "run2_out": "/Users/keanooo7/retrieval-successor-retention/.worktrees/rsr-run2-run/runs/rsr-run2"
+  },
+  "run_id": "post-fails-controls-1a",
+  "sealed": {
+    "EVAL2": [
+      984000,
+      986048
+    ],
+    "TUNE": [
+      997200,
+      997712
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "steps_per_stream": 48,
+  "substrate": {
+    "0": {
+      "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+      "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+      "root": "/Users/keanooo7/retrieval-successor-retention",
+      "sha256": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+      "source_config": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/result.json"
+    },
+    "1": {
+      "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed1/ckpt-003000.pt",
+      "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+      "root": "/Users/keanooo7/retrieval-successor-retention",
+      "sha256": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+      "source_config": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed1/result.json"
+    },
+    "2": {
+      "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed2/ckpt-003000.pt",
+      "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+      "root": "/Users/keanooo7/retrieval-successor-retention",
+      "sha256": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8",
+      "source_config": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed2/result.json"
+    }
+  },
+  "threads_per_process": 1
+}

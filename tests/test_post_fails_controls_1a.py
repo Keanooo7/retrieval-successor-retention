@@ -115,6 +115,15 @@ def test_dispatcher_absent_module_exits_3(RUN, tmp_path, capsys):
     assert RUN.load_item("1z") is None
 
 
+def test_harness_leaks_no_run2_state(M, H):
+    """Launch attempt 1: a second run-2 instance reused run 2's shared private R1 and
+    wrapped its ``cli_argv`` twice. Ours owns its R1 and leaves sys.modules' entry to
+    whoever loaded run 2 first (``tests/test_rsr_run2_harness.py`` run after this file
+    in the same session is the end-to-end check)."""
+    assert sys.modules.get("_rsr_run2_r1") is not H["R2"].R1
+    assert H["R2"]._R1_CLI_ARGV.__module__ == H["R2"].R1.__name__  # unwrapped run 1
+
+
 def test_dispatcher_loads_item_1a_with_the_shared_common(RUN, M):
     assert M.C is sys.modules["pfc_common"]
     assert callable(M.main) and callable(M.finalize)

@@ -124,7 +124,20 @@ def harness() -> dict[str, Any]:
         return _H
     C.install_seal()
     R1 = C.load_module("_pfc1a_r1", "experiments/rsr-run1/run.py")
-    R2 = C.load_module("_pfc1a_r2", "experiments/rsr-run2/run.py")
+    # Run 2's module registers its private run-1 instance as ``_rsr_run2_r1`` in
+    # sys.modules and wraps that instance's ``cli_argv`` at import. A second run-2
+    # instance would reuse a first one's R1 and wrap ``cli_argv`` twice (launch
+    # attempt 1: tests/test_rsr_run2_harness.py red). So: load ours against a fresh R1
+    # and restore whatever sys.modules held before.
+    key = "_rsr_run2_r1"
+    saved = sys.modules.pop(key, None)
+    try:
+        R2 = C.load_module("_pfc1a_r2", "experiments/rsr-run2/run.py")
+    finally:
+        if saved is not None:
+            sys.modules[key] = saved
+        else:
+            sys.modules.pop(key, None)
     B0 = C.load_module("_pfc1a_b0", "experiments/b0-ceilings/run.py")
     LR = R2._lr()  # run 2's own lookahead-room instance: its FactFiller
     orig_ref, orig_model = R1.reference_policy, R1.model_from_payload
