@@ -253,8 +253,8 @@ def _bs(paths, *, errors=(), rc=0, n_refs=3, allowed=()):
     hits = [
         {
             "path": p,
-            "token": "997200",
-            "value": 997200,
+            "token": "<sealed-bound>",
+            "value": None,
             "range": "TUNE",
             "allowed": p in allowed,
             "refs": ["refs/heads/x"],
