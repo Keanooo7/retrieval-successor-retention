@@ -27,15 +27,13 @@ changes:
 training process has exited with a completed footer; then §5.4's descriptive passes,
 §5.6's contrasts and §5.7's added controls (C11', C-K, C-omega, C-pair, C-res, C-ES).
 
-🔴 **Not implementable as written at K_2b != 3000 (reported to the PM, not resolved
-here).** §5.7 applies run 2's C10 and C12 "unchanged". C10 requires the registered R-1
-(run 1's owner table: 3000) to equal the run's iters; C12 requires fifo's run_id and
-config hash to equal run 1's fifo's, and both stamp ``iters``. §5.2 says fifo is "run
-1's command, byte for byte", while §5.3/§5.4 run K_2b steps. At K_2b = 3000 every
-reading agrees; at K_2b > 3000 C10 and C12 fail by construction (or fifo runs a
-different step count from the RSR arms, which run 1's pairing and step controls do not
-admit). ``plan`` therefore refuses (exit 3) at K_2b != 3000 with this reason, and 2b
-waits for a PM ruling. Nothing here picks a reading.
+**K_2b > 3000 (Amendment PM-1, c7f63ea).** fifo stays run 1's 3000-step command (C12
+holds as registered); C10 runs once per view -- fifo against R-1, psiR/ageR against
+K_2b, every other field unchanged (``c10_per_arm``); C-F (fifo frozen, no optimizer,
+tensors = the substrate's) is added. ``plan`` no longer refuses for this. Run 1's C6,
+C2, C4, the held-out read of fifo's checkpoint and the training Δloss_lm also read fifo
+at ``cfg.iters`` and are NOT covered by PM-1 (``UNRULED``): at K_2b > 3000 ``measure``
+refuses before EVAL2 is opened and the list goes to the PM. Nothing here picks a reading.
 """
 
 from __future__ import annotations
@@ -140,7 +138,10 @@ def harness() -> dict[str, Any]:
 
     def cli_argv(cfg, arm: str, owner, out_dir: Path) -> list[str]:
         """Run 2's command plus §0.3's switch on both RSR arms (after the target
-        override); fifo is run 1's command byte for byte."""
+        override); fifo is run 1's command byte for byte, at R-1 = 3000 steps
+        whatever K_2b is (Amendment PM-1 item 2)."""
+        if arm == "fifo":
+            cfg = dataclasses.replace(cfg, iters=fifo_iters())
         argv = list(_r2_cli(cfg, arm, owner, out_dir))
         if arm in R1.RSR_ARMS:
             om = _PLAN["omega"].get(int(cfg.seed))
@@ -157,8 +158,96 @@ def harness() -> dict[str, Any]:
     R1.RUN_ID = RUN_ID
     R1.cli_argv = cli_argv
     R1.derive_every = derive_every
+    globals()["_C10_ORIG"] = R1.c10_launch_values
+    R1.c10_launch_values = c10_per_arm
     _H.update(R1=R1, R2=R2, cli_argv=cli_argv, derive_every=derive_every)
     return _H
+
+
+_C10_ORIG = None  # run 1's c10_launch_values, kept by harness() before rebinding
+
+
+def fifo_iters() -> int:
+    """R-1, machine-read from run 1's owner table (A4.1): fifo's step count."""
+    if _PLAN.get("fifo_iters") is not None:
+        return int(_PLAN["fifo_iters"])
+    R1 = harness()["R1"]
+    reg = R1.owner_table(R1.prereg_config(0, K_MIN))
+    if reg.get("status") != "filled":
+        raise R1.Refused(f"run 1's owner table is not filled: {reg.get('problems')}")
+    return int(reg["values"]["iters"])
+
+
+def c10_per_arm(cfg, owner, launch, results, hbs, jobs, out_root, *, rcs=None,
+                registered=None):  # fmt: skip
+    """Amendment PM-1 item 2: run 1's C10, UNCHANGED, called on two views and merged.
+    fifo: ``iters`` (config, command, launch steps / ckpt / cadence) against R-1 =
+    3000, the registered owner table as is. psiR and ageR: ``iters`` against
+    ``K_2b`` (the registered R-1 replaced by K_2b, which C-K checks against §5.3's
+    rule on 2a's ledger). Every other C10 field is checked unchanged in both."""
+    H = harness()
+    R1 = H["R1"]
+    reg = R1.owner_table(cfg) if registered is None else registered
+    fi = fifo_iters()
+    views = {}
+    f_res = {a: r for a, r in results.items() if a == "fifo"}
+    if f_res:
+        f_launch = {
+            **launch,
+            "steps": launch.get("fifo_steps"),
+            "ckpt": launch.get("fifo_ckpt"),
+            "ckpt_every": launch.get("fifo_ckpt_every"),
+        }
+        views["fifo"] = _C10_ORIG(
+            dataclasses.replace(cfg, iters=fi),
+            dataclasses.replace(owner, iters=fi),
+            f_launch, f_res, hbs, jobs, out_root, rcs=rcs, registered=reg,
+        )  # fmt: skip
+    r_res = {a: r for a, r in results.items() if a != "fifo"}
+    if r_res:
+        r_reg = json.loads(json.dumps(reg, default=str))
+        if r_reg.get("status") == "filled":
+            r_reg["values"]["iters"] = int(owner.iters)
+            r_reg["iters_is_K_2b"] = "Amendment PM-1 item 2"
+        views["rsr"] = _C10_ORIG(
+            cfg, owner, launch, r_res, hbs, jobs, out_root, rcs=rcs, registered=r_reg
+        )
+    per = {}
+    for v in views.values():
+        per.update(v.get("per_arm") or {})
+    probs = [
+        f"{k}: {x}" for k, v in views.items() for x in v.get("launch_problems") or []
+    ]
+    return {
+        "views": views,
+        "per_arm": per,
+        "launch_problems": probs,
+        "pm1": "C10 per arm (Amendment PM-1 item 2): fifo vs R-1, psiR/ageR vs K_2b",
+        "ok": bool(views) and all(v.get("ok") for v in views.values()),
+    }
+
+
+def c_f(payload: dict, substrate_model: dict) -> dict:
+    """C-F (Amendment PM-1): the fifo arm under the frozen transformer has no trainable
+    parameter -- its recorded config is fifo with ``freeze_transformer`` and no head --
+    its checkpoint holds no optimizer, and its transformer and ``W_sent`` tensors (the
+    whole model state) equal the substrate's bit for bit (run 1's ``c3_frozen``)."""
+    R1 = harness()["R1"]
+    conf = (payload.get("meta") or {}).get("config") or {}
+    pol = payload.get("policy") or {}
+    no_train = (
+        conf.get("policy") == "fifo"
+        and conf.get("freeze_transformer") is True
+        and set(pol) <= {"__policy_name__"}
+    )
+    no_opt = payload.get("optimizer") is None
+    eq = R1.c3_frozen({"fifo": payload}, substrate_model)
+    return {
+        "no_trainable_parameter": no_train,
+        "optimizer_holds_none": no_opt,
+        "tensors_equal_substrate": eq,
+        "ok": bool(no_train and no_opt and eq["ok"]),
+    }
 
 
 def rank_tokens(omega: float) -> list[str]:
@@ -191,14 +280,6 @@ def ckpt_every(steps: int) -> int:
 # plan: omega_s and K_2b, machine-read from 2a's ledger (C-K, C-omega inputs)
 # --------------------------------------------------------------------------- #
 
-C10_C12_REASON = (
-    "PREREG §5.7 applies run 2's C10 (registered R-1 = 3000 in run 1's owner table) "
-    "and C12 (fifo's run_id / config hash = run 1's fifo's; iters is in both) "
-    "unchanged, and §5.2 has fifo as run 1's command byte for byte, while §5.3 runs "
-    "K_2b steps. At K_2b != 3000 these cannot all hold: C10 and C12 fail by "
-    "construction, or fifo runs a different step count from the RSR arms. Not "
-    "resolved here: a PM ruling is needed before 2b launches."
-)
 
 
 def read_2a(ledger_path: Path) -> dict:
@@ -244,8 +325,16 @@ def make_plan(ledger_path: Path) -> dict:
         K = k_2b(kconv.values())
         out.update(K_2b=K, ckpt=harness()["R1"].derive_ckpt(K), ckpt_every=ckpt_every(K))
         out["psiR_at_3000"] = K > PSIR_AT
-        if K != K_MIN:
-            problems.append(f"K_2b = {K} != 3000. " + C10_C12_REASON)
+        fi = fifo_iters()
+        R1 = harness()["R1"]
+        out.update(
+            fifo_iters=fi,
+            fifo_ckpt=R1.derive_ckpt(fi),
+            fifo_ckpt_every=ckpt_every(fi),
+            pm1="Amendment PM-1: fifo is run 1's 3000-step command; C10 per arm; C-F",
+        )
+        k2 = int(K)
+        out["unruled_at_K_gt_3000"] = list(UNRULED) if k2 > fi else []
     out["problems"] = problems
     out["ok"] = not problems
     return out
@@ -253,6 +342,27 @@ def make_plan(ledger_path: Path) -> dict:
 
 def set_plan(plan: dict) -> None:
     _PLAN["omega"] = {int(k): float(v) for k, v in plan["omega_s"].items()}
+    _PLAN["fifo_iters"] = plan.get("fifo_iters")
+
+
+#: Run 1's controls that read fifo at the RSR step count ``cfg.iters``, which
+#: Amendment PM-1 does not rule on. At K_2b > 3000 each fails by construction (fifo ran
+#: 3000 steps), so ``measure`` refuses BEFORE EVAL2 is opened rather than spend the
+#: sealed range on a guaranteed exit 3. To the PM; nothing here picks a reading.
+UNRULED = [
+    "C6: steps_done == cfg.iters for every arm (fifo has 3000)",
+    "C2: same_step_sets / per-step fingerprints across arms over [0, cfg.iters)",
+    "C4: fresh-stream's R quantity on fifo's checkpoint at cfg.iters",
+    "held-out: fifo's checkpoint read at cfg.iters (it exists at 3000)",
+    "training analysis: loss_lm(arm, k) - loss_lm(fifo, k) for k in [T_warm, cfg.iters)",
+]
+
+
+def measure_precheck(plan: dict) -> dict:
+    """Before EVAL2 is opened: the plan is ok and nothing it needs is unruled."""
+    un = plan.get("unruled_at_K_gt_3000") or []
+    return {"plan_ok": bool(plan.get("ok")), "unruled": un,
+            "ok": bool(plan.get("ok")) and not un}  # fmt: skip
 
 
 # --------------------------------------------------------------------------- #
@@ -452,8 +562,9 @@ def measure_stage(seed: int, out_root: Path, *, ledger_2a: Path = OUT_2A / "ledg
     SS.rebind()
     C.forbid_constants_record()
     plan = json.loads((out_root / "plan.json").read_text())
-    if not plan.get("ok"):
-        raise R1.Refused("plan.json is not ok: 2b does not run")
+    pre = measure_precheck(plan)
+    if not pre["ok"]:
+        raise R1.Refused(f"2b measure refused before EVAL2 is opened: {pre}")
     set_plan(plan)
     seeds = plan["seeds"]
     foot = training_footers(out_root, seeds)
@@ -480,6 +591,14 @@ def measure_stage(seed: int, out_root: Path, *, ledger_2a: Path = OUT_2A / "ledg
     kc = {s: a2["selection"][s]["k_conv"] for s in seeds}
     ctl["C-K"] = c_k(plan, launch, steps_done, kc)
     ctl["C-omega"] = c_omega(plan, a2, amendment_2bS())
+    try:
+        fpay = R1.read_checkpoint(
+            R1.checkpoint_path(R1.arm_dir(out_root, "fifo", seed), fifo_iters())
+        )
+        sub, _ = R1.load_substrate_model(cfg)
+        ctl["C-F"] = c_f(fpay, sub)
+    except Exception as e:  # did not run: recorded, never a pass
+        ctl["C-F"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
     doc.setdefault("scoped_controls", {})["C-ES"] = {
         k: v for k, v in es.items() if not k.startswith("_")
     }

@@ -65,6 +65,13 @@ DIAG_STEP=160
 gcd() { local a=$1 b=$2 t; while (( b != 0 )); do t=$(( a % b )); a=$b; b=$t; done; print $a }
 if (( STEPS >= DIAG_STEP && CKPT > 0 )); then EVERY=$(gcd $DIAG_STEP $CKPT); else EVERY=$CKPT; fi
 if (( STEPS > 3000 && EVERY > 0 )); then EVERY=$(gcd $EVERY 3000); fi  # §5.4 psiR@3000 on disk
+# Amendment PM-1: fifo is run 1's command at R-1 (plan.json's fifo_iters, machine-read
+# from run 1's owner table), with run 1's cadence, whatever K_2b is.
+FIFO_STEPS=$("${PJ[@]}" $PLAN fifo_iters)
+[[ $FIFO_STEPS == <-> ]] || refuse "no fifo_iters in $PLAN"
+[[ -n ${SMOKE:-} ]] && FIFO_STEPS=$STEPS
+if (( FIFO_STEPS > 0 && FIFO_STEPS % 3 == 0 )); then FIFO_CKPT=$(( FIFO_STEPS / 3 )); else FIFO_CKPT=$FIFO_STEPS; fi
+if (( FIFO_STEPS >= DIAG_STEP && FIFO_CKPT > 0 )); then FIFO_EVERY=$(gcd $DIAG_STEP $FIFO_CKPT); else FIFO_EVERY=$FIFO_CKPT; fi
 ORCH_REC=${RSR_ORCH_ROOT:-} ; OUT_REC=${OUT:-} ; SUFFIX_REC=${JOB_SUFFIX:-}
 : ${OUT:=runs/rsr-run3-2b}
 C1=(${=C1_FLAGS:-}) ; C3=(${=C3_FLAGS:-})
@@ -89,7 +96,9 @@ with open(sys.argv[1], "w") as f:
     f.write("\n")' $OUT/launch-git.json \
   run_sha "$RUN_SHA" gamma "$GAMMA" wd "$WD" steps "$STEPS" ckpt "$CKPT" \
   ckpt_rule "STEPS/3 if STEPS>0 and STEPS%3==0 else STEPS (A1.8 m-9)" o5 "$O5" \
-  ckpt_every "$EVERY" ckpt_every_rule "gcd(160, CKPT) if STEPS>=160 and CKPT>0 else CKPT (A4.2); then gcd(., 3000) if STEPS>3000 (run 3 §5.4)" \
+  ckpt_every "$EVERY" ckpt_every_rule "gcd(160, CKPT) if STEPS>=160 and CKPT>0 else CKPT (A4.2)" \
+  ckpt_every_rule_run3 "then gcd(EVERY, 3000) if STEPS>3000 (run 3 §5.4, psiR@3000 on disk)" \
+  fifo_steps "$FIFO_STEPS" fifo_ckpt "$FIFO_CKPT" fifo_ckpt_every "$FIFO_EVERY" \
   diag_step "$DIAG_STEP" \
   c1_flags "${C1_FLAGS:-}" c2_flags "" c3_flags "${C3_FLAGS:-}" \
   rsr_orch_root "$ORCH_REC" out "$OUT_REC" job_suffix "$SUFFIX_REC" \
@@ -114,16 +123,17 @@ for s in 0 1 2; do
        --policy-override loss=rank --policy-override rank_k=3
        --policy-override rank_omega=${OM[$s]})
   for a in psiC fifo age; do
+    IT=$STEPS; EV=$EVERY
     case $a in
       psiC) P=("${RSR[@]}") ;;
-      fifo) P=(--policy fifo) ;;
+      fifo) P=(--policy fifo); IT=$FIFO_STEPS; EV=$FIFO_EVERY ;;  # PM-1: run 1's command
       age)  P=("${RSR[@]}" --policy-override psi_override=age_only) ;;
     esac
     k=$a-s$s
     "${SLOT[@]}" --job-id rsr-run3-2b-$k${JOB_SUFFIX:-} -- \
       .venv/bin/python -m rsr.train.loop \
-        --d 128 --batch 16 --iters $STEPS --steps-per-stream 48 --memory-slots 16 \
-        --lr 0.001 --seed $s --beat-every 1 --ckpt-every $EVERY --device cpu \
+        --d 128 --batch 16 --iters $IT --steps-per-stream 48 --memory-slots 16 \
+        --lr 0.001 --seed $s --beat-every 1 --ckpt-every $EV --device cpu \
         --freeze-transformer "${C1[@]}" "${C3[@]}" \
         --srep-norm-reg-weight 0.0 \
         --pool-offset 993000 --pool-length 256 --pool-vocab-documents 64 \

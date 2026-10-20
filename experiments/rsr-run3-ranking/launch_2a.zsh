@@ -3,7 +3,8 @@
 # this head. Run with /bin/zsh INSIDE tmux, from a clean worktree at the reviewed commit.
 #   1. the full suite (G-C3), rc read directly -> logs/suite.rc (2 cpu-det slots: T1(b)
 #      runs two 20-step processes)
-#   2. launch-checks: R-SEAL (d) branch search, G-C3 census, the frozen manifest
+#   2. launch-checks: R-SEAL (d) branch search, G-C3 census, the frozen manifest;
+#      then the Amendment PM-1 slot check (exit 3 -> nothing is fitted)
 #   3. per seed, concurrently: R-C2 and the 3 grid fits (one slot each), then select
 #      (TUNE's first read), then deploy (EVAL once). A failed fit makes select exit 3
 #      (R-C6) and a missing selection makes deploy exit 3 (the guard): nothing is
@@ -38,6 +39,13 @@ slot 2 $PY -m pytest -rs > $LOGS/suite.log 2>&1; echo $? > $LOGS/suite.rc
 slot 1 $PY $RUN 2a launch-checks > $LOGS/launch-checks.log 2>&1; rc=$?
 echo $rc > $LOGS/launch-checks.rc
 if [[ $rc -eq 0 ]]; then
+  # Amendment PM-1: record the cpu-det slots granted; with fewer than 9, the wall
+  # projection is recomputed from 2a-S for that count and must be <= 8 h. Exit 3 here
+  # means nothing is fitted.
+  slot 1 $PY $RUN 2a slot-check --self-slots 1 > $LOGS/slot-check.log 2>&1; rc=$?
+  echo $rc > $LOGS/slot-check.rc
+fi
+if [[ $rc -eq 0 ]]; then
   for s in 0 1 2; do
     (
       (slot 1 $PY $RUN 2a fit --seed $s --rc2 > $LOGS/fit-s$s-rc2.log 2>&1
@@ -55,7 +63,7 @@ if [[ $rc -eq 0 ]]; then
   done
   wait
 else
-  print -u2 "launch checks failed (rc $rc): nothing fitted"
+  print -u2 "launch checks or the PM-1 slot check failed (rc $rc): nothing fitted"
 fi
 
 slot 1 $PY $RUN 2a finalize > $LOGS/finalize.log 2>&1; echo $? > $LOGS/finalize.rc

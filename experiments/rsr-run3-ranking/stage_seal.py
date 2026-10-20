@@ -56,6 +56,7 @@ STAGES: dict[str, dict[str, tuple[str, ...]]] = {
     "2a": {
         "launch-checks": ("TUNE", "EVAL2"),
         "time": ("TUNE", "EVAL2"),
+        "slot-check": ("TUNE", "EVAL2"),
         "fit": ("TUNE", "EVAL2"),
         "select": ("EVAL2",),
         "deploy": ("TUNE", "EVAL2"),

@@ -1482,6 +1482,142 @@ def render_amendment_2aS(record_path: Path, record_commit: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Amendment PM-1 (c7f63ea): the launch-slot check
+# --------------------------------------------------------------------------- #
+
+PM1_MIN_SLOTS = 9  # PM-1: "if fewer than 9 slots are granted, ... recomputes"
+PM1_STOP_H = 8.0  # §4.8 as ruled by PM-1: wall time
+
+
+def amendment_2aS_record(path: Path = PREREG_PATH) -> dict:
+    """Amendment 2a-S's smoke record, machine-read from the committed amendment text
+    (its path and sha256), and whether the file on disk still hashes to it."""
+    t = Path(path).read_text()
+    m = re.search(
+        r"Generated from the smoke's own record \(`([^`]+)`, sha256 `([0-9a-f]{64})`", t
+    )
+    if m is None:
+        raise C.ControlFailure("Amendment 2a-S's record pin is not in the PREREG")
+    rp = ROOT / m.group(1)
+    got = C.sha256_file(rp) if rp.exists() else None
+    return {"path": rp, "sha256": m.group(2), "on_disk": got, "sha_ok": got == m.group(2)}
+
+
+def launch_jobs(d: dict) -> list[dict]:
+    """``launch_2a.zsh``'s jobs, with durations from the 2a-S record (worst case, the
+    same terms as its projection): per seed R-C2 and the 3 fits, then select (after
+    that seed's four), then deploy (after select)."""
+    pr, t = d["projection"], d["timing"]
+    man, io = t["manifest_check_s"], t["inputs_and_model_s"]
+    ref_doc = t["references_block_s"] / t["deploy_block_docs"]
+    jobs = []
+    for sd in registered_seeds():
+        first = [f"rc2-s{sd}"] + [f"fit-s{sd}-{wtag(w)}" for w in OMEGAS]
+        jobs.append({"id": first[0], "s": pr["rc2_one_seed_s"] + io, "deps": []})
+        for w in OMEGAS:
+            jobs.append({
+                "id": f"fit-s{sd}-{wtag(w)}",
+                "s": pr["per_fit_worst_case_s"][wtag(w)]
+                + pr["u_caps_one_config_s"] + 2 * man + io,
+                "deps": [],
+            })  # fmt: skip
+        jobs.append({
+            "id": f"select-s{sd}",
+            "s": 3 * pr["tune_deploy_one_s"] + 512 * ref_doc + 2 * man + io,
+            "deps": first,
+        })  # fmt: skip
+        jobs.append({
+            "id": f"deploy-s{sd}",
+            "s": pr["eval_deploy_one_s"] + 2 * man + io,
+            "deps": [f"select-s{sd}"],
+        })  # fmt: skip
+    return jobs
+
+
+def wall_for_slots(d: dict, n: int) -> float:
+    """The launch's wall time on ``n`` cpu-det slots, one slot per job: an event-driven
+    list schedule (a job starts when its dependencies are done and a slot is free;
+    among ready jobs the earliest-ready, then the longest, first)."""
+    if n < 1:
+        return float("inf")
+    jobs = {j["id"]: j for j in launch_jobs(d)}
+    done: dict[str, float] = {}
+    running: list[tuple[float, str]] = []
+    started: set[str] = set()
+    now = 0.0
+    while len(done) < len(jobs):
+        ready = [
+            j for j in jobs.values()
+            if j["id"] not in started and all(x in done for x in j["deps"])
+        ]  # fmt: skip
+        ready.sort(
+            key=lambda j: (max([done[x] for x in j["deps"]], default=0.0), -j["s"])
+        )
+        while ready and len(running) < n:
+            j = ready.pop(0)
+            started.add(j["id"])
+            running.append((now + j["s"], j["id"]))
+        running.sort()
+        end, jid = running.pop(0)
+        now = end
+        done[jid] = end
+    return now
+
+
+def slot_decision(n: int, d: dict) -> dict:
+    """PM-1: with >= 9 granted slots 2a launches; with fewer, the wall projection is
+    recomputed for ``n`` from 2a-S's measured per-fit time and must be <= 8 h."""
+    wall = wall_for_slots(d, n)
+    rec = n < PM1_MIN_SLOTS
+    ok = n >= 1 and (not rec or wall / 3600.0 <= PM1_STOP_H)
+    return {
+        "slots": n,
+        "recomputed": rec,
+        "wall_s": wall,
+        "wall_h": wall / 3600.0,
+        "stop_h": PM1_STOP_H,
+        "ok": bool(ok),
+    }
+
+
+def slot_check(out_root: Path, *, self_slots: int = 1) -> int:
+    """PM-1's binding launch condition, run by the launcher after launch-checks and
+    before any fit: probe the cpu-det lane (``orchestrator.lanes.status``), count the
+    free slots plus the ``self_slots`` this probe's own slot holds (released when it
+    exits), decide, and record ``launch-slots.json`` (the finalize ledgers it).
+    Exit 3 -- nothing is fitted -- if the decision is not ok."""
+    out_root = Path(out_root)
+    doc: dict[str, Any] = {"run_id": RUN_ID, "stage": "slot-check", "started_utc": utc()}
+    ctl = open_stage("slot-check", doc)
+    try:
+        from orchestrator import lanes
+
+        rec = amendment_2aS_record()
+        ctl["record_pin"] = {
+            **{k: str(v) for k, v in rec.items()}, "ok": bool(rec["sha_ok"])
+        }  # fmt: skip
+        d = json.loads(rec["path"].read_text())
+        root = lanes.orch_root()
+        st = lanes.status(root, lanes.load_config(root))["lanes"]["cpu-det"]
+        n = int(st["free"]) + int(self_slots)
+        doc["lane"] = {**st, "self_slots": int(self_slots), "granted": n}
+        doc["projection"] = {
+            **slot_decision(n, d),
+            "layout_wall_h_2aS": d["projection"]["wall_layout_h"],
+            "serial_h_2aS": d["projection"]["serial_cpu_h"],
+            "rule": "Amendment PM-1: >= 9 slots launches; fewer -> wall on the granted "
+            "slots from 2a-S's measured per-fit time must be <= 8 h",
+            "note": "granted = free cpu-det slots probed now + this probe's own; each "
+            "job then acquires one slot (--wait), so at most this many run at once",
+        }
+        ctl["PM-1.slots"] = {"ok": doc["projection"]["ok"]}
+    except Exception as e:  # did not run: recorded, never a pass
+        doc["error"] = f"{type(e).__name__}: {e}"
+    close_stage(doc)
+    return finish(doc, out_root / "launch-slots.json")
+
+
+# --------------------------------------------------------------------------- #
 # stage: finalize (ledger, claims.json, RESULTS.md); recompute
 # --------------------------------------------------------------------------- #
 
@@ -1611,6 +1747,12 @@ def summarize(out_root: Path, seeds) -> dict:
     rc["G-C3"] = {**((launch or {}).get("controls", {}).get("G-C3") or {})}
     rc["G-C3"]["ok"] = bool(rc["G-C3"].get("ok"))
     rc["prereg_text"] = control("prereg_text")
+    slots = _read(Path(out_root) / "launch-slots.json")
+    rc["PM-1.slots"] = {
+        "projection": (slots or {}).get("projection"),
+        "lane": (slots or {}).get("lane"),
+        "ok": bool(slots and slots.get("exit") == 0),
+    }
     exits = [d.get("exit") for d in every_doc]
     rc["stage_exits"] = {"exits": exits, "ok": all(e == 0 for e in exits) and bool(exits)}
     failed = sorted(k for k, v in rc.items() if not v.get("ok"))
@@ -1858,6 +2000,7 @@ def finalize(out_root: Path, *, argv_self: list[str]) -> int:
         return int(t) if t.lstrip("-").isdigit() else None
 
     led.command([py, EXPERIMENT, "2a", "launch-checks"], exit_code=rc_of("launch-checks"))
+    led.command([py, EXPERIMENT, "2a", "slot-check"], exit_code=rc_of("slot-check"))
     for s in seeds:
         led.command(
             [py, EXPERIMENT, "2a", "fit", "--seed", str(s), "--rc2"],
@@ -1891,6 +2034,11 @@ def finalize(out_root: Path, *, argv_self: list[str]) -> int:
     )
     led.note("summary", sm, how=f"{EXPERIMENT} 2a finalize")
     led.note("prereg", {"path": PREREG_REL, "commit": PREREG_COMMIT}, how="phase2a")
+    led.note(
+        "launch.slots",
+        _read(out_root / "launch-slots.json"),
+        how=f"runs/{RUN_ID}/launch-slots.json (Amendment PM-1)",
+    )
     for s in seeds:
         h = sm["per_seed"][s]["headline"] or {}
         for f in ("point", "lo", "hi"):
@@ -1949,6 +2097,9 @@ def main(argv: list[str]) -> int:
         ps.add_argument("--seed", type=int, required=True)
         ps.add_argument("--out-root", default=str(OUT_DEFAULT))
         ps.add_argument("--smoke-standin", type=int, default=None, help="SMOKE: exit 3")
+    pq = sub.add_parser("slot-check")
+    pq.add_argument("--out-root", default=str(OUT_DEFAULT))
+    pq.add_argument("--self-slots", type=int, default=1)
     pz = sub.add_parser("finalize")
     pz.add_argument("--out-root", default=str(OUT_DEFAULT))
     pt = sub.add_parser("time")
@@ -1975,6 +2126,8 @@ def main(argv: list[str]) -> int:
             suite_rc=Path(a.suite_rc or logs / "suite.rc"),
             suite_head=Path(a.suite_head or logs / "suite.head"),
         )
+    if a.cmd == "slot-check":
+        return slot_check(Path(a.out_root), self_slots=a.self_slots)
     if a.cmd == "fit":
         if a.rc2:
             return rc2_seed(a.seed, Path(a.out_root))
