@@ -1592,3 +1592,155 @@ def test_pm2_changes_nothing_at_k_equal_r1(p2b, monkeypatch):
     R1.c2_pairing({a: [] for a in R1.ARMS}, {}, cfg, "perm")
     R1.c6_steps({a: {} for a in R1.ARMS}, {}, cfg)
     assert calls == [sorted(R1.ARMS), ("c6", sorted(R1.ARMS))]
+
+
+# --------------------------------------------------------------------------- #
+# Tier G review 66352af, stage A (2a): F0 / F2, F1, F3
+# --------------------------------------------------------------------------- #
+
+
+def _write(p: Path, d: dict) -> None:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(d))
+
+
+def _preselect_world(
+    p2a,
+    root: Path,
+    *,
+    rc2_ok=True,
+    fit_smoke=False,
+    launch_ok=True,
+    slots_ok=True,
+    rc2_missing=(),
+):
+    for s in (0, 1, 2):
+        for w in p2a.OMEGAS:
+            _write(
+                p2a.fit_file(root, s, w),
+                {"exit": 0, "smoke": fit_smoke, "controls_failed": []},
+            )
+        if s not in rc2_missing:
+            _write(
+                p2a.seed_dir(root, s) / "rc2.json",
+                {"exit": 0 if rc2_ok else 3, "controls": {"R-C2": {"ok": rc2_ok}}},
+            )
+    _write(root / "launch.json", {"exit": 0 if launch_ok else 3})
+    _write(root / "launch-slots.json", {"exit": 0 if slots_ok else 3})
+
+
+def test_f0_preselect_gate(p2a, tmp_path):
+    _preselect_world(p2a, tmp_path)
+    assert p2a.preselect_gate(tmp_path, 0, standin=None)["ok"]
+    for kw in (
+        {"rc2_ok": False},
+        {"rc2_missing": (2,)},
+        {"fit_smoke": True},
+        {"launch_ok": False},
+        {"slots_ok": False},
+    ):
+        root = tmp_path / str(sorted(kw.items()))
+        _preselect_world(p2a, root, **kw)
+        g = p2a.preselect_gate(root, 0, standin=None)
+        assert not g["ok"] and g["problems"], kw
+    # the stand-in smoke needs only its own smoke fits (no launch, no slot check)
+    root = tmp_path / "smoke"
+    for w in p2a.OMEGAS:
+        _write(
+            p2a.fit_file(root, 0, w), {"exit": 3, "smoke": True, "controls_failed": []}
+        )
+    assert p2a.preselect_gate(root, 0, standin=32)["ok"]
+
+
+def test_f0_select_gates_before_tune_opens_statically():
+    tree = ast.parse((EXP / "phase2a.py").read_text())
+    fn = next(
+        n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "select_seed"
+    )
+    calls = [
+        c.func.id
+        for c in ast.walk(fn)
+        if isinstance(c, ast.Call) and isinstance(c.func, ast.Name)
+    ]
+    assert "preselect_gate" in calls
+    src = ast.get_source_segment((EXP / "phase2a.py").read_text(), fn)
+    assert (
+        src.index("preselect_gate(")
+        < src.index("tune_closure(")
+        < src.index("docs_by_id(")
+    )
+
+
+def _run2a(args, tmp):
+    return subprocess.run(
+        [str(PY), str(EXP / "run.py"), "2a", *args, "--out-root", str(tmp)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_f0_select_refuses_without_r_c2_and_generates_no_tune_id(p2a, tmp_path):
+    _preselect_world(p2a, tmp_path, rc2_missing=(1,))
+    r = _run2a(["select", "--seed", "0"], tmp_path)
+    assert r.returncode == 3, r.stderr[-2000:]
+    d = json.loads((p2a.seed_dir(tmp_path, 0) / "select.json").read_text())
+    assert "R-C2" in json.dumps(d["controls"]["R-C6.preselect"])
+    cen = d["controls"]["R-SEAL.census"]
+    assert cen["n_sealed_generated"] == 0
+    for rows in cen["per_seed"].values():
+        assert all(v["count"] == 0 for k, v in rows.items() if k.startswith("TUNE"))
+    assert not (tmp_path / "tune").exists()
+
+
+def test_f1_deploy_refuses_unless_select_exited_0(p2a, tmp_path):
+    sd = p2a.seed_dir(tmp_path, 0)
+    sel = {
+        "seed": 0,
+        "omega_s": 2.0,
+        "phi_sha256": "0" * 64,
+        "phi_path": str(sd / "x.pt"),
+    }
+    _write(p2a.selection_file(tmp_path, 0), sel)
+    (sd / "selection.sha256").write_text(C_sha(p2a.selection_file(tmp_path, 0)) + "\n")
+    _write(
+        sd / "select.json", {"exit": 3, "smoke": False, "controls_failed": ["R-C7.tune"]}
+    )
+    r = _run2a(["deploy", "--seed", "0"], tmp_path)
+    assert r.returncode == 3, r.stderr[-2000:]
+    d = json.loads((sd / "deploy.json").read_text())
+    assert "select" in (d.get("error") or "")
+    assert "deploy" not in d and not (tmp_path / "heldout").exists()
+    assert not p2a.select_done({"exit": 3, "smoke": False, "controls_failed": []}, None)
+    assert p2a.select_done({"exit": 0, "smoke": False}, None)
+    assert p2a.select_done({"exit": 3, "smoke": True, "controls_failed": []}, 32)
+    assert not p2a.select_done({"exit": 3, "smoke": True, "controls_failed": ["x"]}, 32)
+    assert not p2a.select_done(None, None)
+
+
+def C_sha(p: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+
+
+def test_f3_rank_pairs_keep_only_finite_g(p2a):
+    class Doc:
+        def __init__(self, i):
+            self.doc_id = i
+
+    n = 48
+    D = torch.full((n, n), float("nan"))
+    low = torch.ones(n, n, dtype=torch.bool).tril(-1)
+    D[low] = 0.01
+    D2 = D.clone()
+    D2[40, 3] = float("inf")  # an infinite knockout cell
+    D2[30, 5] = float("-inf")
+    blob = {"Delta": {1: D, 2: D2}}
+    t = p2a.rank_fit_tensors(blob, [Doc(1), Doc(2)])
+    raw = torch.stack([p2a._H["OP"].target_of(blob["Delta"][i]) for i in (1, 2)])
+    assert torch.equal(t["mask"], t["mask"] & torch.isfinite(raw))
+    assert not bool(t["mask"][1][~torch.isfinite(raw[1])].any())
+    assert bool(t["mask"][0][low].all())  # a finite document loses nothing
+    assert t["n_nonfinite_excluded"] > 0
+    assert torch.isfinite(t["G"][t["mask"]]).all()
