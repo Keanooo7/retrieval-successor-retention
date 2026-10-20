@@ -1,0 +1,161 @@
+<string>:82: RuntimeWarning: Mean of empty slice
+{
+ "OI1.bos_excluded": {
+  "n_critical": 517,
+  "A_cells": 475,
+  "needed_after_t(pending_assert)": 10,
+  "frac_needed_after_t": 0.019342359767891684,
+  "critical_by_kind": {
+   "assert": 505,
+   "query": 12
+  },
+  "pending_assert_cells_in_Q": 1181,
+  "pending_assert_cells_critical": 10
+ },
+ "OI1.all_cells": {
+  "n_critical": 683,
+  "A_cells": 631,
+  "needed_after_t(pending_assert)": 12,
+  "frac_needed_after_t": 0.017569546120058566,
+  "critical_by_kind": {
+   "assert": 663,
+   "query": 20
+  },
+  "pending_assert_cells_in_Q": 1647,
+  "pending_assert_cells_critical": 12
+ },
+ "OI2.bos_excluded.pure_step_level_AUROC_cap(0.5+0.5*f_neg_on_k0_steps)": 0.6694396326836812,
+ "OI2.bos_excluded.SC0_null_iid": {
+  "AUROC_strat": 0.47246702251292355,
+  "AUROC_unstrat": 0.4703198356696182,
+  "companion": -0.029874049432570986,
+  "H": 0.07674943566591422,
+  "H_age_random": 0.06815321351955933,
+  "R_H": 1.1261308411214954,
+  "AUROC_strat_sd1024": 0.0032190841418567435,
+  "companion_sd1024": 0.0033570372297675464,
+  "R_H_sd1024": 0.03672405079631898
+ },
+ "OI2.bos_excluded.SC1_flat_if_critical_step_else_peaky": {
+  "AUROC_strat": 0.5962514864537999,
+  "AUROC_unstrat": 0.5890700870292367,
+  "companion": -0.029874049432570986,
+  "H": 0.07674943566591422,
+  "H_age_random": 0.06815321351955933,
+  "R_H": 1.1261308411214954,
+  "AUROC_strat_sd1024": 0.0029889804412375058,
+  "companion_sd1024": 0.0033570372297675464,
+  "R_H_sd1024": 0.03672405079631898
+ },
+ "OI2.bos_excluded.SC1b_extreme(flat vs one-hot)": {
+  "AUROC_strat": 0.6445988093758862,
+  "AUROC_unstrat": 0.6382895253040408,
+  "companion": -0.0009534012983567716,
+  "H": 0.06937547027840481,
+  "H_age_random": 0.06937547027840481,
+  "R_H": 1.0,
+  "AUROC_strat_sd1024": 0.0018064618898017346,
+  "companion_sd1024": 0.0003699748377107509,
+  "R_H_sd1024": 9.678699938266252e-17
+ },
+ "OI2.bos_excluded.CONTENT_a1.0_only": {
+  "AUROC_strat": 0.745012415541199,
+  "AUROC_unstrat": 0.7417449707208729,
+  "companion": 0.22366855137790712,
+  "H": 0.011286681715575621,
+  "H_age_random": 0.06405637735733685,
+  "R_H": 0.17619918860870257,
+  "AUROC_strat_sd1024": 0.002783566762954784,
+  "companion_sd1024": 0.0028521733910188097,
+  "R_H_sd1024": 0.017968229832522734
+ },
+ "OI2.bos_excluded.SC1+CONTENT_a1.0": {
+  "AUROC_strat": 0.9541027805121066,
+  "AUROC_unstrat": 0.9559411169700561,
+  "companion": 0.4710905962372389,
+  "H": 0.0,
+  "H_age_random": 0.06320032203985751,
+  "R_H": 0.0,
+  "AUROC_strat_sd1024": 0.000799103487867354,
+  "companion_sd1024": 0.0010337547551182295,
+  "R_H_sd1024": 0.0
+ },
+ "OI2.bos_excluded.SC1+CONTENT_a0.5": {
+  "AUROC_strat": 0.8710563445170172,
+  "AUROC_unstrat": 0.8685732562471876,
+  "companion": 0.3499533519404841,
+  "H": 0.002257336343115124,
+  "H_age_random": 0.06322070430932131,
+  "R_H": 0.035705650036269854,
+  "AUROC_strat_sd1024": 0.0015091501744597003,
+  "companion_sd1024": 0.002290140381181955,
+  "R_H_sd1024": 0.00860680174548838
+ },
+ "OI2.all_cells.pure_step_level_AUROC_cap(0.5+0.5*f_neg_on_k0_steps)": 0.6430757126328183,
+ "OI2.all_cells.SC0_null_iid": {
+  "AUROC_strat": 0.497569563355633,
+  "AUROC_unstrat": 0.4994841812096699,
+  "companion": -0.0024453470859893485,
+  "H": 0.06529209621993128,
+  "H_age_random": 0.06299228870702991,
+  "R_H": 1.0365093499554765,
+  "AUROC_strat_sd1024": 0.002241244575986678,
+  "companion_sd1024": 0.0021702040547149225,
+  "R_H_sd1024": 0.036856974915945424
+ },
+ "OI2.all_cells.SC1_flat_if_critical_step_else_peaky": {
+  "AUROC_strat": 0.5960732815109585,
+  "AUROC_unstrat": 0.5934131207667669,
+  "companion": -0.0024453470859893485,
+  "H": 0.06529209621993128,
+  "H_age_random": 0.06299228870702991,
+  "R_H": 1.0365093499554765,
+  "AUROC_strat_sd1024": 0.0018609621023751117,
+  "companion_sd1024": 0.0021702040547149225,
+  "R_H_sd1024": 0.036856974915945424
+ },
+ "OI2.all_cells.SC1b_extreme(flat vs one-hot)": {
+  "AUROC_strat": 0.6244524605561059,
+  "AUROC_unstrat": 0.6168602472836269,
+  "companion": -6.0326400257367694e-05,
+  "H": 0.06507731958762887,
+  "H_age_random": 0.06507731958762887,
+  "R_H": 1.0,
+  "AUROC_strat_sd1024": 0.00148944047037619,
+  "companion_sd1024": 0.0003298208763572498,
+  "R_H_sd1024": 0.0
+ },
+ "OI2.all_cells.CONTENT_a1.0_only": {
+  "AUROC_strat": 0.7655737319922274,
+  "AUROC_unstrat": 0.7666680015162428,
+  "companion": 0.2469241401765796,
+  "H": 0.005154639175257732,
+  "H_age_random": 0.058073830020901974,
+  "R_H": 0.08876010370596309,
+  "AUROC_strat_sd1024": 0.001907695183140421,
+  "companion_sd1024": 0.001940275870783385,
+  "R_H_sd1024": 0.012131604174229926
+ },
+ "OI2.all_cells.SC1+CONTENT_a1.0": {
+  "AUROC_strat": 0.9622015916540871,
+  "AUROC_unstrat": 0.9632184942128785,
+  "companion": 0.4584850166991638,
+  "H": 0.0,
+  "H_age_random": 0.05798821459359242,
+  "R_H": 0.0,
+  "AUROC_strat_sd1024": 0.000634801916531695,
+  "companion_sd1024": 0.0009366247516335665,
+  "R_H_sd1024": 0.0
+ },
+ "OI2.all_cells.SC1+CONTENT_a0.5": {
+  "AUROC_strat": 0.8784591091189518,
+  "AUROC_unstrat": 0.8800112127364398,
+  "companion": 0.3578720313534378,
+  "H": 0.001718213058419244,
+  "H_age_random": 0.057805174714516835,
+  "R_H": 0.02972420837589377,
+  "AUROC_strat_sd1024": 0.0011575677948543594,
+  "companion_sd1024": 0.0015755214473305193,
+  "R_H_sd1024": 0.007130394259635361
+ }
+}

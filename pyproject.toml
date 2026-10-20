@@ -53,6 +53,9 @@ extend-exclude = [
   # which is linted.
   "experiments/e0c/sweep.py",
   "experiments/e0c/confirm.py",
+  # Vendored verbatim (2026-09-29) as the record of the E0d Amendment 2 measurements
+  # (m1-m7, step1-step3) the PREREG cites; see its README. Same reason as above.
+  "experiments/e0d/amendment-2",
 ]
 
 [tool.ruff.lint]

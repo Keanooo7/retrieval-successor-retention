@@ -1,0 +1,516 @@
+{
+ "numpy_version": "2.5.3",
+ "A_STAR": 0.85,
+ "NB": 300,
+ "seed0": {
+  "seed": 0,
+  "cells_sha256": "1338de4bdc5fbf9d33c8bd37abb34532535d2cd1e77f18e4deb87c357a65f15c",
+  "tau": 0.4157434984576128,
+  "n_Q_steps_excl": 720,
+  "n_t_values": [
+   15
+  ],
+  "k_t_hist": {
+   "0": 222,
+   "1": 481,
+   "2": 15,
+   "3": 2
+  },
+  "labelled_cells": 10713,
+  "positives": 517,
+  "steps_with_a_NaN_label_cell": 80,
+  "cases": {
+   "perfect, binary y (tied)": {
+    "AUROC_strat_pct": 1.0,
+    "AUROC_strat_raw": 1.0,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "perfect, softmax(10y+eps)": {
+    "AUROC_strat_pct": 0.9872,
+    "AUROC_strat_raw": 0.9992,
+    "pct_sd_n1024": 0.0002,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "true_demand (A-cell, C10 control)": {
+    "AUROC_strat_pct": 0.9672,
+    "AUROC_strat_raw": 0.9585,
+    "pct_sd_n1024": 0.0015,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "age-only f(age)": {
+    "AUROC_strat_pct": 0.5,
+    "AUROC_strat_raw": 0.5,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "recency -age": {
+    "AUROC_strat_pct": 0.5,
+    "AUROC_strat_raw": 0.5,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "within-step shuffle of softmax(1.5y+eps)": {
+    "AUROC_strat_pct": 0.5063,
+    "AUROC_strat_raw": 0.4995,
+    "pct_sd_n1024": 0.0034,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "pure step-concentration (flat on k>=1, peaked else)": {
+    "AUROC_strat_pct": 0.5008,
+    "AUROC_strat_raw": 0.6458,
+    "pct_sd_n1024": 0.0007,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=0.5": {
+    "AUROC_strat_pct": 0.6419,
+    "AUROC_strat_raw": 0.6519,
+    "pct_sd_n1024": 0.003,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.0": {
+    "AUROC_strat_pct": 0.7629,
+    "AUROC_strat_raw": 0.7747,
+    "pct_sd_n1024": 0.0026,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.25": {
+    "AUROC_strat_pct": 0.8149,
+    "AUROC_strat_raw": 0.8258,
+    "pct_sd_n1024": 0.0023,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.4": {
+    "AUROC_strat_pct": 0.8414,
+    "AUROC_strat_raw": 0.8525,
+    "pct_sd_n1024": 0.0021,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.5": {
+    "AUROC_strat_pct": 0.8596,
+    "AUROC_strat_raw": 0.8691,
+    "pct_sd_n1024": 0.0019,
+    "P(CI_lo>=0.85) one seed": 0.999,
+    "excluded_bins": []
+   },
+   "content a=2.0": {
+    "AUROC_strat_pct": 0.9203,
+    "AUROC_strat_raw": 0.9326,
+    "pct_sd_n1024": 0.0014,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.5": {
+    "AUROC_strat_pct": 0.951,
+    "AUROC_strat_raw": 0.9688,
+    "pct_sd_n1024": 0.0011,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=3.0": {
+    "AUROC_strat_pct": 0.9709,
+    "AUROC_strat_raw": 0.9861,
+    "pct_sd_n1024": 0.0007,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=1.0 + age u(age)": {
+    "AUROC_strat_pct": 0.7553,
+    "AUROC_strat_raw": 0.7795,
+    "pct_sd_n1024": 0.0024,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=2.0 + age u(age)": {
+    "AUROC_strat_pct": 0.8915,
+    "AUROC_strat_raw": 0.934,
+    "pct_sd_n1024": 0.0014,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=3.0 + age u(age)": {
+    "AUROC_strat_pct": 0.942,
+    "AUROC_strat_raw": 0.985,
+    "pct_sd_n1024": 0.001,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.0, step temp flat-crit/peaked-else": {
+    "AUROC_strat_pct": 0.9203,
+    "AUROC_strat_raw": 0.9176,
+    "pct_sd_n1024": 0.0014,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.0 rescaled c_t*r": {
+    "AUROC_strat_pct": 0.9203,
+    "AUROC_strat_raw": 0.9196,
+    "pct_sd_n1024": 0.0014,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "LOO replicate (donor seed 1), NaN->0": {
+    "AUROC_strat_pct": 0.9675,
+    "AUROC_strat_raw": 0.9885,
+    "pct_sd_n1024": 0.0011,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   }
+  },
+  "perfect_softmax_on_k>=1_steps_only": 0.9985
+ },
+ "seed1": {
+  "seed": 1,
+  "cells_sha256": "b683dd1ba1c105a52edc440dd300e2ada9c090e1fcee4fa22740756935f6cd6c",
+  "tau": 0.4315741845071321,
+  "n_Q_steps_excl": 724,
+  "n_t_values": [
+   15
+  ],
+  "k_t_hist": {
+   "0": 232,
+   "1": 478,
+   "2": 14
+  },
+  "labelled_cells": 10752,
+  "positives": 506,
+  "steps_with_a_NaN_label_cell": 106,
+  "cases": {
+   "perfect, binary y (tied)": {
+    "AUROC_strat_pct": 1.0,
+    "AUROC_strat_raw": 1.0,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "perfect, softmax(10y+eps)": {
+    "AUROC_strat_pct": 0.9875,
+    "AUROC_strat_raw": 0.9993,
+    "pct_sd_n1024": 0.0002,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "true_demand (A-cell, C10 control)": {
+    "AUROC_strat_pct": 0.9731,
+    "AUROC_strat_raw": 0.9639,
+    "pct_sd_n1024": 0.0013,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "age-only f(age)": {
+    "AUROC_strat_pct": 0.5,
+    "AUROC_strat_raw": 0.5,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "recency -age": {
+    "AUROC_strat_pct": 0.5,
+    "AUROC_strat_raw": 0.5,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "within-step shuffle of softmax(1.5y+eps)": {
+    "AUROC_strat_pct": 0.5087,
+    "AUROC_strat_raw": 0.4946,
+    "pct_sd_n1024": 0.0032,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "pure step-concentration (flat on k>=1, peaked else)": {
+    "AUROC_strat_pct": 0.4963,
+    "AUROC_strat_raw": 0.6534,
+    "pct_sd_n1024": 0.0007,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=0.5": {
+    "AUROC_strat_pct": 0.649,
+    "AUROC_strat_raw": 0.6513,
+    "pct_sd_n1024": 0.0028,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.0": {
+    "AUROC_strat_pct": 0.7729,
+    "AUROC_strat_raw": 0.7767,
+    "pct_sd_n1024": 0.0023,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.25": {
+    "AUROC_strat_pct": 0.8187,
+    "AUROC_strat_raw": 0.829,
+    "pct_sd_n1024": 0.0021,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.4": {
+    "AUROC_strat_pct": 0.8442,
+    "AUROC_strat_raw": 0.8568,
+    "pct_sd_n1024": 0.002,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.5": {
+    "AUROC_strat_pct": 0.8579,
+    "AUROC_strat_raw": 0.8735,
+    "pct_sd_n1024": 0.0018,
+    "P(CI_lo>=0.85) one seed": 0.991,
+    "excluded_bins": []
+   },
+   "content a=2.0": {
+    "AUROC_strat_pct": 0.9176,
+    "AUROC_strat_raw": 0.9366,
+    "pct_sd_n1024": 0.0013,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.5": {
+    "AUROC_strat_pct": 0.9541,
+    "AUROC_strat_raw": 0.9716,
+    "pct_sd_n1024": 0.001,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=3.0": {
+    "AUROC_strat_pct": 0.9749,
+    "AUROC_strat_raw": 0.9881,
+    "pct_sd_n1024": 0.0006,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=1.0 + age u(age)": {
+    "AUROC_strat_pct": 0.7461,
+    "AUROC_strat_raw": 0.7807,
+    "pct_sd_n1024": 0.0025,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=2.0 + age u(age)": {
+    "AUROC_strat_pct": 0.875,
+    "AUROC_strat_raw": 0.9376,
+    "pct_sd_n1024": 0.0015,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=3.0 + age u(age)": {
+    "AUROC_strat_pct": 0.9366,
+    "AUROC_strat_raw": 0.986,
+    "pct_sd_n1024": 0.0009,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.0, step temp flat-crit/peaked-else": {
+    "AUROC_strat_pct": 0.9176,
+    "AUROC_strat_raw": 0.9217,
+    "pct_sd_n1024": 0.0013,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.0 rescaled c_t*r": {
+    "AUROC_strat_pct": 0.9176,
+    "AUROC_strat_raw": 0.92,
+    "pct_sd_n1024": 0.0013,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   }
+  },
+  "perfect_softmax_on_k>=1_steps_only": 0.9989
+ },
+ "seed2": {
+  "seed": 2,
+  "cells_sha256": "4c55cc601c70bee4aebf79c331fe6984601feb61a63df0ed99c77e4991156197",
+  "tau": 0.4884946896703897,
+  "n_Q_steps_excl": 740,
+  "n_t_values": [
+   15
+  ],
+  "k_t_hist": {
+   "0": 239,
+   "1": 490,
+   "2": 11
+  },
+  "labelled_cells": 11016,
+  "positives": 512,
+  "steps_with_a_NaN_label_cell": 79,
+  "cases": {
+   "perfect, binary y (tied)": {
+    "AUROC_strat_pct": 1.0,
+    "AUROC_strat_raw": 1.0,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "perfect, softmax(10y+eps)": {
+    "AUROC_strat_pct": 0.9876,
+    "AUROC_strat_raw": 0.9996,
+    "pct_sd_n1024": 0.0002,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "true_demand (A-cell, C10 control)": {
+    "AUROC_strat_pct": 0.975,
+    "AUROC_strat_raw": 0.9599,
+    "pct_sd_n1024": 0.0011,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "age-only f(age)": {
+    "AUROC_strat_pct": 0.5,
+    "AUROC_strat_raw": 0.5,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "recency -age": {
+    "AUROC_strat_pct": 0.5,
+    "AUROC_strat_raw": 0.5,
+    "pct_sd_n1024": 0.0,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "within-step shuffle of softmax(1.5y+eps)": {
+    "AUROC_strat_pct": 0.4683,
+    "AUROC_strat_raw": 0.4621,
+    "pct_sd_n1024": 0.0036,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "pure step-concentration (flat on k>=1, peaked else)": {
+    "AUROC_strat_pct": 0.4995,
+    "AUROC_strat_raw": 0.6534,
+    "pct_sd_n1024": 0.001,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=0.5": {
+    "AUROC_strat_pct": 0.631,
+    "AUROC_strat_raw": 0.6312,
+    "pct_sd_n1024": 0.0033,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.0": {
+    "AUROC_strat_pct": 0.747,
+    "AUROC_strat_raw": 0.7584,
+    "pct_sd_n1024": 0.0029,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.25": {
+    "AUROC_strat_pct": 0.7979,
+    "AUROC_strat_raw": 0.8129,
+    "pct_sd_n1024": 0.0027,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.4": {
+    "AUROC_strat_pct": 0.8214,
+    "AUROC_strat_raw": 0.8412,
+    "pct_sd_n1024": 0.0025,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=1.5": {
+    "AUROC_strat_pct": 0.8384,
+    "AUROC_strat_raw": 0.8591,
+    "pct_sd_n1024": 0.0023,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=2.0": {
+    "AUROC_strat_pct": 0.907,
+    "AUROC_strat_raw": 0.9284,
+    "pct_sd_n1024": 0.0016,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.5": {
+    "AUROC_strat_pct": 0.9516,
+    "AUROC_strat_raw": 0.9683,
+    "pct_sd_n1024": 0.001,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=3.0": {
+    "AUROC_strat_pct": 0.9734,
+    "AUROC_strat_raw": 0.9876,
+    "pct_sd_n1024": 0.0006,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=1.0 + age u(age)": {
+    "AUROC_strat_pct": 0.7293,
+    "AUROC_strat_raw": 0.7628,
+    "pct_sd_n1024": 0.0027,
+    "P(CI_lo>=0.85) one seed": 0.0,
+    "excluded_bins": []
+   },
+   "content a=2.0 + age u(age)": {
+    "AUROC_strat_pct": 0.8702,
+    "AUROC_strat_raw": 0.9302,
+    "pct_sd_n1024": 0.0017,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=3.0 + age u(age)": {
+    "AUROC_strat_pct": 0.9343,
+    "AUROC_strat_raw": 0.9866,
+    "pct_sd_n1024": 0.0012,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.0, step temp flat-crit/peaked-else": {
+    "AUROC_strat_pct": 0.907,
+    "AUROC_strat_raw": 0.9115,
+    "pct_sd_n1024": 0.0016,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   },
+   "content a=2.0 rescaled c_t*r": {
+    "AUROC_strat_pct": 0.907,
+    "AUROC_strat_raw": 0.9124,
+    "pct_sd_n1024": 0.0016,
+    "P(CI_lo>=0.85) one seed": 1.0,
+    "excluded_bins": []
+   }
+  },
+  "perfect_softmax_on_k>=1_steps_only": 0.9992
+ },
+ "all_seeds_power_product": {
+  "perfect, binary y (tied)": 1.0,
+  "perfect, softmax(10y+eps)": 1.0,
+  "true_demand (A-cell, C10 control)": 1.0,
+  "age-only f(age)": 0.0,
+  "recency -age": 0.0,
+  "within-step shuffle of softmax(1.5y+eps)": 0.0,
+  "pure step-concentration (flat on k>=1, peaked else)": 0.0,
+  "content a=0.5": 0.0,
+  "content a=1.0": 0.0,
+  "content a=1.25": 0.0,
+  "content a=1.4": 0.0,
+  "content a=1.5": 0.0,
+  "content a=2.0": 1.0,
+  "content a=2.5": 1.0,
+  "content a=3.0": 1.0,
+  "content a=1.0 + age u(age)": 0.0,
+  "content a=2.0 + age u(age)": 1.0,
+  "content a=3.0 + age u(age)": 1.0,
+  "content a=2.0, step temp flat-crit/peaked-else": 1.0,
+  "content a=2.0 rescaled c_t*r": 1.0,
+  "LOO replicate (donor seed 1), NaN->0": 1.0
+ }
+}

@@ -1,0 +1,48 @@
+<string>:82: RuntimeWarning: Mean of empty slice
+{
+ "bos_excluded.PC": {
+  "AUROC_strat": 0.9585,
+  "AUROC_strat_pct": 0.9672,
+  "pct_sd1024": 0.0015
+ },
+ "bos_excluded.ORACLE": {
+  "AUROC_strat": 0.9885,
+  "AUROC_strat_pct": 0.9675,
+  "pct_sd1024": 0.0011
+ },
+ "bos_excluded.pure step-level (SC1b)": {
+  "AUROC_strat": 0.6434,
+  "AUROC_strat_pct": 0.5022,
+  "pct_sd1024": 0.0008
+ },
+ "bos_excluded.a=0.5 T=1": {
+  "AUROC_strat": 0.6503,
+  "AUROC_strat_pct": 0.6539,
+  "pct_sd1024": 0.004
+ },
+ "bos_excluded.a=0.5 flat-crit/peaky-k0": {
+  "AUROC_strat": 0.7283,
+  "AUROC_strat_pct": 0.6539,
+  "pct_sd1024": 0.004
+ },
+ "bos_excluded.a=1.0 T=1": {
+  "AUROC_strat": 0.7728,
+  "AUROC_strat_pct": 0.7722,
+  "pct_sd1024": 0.0034
+ },
+ "bos_excluded.a=1.0 flat-crit/peaky-k0": {
+  "AUROC_strat": 0.8098,
+  "AUROC_strat_pct": 0.7722,
+  "pct_sd1024": 0.0034
+ },
+ "bos_excluded.a=1.5 T=1": {
+  "AUROC_strat": 0.8676,
+  "AUROC_strat_pct": 0.8565,
+  "pct_sd1024": 0.0026
+ },
+ "bos_excluded.a=1.5 flat-crit/peaky-k0": {
+  "AUROC_strat": 0.8713,
+  "AUROC_strat_pct": 0.8565,
+  "pct_sd1024": 0.0026
+ }
+}

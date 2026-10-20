@@ -1,0 +1,28 @@
+{
+  "status": "ok",
+  "seed": "aab5088efaad3ab0875ed725284eb29c322ff100052643d9a595e597deeb7118",
+  "claims": [
+    {
+      "claim": "the run exited 0",
+      "command": ".venv/bin/python -c \"import json; print(json.load(open('runs/e0d/ledger.json'))['commands'][-1]['exit_code'])\"",
+      "expected": "0",
+      "observed": "0",
+      "match": true
+    },
+    {
+      "claim": "the per-seed A2.8 labels are ['AGREE', 'AGREE', 'AGREE']",
+      "command": ".venv/bin/python -c \"import json; r=json.load(open('runs/e0d/ledger.json'))['rows']; print(json.dumps([x['value'] for x in r if x['key']=='e0d.labels'][-1]))\"",
+      "expected": "[\"AGREE\", \"AGREE\", \"AGREE\"]",
+      "observed": "[\"AGREE\", \"AGREE\", \"AGREE\"]",
+      "match": true
+    },
+    {
+      "claim": "re-running the experiment reproduces exit 0",
+      "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 3 -- .venv/bin/python experiments/e0d/run.py --run-id e0d-reverify > /dev/null 2>&1; echo $?",
+      "expected": "0",
+      "observed": "0 (run in detached worktree .worktrees/verify-e0d at 2fd93683a33d98b8540ab572f39848dcc0dbb6f5, 2026-09-30T06:48:18Z..09:00:39Z; stdout 'class AGREE -> exit 0; labels ['AGREE', 'AGREE', 'AGREE']'; all 45 ledger rows of runs/e0d-reverify identical to runs/e0d after worktree-path substitution)",
+      "match": true
+    }
+  ],
+  "verifier_sha": "2fd93683a33d98b8540ab572f39848dcc0dbb6f5"
+}

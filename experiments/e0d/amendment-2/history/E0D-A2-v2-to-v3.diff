@@ -1,0 +1,365 @@
+--- /Users/keanooo7/Documents/RSR-2026-09-27-plan/reviews/E0D-AMENDMENT-2-FINAL-v2.md	2026-09-29 07:11:23
++++ E0D-AMENDMENT-2-FINAL-v3.md	2026-09-29 08:30:23
+@@ -1,7 +1,17 @@
+-# E0d Amendment 2: final draft v2, for independent adversarial review
++# E0d Amendment 2: final draft v3, for confirmatory re-review
+ 
+-> **Status: DRAFT. NOT COMMITTED. NOT REVIEWED.** Nothing here has been written to
+-> `experiments/e0d/PREREG.md`. An independent adversarial review comes next. Part A is the text
++> **Update 2026-09-29:** re-reviewed (`reviews/REVIEW-E0D-A2v3.md`, MERGE-READY WITH EDITS); its
++> edits are applied (m-N6 not applied, see the edit map). Part A was committed to `run/e0d` as
++> Amendment 2 of `experiments/e0d/PREREG.md` at `8c63ecd`. Pre-re-review copy:
++> `superseded/E0D-AMENDMENT-2-FINAL-v3.pre-rereview.md`.
++
++> **Status: DRAFT v3. NOT COMMITTED.** v2 was reviewed adversarially
++> (`~/Documents/RSR-2026-09-29-day/reviews/REVIEW-E0D-A2v2.md`, VERDICT: MERGE-READY WITH EDITS,
++> edits 1–12). v3 applies all twelve (P0.3b, 2026-09-29; edit map in
++> `~/Documents/RSR-2026-09-29-day/reports/P0.3b-edit-map.md`, diff in
++> `~/Documents/RSR-2026-09-29-day/E0D-A2-v2-to-v3.diff`). v2 is kept unchanged at
++> `~/Documents/RSR-2026-09-27-plan/reviews/E0D-AMENDMENT-2-FINAL-v2.md`. A confirmatory re-review
++> comes next; nothing here has been written to `experiments/e0d/PREREG.md`. Part A is the text
+ > that would be appended, verbatim, after A1.10. Parts B–E sit outside the PREREG: the runner test
+ > plan, what the decisions settled and what they left, the fix map, and a spec-correction note for
+ > Brendan to write himself.
+@@ -22,7 +32,13 @@
+ - **Supersedes** `reviews/E0D-AMENDMENT-2-FINAL-DRAFT.md` (left untouched).
+ - **Decisions applied:** `owner-drafts/R-2026-09-27-e0d-statistic-amended.md` (made by the PM under
+   Brendan's delegation; rationale in `DIGEST.md`, cycle 17), on top of
+-  `owner-drafts/R-2026-09-27-e0d-statistic.md`. Neither is committed in `docs/owner/rulings/`.
++  `R-2026-09-27-e0d-statistic.md`. **Status of the two rulings:** the first ruling is committed on
++  `main` at `7f9bb10` as `docs/owner/rulings/R-2026-09-27-e0d-statistic.md` (byte-identical to the
++  `owner-drafts/` copy); `7f9bb10` is **not** an ancestor of `run/e0d` (`4918f2d`), so `main` must
++  be merged into `run/e0d` before the runner can pass C8. The amended ruling is drafted in
++  `owner-drafts/` and is **not committed** anywhere; Brendan commits it.
++- **Review edits applied (v3):** `REVIEW-E0D-A2v2.md` edits 1–12. M-2 is closed by a PM decision
++  under delegation, 2026-09-29 (row 5b, A2.8).
+ - **Base:** PREREG at `run/e0d` `268b947` (base, Amendment 1, the A1.10 erratum); runner at
+   `4918f2d`.
+ 
+@@ -46,9 +62,13 @@
+ ## Part A: the amendment text (append-only)
+ 
+ ```
+-## Amendment 2 (2026-09-27, pre-data)
++## Amendment 2 (drafted 2026-09-27, completed 2026-09-29, pre-data)
+ 
+ **Written 2026-09-27 by a model** (Claude Opus 5.5, RSR researcher subagent, item E0D-AMD2-FINAL).
++Completed 2026-09-29 by a second session of the same model (m6, m7).
++Review edits (REVIEW-E0D-A2v2 edits 1–12, row 5b and its order, and REVIEW-E0D-A2v3's edits)
++applied 2026-09-29 by a further session of the same model, under PM decisions recorded in DIGEST
++2026-09-29 cycles 2–3.
+ **Append-only.** Nothing above this heading has been edited. Where this section and the text
+ above disagree, **this section governs**, including over Amendment 1 and over the front matter's
+ `thresholds.RHO_STAR`, `requires` and `prediction` fields.
+@@ -69,6 +89,9 @@
+       not gated.
+     - τ is "computed **per seed** on the already-inspected set E `[64,128)` and frozen in
+       Amendment 2, before any data from `[262144, 263168)` is read."
++  - PM decision under delegation, 2026-09-29 (review M-2): A2.8 row 5b. Raw `AUROC_strat` can
++    block a kill (exit 2, HALT to Brendan); it never produces a pass. This narrows the amended
++    ruling's "reported, not gated" for raw `AUROC_strat`: raw can block a kill; it never passes.
+ - **LOO remains the truth.** Spec §3.2.1 is unchanged. This amendment changes the *comparison
+   statistic*, not the ground truth. The departure from §3.2.1's named statistic ("Report Spearman
+   ρ") is declared in A2.12.
+@@ -76,6 +99,10 @@
+   - At this commit no document of `D_E0d = [262144, 263168)` has been generated, run or inspected,
+     and no E0d measurement exists.
+   - No arm-B `r_i` has been computed on any document for this amendment.
++  - Real gated arm-B `r_i` on `[0,1088)` exists (`lookahead-room-r2` `D.pt`; B0; E0e) and its
++    age/kind profile was known when this amendment was written. No script joined it to any LOO
++    cell, and no `AUROC` of real `r_i` was computed on any document (checked by grep over
++    `reviews/e0d-a2*/`).
+   - The constants below were computed on set E `[64, 128)` from LOO Δ only.
+ - **Unchanged:** §1 and §2; A1.1's strata (Q-steps, A-cells, N-steps); A1.1's LOO-flat rule and
+   §5's `R_FLAT`; A1.3 (bos-copy exclusions; the exit follows the excluded population); A1.4 (any
+@@ -103,9 +130,13 @@
+     when slot `i` alone is knocked out. It is not answer-token NLL; τ was computed on this Δ.
+   - A cell whose Δ_resample is NaN (no resample donor) **has no label** (A2.4).
+ - **The rule.** `τ_s` = the q = 0.995 quantile (numpy default, linear / type 7) of
+-  |Δ_resample| over full-memory Q-step cells of seed `s` that are not A-cells and have a value;
++  |Δ_resample| over full-memory Q-step cells of seed `s` that are not A-cells and have a value
++  (before the A1.3 exclusions; the same τ is applied to every population);
+   computed once on set E `[64, 128)` and frozen. The off-A Δ is continuous (exact zeros: see the
+   table), so τ = 0⁺ does not apply.
++- **Provenance of q.** q = 0.995 was chosen after `m4.log` showed, on seed 0 only, the critical
++  cell counts (all / A-cells / non-A) at five candidate τ values; that is the label composition
++  from LOO Δ alone, and no `r_i` of any kind was involved.
+ - **The samples.** Arm B ckpt3000 of each seed (sha256 as C1), resample donor seed = model seed,
+   64 documents per seed.
+ 
+@@ -178,7 +209,7 @@
+   mean of the ranks they span);
+ - `pct(t, i) = (mr(t, i) − 1) / (n_t − 1)`, in [0, 1].
+ - **NaN donors.** A slot whose Δ_resample is NaN **still counts** in `n_t` and still receives a
+-  `pct`. The percentile is a property of the eviction candidates' scores, not of the labels, so a
++  `pct`. The percentile is a property of the A1.3-eligible slots' scores, not of the labels, so a
+   missing label never shifts another slot's percentile. The step is **not** dropped.
+ 
+ **Step 2, the label.** `y(t, i)` as A2.2 on cells with a Δ value. A cell with a NaN Δ has no label
+@@ -194,7 +225,9 @@
+ 
+ **Bootstrap.** Each cell carries its document's bootstrap count; `AUROC_a` and `w_a` are computed
+ on the weighted sample. `pct` is computed once per step on the original data (a document's steps
+-are resampled whole, so a step's percentiles never change within a resample).
++are resampled whole, so a step's percentiles never change within a resample). A resample in which
++the statistic is undefined is counted and reported; if any occurs, the seed's label is computed on
++the defined resamples and the count is reported beside it.
+ 
+ **Undefined.** If no bin has both classes, the statistic has no value: `MeasurementUndefined`,
+ exit 3, unless the LOO-flat rule already labelled the seed.
+@@ -207,10 +240,15 @@
+ - a pure step-level signal (no within-step content) gives 0.5 in expectation (T18);
+ - the binary perfect proxy `r = y` gives **exactly 1.0** (T1a). A perfect proxy with continuous
+   noise does **not** reach 1.0: on a Q-step with no critical cell some negative holds `pct = 1`,
+-  and it ties or beats positives of its age. Its ceiling on set E is in A2.11 (T1b).
++  and it ties or beats positives of its age. Its ceiling on set E is in the A2.4 table (T1c).
+ 
+-**Reported values on set E** (A2.11 has the full table): the table below.
++- **Scope of an AGREE.** On set E the positives are ≈ 92% A-cells (the queried assert at its own
++  query step); ≈ 2% are needed after `t` (`m3.log`: 10 / 517 on seed 0). `AUROC_strat,pct`
++  therefore certifies that `r_i` ranks the slot being retrieved *now* above same-age peers. It is
++  not evidence that `r_i` predicts later demand; A2.6's limit applies to this statistic as well.
+ 
++**Reported values on set E** (the A2.4 table (T1c), below).
++
+ | score | seed 0 pct (raw) | seed 1 pct (raw) | seed 2 pct (raw) | sd of pct at n = 1024, seeds 0/1/2 |
+ |---|---|---|---|---|
+ | perfect proxy, binary `r = y` | 1.0000 (1.0000) | 1.0000 (1.0000) | 1.0000 (1.0000) | 0.0000 / 0.0000 / 0.0000 |
+@@ -230,13 +268,17 @@
+ - Perfect continuous proxy restricted to steps with `k_t ≥ 1`: 0.9985 / 0.9989 / 0.9992 (the k = 0 steps hold it below 1.0; T1c).
+ - Source: `reviews/e0d-a2-final/m6_out_012.json` (`m6.rc` = 0).
+ 
+-### A2.5 Reported secondaries of the AUROC family (never gating)
++### A2.5 Reported secondaries of the AUROC family (none gates a pass; raw `AUROC_strat` is read by A2.8 row 5b only)
+ 
+ - **`AUROC_strat`** (raw): the A2.4 procedure with `r_i` in place of `pct` (the first ruling's
+-  form). It is cross-step on raw shares, so step-level concentration moves it.
++  form). It is cross-step on raw shares, so step-level concentration moves it. It never produces a
++  pass. It is read by one gate row only, A2.8 row 5b, which can turn a would-be kill into exit 2
++  and nothing else; it uses the same bootstrap indices as every other statistic of the seed.
+ - **`STEP_SENSITIVE`**: flagged when the per-seed label computed with `AUROC_strat` in place of
+-  `AUROC_strat,pct` differs from the gated label. It changes no exit (the analogue of
+-  `GATE_SENSITIVE`).
++  `AUROC_strat,pct` differs from the gated label. The flag itself changes no exit (the analogue of
++  `GATE_SENSITIVE`); the pct-`DISAGREE` / raw-`AGREE` pattern is handled by A2.8 row 5b, not by
++  this flag. Row 5b is skipped in the raw-substituted label (substituting raw into it gives raw CI
++  upper < A\* and raw CI lower ≥ A\*, which cannot hold).
+ - **`AUROC_unstrat,pct`**: the A2.4 procedure with a single bin holding every age. Used by A2.8
+   row 5 only.
+ - **`C_ws`** (the within-step companion), as in the v1 draft: `pct` as A2.4 step 1 over the
+@@ -297,13 +339,17 @@
+ 
+ **Threshold:** `A* = AUROC_STAR`, read from the C8 ruling(s), never typed. Every reading is through
+ the seed's 95% CI, never a point estimate. The primary cell is gated `r_i` × resample in the A1.3
+-population. **First matching row wins. This table replaces A1's §7 table and the v1 draft's.**
++population. **First matching row wins, in table order: 0, 1, 2, 5b, 3, 4, 5, 6, 7.** Row 5b keeps
++its label (so every cross-reference to it and to rows 3–7 stays unambiguous) but is evaluated
++immediately after row 2 and ahead of row 3. **This table replaces A1's §7 table and the v1
++draft's.**
+ 
+ | # | condition | label |
+ |---|---|---|
+ | 0 | C10′: the `true_demand` control's `AUROC_strat,pct` CI upper < A\* | `CEILING` |
+ | 1 | LOO flat (A1.1) and `r_i` flat (§5) | `DEGENERATE` |
+ | 2 | LOO flat, `r_i` not flat | `LOO_UNINFORMATIVE` |
++| 5b | `AUROC_strat,pct` CI upper < A\* **and** raw `AUROC_strat` CI lower ≥ A\* | `STEP_OR_AGE_AMBIGUOUS` |
+ | 3 | `AUROC_strat,pct` CI upper < 0.5 | `INVERTED` |
+ | 4 | `AUROC_strat,pct` CI lower ≥ A\* | `AGREE` |
+ | 5 | `AUROC_strat,pct` CI upper < A\* **and** `AUROC_unstrat,pct` CI lower ≥ A\* | `AGREE_VIA_RANK` |
+@@ -312,12 +358,34 @@
+ 
+ - **Row 0 (CEILING) is kept, and why.** The pct form's reachable maximum is below 1 whenever the
+   score is continuous (A2.4), and the `true_demand` control's value depends on each seed's own
+-  label composition (critical non-A cells score 0 under it). Row 0 turns a kill into exit 2 only
+-  where a perfect-structure score could not have passed on that seed's labels. It can never
+-  produce a pass. Measured on set E: the `true_demand` control reads `AUROC_strat,pct` 0.9672 / 0.9731 / 0.9750 on seeds 0 / 1 / 2 (sd at n = 1024: 0.0015 / 0.0013 / 0.0011), about 80 sd above the bar. So row 0 is expected not to fire; it
++  label composition (critical non-A cells score 0 under it). Row 0 turns a would-be kill or pass
++  into exit 2 only where a perfect-structure score could not have passed on that seed's labels
++  (row 0 precedes row 4, so a seed whose `r_i` clears the bar while the control does not is
++  `CEILING`, counted as `UNRESOLVED`). It can never produce a pass. Measured on set E: the `true_demand` control reads `AUROC_strat,pct` 0.9672 / 0.9731 / 0.9750 on seeds 0 / 1 / 2 (sd at n = 1024: 0.0015 / 0.0013 / 0.0011), about 80 sd above the bar. So row 0 is expected not to fire; it
+   costs nothing when it does not.
+ - **Row 5 keeps A1.2 in force:** agreement that exists only without age control is not the
+   §3.2.1 kill. Class `RECENCY_ONLY`, exit 2. It can never produce a pass.
++- **Row 5b (`STEP_OR_AGE_AMBIGUOUS`): PM decision under delegation, 2026-09-29.** On any seed, a
++  pct-form `DISAGREE` while raw `AUROC_strat` reads `AGREE` (its CI lower ≥ A\*) is exit 2 and a
++  **HALT to Brendan**; it is never counted toward a kill. Rationale: ψ̂ is age-blind (CLAUDE.md), so
++  the pass stays on the pct form; arm-B `r_i` is known to carry age (brief §3.4), and an age
++  component in `r_i` lowers the pct form while raw rises (A2.11; D.2 item 3), so a kill in that
++  pattern is confounded by a component the gate is meant to exclude. A pass still needs the pct
++  form (row 4); a kill needs the pct form to reject and raw `AUROC_strat` not to read AGREE (raw
++  CI lower < A\*). A raw CI that contains A\* does not block a kill. **Why the condition is raw
++  AGREE and not "raw does not reject" (PM decision under delegation, 2026-09-29):** a raw CI that
++  merely contains A\* is not evidence that an age component is rescuing `r_i`; only a raw `AGREE`
++  is. T12 pins this (the 5b tuple with raw CI lower < A\* → `DISAGREE`). Row 5b never produces a
++  pass. Raw `AUROC_strat` is read here only; everywhere else it is reported (A2.5): it can block a
++  kill and never produce a pass.
++  **Reported on every seed:** whether row 5b's condition (pct CI upper < A\* and raw CI lower ≥
++  A\*) holds, as a boolean, whatever the seed's label (so a 5b pattern absorbed by rows 0–2 is
++  still visible).
++  **Order (PM decision under delegation, 2026-09-29):** row 5b precedes row 3 (`INVERTED`) and
++  row 5 (`AGREE_VIA_RANK`) on purpose. A seed that matches 5b together with row 3 or row 5 is
++  labelled `STEP_OR_AGE_AMBIGUOUS`, halts to Brendan, and is never counted toward a kill or
++  relabelled. Row 5b cannot pre-empt a pass: row 4 needs pct CI lower ≥ A\*, which cannot hold
++  together with 5b's pct CI upper < A\*.
+ - **Row 3 (`INVERTED`)** reads the gated statistic's CI upper < 0.5: a score that ranks critical
+   slots *below* their same-age, same-standing peers.
+ - **Removed:** the v1 rows that read `R_H` (its term in rows 0, 4, 5, 6) and `HARM_UNDEFINED`.
+@@ -331,12 +399,19 @@
+ | 2 | **all 3 seeds `AGREE`** | `AGREE` | **0** |
+ | 3 | all 3 seeds `INVERTED` | `CONFOUND_INVERTED` | **1** |
+ | 4 | all 3 seeds in {`DISAGREE`, `INVERTED`} | `CONFOUND` | **1** |
++| 4b | all 3 seeds in {`DISAGREE`, `INVERTED`, `AGREE_VIA_RANK`, `STEP_OR_AGE_AMBIGUOUS`}, at least one `STEP_OR_AGE_AMBIGUOUS` | `STEP_OR_AGE_AMBIGUOUS` | **2** |
+ | 5 | all 3 seeds in {`DISAGREE`, `INVERTED`, `AGREE_VIA_RANK`}, at least one `AGREE_VIA_RANK` | `RECENCY_ONLY` | **2** |
+ | 6 | otherwise | `MIXED_UNRESOLVED` | **2** |
+ 
+ - **Seed rule (the ruling).** A pass needs every seed `AGREE`. Pooled results never gate.
+ - A kill (exit 1) needs every seed in {`DISAGREE`, `INVERTED`}. `AGREE, AGREE, DISAGREE` is
+-  `MIXED_UNRESOLVED`, exit 2.
++  `MIXED_UNRESOLVED`, exit 2. A `STEP_OR_AGE_AMBIGUOUS` seed never counts toward a kill; because
++  A2.8 row 5b is evaluated ahead of row 3, such a seed is never labelled `INVERTED` or
++  `DISAGREE`.
++- **HALT on row 5b.** Whenever any seed is labelled `STEP_OR_AGE_AMBIGUOUS`, whichever §8 row
++  wins other than row 0 (row 4b, or row 1 or 6 when other seeds place the run there; row 0 still
++  exits 3), the exit is 2 and the report
++  names the seed(s) and halts to Brendan; the next E0d action is his.
+ - **Unchanged reporting:** `GATE_SENSITIVE` (ungated class differs; exit follows gated);
+   `STEP_SENSITIVE` (A2.5); the zero knockout never changes the exit; `BOS_SENSITIVE`; A1's
+   reporting for the flat conditions.
+@@ -403,7 +478,8 @@
+ ### A2.12 Declared departure from §3.2.1's named statistic
+ 
+ - §3.2.1 says "Report Spearman ρ(`r_i`, LOO Δloss)", and §6's prediction is "High ρ". This
+-  amendment gates E0d on `AUROC_strat,pct` alone. LOO stays truth (`y` thresholds LOO Δ).
++  amendment gates the pass on `AUROC_strat,pct` alone; raw `AUROC_strat` can only turn a would-be
++  kill into exit 2 (A2.8 row 5b). LOO stays truth (`y` thresholds LOO Δ).
+   Spearman ρ is still reported (A2.1).
+ - **Reason.** With about 5% signal-bearing cells, a perfect-label score reaches Spearman ρ of at
+   most `√(3p(1−p))`, measured 0.3633 on real Δ; "High ρ" is unreachable by construction.
+@@ -414,7 +490,14 @@
+ 
+ - **C8 now requires**, in `docs/owner/rulings/`, committed and unmodified: `R-*-retrieval-shown*`;
+   `R-*-sprint0-gate*`; and **every `R-*-e0d-statistic*` file** (the ruling and its amendment),
+-  which **replace `R-*-rho-star*`**.
++  which **replace `R-*-rho-star*`**. C8 additionally requires at least one committed, unmodified
++  file matching `R-*-e0d-statistic-amended*`; without it C8 exits 3, because the committed
++  `R-2026-09-27-e0d-statistic` alone names raw `AUROC_strat` and the H gate, not A2.4's statistic.
++- **Both rulings must be present.** C8 passes only when `docs/owner/rulings/` holds, committed and
++  unmodified, (i) at least one `R-*-e0d-statistic*` file that is not `-amended` (the first ruling,
++  whose committed text carries `AUROC_STAR` 0.85) **and** (ii) at least one
++  `R-*-e0d-statistic-amended*` file. Either alone exits 3. The value is read from the files under
++  the rule below, never typed into the runner.
+ - **Across all `R-*-e0d-statistic*` files, exactly one distinct `AUROC_STAR` value, in (0.5, 1).**
+   `HARM_RATIO_STAR` is **not required and not read**; its presence in the first ruling is not an
+   error.
+@@ -427,8 +510,10 @@
+ - **Refusals.** A missing file, no `AUROC_STAR`, more than one distinct value, or a value out of
+   range exits 3 before any `D_E0d` document is generated. An `R-*-rho-star*` file is neither
+   required nor read.
+-- **Where the rulings are now.** Both files are in `~/Documents/RSR-2026-09-27-plan/owner-drafts/`,
+-  not in `docs/owner/rulings/`. Brendan commits them.
++- **Where the rulings are now.** The first ruling is committed on `main` (`7f9bb10`); the amended
++  ruling is in `owner-drafts/` and is committed by Brendan. `run/e0d` must contain both (merge
++  `main`) before the run; C8 checks this. (At `run/e0d` `4918f2d`, `7f9bb10` is not an ancestor:
++  `git merge-base --is-ancestor` rc 1.)
+ - **C11 (new, exit 3):** at every full-memory step of every seed, the eligible slots hold exactly
+   one slot per age and `rank = M − age` (A2.3); under A1.3, `n_t = 15`.
+ - **C12 (new, exit 3):** the runner's `TAU_RESAMPLE` and `TAU_ZERO` tables hold exactly seeds
+@@ -437,8 +522,9 @@
+ ### A2.14 Registered prediction
+ 
+ No new class prediction is registered. §9's class prediction (CONFOUND; second most likely MIXED)
+-is scored against the A2.8 classification; its numeric parts against the ρ secondaries, as A1.8
+-arranged.
++is scored against the class that A1's §8 gives from `label_A1` only; no class prediction is
++registered for the A2.8 classification. Its numeric parts are scored against
++the ρ secondaries, as A1.8 arranged.
+ 
+ ---
+ 
+@@ -447,7 +533,7 @@
+ ### B.1 The calibration fixture
+ 
+ A pure function `synthetic_ledger(seed, n_docs, noise="continuous"|"tied", k_profile="matched"|
+-"one_per_step")` returning per-cell arrays shaped like `cells_from` output (`doc, t, rank,
++"one_per_step", nan_mode="matched"|"independent")` returning per-cell arrays shaped like `cells_from` output (`doc, t, rank,
+ sentence, full, q_step, a_cell, gap, d_resample, d_zero`). Deterministic (numpy
+ `default_rng(seed)`), no model, under 2 s at `n_docs = 64`.
+ 
+@@ -455,8 +541,11 @@
+ `rank = 16 − age`; Q-steps ≈ 43% of full-memory steps; `k_t` per Q-step 0: 26%, 1: 72%, 2: 2%,
+ ≥ 3: < 1%; critical cells by age U-shaped (166, 115, 92, 81, 38, 27, 24, 19, 11, 14, 2, 22, 14,
+ 19, 20, 19 over 64 docs); critical Δ log-normal (median 1.2, q10 0.62), ≈ 92% A-cells; off-critical
+-Δ continuous (|Δ| q50 0.0094, q90 0.081, q99 0.31, 58% positive) or tied at 0; 0.8% NaN
+-`d_resample` independent of `y`; a gap-1 A-cell at rank 15. `k_profile="one_per_step"` makes every
++Δ continuous (|Δ| q50 0.0094, q90 0.081, q99 0.31, 58% positive) or tied at 0; NaN
++`d_resample` about 2× more frequent on A-cells than on other cells (`nan_mode="matched"`: set E
++seed 0 has 11 / 663 = 1.7% of A-cells NaN against 105 / 13,481 = 0.8% of non-A Q-cells, seed 1
++14 / 615, `m5_out.json`), so NaN depends on `y`; a separate case `nan_mode="independent"` keeps
++0.8% NaN independent of `y`; a gap-1 A-cell at rank 15. `k_profile="one_per_step"` makes every
+ Q-step hold exactly one critical cell.
+ 
+ **Injected proxies** (each returns an `r` grid; each step's shares sum to 1 unless stated):
+@@ -485,9 +574,9 @@
+ | T9 | a NaN Δ on one eligible slot of a step | `n_t` still 15 and every other slot's `pct` is unchanged vs the same step with that Δ filled; only that cell leaves the AUROC; the step stays | A2.4 NaN rule |
+ | T10 | a non-finite `r` on an eligible slot | `MeasurementUndefined`, exit 3 | A2.4 |
+ | T11 | τ | runner constants equal A2.2's per-seed values; the labelling path uses `τ_s` of the cell's seed; no quantile computed on run cells (`np.quantile` monkeypatched to raise in the labelling path) | A2.2, C12 |
+-| T12 | label table | one CI tuple per A2.8 row, including boundary equality (`== A*`, CI upper == 0.5); first-match order: row 0 beats all; row 3 beats row 6; row 4 beats row 5 beats row 6 | A2.8 |
+-| T13 | classification | every §8 row reachable; exits 0/1/2 match; `CEILING` counts as `UNRESOLVED`; `AGREE, AGREE, DISAGREE` → `MIXED_UNRESOLVED` | A2.8 |
+-| T14 | C8 | passes on fixture copies of **the two real ruling texts** (key in a table cell and in a list item); exits 3 on a missing file, no key, two distinct values, `AUROC_STAR ≤ 0.5` or `≥ 1`; `HARM_RATIO_STAR` absent passes; an `R-*-rho-star*` file alone fails | A2.13 |
++| T12 | label table | one CI tuple per A2.8 row, including boundary equality (`== A*`, CI upper == 0.5); first-match order 0, 1, 2, 5b, 3, 4, 5, 6, 7: row 0 beats all; row 5b beats rows 3, 5 and 6; row 3 beats row 6; row 4 beats row 5 beats row 6; **overlap cases:** pct CI upper < 0.5 with raw `AUROC_strat` CI lower ≥ A\* → `STEP_OR_AGE_AMBIGUOUS`, not `INVERTED`; a tuple matching row 5 and row 5b (pct CI upper < A\*, `AUROC_unstrat,pct` CI lower ≥ A\*, raw CI lower ≥ A\*) → `STEP_OR_AGE_AMBIGUOUS`, not `AGREE_VIA_RANK`; a row-5b tuple (pct CI upper < A\*, raw `AUROC_strat` CI lower ≥ A\*, `AUROC_unstrat,pct` CI lower < A\*) → `STEP_OR_AGE_AMBIGUOUS`, and the same tuple with raw CI lower < A\* → `DISAGREE` | A2.8 |
++| T13 | classification | every §8 row reachable (including 4b); exits 0/1/2 match; `CEILING` counts as `UNRESOLVED`; `AGREE, AGREE, DISAGREE` → `MIXED_UNRESOLVED`; `DISAGREE, DISAGREE, STEP_OR_AGE_AMBIGUOUS` → `STEP_OR_AGE_AMBIGUOUS`, exit 2, never 1, HALT flagged; `AGREE, AGREE, STEP_OR_AGE_AMBIGUOUS` → exit 2, HALT flagged | A2.8 |
++| T14 | C8 | passes on fixture copies of **the two real ruling texts** (key in a table cell and in a list item); exits 3 on a missing file, no key, two distinct values, `AUROC_STAR ≤ 0.5` or `≥ 1`; **the first ruling alone → exit 3**; the amended ruling alone → exit 3; `HARM_RATIO_STAR` absent passes; an `R-*-rho-star*` file alone fails | A2.13 |
+ | T15 | C11 | a duplicated age at one step exits 3 | A2.13 |
+ | T16 | A1.3 population | `n_t == 15`, bin 1 excluded, gap-1 Q-steps absent | A2.3 |
+ | T17 | bootstrap | one `W` for every statistic of a seed; `pct` not recomputed per resample; `m_a` and π re-estimated per resample | A2.4–A2.6 |
+@@ -497,11 +586,12 @@
+ **Mutations for the battery** (each killed by at least one test): ties at 0 or 1 instead of ½;
+ `pct` by ordinal rank instead of midrank; `pct` over labelled slots only (NaN cells dropped from
+ `n_t`); step dropped when any Δ is NaN; `pct` recomputed per resample; `w_a` = all cells; an
+-excluded bin counted as 0.5; `n_t = M` under A1.3; gating on raw `AUROC_strat`; `y` using `≥ τ`;
++excluded bin counted as 0.5; `n_t = M` under A1.3; a pass gated on raw `AUROC_strat`; `y` using `≥ τ`;
+ seed 0's τ used for every seed; τ recomputed on run cells; H or `R_H` re-entering the label;
+ `CEILING` not counted as `UNRESOLVED`; rows 5 and 6 swapped; C8 anchored at line start (fails on
+-the real rulings); C8 still requiring `HARM_RATIO_STAR`; C8 accepting `R-*-rho-star*`; C11
+-disabled; pooled across seeds gating.
++the real rulings); C8 still requiring `HARM_RATIO_STAR`; C8 accepting `R-*-rho-star*`; C8
++accepts the first ruling alone; row 5b removed; 5b moved after row 3; a `STEP_OR_AGE_AMBIGUOUS` seed counted toward a
++kill; C11 disabled; pooled across seeds gating.
+ 
+ ---
+ 
+@@ -513,13 +603,16 @@
+ | OI-2: raw `AUROC_strat` moved by step-level concentration | gate on `AUROC_strat,pct` at 0.85, per seed, through the CI; raw reported | A2.4, A2.5, A2.8, A2.11 |
+ | OI-3: departure from §3.2.1's named statistic | Part E note for Brendan | A2.12, Part E |
+ | OI-4: τ from seed 0 only | per-seed τ, measured on set E `[64,128)` | A2.2, A2.10, C12 |
++| Review M-2: a pct-form kill can be an artefact of age in `r_i` | row 5b `STEP_OR_AGE_AMBIGUOUS`, evaluated after row 2 and ahead of rows 3 and 5, exit 2, HALT to Brendan, never a kill (PM decision under delegation, 2026-09-29) | A2.5, A2.8, T12, T13, battery |
+ 
+ **Still open (not settled by the decisions; for the reviewer):**
+ - **The consequence question for `r_i` itself.** B2 measures ψ̂-driven eviction closed-loop, not
+   `argmin r_i` eviction (A2.6 scope note). The decision's cross-reference holds for the project's
+   learned policy; it does not cover the E0d signal as an eviction rule.
+ - **The pct ceiling.** A continuous score cannot reach 1.0 on the matched population (A2.4, T1c);
+-  the measured ceiling is in A2.11. It is far above 0.85, so the gate stays reachable.
++  the measured ceiling is in the A2.4 table (T1c). It is far above 0.85, so the gate stays reachable.
++- **Closed in v3:** the kill under an age component in `r_i` (review M-2). PM decision under
++  delegation, 2026-09-29: row 5b (A2.8).
+ 
+ ---
+ 
+@@ -569,10 +662,12 @@
+ 
+    At `a = 1.0` the drop is 0.008–0.018. All of these scores stay above 0.85 at `a = 2`, but an
+    `r_i` with real content near the bar *and* an age component would read `DISAGREE` under pct
+-   where raw reads `AGREE`. `STEP_SENSITIVE` (A2.5) makes that visible; it changes no exit.
+-   **Bearing on the decision:** it makes the gate more conservative for age-steered `r_i`. It does
+-   not make it permissive. Whether that is intended is the PM's to confirm. This draft does not
+-   change it.
++   where raw reads `AGREE`.
++   **Bearing on the decision:** for the pass, it makes the gate more conservative for age-steered
++   `r_i`. For the kill it is the opposite: without a guard, such a seed would count toward
++   CONFOUND, exit 1 (review M-2). **Resolved in v3** by the PM decision under delegation,
++   2026-09-29: A2.8 row 5b labels that seed `STEP_OR_AGE_AMBIGUOUS`, exit 2, HALT to Brendan,
++   never counted toward a kill; the pass stays on the pct form.
+ 4. **The consequence question is not fully covered by B2.** B2's PREREG (`run/b2-psi-probe`,
+    `ed7fce8`, §7) evicts by `argmin ψ̂` (the fitted probe), FIFO, age-only, random, oracle and
+    kind-oracle. It has **no arm that evicts by `argmin r_i`**. The deferral covers the project's

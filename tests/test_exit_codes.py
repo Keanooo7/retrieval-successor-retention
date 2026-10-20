@@ -142,7 +142,10 @@ def test_the_canary_ledger_row_records_the_exit_code_it_returns(tmp_path, monkey
 
 #: `e` left on 2026-09-26: `experiments/e0e/run.py` is implemented (W7, PREREG
 #: `experiments/e0e/PREREG.md`) and its exit codes are its own tests'.
-STUBS = [f"experiments/e0{x}/run.py" for x in "adfghi"]
+#: `d` left on 2026-09-27: `experiments/e0d/run.py` runs its PREREG preconditions
+#: and writes a ledger, so running it here would write `runs/e0d/` into the tree;
+#: its exit-3 paths are `tests/test_e0d.py`'s (with a fake ledger).
+STUBS = [f"experiments/e0{x}/run.py" for x in "afghi"]
 
 
 @pytest.mark.parametrize("stub", STUBS)
@@ -327,6 +330,16 @@ NOT_CONVERTED = {
         "landed on main (S0-03, #30) after S0-05 was written; not converted in the "
         "merge. :190 exits 1 via `raise SystemExit(msg)` on a corpus precondition, "
         "and argparse's usage error is 2 -- needs its own brief"
+    ),
+    "experiments/e0d/amendment-2/reviews/e0d-a2-final/m5_tau_seeds.py": (
+        "vendored byte copy (2026-09-29) of the script that measured E0d PREREG A2.2's "
+        "frozen tau; the record of what was run, never re-run from the repo, and "
+        "editing it would edit the provenance (experiments/e0d/amendment-2/README.md)"
+    ),
+    "experiments/e0d/amendment-2/reviews/e0d-a2-final/m6_pct_calib_power.py": (
+        "vendored byte copy (2026-09-29) of the script behind E0d PREREG A2.4 / A2.11's "
+        "tables; the record of what was run, never re-run from the repo "
+        "(experiments/e0d/amendment-2/README.md)"
     ),
     "experiments/s0-02/measure_qtok_collapse.py": (
         "not in S0-05's files in scope; three precondition refusals exit 1 via bare "

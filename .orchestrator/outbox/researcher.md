@@ -11,6 +11,7 @@ Regenerate with `PYTHONPATH=scripts .venv/bin/python -m orchestrator.outbox inde
 | 2026-09-30T08:45:00Z | b1-beta-inertness | RETURNED | [b1-beta-inertness.md](b1-beta-inertness.md) |
 | 2026-09-30T08:31:00-07:00 | b5-convergence | RETURNED | [b5-convergence.md](b5-convergence.md) |
 | 2026-09-30T06:40:00Z | newcomer-bakeoff | RETURNED | [newcomer-bakeoff.md](newcomer-bakeoff.md) |
+| 2026-09-29T22:45:00Z | e0d | RETURNED | [e0d.md](e0d.md) |
 | 2026-09-29T17:40:00-07:00 | b2-psi-probe | RETURNED | [b2-psi-probe.md](b2-psi-probe.md) |
 
 Reports filed before per-run files (prepend-only, 2026-09-18 .. 2026-09-21): [_legacy-researcher.md](_legacy-researcher.md).
