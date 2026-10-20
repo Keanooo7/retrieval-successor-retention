@@ -567,3 +567,32 @@ Deploy block: 64 documents in 7.957 s (0.1243 s per document; residency mismatch
 - **Wall under `launch_2a.zsh`'s layout** (9 fits + 3 R-C2 concurrently (12 slots), then 3 selects, then 3 deploys (3 slots each stage); 1 thread per process): 1.27 h. This needs 12 concurrent cpu-det slots for the fits; with fewer the slots queue (`--wait`) and the wall grows toward the serial figure. Measured on one process under the battery's load; 12 concurrent processes may each run slower. Not included: the full suite at the launch head (T1(b) runs two 20-step processes) and the launch checks (§1 (d) search on every branch).
 
 §4.8 says "a projection above 8 h stops 2a and returns to the PM" and does not say whether the projection is CPU-serial or wall-clock under a layout. The two readings disagree here (serial above, layout below), so this amendment does not choose: **the go/no-go on this projection is the PM's.** Nothing above is changed to fit either number.
+
+## Amendment PM-1 (2026-10-20, PM): the 2a stop line, and C10/C12 at K_2b > 3000. Committed alone, before any 2a launch
+
+Two rulings on questions the builder stopped on rather than choosing a reading. Nothing above is edited.
+
+**1. §4.8's 8 h line is wall time under the registered launch layout.** The phase-1 PREREG words its
+line as "a projected wall time above 8 h" (`experiments/post-fails-controls/PREREG.md` §0); §4.8 says
+"a projection above 8 h". The stop line exists to bound how long the launch occupies the machine, so
+wall time is the reading. Amendment 2a-S projects the worst case (9 fits at the 200,000-step cap) at
+10.48 h serial and 1.27 h wall with the launcher's concurrent layout of 12 slots.
+- **Binding launch condition:** 2a launches only when the cpu-det lane can grant the layout's slots,
+  i.e. after the integration battery (8 slots) has exited. The launcher records the slots it was
+  granted.
+- If fewer than 9 slots are granted, the launcher recomputes the wall projection from 2a-S's
+  measured per-fit time for the slots it actually has. If that exceeds 8 h, it exits 3 before any fit.
+
+**2. C10 and C12 when `K_2b > 3000`.** Run 1's C10 checks `iters` equals R-1 (3000; owner ruling
+`R-2026-10-01-rsr-run-1-owner-values`). §5.3 fixes 2b's RSR step count at `K_2b` by rule. That
+authority is PLAN-2026-10-19 §2, phase 2b, approved by the owner: "Step count and projection are
+fixed in the PREREG". C12 requires fifo to be run 1's fifo, byte for byte.
+- **fifo** stays run 1's command at 3000 steps, unchanged, so C12 holds as registered. C10 checks
+  fifo's `iters` against R-1.
+- **psiR and ageR:** C10 checks `iters` against `K_2b`. That is the same value C-K checks against
+  §5.3's rule applied to 2a's ledger. Every other C10 field is checked unchanged.
+- **New control C-F (exit 3):** the fifo arm under the frozen transformer has **no trainable
+  parameter**. Its optimizer holds none, and its checkpoint's transformer and `W_sent` tensors equal
+  the substrate's bit for bit. So fifo's step count cannot change the reader that every arm is read
+  through. If C-F fails, 2b does not read its headline.
+- This changes no threshold, label rule or class rule. It applies only if 2a is WIN on all 3 seeds.
