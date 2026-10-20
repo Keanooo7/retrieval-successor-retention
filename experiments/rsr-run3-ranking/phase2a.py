@@ -984,11 +984,32 @@ def select_seed(
 # --------------------------------------------------------------------------- #
 
 
-def selection_guard(out_root: Path, seed: int) -> dict:
+def select_done(doc: dict | None, standin: int | None) -> bool:
+    """Review F1: ``select`` exited 0 (or, in the stand-in smoke only, is a smoke with
+    no failed control and no error)."""
+    if not doc:
+        return False
+    if doc.get("exit") == 0 and not doc.get("smoke"):
+        return True
+    return (
+        standin is not None
+        and bool(doc.get("smoke"))
+        and not doc.get("controls_failed")
+        and not doc.get("error")
+    )
+
+
+def selection_guard(out_root: Path, seed: int, standin: int | None = None) -> dict:
     """§4.3 / R-C6 before EVAL is read: the selection file exists and hashes to the
     sha written beside it; offline-psi's ``deploy_guard`` (the frozen phi on disk is
     the selected one; the EVAL output does not exist yet)."""
     OP = harness()["OP"]
+    sj = _read(seed_dir(out_root, seed) / "select.json")
+    if not select_done(sj, standin):
+        raise OP.Refused(
+            f"select did not exit 0 for seed {seed} (exit {(sj or {}).get('exit')}, "
+            f"failed {(sj or {}).get('controls_failed')}): EVAL is not opened"
+        )
     sf = selection_file(out_root, seed)
     if not sf.exists():
         raise OP.Refused(f"{sf} is missing: EVAL is read only by the selected phi")
@@ -1017,7 +1038,7 @@ def deploy_seed(
     try:
         ctl = open_stage("deploy", doc)
         OP, R1, R2, CV = (harness()[k] for k in ("OP", "R1", "R2", "CV"))
-        ctl["R-C6.guard"] = selection_guard(out_root, seed)
+        ctl["R-C6.guard"] = selection_guard(out_root, seed, standin)
         event(out_root, "deploy", "start", seed=seed)
         sel = ctl["R-C6.guard"]["selection"]
         cfg = R1.prereg_config(seed, OP.CKPT)
