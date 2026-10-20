@@ -1,0 +1,527 @@
+{
+ "status": "ok",
+ "seed": "a81dc505debc0b1b9009df506a066c697d30a94e3327959c8180dee5aa6c5322",
+ "claims": [
+  {
+   "claim": "1c registered label is DROPPED",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what label",
+   "expected": "DROPPED",
+   "observed": "DROPPED",
+   "match": true,
+   "observed_by": "Independent path (verifier script, embedded as independent_script; imports no experiment harness, only rsr.data.synthetic.SyntheticConfig/_generate_document for doc.pairs): D.pt and delta.pt read directly with torch.load after sha256 == the pins (manifest inputs.delta_sha256 and ~/rsr-substrate/2026-09-27/MANIFEST.sha256); U ids asserted == [64,1088)+[4096,4160) in that order in both files, none sealed; ceiling = exact powers of 9/10 from doc.pairs (Fraction); r_i = D[t][i]; F_i(t) = forward power sum sum_k 0.9^k Delta[t+1+k][i] in numpy float64 (backward recursion cross-checked, max |diff| <= 1.4e-15, no F ties, nearest non-tied F boundary margin >= 1.8e-6 relative); p_j, q_j and agreement as exact Fractions; chance = k/16; pooled point = exact rational (sum agreement - chance*n)/n converted with one rounding; bootstrap indices torch.Generator().manual_seed(20260927+seed).randint(0,1088,(2000,1088)), counts by numpy bincount, replicate = (W @ per-doc (agreement-chance)) / (W @ per-doc decisions), percentile 95% via numpy.quantile (linear). Primary set U, all_live, all decisions t in [16,47), 33728 decisions per seed. Label by PREREG section 5 tightened rule on the re-derived CIs of all 3 seeds.",
+   "detail": {
+    "conditions_per_seed": {
+     "0": {
+      "1": {
+       "ceiling_bottom_lo_gt0": true,
+       "r_i_top_lo_gt0": true,
+       "r_i_bottom_hi_le0": false
+      },
+      "3": {
+       "ceiling_bottom_lo_gt0": true,
+       "r_i_top_lo_gt0": true,
+       "r_i_bottom_hi_le0": false
+      }
+     },
+     "1": {
+      "1": {
+       "ceiling_bottom_lo_gt0": true,
+       "r_i_top_lo_gt0": true,
+       "r_i_bottom_hi_le0": false
+      },
+      "3": {
+       "ceiling_bottom_lo_gt0": true,
+       "r_i_top_lo_gt0": true,
+       "r_i_bottom_hi_le0": true
+      }
+     },
+     "2": {
+      "1": {
+       "ceiling_bottom_lo_gt0": true,
+       "r_i_top_lo_gt0": true,
+       "r_i_bottom_hi_le0": true
+      },
+      "3": {
+       "ceiling_bottom_lo_gt0": true,
+       "r_i_top_lo_gt0": true,
+       "r_i_bottom_hi_le0": true
+      }
+     }
+    }
+   }
+  },
+  {
+   "claim": "seed 2 U.all_live.all.ceiling.bottom.1.point = 0.006374147641047546",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.point --seed 2",
+   "expected": 0.006374147641047546,
+   "observed": 0.006374147641047546,
+   "match": true,
+   "observed_by": "Independent path (verifier script, embedded as independent_script; imports no experiment harness, only rsr.data.synthetic.SyntheticConfig/_generate_document for doc.pairs): D.pt and delta.pt read directly with torch.load after sha256 == the pins (manifest inputs.delta_sha256 and ~/rsr-substrate/2026-09-27/MANIFEST.sha256); U ids asserted == [64,1088)+[4096,4160) in that order in both files, none sealed; ceiling = exact powers of 9/10 from doc.pairs (Fraction); r_i = D[t][i]; F_i(t) = forward power sum sum_k 0.9^k Delta[t+1+k][i] in numpy float64 (backward recursion cross-checked, max |diff| <= 1.4e-15, no F ties, nearest non-tied F boundary margin >= 1.8e-6 relative); p_j, q_j and agreement as exact Fractions; chance = k/16; pooled point = exact rational (sum agreement - chance*n)/n converted with one rounding; bootstrap indices torch.Generator().manual_seed(20260927+seed).randint(0,1088,(2000,1088)), counts by numpy bincount, replicate = (W @ per-doc (agreement-chance)) / (W @ per-doc decisions), percentile 95% via numpy.quantile (linear). Primary set U, all_live, all decisions t in [16,47), 33728 decisions per seed.",
+   "detail": {
+    "point_exact_rational": "38736403/6077111040"
+   }
+  },
+  {
+   "claim": "seed 2 U.all_live.all.r_i.bottom.1.point = -0.017641129032258066",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.point --seed 2",
+   "expected": -0.017641129032258066,
+   "observed": -0.017641129032258066,
+   "match": true,
+   "observed_by": "Independent path (verifier script, embedded as independent_script; imports no experiment harness, only rsr.data.synthetic.SyntheticConfig/_generate_document for doc.pairs): D.pt and delta.pt read directly with torch.load after sha256 == the pins (manifest inputs.delta_sha256 and ~/rsr-substrate/2026-09-27/MANIFEST.sha256); U ids asserted == [64,1088)+[4096,4160) in that order in both files, none sealed; ceiling = exact powers of 9/10 from doc.pairs (Fraction); r_i = D[t][i]; F_i(t) = forward power sum sum_k 0.9^k Delta[t+1+k][i] in numpy float64 (backward recursion cross-checked, max |diff| <= 1.4e-15, no F ties, nearest non-tied F boundary margin >= 1.8e-6 relative); p_j, q_j and agreement as exact Fractions; chance = k/16; pooled point = exact rational (sum agreement - chance*n)/n converted with one rounding; bootstrap indices torch.Generator().manual_seed(20260927+seed).randint(0,1088,(2000,1088)), counts by numpy bincount, replicate = (W @ per-doc (agreement-chance)) / (W @ per-doc decisions), percentile 95% via numpy.quantile (linear). Primary set U, all_live, all decisions t in [16,47), 33728 decisions per seed.",
+   "detail": {
+    "point_exact_rational": "-35/1984"
+   }
+  }
+ ],
+ "verifier_sha": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+ "run_id": "post-fails-controls-1c",
+ "draw": {
+  "n_claims": 55,
+  "k": 3,
+  "indices": [
+   0,
+   37,
+   43
+  ]
+ },
+ "researcher_head": {
+  "ledger_git_sha": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+  "spawn_prompt_sha": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+  "agree": true,
+  "ledger_dirty": false
+ },
+ "extra_checks_note": "The draw covers the label and two seed-2 points but none of the label-determining CI bounds, so these were verified in addition (manager's instruction): r_i bottom-k (agreement - chance) CI upper bound on seed 0 at k=1 and k=3 and on seed 1 at k=1, and the ceiling's bottom-1 CI lower bound on seed 0.",
+ "extra_checks": [
+  {
+   "extra": true,
+   "index": 9,
+   "claim": "seed 0 U.all_live.all.r_i.bottom.1.hi = 0.005959440227703985",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.hi --seed 0",
+   "expected": 0.005959440227703985,
+   "observed": 0.005959440227703985,
+   "match": true,
+   "observed_by": "Independent path (verifier script, embedded as independent_script; imports no experiment harness, only rsr.data.synthetic.SyntheticConfig/_generate_document for doc.pairs): D.pt and delta.pt read directly with torch.load after sha256 == the pins (manifest inputs.delta_sha256 and ~/rsr-substrate/2026-09-27/MANIFEST.sha256); U ids asserted == [64,1088)+[4096,4160) in that order in both files, none sealed; ceiling = exact powers of 9/10 from doc.pairs (Fraction); r_i = D[t][i]; F_i(t) = forward power sum sum_k 0.9^k Delta[t+1+k][i] in numpy float64 (backward recursion cross-checked, max |diff| <= 1.4e-15, no F ties, nearest non-tied F boundary margin >= 1.8e-6 relative); p_j, q_j and agreement as exact Fractions; chance = k/16; pooled point = exact rational (sum agreement - chance*n)/n converted with one rounding; bootstrap indices torch.Generator().manual_seed(20260927+seed).randint(0,1088,(2000,1088)), counts by numpy bincount, replicate = (W @ per-doc (agreement-chance)) / (W @ per-doc decisions), percentile 95% via numpy.quantile (linear). Primary set U, all_live, all decisions t in [16,47), 33728 decisions per seed."
+  },
+  {
+   "extra": true,
+   "index": 18,
+   "claim": "seed 0 U.all_live.all.r_i.bottom.3.hi = 0.0039435582700822255",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.hi --seed 0",
+   "expected": 0.0039435582700822255,
+   "observed": 0.0039435582700822255,
+   "match": true,
+   "observed_by": "Independent path (verifier script, embedded as independent_script; imports no experiment harness, only rsr.data.synthetic.SyntheticConfig/_generate_document for doc.pairs): D.pt and delta.pt read directly with torch.load after sha256 == the pins (manifest inputs.delta_sha256 and ~/rsr-substrate/2026-09-27/MANIFEST.sha256); U ids asserted == [64,1088)+[4096,4160) in that order in both files, none sealed; ceiling = exact powers of 9/10 from doc.pairs (Fraction); r_i = D[t][i]; F_i(t) = forward power sum sum_k 0.9^k Delta[t+1+k][i] in numpy float64 (backward recursion cross-checked, max |diff| <= 1.4e-15, no F ties, nearest non-tied F boundary margin >= 1.8e-6 relative); p_j, q_j and agreement as exact Fractions; chance = k/16; pooled point = exact rational (sum agreement - chance*n)/n converted with one rounding; bootstrap indices torch.Generator().manual_seed(20260927+seed).randint(0,1088,(2000,1088)), counts by numpy bincount, replicate = (W @ per-doc (agreement-chance)) / (W @ per-doc decisions), percentile 95% via numpy.quantile (linear). Primary set U, all_live, all decisions t in [16,47), 33728 decisions per seed."
+  },
+  {
+   "extra": true,
+   "index": 27,
+   "claim": "seed 1 U.all_live.all.r_i.bottom.1.hi = 0.003884754506641362",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.hi --seed 1",
+   "expected": 0.003884754506641362,
+   "observed": 0.003884754506641362,
+   "match": true,
+   "observed_by": "Independent path (verifier script, embedded as independent_script; imports no experiment harness, only rsr.data.synthetic.SyntheticConfig/_generate_document for doc.pairs): D.pt and delta.pt read directly with torch.load after sha256 == the pins (manifest inputs.delta_sha256 and ~/rsr-substrate/2026-09-27/MANIFEST.sha256); U ids asserted == [64,1088)+[4096,4160) in that order in both files, none sealed; ceiling = exact powers of 9/10 from doc.pairs (Fraction); r_i = D[t][i]; F_i(t) = forward power sum sum_k 0.9^k Delta[t+1+k][i] in numpy float64 (backward recursion cross-checked, max |diff| <= 1.4e-15, no F ties, nearest non-tied F boundary margin >= 1.8e-6 relative); p_j, q_j and agreement as exact Fractions; chance = k/16; pooled point = exact rational (sum agreement - chance*n)/n converted with one rounding; bootstrap indices torch.Generator().manual_seed(20260927+seed).randint(0,1088,(2000,1088)), counts by numpy bincount, replicate = (W @ per-doc (agreement-chance)) / (W @ per-doc decisions), percentile 95% via numpy.quantile (linear). Primary set U, all_live, all decisions t in [16,47), 33728 decisions per seed."
+  },
+  {
+   "extra": true,
+   "index": 2,
+   "claim": "seed 0 U.all_live.all.ceiling.bottom.1.lo = 0.006147234009155112",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.lo --seed 0",
+   "expected": 0.006147234009155112,
+   "observed": 0.006147234009155112,
+   "match": true,
+   "observed_by": "Independent path (verifier script, embedded as independent_script; imports no experiment harness, only rsr.data.synthetic.SyntheticConfig/_generate_document for doc.pairs): D.pt and delta.pt read directly with torch.load after sha256 == the pins (manifest inputs.delta_sha256 and ~/rsr-substrate/2026-09-27/MANIFEST.sha256); U ids asserted == [64,1088)+[4096,4160) in that order in both files, none sealed; ceiling = exact powers of 9/10 from doc.pairs (Fraction); r_i = D[t][i]; F_i(t) = forward power sum sum_k 0.9^k Delta[t+1+k][i] in numpy float64 (backward recursion cross-checked, max |diff| <= 1.4e-15, no F ties, nearest non-tied F boundary margin >= 1.8e-6 relative); p_j, q_j and agreement as exact Fractions; chance = k/16; pooled point = exact rational (sum agreement - chance*n)/n converted with one rounding; bootstrap indices torch.Generator().manual_seed(20260927+seed).randint(0,1088,(2000,1088)), counts by numpy bincount, replicate = (W @ per-doc (agreement-chance)) / (W @ per-doc decisions), percentile 95% via numpy.quantile (linear). Primary set U, all_live, all decisions t in [16,47), 33728 decisions per seed."
+  }
+ ],
+ "all_claims_rederived": {
+  "note": "Informational, not the drawn set. All 54 numeric claims re-derived on the independent path. Every lo/hi is bit-equal. 49 of 54 are bit-equal outright; the 5 points that are not differ by 1 ulp only because this path rounds the exact rational once while the harness rounds twice ((A-C)/UNITS then /N); under the harness's rounding order the same exact rational gives the claimed float in all 5 (see table).",
+  "table": [
+   {
+    "index": 1,
+    "claim": "seed 0 U.all_live.all.ceiling.bottom.1.point = 0.006585909404413319",
+    "observed": 0.006585909404413318,
+    "exact": false,
+    "claimant_rounding_order_((A-C)/UNITS)/N": 0.006585909404413319,
+    "equal_under_claimant_rounding_order": true,
+    "point_exact_rational": "160093211/24308444160"
+   },
+   {
+    "index": 2,
+    "claim": "seed 0 U.all_live.all.ceiling.bottom.1.lo = 0.006147234009155112",
+    "observed": 0.006147234009155112,
+    "exact": true
+   },
+   {
+    "index": 3,
+    "claim": "seed 0 U.all_live.all.ceiling.bottom.1.hi = 0.007019774323146151",
+    "observed": 0.007019774323146151,
+    "exact": true
+   },
+   {
+    "index": 4,
+    "claim": "seed 0 U.all_live.all.r_i.top.1.point = 0.0903996679316888",
+    "observed": 0.0903996679316888,
+    "exact": true
+   },
+   {
+    "index": 5,
+    "claim": "seed 0 U.all_live.all.r_i.top.1.lo = 0.08621842386148007",
+    "observed": 0.08621842386148007,
+    "exact": true
+   },
+   {
+    "index": 6,
+    "claim": "seed 0 U.all_live.all.r_i.top.1.hi = 0.09446231617647059",
+    "observed": 0.09446231617647059,
+    "exact": true
+   },
+   {
+    "index": 7,
+    "claim": "seed 0 U.all_live.all.r_i.bottom.1.point = 0.0025794592030360533",
+    "observed": 0.0025794592030360533,
+    "exact": true
+   },
+   {
+    "index": 8,
+    "claim": "seed 0 U.all_live.all.r_i.bottom.1.lo = -0.0007412239089184061",
+    "observed": -0.0007412239089184061,
+    "exact": true
+   },
+   {
+    "index": 9,
+    "claim": "seed 0 U.all_live.all.r_i.bottom.1.hi = 0.005959440227703985",
+    "observed": 0.005959440227703985,
+    "exact": true
+   },
+   {
+    "index": 10,
+    "claim": "seed 0 U.all_live.all.ceiling.bottom.3.point = 0.02357011288870575",
+    "observed": 0.02357011288870575,
+    "exact": true
+   },
+   {
+    "index": 11,
+    "claim": "seed 0 U.all_live.all.ceiling.bottom.3.lo = 0.022856741878168812",
+    "observed": 0.022856741878168812,
+    "exact": true
+   },
+   {
+    "index": 12,
+    "claim": "seed 0 U.all_live.all.ceiling.bottom.3.hi = 0.024297519639159007",
+    "observed": 0.024297519639159007,
+    "exact": true
+   },
+   {
+    "index": 13,
+    "claim": "seed 0 U.all_live.all.r_i.top.3.point = 0.13682005060088553",
+    "observed": 0.1368200506008855,
+    "exact": false,
+    "claimant_rounding_order_((A-C)/UNITS)/N": 0.13682005060088553,
+    "equal_under_claimant_rounding_order": true,
+    "point_exact_rational": "3461/25296"
+   },
+   {
+    "index": 14,
+    "claim": "seed 0 U.all_live.all.r_i.top.3.lo = 0.1336967801233397",
+    "observed": 0.1336967801233397,
+    "exact": true
+   },
+   {
+    "index": 15,
+    "claim": "seed 0 U.all_live.all.r_i.top.3.hi = 0.13997321710942442",
+    "observed": 0.13997321710942442,
+    "exact": true
+   },
+   {
+    "index": 16,
+    "claim": "seed 0 U.all_live.all.r_i.bottom.3.point = 0.0007412239089184061",
+    "observed": 0.0007412239089184061,
+    "exact": true
+   },
+   {
+    "index": 17,
+    "claim": "seed 0 U.all_live.all.r_i.bottom.3.lo = -0.0022043999051233392",
+    "observed": -0.0022043999051233392,
+    "exact": true
+   },
+   {
+    "index": 18,
+    "claim": "seed 0 U.all_live.all.r_i.bottom.3.hi = 0.0039435582700822255",
+    "observed": 0.0039435582700822255,
+    "exact": true
+   },
+   {
+    "index": 19,
+    "claim": "seed 1 U.all_live.all.ceiling.bottom.1.point = 0.00755134564728967",
+    "observed": 0.00755134564728967,
+    "exact": true
+   },
+   {
+    "index": 20,
+    "claim": "seed 1 U.all_live.all.ceiling.bottom.1.lo = 0.0071612386236733945",
+    "observed": 0.0071612386236733945,
+    "exact": true
+   },
+   {
+    "index": 21,
+    "claim": "seed 1 U.all_live.all.ceiling.bottom.1.hi = 0.007927592650791848",
+    "observed": 0.007927592650791848,
+    "exact": true
+   },
+   {
+    "index": 22,
+    "claim": "seed 1 U.all_live.all.r_i.top.1.point = 0.10276328273244782",
+    "observed": 0.10276328273244782,
+    "exact": true
+   },
+   {
+    "index": 23,
+    "claim": "seed 1 U.all_live.all.r_i.top.1.lo = 0.09840488614800759",
+    "observed": 0.09840488614800759,
+    "exact": true
+   },
+   {
+    "index": 24,
+    "claim": "seed 1 U.all_live.all.r_i.top.1.hi = 0.10712167931688804",
+    "observed": 0.10712167931688804,
+    "exact": true
+   },
+   {
+    "index": 25,
+    "claim": "seed 1 U.all_live.all.r_i.bottom.1.point = 0.0004447343453510436",
+    "observed": 0.0004447343453510436,
+    "exact": true
+   },
+   {
+    "index": 26,
+    "claim": "seed 1 U.all_live.all.r_i.bottom.1.lo = -0.003053842504743833",
+    "observed": -0.003053842504743833,
+    "exact": true
+   },
+   {
+    "index": 27,
+    "claim": "seed 1 U.all_live.all.r_i.bottom.1.hi = 0.003884754506641362",
+    "observed": 0.003884754506641362,
+    "exact": true
+   },
+   {
+    "index": 28,
+    "claim": "seed 1 U.all_live.all.ceiling.bottom.3.point = 0.02568041401132601",
+    "observed": 0.02568041401132601,
+    "exact": true
+   },
+   {
+    "index": 29,
+    "claim": "seed 1 U.all_live.all.ceiling.bottom.3.lo = 0.02499219010279924",
+    "observed": 0.02499219010279924,
+    "exact": true
+   },
+   {
+    "index": 30,
+    "claim": "seed 1 U.all_live.all.ceiling.bottom.3.hi = 0.026375560847494404",
+    "observed": 0.026375560847494404,
+    "exact": true
+   },
+   {
+    "index": 31,
+    "claim": "seed 1 U.all_live.all.r_i.top.3.point = 0.16161646110056926",
+    "observed": 0.16161646110056926,
+    "exact": true
+   },
+   {
+    "index": 32,
+    "claim": "seed 1 U.all_live.all.r_i.top.3.lo = 0.15785054949399113",
+    "observed": 0.15785054949399113,
+    "exact": true
+   },
+   {
+    "index": 33,
+    "claim": "seed 1 U.all_live.all.r_i.top.3.hi = 0.16529317876344088",
+    "observed": 0.16529317876344088,
+    "exact": true
+   },
+   {
+    "index": 34,
+    "claim": "seed 1 U.all_live.all.r_i.bottom.3.point = -0.004486875395319418",
+    "observed": -0.004486875395319418,
+    "exact": true
+   },
+   {
+    "index": 35,
+    "claim": "seed 1 U.all_live.all.r_i.bottom.3.lo = -0.007937272691334598",
+    "observed": -0.007937272691334598,
+    "exact": true
+   },
+   {
+    "index": 36,
+    "claim": "seed 1 U.all_live.all.r_i.bottom.3.hi = -0.0010572323687539538",
+    "observed": -0.0010572323687539538,
+    "exact": true
+   },
+   {
+    "index": 37,
+    "claim": "seed 2 U.all_live.all.ceiling.bottom.1.point = 0.006374147641047546",
+    "observed": 0.006374147641047546,
+    "exact": true
+   },
+   {
+    "index": 38,
+    "claim": "seed 2 U.all_live.all.ceiling.bottom.1.lo = 0.005946627071174925",
+    "observed": 0.005946627071174925,
+    "exact": true
+   },
+   {
+    "index": 39,
+    "claim": "seed 2 U.all_live.all.ceiling.bottom.1.hi = 0.006804741815693399",
+    "observed": 0.006804741815693399,
+    "exact": true
+   },
+   {
+    "index": 40,
+    "claim": "seed 2 U.all_live.all.r_i.top.1.point = 0.10039136622390891",
+    "observed": 0.10039136622390891,
+    "exact": true
+   },
+   {
+    "index": 41,
+    "claim": "seed 2 U.all_live.all.r_i.top.1.lo = 0.09618121442125237",
+    "observed": 0.09618121442125237,
+    "exact": true
+   },
+   {
+    "index": 42,
+    "claim": "seed 2 U.all_live.all.r_i.top.1.hi = 0.10460225925047438",
+    "observed": 0.10460225925047438,
+    "exact": true
+   },
+   {
+    "index": 43,
+    "claim": "seed 2 U.all_live.all.r_i.bottom.1.point = -0.017641129032258066",
+    "observed": -0.017641129032258066,
+    "exact": true
+   },
+   {
+    "index": 44,
+    "claim": "seed 2 U.all_live.all.r_i.bottom.1.lo = -0.020251719639468688",
+    "observed": -0.020251719639468688,
+    "exact": true
+   },
+   {
+    "index": 45,
+    "claim": "seed 2 U.all_live.all.r_i.bottom.1.hi = -0.014883034867172679",
+    "observed": -0.014883034867172679,
+    "exact": true
+   },
+   {
+    "index": 46,
+    "claim": "seed 2 U.all_live.all.ceiling.bottom.3.point = 0.0225106004480708",
+    "observed": 0.022510600448070798,
+    "exact": false,
+    "claimant_rounding_order_((A-C)/UNITS)/N": 0.0225106004480708,
+    "equal_under_claimant_rounding_order": true,
+    "point_exact_rational": "273598837/12154222080"
+   },
+   {
+    "index": 47,
+    "claim": "seed 2 U.all_live.all.ceiling.bottom.3.lo = 0.021762928180139026",
+    "observed": 0.021762928180139026,
+    "exact": true
+   },
+   {
+    "index": 48,
+    "claim": "seed 2 U.all_live.all.ceiling.bottom.3.hi = 0.02330178363932774",
+    "observed": 0.02330178363932774,
+    "exact": true
+   },
+   {
+    "index": 49,
+    "claim": "seed 2 U.all_live.all.r_i.top.3.point = 0.14229522454142945",
+    "observed": 0.14229522454142948,
+    "exact": false,
+    "claimant_rounding_order_((A-C)/UNITS)/N": 0.14229522454142945,
+    "equal_under_claimant_rounding_order": true,
+    "point_exact_rational": "7199/50592"
+   },
+   {
+    "index": 50,
+    "claim": "seed 2 U.all_live.all.r_i.top.3.lo = 0.13896441136938648",
+    "observed": 0.13896441136938648,
+    "exact": true
+   },
+   {
+    "index": 51,
+    "claim": "seed 2 U.all_live.all.r_i.top.3.hi = 0.14604087602783047",
+    "observed": 0.14604087602783047,
+    "exact": true
+   },
+   {
+    "index": 52,
+    "claim": "seed 2 U.all_live.all.r_i.bottom.3.point = -0.019074161922833652",
+    "observed": -0.01907416192283365,
+    "exact": false,
+    "claimant_rounding_order_((A-C)/UNITS)/N": -0.019074161922833652,
+    "equal_under_claimant_rounding_order": true,
+    "point_exact_rational": "-965/50592"
+   },
+   {
+    "index": 53,
+    "claim": "seed 2 U.all_live.all.r_i.bottom.3.lo = -0.022622153700189752",
+    "observed": -0.022622153700189752,
+    "exact": true
+   },
+   {
+    "index": 54,
+    "claim": "seed 2 U.all_live.all.r_i.bottom.3.hi = -0.015921489563567363",
+    "observed": -0.015921489563567363,
+    "exact": true
+   }
+  ]
+ },
+ "rederived_conditions": {
+  "0": {
+   "1": {
+    "ceiling_bottom_lo_gt0": true,
+    "r_i_top_lo_gt0": true,
+    "r_i_bottom_hi_le0": false
+   },
+   "3": {
+    "ceiling_bottom_lo_gt0": true,
+    "r_i_top_lo_gt0": true,
+    "r_i_bottom_hi_le0": false
+   }
+  },
+  "1": {
+   "1": {
+    "ceiling_bottom_lo_gt0": true,
+    "r_i_top_lo_gt0": true,
+    "r_i_bottom_hi_le0": false
+   },
+   "3": {
+    "ceiling_bottom_lo_gt0": true,
+    "r_i_top_lo_gt0": true,
+    "r_i_bottom_hi_le0": true
+   }
+  },
+  "2": {
+   "1": {
+    "ceiling_bottom_lo_gt0": true,
+    "r_i_top_lo_gt0": true,
+    "r_i_bottom_hi_le0": true
+   },
+   "3": {
+    "ceiling_bottom_lo_gt0": true,
+    "r_i_top_lo_gt0": true,
+    "r_i_bottom_hi_le0": true
+   }
+  }
+ },
+ "notes": [
+  "Label-determining failures on the re-derived numbers: seed 0 k=1 r_i bottom-1 hi = 0.005959440227703985 > 0; seed 0 k=3 r_i bottom-3 hi = 0.0039435582700822255 > 0; seed 1 k=1 r_i bottom-1 hi = 0.003884754506641362 > 0. Every other condition holds on every seed: ceiling bottom-k lo > 0 and r_i top-k lo > 0 at k=1,3 on all 3 seeds; r_i bottom-k hi <= 0 at seed 1 k=3, seed 2 k=1, seed 2 k=3.",
+  "Ties: F has no ties on any decision row of any seed; r_i has one row (seed 1) tied at the bottom-1 boundary, handled by the exact fractional rule. No near-ties at float resolution at any k-boundary (min nonzero relative margin 3.1e-7).",
+  "The claimant's harness commands were not run. The label claim's own command ('recompute --what label') calls label(conds, controls_ok=True), so it re-derives the label from the numbers only and could not reproduce a control-failure DROPPED. The observed label here comes from the independent path's numbers.",
+  "Inputs read from the worktree paths, sha256-equal to the pins: D.pt seed0/1/2 9aadab23.../001ce61c.../20813d0a...; delta.pt seed0/1/2 1c047a36.../bf2753ce.../c880a241....",
+  "Not re-executed: controls C-C1..C-C7 (ES, psiC, op, ls rows, C-C3 forward). The verified scope is the label and the r_i/ceiling primary-set numbers."
+ ],
+ "independent_script": "\"\"\"Independent re-derivation of post-fails-controls-1c primary-set numbers.\n\nDifferent path from item_1c.py: reads D.pt / delta.pt directly, builds the ceiling\nfrom doc.pairs as exact powers of 9/10, F by a forward power-sum (not the backward\nrecursion), p_j/q_j as exact Fractions, pooled point as an exact rational, bootstrap\ncounts via numpy bincount over the PREREG's torch.Generator(20260927+seed) draw,\npercentile CI via numpy.quantile.  Imports no experiment script.\n\"\"\"\n\nimport hashlib\nimport json\nimport sys\nfrom fractions import Fraction\n\nimport numpy as np\nimport torch\n\nfrom rsr.data.synthetic import SyntheticConfig, _generate_document\n\nR = \"/Users/keanooo7/retrieval-successor-retention\"\nDPT = R + \"/.worktrees/lookahead-room/runs/lookahead-room-r2/raw/B-ckpt3000-seed{s}.D.pt\"\nDEL = R + \"/.worktrees/cf-ceiling/runs/cf-ceiling/raw/B-ckpt3000-seed{s}.delta.pt\"\nPIN_D = {\n    0: \"9aadab236221b384377a3d436bdd1703a215bdf4cebc8b1b04f10e964db6073c\",\n    1: \"001ce61c14715e60ba0455fe2690661d58d8a8dd88e708283d0baa709a32615a\",\n    2: \"20813d0a084417bd0f49ecd7ab283e68a5de5c7572f876e9db45936f4578dfd3\",\n}\nPIN_DEL = {\n    0: \"1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72\",\n    1: \"bf2753cef826f8d3c1647213d232c65a1e2167160be1a6c262fbea132b838700\",\n    2: \"c880a2413fa2a4840724c7c005778df8cda77932f9db0fb6081db495514ce9c2\",\n}\nM, S, GAMMA = 16, 48, 0.9\nTS = list(range(M, S - 1))  # decisions t in [16, 47)\nKS = (1, 3)\nSEALED = [(997200, 997712), (984000, 986048)]\n\n\ndef sha(p):\n    h = hashlib.sha256()\n    with open(p, \"rb\") as f:\n        for b in iter(lambda: f.read(1 << 20), b\"\"):\n            h.update(b)\n    return h.hexdigest()\n\n\ndef probs(vals, k):\n    \"\"\"Exact bottom-k membership probability per element (uniform tie-break).\"\"\"\n    srt = sorted(vals)\n    kth = srt[k - 1]\n    nb = sum(1 for v in vals if v < kth)\n    nt = sum(1 for v in vals if v == kth)\n    return [Fraction(1) if v < kth else (Fraction(k - nb, nt) if v == kth else Fraction(0)) for v in vals]\n\n\ndef agree(x, f, k, top):\n    if top:\n        x = [-v for v in x]\n        f = [-v for v in f]\n    p, q = probs(x, k), probs(f, k)\n    return sum((a * b for a, b in zip(p, q)), Fraction(0)) / k\n\n\ndef margin(vals, k):\n    \"\"\"Relative gap at the k-boundary (0 if tied there).\"\"\"\n    srt = sorted(vals)\n    a, b = srt[k - 1], srt[k]\n    return abs(b - a) / max(abs(a), abs(b), 1e-300)\n\n\ndef run_seed(s):\n    out = {\"seed\": s}\n    assert sha(DPT.format(s=s)) == PIN_D[s], \"D.pt pin\"\n    assert sha(DEL.format(s=s)) == PIN_DEL[s], \"delta pin\"\n    D = torch.load(DPT.format(s=s), weights_only=True)\n    Dl = torch.load(DEL.format(s=s), weights_only=True)[\"Delta\"]\n    ids = list(D.keys())\n    expect = list(range(64, 1088)) + list(range(4096, 4160))\n    assert ids == expect and list(Dl.keys()) == expect, \"U ids / order\"\n    assert not any(lo <= i < hi for i in ids for lo, hi in SEALED)\n    cfg = SyntheticConfig(sentences_per_document=S, seed=s)\n    combos = [(sc, d, k) for sc in (\"ceiling\", \"r_i\") for d in (\"bottom\", \"top\") for k in KS]\n    per = {c: [] for c in combos}  # per document: exact sum of agreement over decisions\n    ndec = []\n    tie_rows = {\"F\": 0, \"r_i\": 0}\n    min_margin = {(\"F\", k): 1.0 for k in KS}\n    min_margin.update({(\"r_i\", k): 1.0 for k in KS})\n    fwd_vs_bwd_maxabs = 0.0\n    boundary_ties = {(a, k): 0 for a in (\"F\", \"r_i\") for k in KS}\n    for did in ids:\n        doc = _generate_document(did, cfg)\n        assert doc.doc_id == did and len(doc.sentences) == S\n        q_of = {a: q for a, q in doc.pairs}\n        assert len(q_of) == len(doc.pairs)\n        Dm = D[did].numpy()\n        Dx = Dl[did].numpy()\n        # C-C2-style: finite iff i < t\n        tt, ii = np.meshgrid(np.arange(S), np.arange(S), indexing=\"ij\")\n        assert np.isfinite(Dm[ii < tt]).all() and np.isnan(Dm[ii >= tt]).all()\n        assert np.isfinite(Dx[ii < tt]).all() and np.isnan(Dx[ii >= tt]).all()\n        acc = {c: Fraction(0) for c in combos}\n        for t in TS:\n            live = list(range(t - M, t))\n            # ceiling: discounted true demand strictly after t, exact powers of 9/10\n            ceil = []\n            for i in live:\n                q = q_of.get(i)\n                ceil.append(Fraction(9, 10) ** (q - t - 1) if (q is not None and q >= t + 1) else Fraction(0))\n            ri = [float(Dm[t, i]) for i in live]\n            # F_i(t) = sum_{T >= t+1} 0.9^(T-t-1) Delta[T][i], forward power sum\n            F = []\n            for i in live:\n                col = Dx[t + 1 :, i]\n                w = GAMMA ** np.arange(len(col), dtype=np.float64)\n                F.append(float(np.dot(w, col)))\n            # cross-check with a backward recursion (the definition's other order)\n            for j, i in enumerate(live):\n                g = 0.0\n                for T in range(S - 1, t, -1):\n                    g = Dx[T, i] + GAMMA * g\n                fwd_vs_bwd_maxabs = max(fwd_vs_bwd_maxabs, abs(g - F[j]))\n            if len(set(F)) < M:\n                tie_rows[\"F\"] += 1\n            if len(set(ri)) < M:\n                tie_rows[\"r_i\"] += 1\n            for k in KS:\n                for nm, v in ((\"F\", F), (\"r_i\", ri)):\n                    for vv in (v, [-x for x in v]):\n                        mg = margin(vv, k)\n                        if mg == 0:\n                            boundary_ties[(nm, k)] += 1\n                        else:\n                            min_margin[(nm, k)] = min(min_margin[(nm, k)], mg)\n            for sc, d, k in combos:\n                x = ceil if sc == \"ceiling\" else ri\n                acc[(sc, d, k)] += agree(x, F, k, d == \"top\")\n        for c in combos:\n            per[c].append(acc[c])\n        ndec.append(len(TS))\n    n = len(ids)\n    g = torch.Generator().manual_seed(20260927 + s)\n    idx = torch.randint(0, n, (2000, n), generator=g).numpy()\n    W = np.stack([np.bincount(r, minlength=n) for r in idx]).astype(np.float64)\n    nd = np.array(ndec, dtype=np.float64)\n    den = W @ nd\n    res = {}\n    for sc, d, k in combos:\n        ch = Fraction(k, M)\n        diff = [a - ch * nn for a, nn in zip(per[(sc, d, k)], ndec)]\n        pt = sum(diff, Fraction(0)) / sum(ndec)\n        num = W @ np.array([float(x) for x in diff])\n        rep = num / den\n        lo, hi = np.quantile(rep, [0.025, 0.975])\n        res[f\"{sc}.{d}.{k}\"] = {\n            \"point\": float(pt),\n            \"point_exact\": f\"{pt.numerator}/{pt.denominator}\",\n            \"lo\": float(lo),\n            \"hi\": float(hi),\n        }\n    out[\"n_docs\"] = n\n    out[\"n_decisions\"] = int(sum(ndec))\n    out[\"results\"] = res\n    out[\"tie_rows\"] = tie_rows\n    out[\"min_margin_nonzero_rows\"] = {f\"{a}.{k}\": v for (a, k), v in min_margin.items()}\n    out[\"boundary_ties\"] = {f\"{a}.{k}\": v for (a, k), v in boundary_ties.items()}\n    out[\"F_fwd_vs_bwd_maxabs\"] = fwd_vs_bwd_maxabs\n    out[\"conditions\"] = {\n        str(k): {\n            \"ceiling_bottom_lo_gt0\": res[f\"ceiling.bottom.{k}\"][\"lo\"] > 0,\n            \"r_i_top_lo_gt0\": res[f\"r_i.top.{k}\"][\"lo\"] > 0,\n            \"r_i_bottom_hi_le0\": res[f\"r_i.bottom.{k}\"][\"hi\"] <= 0,\n        }\n        for k in KS\n    }\n    return out\n\n\nif __name__ == \"__main__\":\n    torch.set_num_threads(1)\n    allr = {s: run_seed(s) for s in (0, 1, 2)}\n    lab = \"SURVIVES\" if all(all(c.values()) for r in allr.values() for c in r[\"conditions\"].values()) else \"DROPPED\"\n    print(json.dumps({\"label\": lab, \"seeds\": allr}, indent=1))\n    sys.exit(0)\n",
+ "independent_script_sha256": "993ca52657397265f81d4ba94335a9c49ae6c4ecd8b826bd1703bc1d1ba9989e"
+}

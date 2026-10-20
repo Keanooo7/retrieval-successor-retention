@@ -1,0 +1,277 @@
+[
+ {
+  "claim": "1c registered label is DROPPED",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what label",
+  "expected": "DROPPED"
+ },
+ {
+  "claim": "seed 0 U.all_live.all.ceiling.bottom.1.point = 0.006585909404413319",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.point --seed 0",
+  "expected": 0.006585909404413319
+ },
+ {
+  "claim": "seed 0 U.all_live.all.ceiling.bottom.1.lo = 0.006147234009155112",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.lo --seed 0",
+  "expected": 0.006147234009155112
+ },
+ {
+  "claim": "seed 0 U.all_live.all.ceiling.bottom.1.hi = 0.007019774323146151",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.hi --seed 0",
+  "expected": 0.007019774323146151
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.top.1.point = 0.0903996679316888",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.point --seed 0",
+  "expected": 0.0903996679316888
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.top.1.lo = 0.08621842386148007",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.lo --seed 0",
+  "expected": 0.08621842386148007
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.top.1.hi = 0.09446231617647059",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.hi --seed 0",
+  "expected": 0.09446231617647059
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.bottom.1.point = 0.0025794592030360533",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.point --seed 0",
+  "expected": 0.0025794592030360533
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.bottom.1.lo = -0.0007412239089184061",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.lo --seed 0",
+  "expected": -0.0007412239089184061
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.bottom.1.hi = 0.005959440227703985",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.hi --seed 0",
+  "expected": 0.005959440227703985
+ },
+ {
+  "claim": "seed 0 U.all_live.all.ceiling.bottom.3.point = 0.02357011288870575",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.point --seed 0",
+  "expected": 0.02357011288870575
+ },
+ {
+  "claim": "seed 0 U.all_live.all.ceiling.bottom.3.lo = 0.022856741878168812",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.lo --seed 0",
+  "expected": 0.022856741878168812
+ },
+ {
+  "claim": "seed 0 U.all_live.all.ceiling.bottom.3.hi = 0.024297519639159007",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.hi --seed 0",
+  "expected": 0.024297519639159007
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.top.3.point = 0.13682005060088553",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.point --seed 0",
+  "expected": 0.13682005060088553
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.top.3.lo = 0.1336967801233397",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.lo --seed 0",
+  "expected": 0.1336967801233397
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.top.3.hi = 0.13997321710942442",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.hi --seed 0",
+  "expected": 0.13997321710942442
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.bottom.3.point = 0.0007412239089184061",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.point --seed 0",
+  "expected": 0.0007412239089184061
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.bottom.3.lo = -0.0022043999051233392",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.lo --seed 0",
+  "expected": -0.0022043999051233392
+ },
+ {
+  "claim": "seed 0 U.all_live.all.r_i.bottom.3.hi = 0.0039435582700822255",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.hi --seed 0",
+  "expected": 0.0039435582700822255
+ },
+ {
+  "claim": "seed 1 U.all_live.all.ceiling.bottom.1.point = 0.00755134564728967",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.point --seed 1",
+  "expected": 0.00755134564728967
+ },
+ {
+  "claim": "seed 1 U.all_live.all.ceiling.bottom.1.lo = 0.0071612386236733945",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.lo --seed 1",
+  "expected": 0.0071612386236733945
+ },
+ {
+  "claim": "seed 1 U.all_live.all.ceiling.bottom.1.hi = 0.007927592650791848",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.hi --seed 1",
+  "expected": 0.007927592650791848
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.top.1.point = 0.10276328273244782",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.point --seed 1",
+  "expected": 0.10276328273244782
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.top.1.lo = 0.09840488614800759",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.lo --seed 1",
+  "expected": 0.09840488614800759
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.top.1.hi = 0.10712167931688804",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.hi --seed 1",
+  "expected": 0.10712167931688804
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.bottom.1.point = 0.0004447343453510436",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.point --seed 1",
+  "expected": 0.0004447343453510436
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.bottom.1.lo = -0.003053842504743833",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.lo --seed 1",
+  "expected": -0.003053842504743833
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.bottom.1.hi = 0.003884754506641362",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.hi --seed 1",
+  "expected": 0.003884754506641362
+ },
+ {
+  "claim": "seed 1 U.all_live.all.ceiling.bottom.3.point = 0.02568041401132601",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.point --seed 1",
+  "expected": 0.02568041401132601
+ },
+ {
+  "claim": "seed 1 U.all_live.all.ceiling.bottom.3.lo = 0.02499219010279924",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.lo --seed 1",
+  "expected": 0.02499219010279924
+ },
+ {
+  "claim": "seed 1 U.all_live.all.ceiling.bottom.3.hi = 0.026375560847494404",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.hi --seed 1",
+  "expected": 0.026375560847494404
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.top.3.point = 0.16161646110056926",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.point --seed 1",
+  "expected": 0.16161646110056926
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.top.3.lo = 0.15785054949399113",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.lo --seed 1",
+  "expected": 0.15785054949399113
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.top.3.hi = 0.16529317876344088",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.hi --seed 1",
+  "expected": 0.16529317876344088
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.bottom.3.point = -0.004486875395319418",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.point --seed 1",
+  "expected": -0.004486875395319418
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.bottom.3.lo = -0.007937272691334598",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.lo --seed 1",
+  "expected": -0.007937272691334598
+ },
+ {
+  "claim": "seed 1 U.all_live.all.r_i.bottom.3.hi = -0.0010572323687539538",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.hi --seed 1",
+  "expected": -0.0010572323687539538
+ },
+ {
+  "claim": "seed 2 U.all_live.all.ceiling.bottom.1.point = 0.006374147641047546",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.point --seed 2",
+  "expected": 0.006374147641047546
+ },
+ {
+  "claim": "seed 2 U.all_live.all.ceiling.bottom.1.lo = 0.005946627071174925",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.lo --seed 2",
+  "expected": 0.005946627071174925
+ },
+ {
+  "claim": "seed 2 U.all_live.all.ceiling.bottom.1.hi = 0.006804741815693399",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.1.hi --seed 2",
+  "expected": 0.006804741815693399
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.top.1.point = 0.10039136622390891",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.point --seed 2",
+  "expected": 0.10039136622390891
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.top.1.lo = 0.09618121442125237",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.lo --seed 2",
+  "expected": 0.09618121442125237
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.top.1.hi = 0.10460225925047438",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.1.hi --seed 2",
+  "expected": 0.10460225925047438
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.bottom.1.point = -0.017641129032258066",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.point --seed 2",
+  "expected": -0.017641129032258066
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.bottom.1.lo = -0.020251719639468688",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.lo --seed 2",
+  "expected": -0.020251719639468688
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.bottom.1.hi = -0.014883034867172679",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.1.hi --seed 2",
+  "expected": -0.014883034867172679
+ },
+ {
+  "claim": "seed 2 U.all_live.all.ceiling.bottom.3.point = 0.0225106004480708",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.point --seed 2",
+  "expected": 0.0225106004480708
+ },
+ {
+  "claim": "seed 2 U.all_live.all.ceiling.bottom.3.lo = 0.021762928180139026",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.lo --seed 2",
+  "expected": 0.021762928180139026
+ },
+ {
+  "claim": "seed 2 U.all_live.all.ceiling.bottom.3.hi = 0.02330178363932774",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.ceiling.bottom.3.hi --seed 2",
+  "expected": 0.02330178363932774
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.top.3.point = 0.14229522454142945",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.point --seed 2",
+  "expected": 0.14229522454142945
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.top.3.lo = 0.13896441136938648",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.lo --seed 2",
+  "expected": 0.13896441136938648
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.top.3.hi = 0.14604087602783047",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.top.3.hi --seed 2",
+  "expected": 0.14604087602783047
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.bottom.3.point = -0.019074161922833652",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.point --seed 2",
+  "expected": -0.019074161922833652
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.bottom.3.lo = -0.022622153700189752",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.lo --seed 2",
+  "expected": -0.022622153700189752
+ },
+ {
+  "claim": "seed 2 U.all_live.all.r_i.bottom.3.hi = -0.015921489563567363",
+  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1c recompute --what U.all_live.all.r_i.bottom.3.hi --seed 2",
+  "expected": -0.015921489563567363
+ }
+]
