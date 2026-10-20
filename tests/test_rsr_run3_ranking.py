@@ -32,6 +32,7 @@ import importlib.util
 import inspect
 import json
 import os
+import shlex
 import subprocess
 import sys
 import textwrap
@@ -171,8 +172,14 @@ def rsr_728a42f(tmp_path_factory):
         text=True,
     )
     assert r.returncode == 0, r.stderr
-    for dep in ("mc.py", "value_head.py", "targets.py", "instrumentation.py", "policy.py",
-                "reward.py"):  # fmt: skip
+    for dep in (
+        "mc.py",
+        "value_head.py",
+        "targets.py",
+        "instrumentation.py",
+        "policy.py",
+        "reward.py",
+    ):
         q = subprocess.run(
             [GIT, "diff", "--quiet", RUN2_HEAD, "--", f"src/rsr/retention/{dep}"],
             cwd=ROOT,
@@ -317,10 +324,17 @@ def test_t1b_twenty_steps_end_to_end_identical_to_728a42f(tmp_path):
         env = R1.thread_env(1)
         env["PYTHONPATH"] = os.pathsep.join([str(src), str(ROOT / "scripts")])
         probe = subprocess.run(
-            [str(PY), "-c", "import rsr, importlib.util as u; print(rsr.__file__); "
-             "print(u.find_spec('rsr.retention.rank_loss') is not None)"],
-            cwd=ROOT, env=env, capture_output=True, text=True,
-        )  # fmt: skip
+            [
+                str(PY),
+                "-c",
+                "import rsr, importlib.util as u; print(rsr.__file__); "
+                "print(u.find_spec('rsr.retention.rank_loss') is not None)",
+            ],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
         f, sw = probe.stdout.split()
         assert Path(f).resolve().is_relative_to(src.resolve()) and sw == str(has_switch)
     a, b = tmp_path / "new", tmp_path / "old"
@@ -606,9 +620,17 @@ def test_t5_planted_bilinear_target_is_learned(p2a):
     opt = torch.optim.AdamW(head.parameters(), lr=0.2, weight_decay=0.0)
     pos = list(range(N))
     r = p2a.fit_loop(
-        head, opt, data, pos, seed=0, loss="rank", omega=8.0, cap=1500, every=250,
+        head,
+        opt,
+        data,
+        pos,
+        seed=0,
+        loss="rank",
+        omega=8.0,
+        cap=1500,
+        every=250,
         stop_on_convergence=False,
-    )  # fmt: skip
+    )
     j = [h["J"] for h in r["history"]]
     assert j[-1] < 0.05 * j[0]
     P = p2a._H["OP"].psi_matrix(head, Sx, Cx).detach()
@@ -647,13 +669,15 @@ def test_fit_loop_stops_at_convergence_and_reports_cap_hit(p2a):
     }
     head = BilinearValueHead(d, generator=torch.Generator().manual_seed(1))
     opt = torch.optim.AdamW(head.parameters(), lr=0.0)  # nothing moves: J flat
-    r = p2a.fit_loop(head, opt, data, list(range(N)), seed=0, loss="rank", omega=2.0,
-                     cap=10_000)  # fmt: skip
+    r = p2a.fit_loop(
+        head, opt, data, list(range(N)), seed=0, loss="rank", omega=2.0, cap=10_000
+    )
     assert r["label"] == "CONVERGED" and r["k_conv"] == 2000
     head = BilinearValueHead(d, generator=torch.Generator().manual_seed(1))
     opt = torch.optim.AdamW(head.parameters(), lr=0.0)
-    r = p2a.fit_loop(head, opt, data, list(range(N)), seed=0, loss="rank", omega=2.0,
-                     cap=1000)  # fmt: skip
+    r = p2a.fit_loop(
+        head, opt, data, list(range(N)), seed=0, loss="rank", omega=2.0, cap=1000
+    )
     assert r["label"] == "CAP-HIT" and r["k_conv"] == 1000
     assert [h["step"] for h in r["history"]] == [0, 250, 500, 750, 1000]
 
@@ -693,9 +717,11 @@ def test_prereg_constants_are_the_committed_texts(p2a):
 
 def test_order_check(p2a):
     ev = [{"seed": 0, "stage": "fit", "what": "end", "t": t} for t in (1, 2, 3, 4)]
-    ev += [{"seed": 0, "stage": "select", "what": "start", "t": 5},
-           {"seed": 0, "stage": "select", "what": "end", "t": 6},
-           {"seed": 0, "stage": "deploy", "what": "start", "t": 7}]  # fmt: skip
+    ev += [
+        {"seed": 0, "stage": "select", "what": "start", "t": 5},
+        {"seed": 0, "stage": "select", "what": "end", "t": 6},
+        {"seed": 0, "stage": "deploy", "what": "start", "t": 7},
+    ]
     assert p2a.order_check(ev, 0)["ok"]
     bad = [*ev, {"seed": 0, "stage": "deploy", "what": "start", "t": 8}]
     assert not p2a.order_check(bad, 0)["ok"]  # EVAL read twice
@@ -807,8 +833,9 @@ _T6 = textwrap.dedent(
 
 @pytest.mark.parametrize("run,stage", sorted(PREREG_SEALS))
 def test_t6_stage_seal_raises_exactly_where_the_prereg_seals(run, stage, tmp_path):
-    code = _T6.format(src=str(ROOT / "src"), seal=str(EXP / "stage_seal.py"), run=run,
-                      stage=stage)  # fmt: skip
+    code = _T6.format(
+        src=str(ROOT / "src"), seal=str(EXP / "stage_seal.py"), run=run, stage=stage
+    )
     r = subprocess.run([str(PY), "-c", code], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-3000:]
     out = json.loads(r.stdout.strip().splitlines()[-1])
@@ -876,12 +903,21 @@ def test_t7_rank_arms_config_and_label(p2a):
         ov = p2a.rank_overrides(base, 8.0)
         if psi:
             ov["psi_override"] = psi
-        pol = loop.build_policy("rsr", d_model=D, steps_per_epoch=16.0, overrides=ov,
-                                generator=torch.Generator().manual_seed(0))  # fmt: skip
+        pol = loop.build_policy(
+            "rsr",
+            d_model=D,
+            steps_per_epoch=16.0,
+            overrides=ov,
+            generator=torch.Generator().manual_seed(0),
+        )
         c = pol.config
         assert (c.b_enabled, c.shadow_enabled, c.nu, c.target, c.gamma) == (
-            False, False, 0.0, "loo_resample", 0.9,
-        )  # fmt: skip
+            False,
+            False,
+            0.0,
+            "loo_resample",
+            0.9,
+        )
         assert (c.loss, c.rank_k, c.rank_omega) == ("rank", 3, 8.0)
         lab = loop.arm_label("rsr", ov)
         assert "loss=rank" in lab and "rank_k=3" in lab and "rank_omega=8" in lab
@@ -907,3 +943,291 @@ def test_t7_switch_misuse_is_refused():
         RSR.RSRPolicy(
             RSR.RSRConfig(**_kw(loss="rank", rank_k=3, rank_omega=0.5)), d_model=D
         )
+
+
+# --------------------------------------------------------------------------- #
+# 2b on fixtures (its smoke needs 2a's selection; nothing here trains or reads EVAL2)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture(scope="module")
+def p2b():
+    mod = _load("run3_phase2b_test", EXP / "phase2b.py")
+    mod.harness()
+    return mod
+
+
+def test_2b_k_rule(p2b):
+    assert p2b.k_2b([500, 1000, 2999]) == 3000
+    assert p2b.k_2b([3000]) == 3000
+    assert p2b.k_2b([3001, 10]) == 4500
+    assert p2b.k_2b([95500, 117500, 103500]) == 118500
+    assert p2b.k_2b([200_000]) == 201_000
+    assert p2b.prereg_check()["ok"]
+
+
+def test_2b_cadence_keeps_3000_160_and_k_on_disk(p2b):
+    R1 = p2b.harness()["R1"]
+    for K in range(3000, 201_001, 1500):
+        e = p2b.ckpt_every(K)
+        assert K % e == 0 and 3000 % e == 0 and 160 % e == 0, K
+        assert K % R1.derive_ckpt(K) == 0
+    assert p2b.ckpt_every(3000) == 40  # run 1's / run 2's cadence, unchanged
+
+
+def _ledger_2a(tmp_path, kconv, labels, gate=True, exit_=0):
+    per = {str(s): {} for s in (0, 1, 2)}
+    rows = [
+        {
+            "key": "summary",
+            "value": {
+                "exit": exit_,
+                "gate_to_2b": gate,
+                "labels": labels,
+                "per_seed": per,
+            },
+        }
+    ]
+    for s in (0, 1, 2):
+        rows.append(
+            {
+                "key": f"seed{s}.selection",
+                "value": {"omega_s": [2.0, 8.0, 32.0][s], "k_conv": kconv[s]},
+            }
+        )
+    p = tmp_path / "ledger.json"
+    p.write_text(json.dumps({"rows": rows}))
+    return p
+
+
+def test_2b_plan_from_2a_ledger(p2b, tmp_path):
+    win = {"0": "WIN", "1": "WIN", "2": "WIN"}
+    ok = p2b.make_plan(_ledger_2a(tmp_path, [2000, 2750, 1000], win))
+    assert ok["ok"] and ok["K_2b"] == 3000 and ok["omega_s"] == {0: 2.0, 1: 8.0, 2: 32.0}
+    assert ok["ckpt_every"] == 40 and ok["psiR_at_3000"] is False
+    # K_2b != 3000: refused with the C10/C12 reason (a PM ruling, not a reading)
+    big = p2b.make_plan(_ledger_2a(tmp_path, [2000, 95_500, 1000], win))
+    assert not big["ok"] and big["K_2b"] == 96_000
+    assert any("C10" in x and "C12" in x for x in big["problems"])
+    # 2a not WIN on every seed: 2b does not run
+    no = p2b.make_plan(
+        _ledger_2a(
+            tmp_path,
+            [2000, 2000, 2000],
+            {"0": "WIN", "1": "EQUIV", "2": "WIN"},
+            gate=False,
+        )
+    )
+    assert not no["ok"] and "K_2b" not in no
+    bad = p2b.make_plan(_ledger_2a(tmp_path, [2000, 2000, 2000], win, exit_=3))
+    assert not bad["ok"]
+
+
+def test_2b_cli_argv_is_run_2s_plus_the_switch_and_fifo_is_run_1s(p2b):
+    H = p2b.harness()
+    R1, R2 = H["R1"], H["R2"]
+    p2b.set_plan({"omega_s": {"0": 2.0, "1": 8.0, "2": 32.0}})
+    ow = R1.OwnerValues(0.9, 0.01, 3000, "eval", (0, 1, 2))
+    for seed, om in ((0, "2"), (1, "8"), (2, "32")):
+        cfg = R1.prereg_config(seed, 3000)
+        for arm in R1.ARMS:
+            got = R1.cli_argv(cfg, arm, ow, Path(f"runs/rsr-run3-2b/{arm}/seed{seed}"))
+            r2 = R2._R1_CLI_ARGV(cfg, arm, ow, Path(f"runs/rsr-run3-2b/{arm}/seed{seed}"))
+            if arm == "fifo":
+                assert got == r2 and not any("loss=" in t for t in got)
+                continue
+            i = got.index("target=loo_resample")
+            assert got[i + 1 : i + 7] == [
+                "--policy-override",
+                "loss=rank",
+                "--policy-override",
+                "rank_k=3",
+                "--policy-override",
+                f"rank_omega={om}",
+            ]
+            items = [got[j + 1] for j, t in enumerate(got) if t == "--policy-override"]
+            ov = loop.parse_overrides(items)
+            pol = loop.build_policy(
+                "rsr",
+                d_model=128,
+                steps_per_epoch=16.0,
+                overrides=ov,
+                generator=torch.Generator().manual_seed(0),
+            )
+            c = pol.config
+            assert (c.loss, c.rank_k, c.rank_omega, c.target, c.b_enabled, c.nu) == (
+                "rank",
+                3.0,
+                float(om),
+                "loo_resample",
+                False,
+                0.0,
+            )
+            assert "loss=rank" in loop.arm_label("rsr", ov)
+    assert R1.RUN_ID == "rsr-run3-2b"
+
+
+def test_2b_launcher_command_is_the_harness_s_token_for_token(p2b):
+    H = p2b.harness()
+    R1 = H["R1"]
+    p2b.set_plan({"omega_s": {"0": 2.0, "1": 8.0, "2": 32.0}})
+    text = (EXP / "launch_2b.zsh").read_text()
+    i = text.index(".venv/bin/python -m rsr.train.loop")
+    j = text.index('"${P[@]}" --out-dir $OUT/$a/seed$s') + len(
+        '"${P[@]}" --out-dir $OUT/$a/seed$s'
+    )
+    tmpl = text[i:j].replace("\\\n", " ")
+    ow = R1.OwnerValues(0.9, 0.01, 3000, "eval", (0, 1, 2))
+    for seed, om in ((0, "2"), (1, "8"), (2, "32")):
+        rsr = (
+            "--policy rsr --policy-override b_enabled=false --policy-override "
+            "shadow_enabled=false --policy-override nu=0 --policy-override beta=1 "
+            "--policy-override gamma=0.9 --policy-override target=loo_resample "
+            "--policy-override loss=rank --policy-override rank_k=3 "
+            f"--policy-override rank_omega={om}"
+        )
+        for arm in R1.ARMS:
+            p = {
+                "psiC": rsr,
+                "fifo": "--policy fifo",
+                "age": rsr + " --policy-override psi_override=age_only",
+            }[arm]
+            s = R1.SUBSTRATE[seed]
+            out = f"runs/rsr-run3-2b/{arm}/seed{seed}"
+            cmd = tmpl
+            for k, v in (
+                ('"${C1[@]}"', " ".join(R1.C1_FLAGS["eval"])),
+                ('"${C3[@]}"', ""),
+                ('"${P[@]}"', p),
+                ("${SHA[$s]}", s["sha256"]),
+                ("$STEPS", "3000"),
+                ("$EVERY", str(p2b.ckpt_every(3000))),
+                ("$OUT/$a/seed$s", out),
+                ("$B", str(Path(s["checkpoint"]).parent)),
+                ("$R", R1._R),
+                ("$s", str(seed)),
+            ):
+                cmd = cmd.replace(k, v)
+            cfg = R1.prereg_config(seed, 3000)
+            assert R1.cli_argv(cfg, arm, ow, Path(out)) == shlex.split(cmd), (arm, seed)
+
+
+@pytest.mark.parametrize(
+    ("env", "msg"),
+    [
+        (
+            {
+                "GAMMA": "0.9",
+                "WD": "0.01",
+                "O5": "eval",
+                "C1_FLAGS": "--frozen-model-mode eval",
+                "STEPS": "3000",
+            },
+            "STEPS is K_2b from plan.json",
+        ),
+        (
+            {
+                "GAMMA": "0.9",
+                "WD": "0.01",
+                "O5": "eval",
+                "C1_FLAGS": "--frozen-model-mode eval",
+            },
+            "no runs/rsr-run3-2b/plan.json",
+        ),
+        ({"WD": "0.01", "O5": "eval"}, "slot GAMMA unfilled"),
+        (
+            {
+                "GAMMA": "0.9",
+                "WD": "0.01",
+                "O5": "eval",
+                "C1_FLAGS": "--frozen-model-mode eval",
+                "SMOKE": "1",
+                "JOB_SUFFIX": "-s",
+            },
+            "SMOKE=1 needs OUT",
+        ),
+    ],
+)
+def test_2b_launcher_refusals_exit_3_before_anything_runs(tmp_path, env, msg):
+    p = subprocess.run(
+        ["/bin/zsh", str(EXP / "launch_2b.zsh")],
+        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), **env},
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert p.returncode == 3, p.stderr
+    assert msg in p.stderr
+    assert not (tmp_path / "runs").exists()
+
+
+def test_2b_c11_prime_c_k_and_c_omega_on_fixtures(p2b, tmp_path):
+    lab = "rsr[b=off,beta=1,gamma=0.9,loss=rank,nu=0,rank_k=3,rank_omega=8,shadow=off,target=loo_resample]"  # noqa: E501
+    good_beat = {"step": 1, "loo_s": 0.1, "mc": {"loss": "rank", "l_rank": 0.6}}
+    res = {a: {"config": {"arm_label": lab}} for a in ("psiC", "age")}
+    res["fifo"] = {"config": {"arm_label": "fifo+frozen[eval]"}}
+    hbs = {a: {"beats": [good_beat]} for a in ("psiC", "age")}
+    launch = {"loss": "rank", "target": "loo_resample", "smoke": ""}
+    assert p2b.c11_prime(res, hbs, launch, {"ok": True})["ok"]
+    bad = {**hbs, "age": {"beats": [{**good_beat, "mc": {"loss": "mc", "l_rank": None}}]}}
+    assert not p2b.c11_prime(res, bad, launch, {"ok": True})["ok"]
+    assert not p2b.c11_prime(res, hbs, {**launch, "loss": None}, {"ok": True})["ok"]
+    assert not p2b.c11_prime(res, hbs, launch, {"ok": False})["ok"]
+    plan = {"K_2b": 3000, "seeds": [0, 1, 2], "omega_s": {0: 2.0, 1: 8.0, 2: 32.0}}
+    kc = {0: 1000, 1: 2000, 2: 3000}
+    assert p2b.c_k(plan, {"steps": "3000"}, {"psiC": 3000, "age": 3000}, kc)["ok"]
+    assert not p2b.c_k(plan, {"steps": "3000"}, {"psiC": 2999, "age": 3000}, kc)["ok"]
+    assert not p2b.c_k(plan, {"steps": "4500"}, {"psiC": 3000, "age": 3000}, kc)["ok"]
+    led = {
+        "sha256": "a" * 64,
+        "selection": {0: {"omega_s": 2.0}, 1: {"omega_s": 8.0}, 2: {"omega_s": 32.0}},
+    }
+    pr = tmp_path / "P.md"
+    pr.write_text(
+        "x\n\n## AMENDMENT 2b-S (date)\n\n- 2a ledger sha256: `"
+        + "a" * 64
+        + "`\n- K_2b: 3000\n\n## next\n"
+    )
+    am = p2b.amendment_2bS(pr)
+    assert am == {"ledger_2a_sha256": "a" * 64, "K_2b": 3000}
+    assert p2b.c_omega(plan, led, am)["ok"]
+    assert not p2b.c_omega(plan, led, None)["ok"]  # no amendment: not pinned
+    assert not p2b.c_omega({**plan, "omega_s": {0: 8.0, 1: 8.0, 2: 32.0}}, led, am)["ok"]
+    assert p2b.amendment_2bS() is None  # not yet committed on this branch
+
+
+def test_2b_convergence_label(p2b):
+    g = torch.Generator().manual_seed(0)
+    down = (
+        torch.linspace(1.0, 0.5, 3200) + 0.01 * torch.randn(3200, generator=g)
+    ).tolist()
+    assert p2b.convergence_label(down, 0)["label"] == "STILL-IMPROVING"
+    flat = (0.5 + 0.01 * torch.randn(3200, generator=g)).tolist()
+    r = p2b.convergence_label(flat, 0)
+    assert r["label"] == "PLATEAU" and r["lo"] < 0 < r["hi"]
+    assert p2b.convergence_label(flat[:100], 0)["label"] is None
+
+
+def test_2b_footers_must_all_be_complete(p2b, tmp_path):
+    R1 = p2b.harness()["R1"]
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    for s in (0, 1, 2):
+        for a in R1.ARMS:
+            (logs / f"{a}-s{s}.rc").write_text("0\n")
+            (logs / f"{a}-s{s}.log").write_text(
+                "noise\n" + json.dumps({"run_id": "x", "liveness": {}}, indent=2) + "\n"
+            )
+    assert p2b.training_footers(tmp_path, [0, 1, 2])["ok"]
+    (logs / "age-s2.rc").write_text("1\n")
+    assert not p2b.training_footers(tmp_path, [0, 1, 2])["ok"]
+
+
+def test_2b_rebinding_is_private(p2b):
+    fresh = _load("rsr_run1_fresh_run3", ROOT / "experiments" / "rsr-run1" / "run.py")
+    assert fresh.RUN_ID == "rsr-run1" and fresh.cli_argv is not p2b.harness()["cli_argv"]
+    assert fresh.derive_every(3000, 1000) == 40
+    run2_own = sys.modules.get("_rsr_run2_r1")
+    if run2_own is not None:
+        assert run2_own.RUN_ID == "rsr-run2"
