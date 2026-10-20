@@ -596,3 +596,30 @@ fixed in the PREREG". C12 requires fifo to be run 1's fifo, byte for byte.
   the substrate's bit for bit. So fifo's step count cannot change the reader that every arm is read
   through. If C-F fails, 2b does not read its headline.
 - This changes no threshold, label rule or class rule. It applies only if 2a is WIN on all 3 seeds.
+
+## Amendment PM-2 (2026-10-20, PM): run 1's other fifo-at-`iters` reads when K_2b > 3000. Committed alone, before any launch
+
+PM-1 ruled on C10, C12 and C-F. The builder found five further places in run 1's harness that read
+fifo at the RSR arms' step count. With `K_2b > 3000` each would fail by construction. They apply
+only if 2a is WIN on all 3 seeds, and change nothing at `K_2b = 3000`.
+
+The rule follows from PM-1: fifo is run 1's 3000-step command, frozen with no trainable parameter
+(C-F), so its final checkpoint is the reader every arm is read through. **Every read of fifo is at
+fifo's own `iters` (R-1); every read of an RSR arm is at that arm's own `iters` (`K_2b`).**
+
+- **C6** (`steps_done == iters`): per arm, against that arm's own registered `iters`. fifo is
+  checked against R-1, psiR and ageR against `K_2b`.
+- **C2** (same step sets and fingerprints across arms):
+  - psiR and ageR are compared with each other over `[0, K_2b)`;
+  - each is compared with fifo over the common steps `[0, R-1)`, where their data order is the same
+    by construction (the same pool, sampler and seed);
+  - any difference inside the common steps fails C2 as registered.
+- **C4** (checkpoint present at `iters`): per arm, at its own `iters`.
+- **Held-out read of fifo:** fifo's checkpoint at R-1. By C-F it is bit-equal to the substrate in
+  every transformer and `W_sent` tensor.
+- **Training Δloss_lm against fifo** (descriptive): computed over the common steps `[0, R-1)` only,
+  and labelled "matched steps ≤ R-1". Steps beyond R-1 have no fifo row, and nothing is
+  extrapolated.
+
+No threshold, label rule or class rule changes. If any of these five cannot be computed as stated,
+2b's `measure` refuses before EVAL2 is opened. That is exit 3, and the sealed range is not spent.
