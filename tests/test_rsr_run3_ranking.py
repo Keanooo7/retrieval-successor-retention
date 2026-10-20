@@ -1022,10 +1022,9 @@ def test_2b_plan_from_2a_ledger(p2b, tmp_path):
     ok = p2b.make_plan(_ledger_2a(tmp_path, [2000, 2750, 1000], win))
     assert ok["ok"] and ok["K_2b"] == 3000 and ok["omega_s"] == {0: 2.0, 1: 8.0, 2: 32.0}
     assert ok["ckpt_every"] == 40 and ok["psiR_at_3000"] is False
-    # K_2b != 3000: refused with the C10/C12 reason (a PM ruling, not a reading)
+    # K_2b != 3000: no longer refused (Amendment PM-1); see test_pm1_* for the rest
     big = p2b.make_plan(_ledger_2a(tmp_path, [2000, 95_500, 1000], win))
-    assert not big["ok"] and big["K_2b"] == 96_000
-    assert any("C10" in x and "C12" in x for x in big["problems"])
+    assert big["ok"] and big["K_2b"] == 96_000
     # 2a not WIN on every seed: 2b does not run
     no = p2b.make_plan(
         _ledger_2a(
@@ -1117,8 +1116,8 @@ def test_2b_launcher_command_is_the_harness_s_token_for_token(p2b):
                 ('"${C3[@]}"', ""),
                 ('"${P[@]}"', p),
                 ("${SHA[$s]}", s["sha256"]),
-                ("$STEPS", "3000"),
-                ("$EVERY", str(p2b.ckpt_every(3000))),
+                ("$IT", "3000"),
+                ("$EV", str(p2b.ckpt_every(3000))),
                 ("$OUT/$a/seed$s", out),
                 ("$B", str(Path(s["checkpoint"]).parent)),
                 ("$R", R1._R),
