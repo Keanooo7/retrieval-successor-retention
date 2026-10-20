@@ -128,7 +128,9 @@ def rows() -> list[C.Row]:
             experiment=EXPERIMENT,
             tier="headline",
             claim=f"§7.2 class (SUPERSEDES iff ES - psiC CI lower > 0 on all 3 seeds); "
-            f"falsifier_6 = {d['falsifier_6']}",
+            f"falsifier_6 = {d['falsifier_6']} (against run 1's psiC); the owner "
+            "deferred the falsifier-6 ruling to E1 "
+            "(docs/owner/rulings/R-2026-10-07-falsifier-6-deferred-to-e1.md)",
             seeds=SEEDS,
             values=[d["class"]] * 3,
             source=f"{LEDGER} :: class; falsifier_6",
