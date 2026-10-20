@@ -456,6 +456,16 @@ def state_sha(state: dict) -> str:
     return harness()["OP"].state_sha(state)
 
 
+def save_tensor(obj, p: Path) -> Path:
+    """``torch.save`` into ``p``, creating its directory first. 2a launch 2 (90baaf4):
+    the first fit of a seed to finish crashed on ``torch.save`` because ``seed<s>/``
+    did not exist yet (it is created by a sibling process's ``write_json``)."""
+    p = Path(p)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(obj, p)
+    return p
+
+
 def write_json(p: Path, doc: dict) -> str:
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(doc, indent=1, default=str) + "\n")
@@ -687,7 +697,7 @@ def fit_seed_omega(
             "ok": r["rc4_n_bad"] == 0,
         }
         files = {}
-        torch.save(r["state"], phi_file(out_root, seed, omega, "kconv"))
+        save_tensor(r["state"], phi_file(out_root, seed, omega, "kconv"))
         files["kconv"] = {
             "step": r["k_conv"],
             "path": str(phi_file(out_root, seed, omega, "kconv")),
@@ -695,7 +705,7 @@ def fit_seed_omega(
         }
         for st, snap in sorted(r["saved"].items()):
             p = phi_file(out_root, seed, omega, f"step{st}")
-            torch.save(snap, p)
+            save_tensor(snap, p)
             files[f"step{st}"] = {
                 "step": st,
                 "path": str(p),
@@ -1100,7 +1110,7 @@ def deploy_seed(
             "phi_sha256": sel["phi_sha256"],
             "label_of_arm": loop.arm_label("rsr", {**ov, "t_warm": 0.0}),
         }
-        torch.save(
+        save_tensor(
             {
                 "doc": torch.tensor([d[0] for d in r["decisions"]]),
                 "step": torch.tensor([d[1] for d in r["decisions"]]),

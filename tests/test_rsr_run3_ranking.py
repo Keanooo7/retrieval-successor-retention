@@ -1757,3 +1757,15 @@ def test_f3_rank_pairs_keep_only_finite_g(p2a):
     assert not bool(m[4:41, 3].any()) and bool(m[41:, 3].all())
     assert not bool(m[6:31, 5].any()) and bool(m[31:, 5].all())
     assert int((low & ~m).sum()) == t["n_nonfinite_excluded"] == (41 - 4) + (31 - 6)
+
+
+def test_save_tensor_creates_the_seed_dir(p2a, tmp_path):
+    """2a launch 2 (90baaf4): the first fit of a seed to finish crashed because
+    ``seed<s>/`` did not exist when it saved phi. Every tensor save goes through
+    ``save_tensor``, which creates the directory."""
+    p = p2a.phi_file(tmp_path / "runs" / "rsr-run3-2a", 0, 2.0, "kconv")
+    assert not p.parent.exists()
+    p2a.save_tensor({"w": torch.zeros(2)}, p)
+    assert torch.equal(torch.load(p)["w"], torch.zeros(2))
+    src = Path(p2a.__file__).read_text()
+    assert src.count("torch.save(") == 1  # only inside save_tensor itself
