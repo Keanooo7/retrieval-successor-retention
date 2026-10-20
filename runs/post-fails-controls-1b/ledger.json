@@ -1,0 +1,5907 @@
+{
+  "run_id": "post-fails-controls-1b",
+  "cycle": null,
+  "question": "Is sentence kind, and an assert's pending/answered status, linearly decodable from what psi_hat sees, and where do E[G | kind] and E[G | status] rank (PREREG \u00a74)?",
+  "started_utc": "2026-10-20T07:48:06Z",
+  "provenance": {
+    "git_sha": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+    "dirty": true,
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64"
+  },
+  "device": "cpu",
+  "seeds_actually_run": [
+    0,
+    1,
+    2
+  ],
+  "steps_requested": 0,
+  "steps_done": 0,
+  "status": "did_not_run",
+  "config_hash": "874085ca9df9f1f86d89476a546cf5965c15cae262d2c197df07870626ed4e66",
+  "manifest_written_utc": "2026-10-20T07:48:06Z",
+  "commands": [
+    {
+      "argv": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1bcde/.venv/bin/python experiments/post-fails-controls/run.py 1b --suite-log /private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/pfc/suite1/log --suite-rc 0 --suite-head ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+      "entry_point": "experiments/post-fails-controls/run.py",
+      "reproducible": true,
+      "unreproducible_because": null,
+      "exit_code": 3,
+      "note": "its exit code is the item's",
+      "at_utc": "2026-10-20T08:05:12Z"
+    }
+  ],
+  "rows": [
+    {
+      "key": "G-C1.install",
+      "kind": "observation",
+      "value": {
+        "installed": true,
+        "ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "rebound_now": [
+          "rsr.train.loop._generate_document",
+          "rsr.train.loop.generate",
+          "_offline_psi_r1._generate_document",
+          "_diag_r1._generate_document",
+          "_pfc_e0d._generate_document",
+          "_pfc_e0d.generate"
+        ]
+      },
+      "how": "common.install_seal"
+    },
+    {
+      "key": "G-C4.record_refused",
+      "kind": "observation",
+      "value": {
+        "replaced": [
+          "rsr.constants.record",
+          "rsr.constants.REGISTRY.record"
+        ],
+        "ok": true
+      },
+      "how": "common"
+    },
+    {
+      "key": "G-C1.branch_search",
+      "kind": "observation",
+      "value": {
+        "git": "/opt/homebrew/bin/git",
+        "pattern": "(984|985|986|997)_?[0-9]{3}",
+        "token_regex": "(?<![0-9A-Za-z_.])([0-9]{1,3}(?:_?[0-9]{3})+)(?![0-9A-Za-z_])",
+        "allowed": [
+          "^experiments/post-fails-controls/PREREG\\.md$",
+          "^experiments/post-fails-controls/RESULTS[^/]*\\.md$",
+          "^runs/post-fails-controls-[^/]+/.*\\.json$",
+          "^runs/post-fails-controls-[^/]+/RESULTS[^/]*\\.md$"
+        ],
+        "for_each_ref_rc": 0,
+        "n_refs": 111,
+        "refs": [
+          "refs/heads/agent-f/canary-audit-status",
+          "refs/heads/build/pfc-1a",
+          "refs/heads/build/pfc-1bcde",
+          "refs/heads/c0-fix",
+          "refs/heads/c0-impl",
+          "refs/heads/c0-merge",
+          "refs/heads/clean/2026-09-22",
+          "refs/heads/diag/offline-psi-converge",
+          "refs/heads/diag/psi-ls-capacity",
+          "refs/heads/diag/run2-vs-random",
+          "refs/heads/docs/2026-09-27-state",
+          "refs/heads/docs/adr-leading-edge",
+          "refs/heads/docs/adr-learning-path",
+          "refs/heads/docs/claims-register",
+          "refs/heads/docs/for-brendan-2026-09-22",
+          "refs/heads/docs/for-brendan-2026-09-24",
+          "refs/heads/docs/for-brendan-2026-09-25",
+          "refs/heads/docs/prior-art-eviction-signals",
+          "refs/heads/docs/readme-refresh-2026-09-27",
+          "refs/heads/docs/record-corrections-0930",
+          "refs/heads/docs/record-fixes-2026-09-24",
+          "refs/heads/docs/research-2026-09-25",
+          "refs/heads/docs/verified-results-0930",
+          "refs/heads/eng/battery-union",
+          "refs/heads/eng/battery-union-annotated",
+          "refs/heads/eng/i1-isolation",
+          "refs/heads/eng/i2-sharding",
+          "refs/heads/eng/i6-env-record",
+          "refs/heads/eng/liveness-wiring",
+          "refs/heads/eng/loo",
+          "refs/heads/eng/t5b-review-gate",
+          "refs/heads/exp/carry-forward",
+          "refs/heads/exp/corpus-size-curve",
+          "refs/heads/exp/e0e",
+          "refs/heads/exp/fresh-escape",
+          "refs/heads/exp/fresh-stream",
+          "refs/heads/exp/lookahead-room",
+          "refs/heads/exp/retention-readability",
+          "refs/heads/exp/scaffold-dose",
+          "refs/heads/exp/scaffold-timing",
+          "refs/heads/feat/expire-span",
+          "refs/heads/feat/expire-span-arm",
+          "refs/heads/feat/rsr-run1-harness",
+          "refs/heads/feat/rsr-run1-ready",
+          "refs/heads/feat/rsr-run2",
+          "refs/heads/feat/rsr-slice1",
+          "refs/heads/fix/e0d-minors",
+          "refs/heads/fix/expire-span-nan-backward",
+          "refs/heads/fix/followups-1001",
+          "refs/heads/fix/followups-1001b",
+          "refs/heads/fix/followups-1001c",
+          "refs/heads/fix/night-0930-couplings",
+          "refs/heads/fix/on-write-slot-index",
+          "refs/heads/fix/review-minors-0930",
+          "refs/heads/fix/t-warm-units",
+          "refs/heads/infra/2026-09-22",
+          "refs/heads/integ/2026-09-26",
+          "refs/heads/integ/2026-09-26-final",
+          "refs/heads/integ/2026-10-02",
+          "refs/heads/integ/2026-10-19",
+          "refs/heads/main",
+          "refs/heads/night/2026-09-27",
+          "refs/heads/night/2026-09-30",
+          "refs/heads/owner/2026-09-24",
+          "refs/heads/owner/2026-10-07",
+          "refs/heads/prereg/offline-psi",
+          "refs/heads/prereg/post-fails-controls",
+          "refs/heads/prereg/rsr-run1",
+          "refs/heads/rc/retrieval-curve-fix",
+          "refs/heads/review/expire-span-arm-087a486",
+          "refs/heads/review/expire-span-nan-a992d7c",
+          "refs/heads/review/offline-psi-5e8d9ce",
+          "refs/heads/review/offline-psi-8418741",
+          "refs/heads/review/psi-ls-capacity-90c2720",
+          "refs/heads/review/rsr-run1-harness-63f930d",
+          "refs/heads/review/rsr-run2-728a42f",
+          "refs/heads/review/run1-ready-c02b16d",
+          "refs/heads/run/b0-ceilings",
+          "refs/heads/run/b1-beta-inertness",
+          "refs/heads/run/b2-psi-probe",
+          "refs/heads/run/b5-convergence",
+          "refs/heads/run/capacity-c0-2026-09-24",
+          "refs/heads/run/cf-ceiling",
+          "refs/heads/run/e0d",
+          "refs/heads/run/expire-span-referendum",
+          "refs/heads/run/expire-span-referendum-a2",
+          "refs/heads/run/gamma-ceiling",
+          "refs/heads/run/i2-sharding-measure",
+          "refs/heads/run/i5-flake",
+          "refs/heads/run/newcomer-bakeoff",
+          "refs/heads/run/retrieval-curve-2026-09-24",
+          "refs/heads/run/rsr-run1",
+          "refs/heads/run/rsr-run2",
+          "refs/heads/superseded/night-2026-09-30-bad-merge-2807314",
+          "refs/heads/verify/cf-ceiling",
+          "refs/heads/verify/expire-span-referendum",
+          "refs/heads/verify/gamma-ceiling",
+          "refs/heads/verify/offline-psi",
+          "refs/heads/verify/offline-psi-converge",
+          "refs/heads/verify/psi-ls-capacity",
+          "refs/heads/verify/rsr-run1",
+          "refs/heads/verify/rsr-run2",
+          "refs/heads/worktree-agent-a0c1a6bfe6bd8ffb3",
+          "refs/heads/worktree-agent-a140dcf9d07096cfd",
+          "refs/heads/worktree-agent-a26b66d99869fff5a",
+          "refs/heads/worktree-agent-a4d6a3274c8a26b45",
+          "refs/heads/worktree-agent-a585f6381e85b2a38",
+          "refs/heads/worktree-agent-a8c9f42c25d93f9dc",
+          "refs/heads/worktree-agent-a9cc72adc5b85cdd4",
+          "refs/heads/worktree-agent-ac675d478a21a9f2f",
+          "refs/heads/worktree-agent-ae2e86e37c5eb57da"
+        ],
+        "errors": [],
+        "n_hits": 96,
+        "hits": [
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 16,
+            "excerpt": "TUNE: \"[997200, 997712)\"",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 17,
+            "excerpt": "EVAL2: \"[984000, 986048)\"",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 64,
+            "excerpt": "| **TUNE** (phase 2a selection) | `[997200, 997712)` | 512 per seed | phase 2a |",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 65,
+            "excerpt": "| **EVAL2** (phase 2b headline) | `[984000, 986048)` | 2048 per seed | phase 2b |",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 80,
+            "excerpt": "`[984000, 986048)` lies in the gap between B2's claimed EVAL `[940000, 980000)` and the",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 488,
+            "excerpt": "1. **EVAL2 moved** to `[984000, 986048)`: the PM's candidate collides with generated ids (\u00a71).",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 524,
+            "excerpt": "3. **EVAL2 = `[984000, 986048)` is accepted.** Beyond the drafter's branch search, the PM also",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 526,
+            "excerpt": "- plain-text files (json/jsonl/log/md/txt/csv) for any integer in `[984000, 986048)` or",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "experiments/post-fails-controls/PREREG.md",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 527,
+            "excerpt": "`[997200, 997712)`: no hit;",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/prereg/post-fails-controls"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a-smoke/measure-seed0.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 36,
+            "excerpt": "997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a-smoke/measure-seed0.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 40,
+            "excerpt": "984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 149,
+            "excerpt": "\"token\": \"997200\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 150,
+            "excerpt": "\"value\": 997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 153,
+            "excerpt": "\"excerpt\": \"TUNE: \\\"[997200, 997712)\\\"\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 163,
+            "excerpt": "\"token\": \"984000\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 164,
+            "excerpt": "\"value\": 984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 167,
+            "excerpt": "\"excerpt\": \"EVAL2: \\\"[984000, 986048)\\\"\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 181,
+            "excerpt": "\"excerpt\": \"| **TUNE** (phase 2a selection) | `[997200, 997712)` | 512 per seed | phase 2a |\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 195,
+            "excerpt": "\"excerpt\": \"| **EVAL2** (phase 2b headline) | `[984000, 986048)` | 2048 per seed | phase 2b |\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 209,
+            "excerpt": "\"excerpt\": \"`[984000, 986048)` lies in the gap between B2's claimed EVAL `[940000, 980000)` and the\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 223,
+            "excerpt": "\"excerpt\": \"1. **EVAL2 moved** to `[984000, 986048)`: the PM's candidate collides with generated ids (\\u00a71).\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 237,
+            "excerpt": "\"excerpt\": \"3. **EVAL2 = `[984000, 986048)` is accepted.** Beyond the drafter's branch search, the PM also\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 251,
+            "excerpt": "\"excerpt\": \"- plain-text files (json/jsonl/log/md/txt/csv) for any integer in `[984000, 986048)` or\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 265,
+            "excerpt": "\"excerpt\": \"`[997200, 997712)`: no hit;\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 279,
+            "excerpt": "\"excerpt\": \"997200,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 296,
+            "excerpt": "\"excerpt\": \"984000,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 397,
+            "excerpt": "\"excerpt\": \"\\\"token\\\": \\\"997200\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 412,
+            "excerpt": "\"excerpt\": \"\\\"value\\\": 997200,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 427,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"TUNE: \\\\\\\"[997200, 997712)\\\\\\\"\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 439,
+            "excerpt": "\"excerpt\": \"\\\"token\\\": \\\"984000\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 457,
+            "excerpt": "\"excerpt\": \"\\\"value\\\": 984000,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 475,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"EVAL2: \\\\\\\"[984000, 986048)\\\\\\\"\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 487,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"| **TUNE** (phase 2a selection) | `[997200, 997712)` | 512 per seed | phase 2a |\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 499,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"| **EVAL2** (phase 2b headline) | `[984000, 986048)` | 2048 per seed | phase 2b |\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 511,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"`[984000, 986048)` lies in the gap between B2's claimed EVAL `[940000, 980000)` and the\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 523,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"1. **EVAL2 moved** to `[984000, 986048)`: the PM's candidate collides with generated ids (\\\\u00a71).\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 535,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"3. **EVAL2 = `[984000, 986048)` is accepted.** Beyond the drafter's branch search, the PM also\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 547,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"- plain-text files (json/jsonl/log/md/txt/csv) for any integer in `[984000, 986048)` or\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 559,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"`[997200, 997712)`: no hit;\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 571,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"997200,\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/launch.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 583,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"984000,\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 435,
+            "excerpt": "\"token\": \"997200\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 436,
+            "excerpt": "\"value\": 997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 439,
+            "excerpt": "\"excerpt\": \"TUNE: \\\"[997200, 997712)\\\"\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 449,
+            "excerpt": "\"token\": \"984000\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 450,
+            "excerpt": "\"value\": 984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 453,
+            "excerpt": "\"excerpt\": \"EVAL2: \\\"[984000, 986048)\\\"\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 467,
+            "excerpt": "\"excerpt\": \"| **TUNE** (phase 2a selection) | `[997200, 997712)` | 512 per seed | phase 2a |\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 481,
+            "excerpt": "\"excerpt\": \"| **EVAL2** (phase 2b headline) | `[984000, 986048)` | 2048 per seed | phase 2b |\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 495,
+            "excerpt": "\"excerpt\": \"`[984000, 986048)` lies in the gap between B2's claimed EVAL `[940000, 980000)` and the\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 509,
+            "excerpt": "\"excerpt\": \"1. **EVAL2 moved** to `[984000, 986048)`: the PM's candidate collides with generated ids (\\u00a71).\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 523,
+            "excerpt": "\"excerpt\": \"3. **EVAL2 = `[984000, 986048)` is accepted.** Beyond the drafter's branch search, the PM also\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 537,
+            "excerpt": "\"excerpt\": \"- plain-text files (json/jsonl/log/md/txt/csv) for any integer in `[984000, 986048)` or\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 551,
+            "excerpt": "\"excerpt\": \"`[997200, 997712)`: no hit;\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 565,
+            "excerpt": "\"excerpt\": \"997200,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 582,
+            "excerpt": "\"excerpt\": \"984000,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 683,
+            "excerpt": "\"excerpt\": \"\\\"token\\\": \\\"997200\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 698,
+            "excerpt": "\"excerpt\": \"\\\"value\\\": 997200,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 713,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"TUNE: \\\\\\\"[997200, 997712)\\\\\\\"\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 725,
+            "excerpt": "\"excerpt\": \"\\\"token\\\": \\\"984000\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 743,
+            "excerpt": "\"excerpt\": \"\\\"value\\\": 984000,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 761,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"EVAL2: \\\\\\\"[984000, 986048)\\\\\\\"\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 773,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"| **TUNE** (phase 2a selection) | `[997200, 997712)` | 512 per seed | phase 2a |\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 785,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"| **EVAL2** (phase 2b headline) | `[984000, 986048)` | 2048 per seed | phase 2b |\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 797,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"`[984000, 986048)` lies in the gap between B2's claimed EVAL `[940000, 980000)` and the\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 809,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"1. **EVAL2 moved** to `[984000, 986048)`: the PM's candidate collides with generated ids (\\\\u00a71).\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 821,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"3. **EVAL2 = `[984000, 986048)` is accepted.** Beyond the drafter's branch search, the PM also\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 833,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"- plain-text files (json/jsonl/log/md/txt/csv) for any integer in `[984000, 986048)` or\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 845,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"`[997200, 997712)`: no hit;\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 857,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"997200,\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 869,
+            "excerpt": "\"excerpt\": \"\\\"excerpt\\\": \\\"984000,\\\",\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/manifest.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 37,
+            "excerpt": "984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1a.attempt-1/manifest.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 41,
+            "excerpt": "997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1a",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1b-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 41,
+            "excerpt": "997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1b-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 45,
+            "excerpt": "984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1c-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 41,
+            "excerpt": "997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1c-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 45,
+            "excerpt": "984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 41,
+            "excerpt": "997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 45,
+            "excerpt": "984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 205,
+            "excerpt": "\"token\": \"997200\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 206,
+            "excerpt": "\"value\": 997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 209,
+            "excerpt": "\"excerpt\": \"TUNE: \\\"[997200, 997712)\\\"\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 219,
+            "excerpt": "\"token\": \"984000\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 220,
+            "excerpt": "\"value\": 984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 223,
+            "excerpt": "\"excerpt\": \"EVAL2: \\\"[984000, 986048)\\\"\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 237,
+            "excerpt": "\"excerpt\": \"| **TUNE** (phase 2a selection) | `[997200, 997712)` | 512 per seed | phase 2a |\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 251,
+            "excerpt": "\"excerpt\": \"| **EVAL2** (phase 2b headline) | `[984000, 986048)` | 2048 per seed | phase 2b |\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 265,
+            "excerpt": "\"excerpt\": \"`[984000, 986048)` lies in the gap between B2's claimed EVAL `[940000, 980000)` and the\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 279,
+            "excerpt": "\"excerpt\": \"1. **EVAL2 moved** to `[984000, 986048)`: the PM's candidate collides with generated ids (\\u00a71).\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 293,
+            "excerpt": "\"excerpt\": \"3. **EVAL2 = `[984000, 986048)` is accepted.** Beyond the drafter's branch search, the PM also\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 307,
+            "excerpt": "\"excerpt\": \"- plain-text files (json/jsonl/log/md/txt/csv) for any integer in `[984000, 986048)` or\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 321,
+            "excerpt": "\"excerpt\": \"`[997200, 997712)`: no hit;\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 335,
+            "excerpt": "\"excerpt\": \"997200,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1d-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 349,
+            "excerpt": "\"excerpt\": \"984000,\",",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1e-smoke/ledger.json",
+            "token": "997200",
+            "value": 997200,
+            "range": "TUNE",
+            "line": 41,
+            "excerpt": "997200,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          },
+          {
+            "path": "runs/post-fails-controls-1e-smoke/ledger.json",
+            "token": "984000",
+            "value": 984000,
+            "range": "EVAL2",
+            "line": 45,
+            "excerpt": "984000,",
+            "allowed": true,
+            "refs": [
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde",
+              "refs/heads/build/pfc-1bcde"
+            ]
+          }
+        ],
+        "n_new_hits": 0,
+        "new_hits": [],
+        "ok": true
+      },
+      "how": "common.branch_search (\u00a71.1)"
+    },
+    {
+      "key": "G-C3.suite",
+      "kind": "observation",
+      "value": {
+        "rc": 0,
+        "summary": "passed=2749 failed=0 skipped=0 errors=0",
+        "passed": 2749,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0,
+        "skipped_tests": [],
+        "ok": true,
+        "log": "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/pfc/suite1/log",
+        "head": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+        "launch_head": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+        "head_is_launch_head": true
+      },
+      "how": "common.suite_census of the launch log"
+    },
+    {
+      "key": "G-C2.start",
+      "kind": "observation",
+      "value": {
+        "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "cwd": "/Users/keanooo7/retrieval-successor-retention",
+        "rc": 0,
+        "n_ok": 435,
+        "n_lines": 435,
+        "not_ok": [],
+        "stderr": "",
+        "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "ok": true
+      },
+      "how": "common.manifest_check (shasum -a 256 -c)"
+    },
+    {
+      "key": "G-C2.end",
+      "kind": "observation",
+      "value": {
+        "command": "shasum -a 256 -c /Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+        "cwd": "/Users/keanooo7/retrieval-successor-retention",
+        "rc": 0,
+        "n_ok": 435,
+        "n_lines": 435,
+        "not_ok": [],
+        "stderr": "",
+        "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "expected_manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+        "ok": true
+      },
+      "how": "common.manifest_check (shasum -a 256 -c)"
+    },
+    {
+      "key": "G-C2.pins_end",
+      "kind": "observation",
+      "value": {
+        "n_files": 0,
+        "ok": true
+      },
+      "how": "common.Pins.recheck"
+    },
+    {
+      "key": "G-C1.census",
+      "kind": "observation",
+      "value": {
+        "per_seed": {
+          "0": {
+            "U_E": {
+              "range": [
+                64,
+                1088
+              ],
+              "count": 1024,
+              "min": 64,
+              "max": 1087
+            },
+            "U_P": {
+              "range": [
+                4096,
+                4160
+              ],
+              "count": 64,
+              "min": 4096,
+              "max": 4159
+            },
+            "EVAL": {
+              "range": [
+                995000,
+                997048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "TUNE": {
+              "range": [
+                997200,
+                997712
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "EVAL2": {
+              "range": [
+                984000,
+                986048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "other": {
+              "count": 3072,
+              "min": 0,
+              "max": 4095
+            }
+          },
+          "1": {
+            "U_E": {
+              "range": [
+                64,
+                1088
+              ],
+              "count": 1024,
+              "min": 64,
+              "max": 1087
+            },
+            "U_P": {
+              "range": [
+                4096,
+                4160
+              ],
+              "count": 64,
+              "min": 4096,
+              "max": 4159
+            },
+            "EVAL": {
+              "range": [
+                995000,
+                997048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "TUNE": {
+              "range": [
+                997200,
+                997712
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "EVAL2": {
+              "range": [
+                984000,
+                986048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "other": {
+              "count": 3072,
+              "min": 0,
+              "max": 4095
+            }
+          },
+          "2": {
+            "U_E": {
+              "range": [
+                64,
+                1088
+              ],
+              "count": 1024,
+              "min": 64,
+              "max": 1087
+            },
+            "U_P": {
+              "range": [
+                4096,
+                4160
+              ],
+              "count": 64,
+              "min": 4096,
+              "max": 4159
+            },
+            "EVAL": {
+              "range": [
+                995000,
+                997048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "TUNE": {
+              "range": [
+                997200,
+                997712
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "EVAL2": {
+              "range": [
+                984000,
+                986048
+              ],
+              "count": 0,
+              "min": null,
+              "max": null
+            },
+            "other": {
+              "count": 3072,
+              "min": 0,
+              "max": 4095
+            }
+          }
+        },
+        "sealed_ranges": {
+          "TUNE": [
+            997200,
+            997712
+          ],
+          "EVAL2": [
+            984000,
+            986048
+          ]
+        },
+        "n_sealed_generated": 0,
+        "refused_calls": [],
+        "leaks": [],
+        "ok": true
+      },
+      "how": "common.seal_census (ids by range)"
+    },
+    {
+      "key": "G-C4.no_grads",
+      "kind": "observation",
+      "value": [],
+      "how": "common.no_grads"
+    },
+    {
+      "key": "seed0.controls",
+      "kind": "observation",
+      "value": {
+        "B-C1": {
+          "gestalt_sha256": "211244f1469b90972e3b1d3b6635b3ee9eb095e78b932dc396bba64df3f5562b",
+          "gestalt_ok": true,
+          "delta_sha256": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+          "delta_ok": true,
+          "ok": true
+        },
+        "B-C2": {
+          "sizes": {
+            "P_fit": 745,
+            "P_test": 187,
+            "U_val": 156
+          },
+          "expected_P_fit_P_test": [
+            745,
+            187
+          ],
+          "overlaps": {},
+          "u_val_ids_in_probe_tensors": 0,
+          "n_U_train": 932,
+          "n_U_train_ok": true,
+          "ok": true
+        },
+        "B-C3": {
+          "point": 0.9161993769470408,
+          "ledger": 0.9161993769470408,
+          "ok": true
+        },
+        "B-C4": {
+          "mine": {
+            "assert": 513631,
+            "query": 393299,
+            "filler": 189774
+          },
+          "ledger": {
+            "assert": 513631.0,
+            "query": 393299.0,
+            "filler": 189774.0
+          },
+          "ok": true
+        },
+        "B-C5": {
+          "shuffled": {
+            "fit": {
+              "loss": 0.6852117445303146,
+              "grad_max_abs": 0.00012045728355535886,
+              "n_iter": 1000,
+              "func_evals": 1086,
+              "max_iter": 1000,
+              "max_eval": 1250,
+              "converged": false,
+              "finite": true,
+              "seconds": 72.50966829102254
+            },
+            "bal_acc": {
+              "point": 0.48569407610541504,
+              "lo": 0.4791589696796134,
+              "hi": 0.4928759397825369,
+              "sd": 0.003558546456976673,
+              "dropped": 0,
+              "recall": [
+                0.46896950665234277,
+                0.5024186455584873
+              ],
+              "n_cells": [
+                12101.0,
+                22740.0
+              ]
+            },
+            "n_features": 16640,
+            "std": [
+              {
+                "n_zero_sd": 0
+              },
+              {
+                "n_zero_sd": 0
+              }
+            ],
+            "n_fit_cells": 137626,
+            "n_test_cells": 34841
+          },
+          "ci_contains_half": false,
+          "ok": false
+        },
+        "B-C6": {
+          "finite": true,
+          "converged": {
+            "kind_s": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_s": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_c": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_scx": {
+              "lam0.0001": false,
+              "lam1e-05": false,
+              "lam0.001": true
+            }
+          },
+          "ok": true
+        }
+      },
+      "how": "item_1b.py::measure_seed"
+    },
+    {
+      "key": "seed1.controls",
+      "kind": "observation",
+      "value": {
+        "B-C1": {
+          "gestalt_sha256": "3a18e2917b385a6339ef82e92535953105877cf295bbaf9f6495a4749a6a0c68",
+          "gestalt_ok": true,
+          "delta_sha256": "bf2753cef826f8d3c1647213d232c65a1e2167160be1a6c262fbea132b838700",
+          "delta_ok": true,
+          "ok": true
+        },
+        "B-C2": {
+          "sizes": {
+            "P_fit": 745,
+            "P_test": 187,
+            "U_val": 156
+          },
+          "expected_P_fit_P_test": [
+            745,
+            187
+          ],
+          "overlaps": {},
+          "u_val_ids_in_probe_tensors": 0,
+          "n_U_train": 932,
+          "n_U_train_ok": true,
+          "ok": true
+        },
+        "B-C3": {
+          "point": 0.9551669316375201,
+          "ledger": 0.9551669316375201,
+          "ok": true
+        },
+        "B-C4": {
+          "mine": {
+            "assert": 515109,
+            "query": 395249,
+            "filler": 186346
+          },
+          "ledger": {
+            "assert": 515109.0,
+            "query": 395249.0,
+            "filler": 186346.0
+          },
+          "ok": true
+        },
+        "B-C5": {
+          "shuffled": {
+            "fit": {
+              "loss": 0.6859454559222787,
+              "grad_max_abs": 7.848936981886203e-05,
+              "n_iter": 1000,
+              "func_evals": 1052,
+              "max_iter": 1000,
+              "max_eval": 1250,
+              "converged": false,
+              "finite": true,
+              "seconds": 67.76397645799443
+            },
+            "bal_acc": {
+              "point": 0.5023469809009113,
+              "lo": 0.4957855822704025,
+              "hi": 0.5086719521537784,
+              "sd": 0.003287974774744013,
+              "dropped": 0,
+              "recall": [
+                0.49762139107611547,
+                0.5070725707257072
+              ],
+              "n_cells": [
+                12192.0,
+                22764.0
+              ]
+            },
+            "n_features": 16640,
+            "std": [
+              {
+                "n_zero_sd": 0
+              },
+              {
+                "n_zero_sd": 0
+              }
+            ],
+            "n_fit_cells": 139158,
+            "n_test_cells": 34956
+          },
+          "ci_contains_half": true,
+          "ok": true
+        },
+        "B-C6": {
+          "finite": true,
+          "converged": {
+            "kind_s": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_s": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_c": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_scx": {
+              "lam0.0001": false,
+              "lam1e-05": false,
+              "lam0.001": true
+            }
+          },
+          "ok": true
+        }
+      },
+      "how": "item_1b.py::measure_seed"
+    },
+    {
+      "key": "seed2.controls",
+      "kind": "observation",
+      "value": {
+        "B-C1": {
+          "gestalt_sha256": "74e3bec7e5366d631480f9e3ac9a07916926da21ffd60be57568acb3b3723706",
+          "gestalt_ok": true,
+          "delta_sha256": "c880a2413fa2a4840724c7c005778df8cda77932f9db0fb6081db495514ce9c2",
+          "delta_ok": true,
+          "ok": true
+        },
+        "B-C2": {
+          "sizes": {
+            "P_fit": 745,
+            "P_test": 187,
+            "U_val": 156
+          },
+          "expected_P_fit_P_test": [
+            745,
+            187
+          ],
+          "overlaps": {},
+          "u_val_ids_in_probe_tensors": 0,
+          "n_U_train": 932,
+          "n_U_train_ok": true,
+          "ok": true
+        },
+        "B-C3": {
+          "point": 0.8736576121288696,
+          "ledger": 0.8736576121288696,
+          "ok": true
+        },
+        "B-C4": {
+          "mine": {
+            "assert": 514108,
+            "query": 395270,
+            "filler": 187326
+          },
+          "ledger": {
+            "assert": 514108.0,
+            "query": 395270.0,
+            "filler": 187326.0
+          },
+          "ok": true
+        },
+        "B-C5": {
+          "shuffled": {
+            "fit": {
+              "loss": 0.6842641438530115,
+              "grad_max_abs": 0.0001029957364767,
+              "n_iter": 1000,
+              "func_evals": 1059,
+              "max_iter": 1000,
+              "max_eval": 1250,
+              "converged": false,
+              "finite": true,
+              "seconds": 68.17434808303369
+            },
+            "bal_acc": {
+              "point": 0.5041279663245606,
+              "lo": 0.4977187905713716,
+              "hi": 0.5102895924102262,
+              "sd": 0.0031663888856905227,
+              "dropped": 0,
+              "recall": [
+                0.48963014172139646,
+                0.5186257909277248
+              ],
+              "n_cells": [
+                11572.0,
+                22442.0
+              ]
+            },
+            "n_features": 16640,
+            "std": [
+              {
+                "n_zero_sd": 0
+              },
+              {
+                "n_zero_sd": 0
+              }
+            ],
+            "n_fit_cells": 138537,
+            "n_test_cells": 34014
+          },
+          "ci_contains_half": true,
+          "ok": true
+        },
+        "B-C6": {
+          "finite": true,
+          "converged": {
+            "kind_s": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_s": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_c": {
+              "lam0.0001": true,
+              "lam1e-05": true,
+              "lam0.001": true
+            },
+            "status_scx": {
+              "lam0.0001": false,
+              "lam1e-05": false,
+              "lam0.001": true
+            }
+          },
+          "ok": true
+        }
+      },
+      "how": "item_1b.py::measure_seed"
+    },
+    {
+      "key": "controls_failed",
+      "kind": "observation",
+      "value": [
+        "B-C5 seed0"
+      ],
+      "how": "item_1b.py::execute"
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9999041594786275,
+        1.0,
+        1.0
+      ],
+      "mean": 0.9999680531595425,
+      "sd": 5.533355081366323e-05,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9997105623044906,
+        1.0,
+        1.0
+      ],
+      "mean": 0.9999035207681635,
+      "sd": 0.00016710693141596306,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        9.716524259986726e-05,
+        0.0,
+        0.0
+      ],
+      "mean": 3.2388414199955756e-05,
+      "sd": 5.609837897090865e-05,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.002148834923000558,
+        0.0017152717200750612,
+        0.0015250274511695934
+      ],
+      "mean": 0.0017963780314150708,
+      "sd": 0.0003197148976548041,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.8764686612173312e-07,
+        7.599252428458378e-08,
+        1.7577484822024498e-07
+      ],
+      "mean": 1.4647141287552062e-07,
+      "sd": 6.132447720954154e-08,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        44.0,
+        45.0,
+        41.0
+      ],
+      "mean": 43.333333333333336,
+      "sd": 2.0816659994661326,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        45.0,
+        47.0,
+        41.0
+      ],
+      "mean": 44.333333333333336,
+      "sd": 3.0550504633038935,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.28408050001598895,
+        0.26838904101168737,
+        0.28914620802970603
+      ],
+      "mean": 0.28053858301912743,
+      "sd": 0.01082237855847654,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        35760.0,
+        35760.0,
+        35760.0
+      ],
+      "mean": 35760.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        8976.0,
+        8976.0,
+        8976.0
+      ],
+      "mean": 8976.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam0.0001.recall",
+      "kind": "observation",
+      "value": [
+        [
+          1.0,
+          0.9997124784358827,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0004231811099337253,
+        0.00032103910567657054,
+        0.00026228656557786175
+      ],
+      "mean": 0.0003355022603960525,
+      "sd": 8.14165261737443e-05,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.31138212960352e-07,
+        9.655983477942081e-08,
+        7.980496132462353e-08
+      ],
+      "mean": 1.0250100302146545e-07,
+      "sd": 2.6177257131610728e-08,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        47.0,
+        50.0,
+        46.0
+      ],
+      "mean": 47.666666666666664,
+      "sd": 2.0816659994661326,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        49.0,
+        52.0,
+        48.0
+      ],
+      "mean": 49.666666666666664,
+      "sd": 2.0816659994661326,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.2833555830293335,
+        0.3152264999807812,
+        0.3328080829815008
+      ],
+      "mean": 0.31046338866387185,
+      "sd": 0.025067964814534282,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        35760.0,
+        35760.0,
+        35760.0
+      ],
+      "mean": 35760.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        8976.0,
+        8976.0,
+        8976.0
+      ],
+      "mean": 8976.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam1e-05.recall",
+      "kind": "observation",
+      "value": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.kind_s.lam0.001.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9997124784358826,
+        0.9998076553183305,
+        1.0
+      ],
+      "mean": 0.9998400445847376,
+      "sd": 0.00014647170679665003,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.001.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9993310301603969,
+        0.9995180223483208,
+        1.0
+      ],
+      "mean": 0.9996163508362392,
+      "sd": 0.0003451543571025708,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.001.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam0.001.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.00016096040622762603,
+        0.0001316083183417087,
+        0.0
+      ],
+      "mean": 9.752290818977826e-05,
+      "sd": 8.572295189830778e-05,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.001.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam0.001.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.009670473840985693,
+        0.008312100371262256,
+        0.008156636424012171
+      ],
+      "mean": 0.008713070212086707,
+      "sd": 0.0008327716020586648,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.001.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.138029077424854e-06,
+        4.364542365330518e-07,
+        5.965809605769877e-07
+      ],
+      "mean": 1.0570214248449645e-06,
+      "sd": 9.395974141303674e-07,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.001.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        33.0,
+        37.0,
+        36.0
+      ],
+      "mean": 35.333333333333336,
+      "sd": 2.0816659994661326,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.001.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        33.0,
+        37.0,
+        36.0
+      ],
+      "mean": 35.333333333333336,
+      "sd": 2.0816659994661326,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.001.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.20443562499713153,
+        0.2150879169930704,
+        0.2102174999890849
+      ],
+      "mean": 0.20991368065976226,
+      "sd": 0.005332641074583808,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.kind_s.lam0.001.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.kind_s.lam0.001.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        35760.0,
+        35760.0,
+        35760.0
+      ],
+      "mean": 35760.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam0.001.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        8976.0,
+        8976.0,
+        8976.0
+      ],
+      "mean": 8976.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.kind_s.lam0.001.recall",
+      "kind": "observation",
+      "value": [
+        [
+          1.0,
+          0.9991374353076481,
+          1.0
+        ],
+        [
+          1.0,
+          0.9994229659549914,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_s.lam0.0001.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5302486467424536,
+        0.5302156577176008,
+        0.5451165077281983
+      ],
+      "mean": 0.535193604062751,
+      "sd": 0.00859350248351928,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5142610731015426,
+        0.5151731661455221,
+        0.5296858625138183
+      ],
+      "mean": 0.519706700586961,
+      "sd": 0.008654232086213548,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5461780327446419,
+        0.5463985137067596,
+        0.5608660199448326
+      ],
+      "mean": 0.5511475221320781,
+      "sd": 0.008417187936956779,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.008168895859303926,
+        0.008096758285795385,
+        0.00793433076794211
+      ],
+      "mean": 0.008066661637680474,
+      "sd": 0.00012014387912918706,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_s.lam0.0001.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6864672297952698,
+        0.688368245944783,
+        0.6888102886956611
+      ],
+      "mean": 0.6878819214785713,
+      "sd": 0.0012449356880991176,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.6700433845063444e-06,
+        6.778513299700245e-06,
+        1.1432311850129997e-06
+      ],
+      "mean": 3.1972626230731963e-06,
+      "sd": 3.1126194884718922e-06,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        102.0,
+        112.0,
+        106.0
+      ],
+      "mean": 106.66666666666667,
+      "sd": 5.033222956847166,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        106.0,
+        116.0,
+        110.0
+      ],
+      "mean": 110.66666666666667,
+      "sd": 5.033222956847166,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.2247056249761954,
+        1.2485309580224566,
+        1.4024422500515357
+      ],
+      "mean": 1.2918929443500626,
+      "sd": 0.0964768022220867,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_s.lam0.0001.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.0001.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.5720188414180646,
+          0.4884784520668426
+        ],
+        [
+          0.5699639107611548,
+          0.49046740467404676
+        ],
+        [
+          0.5769097822329762,
+          0.5133232332234203
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_s.lam1e-05.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5320936918578221,
+        0.5339563902528789,
+        0.5256209246446183
+      ],
+      "mean": 0.530557002251773,
+      "sd": 0.004375049478077709,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5145258421497176,
+        0.5191642680357799,
+        0.5098674010173255
+      ],
+      "mean": 0.514519170400941,
+      "sd": 0.004648437100131592,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5485128617095423,
+        0.5496513127698791,
+        0.5415008825397031
+      ],
+      "mean": 0.5465550190063748,
+      "sd": 0.00441386896860355,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.00853672533631483,
+        0.007704239243594179,
+        0.008078783001457195
+      ],
+      "mean": 0.008106582527122068,
+      "sd": 0.00041693870516386225,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_s.lam1e-05.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6855078703242116,
+        0.6868525409188411,
+        0.6873238874350218
+      ],
+      "mean": 0.6865614328926916,
+      "sd": 0.0009423573891339927,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        4.212987757266381e-06,
+        1.1751208496531573e-05,
+        8.86967906313189e-06
+      ],
+      "mean": 8.277958438976615e-06,
+      "sd": 3.803786659535468e-06,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        248.0,
+        250.0,
+        217.0
+      ],
+      "mean": 238.33333333333334,
+      "sd": 18.502252115170556,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        262.0,
+        260.0,
+        225.0
+      ],
+      "mean": 249.0,
+      "sd": 20.808652046684813,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.00952054199297,
+        3.007835292024538,
+        2.6311169170076028
+      ],
+      "mean": 2.8828242503417036,
+      "sd": 0.2179865735716012,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_s.lam1e-05.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam1e-05.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.5727625816048261,
+          0.49142480211081796
+        ],
+        [
+          0.5654527559055118,
+          0.502460024600246
+        ],
+        [
+          0.5456273764258555,
+          0.5056144728633811
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_s.lam0.001.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5364636415127237,
+        0.529147093179312,
+        0.5512717108029723
+      ],
+      "mean": 0.5389608151650026,
+      "sd": 0.01127171608210226,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5199165738585014,
+        0.5140853834937579,
+        0.5364115438035733
+      ],
+      "mean": 0.5234711670519442,
+      "sd": 0.011579754234138394,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5524264911803701,
+        0.5446433650009186,
+        0.5663041629589267
+      ],
+      "mean": 0.5544580063800718,
+      "sd": 0.010972366770636883,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.008080148519053013,
+        0.007469213373872093,
+        0.007617650242941012
+      ],
+      "mean": 0.007722337378622039,
+      "sd": 0.0003186377020804841,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_s.lam0.001.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6875744392437239,
+        0.689673778845985,
+        0.690076860248802
+      ],
+      "mean": 0.6891083594461703,
+      "sd": 0.0013436152890352227,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        9.982544377633046e-06,
+        6.269387991844318e-06,
+        5.50049447750719e-06
+      ],
+      "mean": 7.250808948994851e-06,
+      "sd": 2.396786003829973e-06,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        67.0,
+        66.0,
+        58.0
+      ],
+      "mean": 63.666666666666664,
+      "sd": 4.932882862316248,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        72.0,
+        68.0,
+        64.0
+      ],
+      "mean": 68.0,
+      "sd": 4.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8387987079913728,
+        0.7761100420029834,
+        0.7357749170041643
+      ],
+      "mean": 0.7835612223328402,
+      "sd": 0.051914501284082835,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_s.lam0.001.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_s.lam0.001.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.5702008098504255,
+          0.502726473175022
+        ],
+        [
+          0.5611056430446194,
+          0.4971885433140046
+        ],
+        [
+          0.5807984790874525,
+          0.5217449425184921
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_c.lam0.0001.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6297631551271375,
+        0.6382832508021368,
+        0.6050565673720572
+      ],
+      "mean": 0.6243676577671105,
+      "sd": 0.01725794503300512,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6212615320170031,
+        0.6291708239149775,
+        0.5976785617928314
+      ],
+      "mean": 0.6160369725749373,
+      "sd": 0.016383304288672896,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6379152064789365,
+        0.6471483822248718,
+        0.6129241274667466
+      ],
+      "mean": 0.6326625720568516,
+      "sd": 0.017706426226551667,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.004235488177618546,
+        0.004566487599766274,
+        0.003975290845449327
+      ],
+      "mean": 0.0042590888742780495,
+      "sd": 0.0002963041431381505,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_c.lam0.0001.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6357738855242729,
+        0.6362243145719239,
+        0.6618032230921393
+      ],
+      "mean": 0.6446004743961121,
+      "sd": 0.014899719581446614,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        8.018742494334943e-06,
+        9.525944156004045e-06,
+        7.2351274081398865e-06
+      ],
+      "mean": 8.259938019492958e-06,
+      "sd": 1.1642988465556933e-06,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        132.0,
+        124.0,
+        135.0
+      ],
+      "mean": 130.33333333333334,
+      "sd": 5.686240703077327,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137.0,
+        129.0,
+        140.0
+      ],
+      "mean": 135.33333333333334,
+      "sd": 5.686240703077327,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.5353314590174705,
+        1.3862052079639398,
+        1.7339880419895053
+      ],
+      "mean": 1.5518415696569718,
+      "sd": 0.17447825860464664,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_c.lam0.0001.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.0001.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.6692008924882241,
+          0.590325417766051
+        ],
+        [
+          0.6952099737532809,
+          0.5813565278509928
+        ],
+        [
+          0.6433632907016937,
+          0.5667498440424205
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_c.lam1e-05.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6331481995898345,
+        0.640892573506725,
+        0.6092452270788873
+      ],
+      "mean": 0.6277620000584823,
+      "sd": 0.016496878281194522,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6244601289807513,
+        0.6322758467013518,
+        0.6017714565917682
+      ],
+      "mean": 0.6195024774246237,
+      "sd": 0.015844973515389535,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6411532072467906,
+        0.6495233104705912,
+        0.6171626982781246
+      ],
+      "mean": 0.6359464053318354,
+      "sd": 0.016796886467556685,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.004313098626863173,
+        0.004443859147063426,
+        0.003987563876435637
+      ],
+      "mean": 0.004248173883454079,
+      "sd": 0.00023497395649172347,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_c.lam1e-05.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6310610096124214,
+        0.6310798558279274,
+        0.6572861701509269
+      ],
+      "mean": 0.6398090118637586,
+      "sd": 0.015135665995951859,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        3.625870023780582e-06,
+        4.5855017847456805e-06,
+        4.326139596022186e-06
+      ],
+      "mean": 4.179170468182816e-06,
+      "sd": 4.964103368853662e-07,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        331.0,
+        316.0,
+        357.0
+      ],
+      "mean": 334.6666666666667,
+      "sd": 20.744477176668813,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        348.0,
+        332.0,
+        368.0
+      ],
+      "mean": 349.3333333333333,
+      "sd": 18.036999011291577,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        4.065114042023197,
+        3.7743816659785807,
+        4.292269750032574
+      ],
+      "mean": 4.043921819344784,
+      "sd": 0.259593624012258,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_c.lam1e-05.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam1e-05.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.6781257747293612,
+          0.5881706244503079
+        ],
+        [
+          0.6947178477690289,
+          0.587067299244421
+        ],
+        [
+          0.6376598686484618,
+          0.5808305855093129
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_c.lam0.001.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6239308180626022,
+        0.6329104214832925,
+        0.5974017849229845
+      ],
+      "mean": 0.6180810081562931,
+      "sd": 0.01846296359060417,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6153279454714989,
+        0.6237084901855285,
+        0.5897814840241891
+      ],
+      "mean": 0.6096059732270721,
+      "sd": 0.017672469027908477,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6318499218473783,
+        0.6421916746336839,
+        0.6051135988459581
+      ],
+      "mean": 0.6263850651090067,
+      "sd": 0.01913359402747635,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.004209202078477306,
+        0.004564878305095512,
+        0.0039624132825089725
+      ],
+      "mean": 0.00424549788869393,
+      "sd": 0.000302868065730791,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_c.lam0.001.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6434395701261033,
+        0.6436531320076588,
+        0.6677533046289519
+      ],
+      "mean": 0.6516153355875713,
+      "sd": 0.013976299072169676,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        2.1921033726322132e-06,
+        2.919936291742966e-06,
+        6.295407385027818e-06
+      ],
+      "mean": 3.802482349800999e-06,
+      "sd": 2.1893929781975635e-06,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        72.0,
+        71.0,
+        76.0
+      ],
+      "mean": 73.0,
+      "sd": 2.6457513110645907,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        75.0,
+        74.0,
+        76.0
+      ],
+      "mean": 75.0,
+      "sd": 1.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8752472500200383,
+        0.873127208033111,
+        0.8835591659881175
+      ],
+      "mean": 0.8773112080137556,
+      "sd": 0.005513744521069858,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_c.lam0.001.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_c.lam0.001.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.6666391207338237,
+          0.5812225153913808
+        ],
+        [
+          0.6807742782152231,
+          0.5850465647513619
+        ],
+        [
+          0.6456100933287245,
+          0.5491934765172445
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6705920093391615,
+        0.6817282857516427,
+        0.6408287586238743
+      ],
+      "mean": 0.6643830179048928,
+      "sd": 0.02114489325562749,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6623289516319979,
+        0.6728603480205281,
+        0.6335262757418104
+      ],
+      "mean": 0.6562385251314454,
+      "sd": 0.020362030393008938,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6784592538322931,
+        0.6905054263783241,
+        0.6480990179334519
+      ],
+      "mean": 0.672354566048023,
+      "sd": 0.02185237467658593,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.004083765910746379,
+        0.004506201660246118,
+        0.0037628083104056034
+      ],
+      "mean": 0.004117591960466033,
+      "sd": 0.0003728492582485618,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5839044383769172,
+        0.5725548522018757,
+        0.6140895130298009
+      ],
+      "mean": 0.5901829345361979,
+      "sd": 0.021467339100113725,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.00015706513279182903,
+        0.00020506767060572863,
+        0.00014460245585797937
+      ],
+      "mean": 0.00016891175308517904,
+      "sd": 3.192596682802209e-05,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1000.0,
+        1000.0,
+        1000.0
+      ],
+      "mean": 1000.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1049.0,
+        1065.0,
+        1059.0
+      ],
+      "mean": 1057.6666666666667,
+      "sd": 8.082903768654761,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        67.74983204196906,
+        70.19019654201111,
+        77.69452200003434
+      ],
+      "mean": 71.87818352800484,
+      "sd": 5.182778177693336,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.converged",
+      "kind": "observation",
+      "value": [
+        false,
+        false,
+        false
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.0001.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.691843649285183,
+          0.6493403693931399
+        ],
+        [
+          0.6890583989501312,
+          0.6743981725531542
+        ],
+        [
+          0.6539059799516074,
+          0.6277515372961412
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6754210439443392,
+        0.685116353940536,
+        0.6422979065935239
+      ],
+      "mean": 0.6676117681594663,
+      "sd": 0.02245202551030448,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6668392812399389,
+        0.6761063741208269,
+        0.6349193092696007
+      ],
+      "mean": 0.6592883215434555,
+      "sd": 0.02160685821720072,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6837413373874343,
+        0.6935788544639904,
+        0.6503491542679606
+      ],
+      "mean": 0.675889782039795,
+      "sd": 0.02265914684608482,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.004284716071595867,
+        0.004411819792845,
+        0.003882745077159246
+      ],
+      "mean": 0.004193093647200038,
+      "sd": 0.0002761811274935661,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.5669936244403176,
+        0.5553179446065314,
+        0.6000547550828418
+      ],
+      "mean": 0.5741221080432303,
+      "sd": 0.02320467650617165,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0008759649161006717,
+        0.000685439717754483,
+        0.000485708284016313
+      ],
+      "mean": 0.0006823709726238226,
+      "sd": 0.00019514641328747073,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1000.0,
+        1000.0,
+        1000.0
+      ],
+      "mean": 1000.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1068.0,
+        1061.0,
+        1052.0
+      ],
+      "mean": 1060.3333333333333,
+      "sd": 8.020806277010642,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        69.13893183402251,
+        69.66575179202482,
+        70.65128445898881
+      ],
+      "mean": 69.81865602834539,
+      "sd": 0.7676831342905698,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.converged",
+      "kind": "observation",
+      "value": [
+        false,
+        false,
+        false
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam1e-05.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.6893645153293116,
+          0.6614775725593668
+        ],
+        [
+          0.6864337270341208,
+          0.6837989808469513
+        ],
+        [
+          0.6511406844106464,
+          0.6334551287764014
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_scx.lam0.001.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6524699017075353,
+        0.6680599210730578,
+        0.6305518195184434
+      ],
+      "mean": 0.6503605474330122,
+      "sd": 0.01884280903022166,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6443678666099715,
+        0.6590071768021745,
+        0.6224255580854048
+      ],
+      "mean": 0.6419335338325168,
+      "sd": 0.01841190346048775,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6606989509378899,
+        0.6769467888478796,
+        0.6385122779673851
+      ],
+      "mean": 0.6587193392510515,
+      "sd": 0.019293575445694704,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.bal_acc.sd",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.004043385795659146,
+        0.004593400578201457,
+        0.004103954729998376
+      ],
+      "mean": 0.0042469137012863265,
+      "sd": 0.00030159080864235275,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.bal_acc.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "probe.status_scx.lam0.001.fit.loss",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.6074187727149211,
+        0.5988313495643645,
+        0.6347806173244149
+      ],
+      "mean": 0.6136769132012335,
+      "sd": 0.01877393685087835,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.fit.grad_max_abs",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.3923825125804619e-05,
+        3.453221606192737e-05,
+        1.6771641508708587e-05
+      ],
+      "mean": 2.1742560898813526e-05,
+      "sd": 1.11673172217506e-05,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.fit.n_iter",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        707.0,
+        646.0,
+        675.0
+      ],
+      "mean": 676.0,
+      "sd": 30.512292604784715,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.fit.func_evals",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        750.0,
+        678.0,
+        718.0
+      ],
+      "mean": 715.3333333333334,
+      "sd": 36.073998022583154,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.fit.seconds",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        46.1147932910244,
+        42.2994138749782,
+        46.09815562504809
+      ],
+      "mean": 44.83745426368356,
+      "sd": 2.1980231946016953,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.converged",
+      "kind": "observation",
+      "value": [
+        true,
+        true,
+        true
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "probe.status_scx.lam0.001.n_fit_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        137626.0,
+        139158.0,
+        138537.0
+      ],
+      "mean": 138440.33333333334,
+      "sd": 770.5610510098037,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.n_test_cells",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        34841.0,
+        34956.0,
+        34014.0
+      ],
+      "mean": 34603.666666666664,
+      "sd": 513.8933092902975,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "probe.status_scx.lam0.001.recall",
+      "kind": "observation",
+      "value": [
+        [
+          0.683084042641104,
+          0.6218557607739665
+        ],
+        [
+          0.6843011811023622,
+          0.6518186610437533
+        ],
+        [
+          0.650017283097131,
+          0.6110863559397558
+        ]
+      ],
+      "how": "item_1b.py::measure_seed; seed order 0,1,2"
+    },
+    {
+      "key": "control.B-C5.shuffled.bal_acc.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.48569407610541504,
+        0.5023469809009113,
+        0.5041279663245606
+      ],
+      "mean": 0.497389674443629,
+      "sd": 0.010167755044081139,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "control.B-C5.shuffled.bal_acc.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.4791589696796134,
+        0.4957855822704025,
+        0.4977187905713716
+      ],
+      "mean": 0.49088778084046253,
+      "sd": 0.010203336808068106,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "control.B-C5.shuffled.bal_acc.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.4928759397825369,
+        0.5086719521537784,
+        0.5102895924102262
+      ],
+      "mean": 0.5039458281155138,
+      "sd": 0.009620863307326113,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.ko_D.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9819494584837545,
+        1.0179211469534046,
+        1.005050505050505
+      ],
+      "mean": 1.0016403701625547,
+      "sd": 0.01822669355107783,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.ko_D.diff_fifo.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15641173087981597,
+        0.16387766878245813,
+        0.1752274728500146
+      ],
+      "mean": 0.16517229083742957,
+      "sd": 0.009474443053350814,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.ko_D.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9425467884220448,
+        0.9794747241746239,
+        0.9666652754590987
+      ],
+      "mean": 0.9628955960185891,
+      "sd": 0.018750359251219796,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.ko_D.diff_fifo.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.14437242898063787,
+        0.15143453421802763,
+        0.16208003580664304
+      ],
+      "mean": 0.15262899966843618,
+      "sd": 0.008914028026670153,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.ko_D.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0250986083719895,
+        1.06104925700641,
+        1.044342672413793
+      ],
+      "mean": 1.0434968459307308,
+      "sd": 0.0179902432206593,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.ko_D.diff_fifo.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.16887632286805496,
+        0.17621566338358094,
+        0.18834747205364008
+      ],
+      "mean": 0.17781315276842533,
+      "sd": 0.009833381509066244,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.ko_D.hit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9652098907418056,
+        0.9653779572994806,
+        0.9706486645142354
+      ],
+      "mean": 0.9670788375185072,
+      "sd": 0.0030927027300606115,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.ko_D.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "cap.oos.st_D.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.2003610108303249,
+        1.232974910394265,
+        1.1734006734006737
+      ],
+      "mean": 1.2022455315417544,
+      "sd": 0.029831794985820163,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.st_D.diff_fifo.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.19120184013801034,
+        0.19849971148297751,
+        0.20457880833577924
+      ],
+      "mean": 0.19809345331892236,
+      "sd": 0.0066977312437068,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.st_D.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.1622538815161765,
+        1.1896838602329454,
+        1.1393463077129178
+      ],
+      "mean": 1.1637613498206798,
+      "sd": 0.025202611847652726,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.st_D.diff_fifo.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.17978653158852273,
+        0.18552341569377592,
+        0.19173687116942767
+      ],
+      "mean": 0.18568227281724212,
+      "sd": 0.00597675335897281,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.st_D.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.2425971419396273,
+        1.2826117894563154,
+        1.2125076506591341
+      ],
+      "mean": 1.2459055273516924,
+      "sd": 0.03516897254185408,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.st_D.diff_fifo.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.20300486411724142,
+        0.21104331421386205,
+        0.217621489638938
+      ],
+      "mean": 0.2105565559900138,
+      "sd": 0.007320460066603791,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.st_D.hit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "cap.oos.st_D.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "cap.oos.fifo_hit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8087981598619897,
+        0.8015002885170225,
+        0.7954211916642208
+      ],
+      "mean": 0.8019065466810776,
+      "sd": 0.0066977312437068,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.oos.factfiller_hit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9680851063829787,
+        0.9624927870744374,
+        0.9697681244496624
+      ],
+      "mean": 0.9667820059690261,
+      "sd": 0.003808698793219142,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.ko_D.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9962616822429904,
+        0.9993640699523056,
+        1.0015792798483896
+      ],
+      "mean": 0.9990683440145619,
+      "sd": 0.0026711049110672547,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.ko_D.diff_fifo.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1589463220675944,
+        0.15589504488864647,
+        0.1580285059304296
+      ],
+      "mean": 0.1576232909622235,
+      "sd": 0.0015654783561377724,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.ko_D.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.978409091776306,
+        0.9808412568382621,
+        0.9817098943554373
+      ],
+      "mean": 0.9803200809900018,
+      "sd": 0.001711006316530539,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.ko_D.diff_fifo.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.15342456585372463,
+        0.15043723679174323,
+        0.1527018015154399
+      ],
+      "mean": 0.15218786805363593,
+      "sd": 0.001558566467466513,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.ko_D.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0155395271901841,
+        1.0182876946027013,
+        1.0211528645652415
+      ],
+      "mean": 1.018326695452709,
+      "sd": 0.0028068719103799206,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.ko_D.diff_fifo.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.16450976122378502,
+        0.16139774468638726,
+        0.16333868305969462
+      ],
+      "mean": 0.16308206298995565,
+      "sd": 0.0015717990098622402,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.ko_D.hit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9648608349900596,
+        0.9651802985962998,
+        0.9668593640984751
+      ],
+      "mean": 0.9656334992282781,
+      "sd": 0.0010735794143495625,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.ko_D.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "cap.insample_U.st_D.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.2165109034267914,
+        1.2225755166931638,
+        1.2116234996841444
+      ],
+      "mean": 1.2169033066013666,
+      "sd": 0.005486543021796597,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.st_D.diff_fifo.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.1940854870775348,
+        0.19071474629234664,
+        0.19116914183195455
+      ],
+      "mean": 0.19198979173394534,
+      "sd": 0.0018290907731604966,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.st_D.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.1989127851959855,
+        1.2044407595769877,
+        1.1917879343847526
+      ],
+      "mean": 1.1983804930525752,
+      "sd": 0.006343185125058781,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.st_D.diff_fifo.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.188544090592681,
+        0.18509066448283384,
+        0.18585454225993026
+      ],
+      "mean": 0.18649643244514835,
+      "sd": 0.0018139887627692313,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.st_D.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.2348325353396352,
+        1.2427962828927377,
+        1.2328387982304443
+      ],
+      "mean": 1.236822538820939,
+      "sd": 0.005268582408167606,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2 -> B0.boot_rule (per document, 2000, paired)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.st_D.diff_fifo.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.19941589534371904,
+        0.1960807897617576,
+        0.19681604305271858
+      ],
+      "mean": 0.19743757605273174,
+      "sd": 0.001752272742265482,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.st_D.hit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "mean": 1.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "cap.insample_U.st_D.dropped",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean": 0.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "cap.insample_U.fifo_hit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.8059145129224652,
+        0.8092852537076534,
+        0.8088308581680455
+      ],
+      "mean": 0.8080102082660546,
+      "sd": 0.0018290907731604966,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "cap.insample_U.factfiller_hit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9654572564612326,
+        0.9652795000248003,
+        0.9666101863849297
+      ],
+      "mean": 0.9657823142903208,
+      "sd": 0.0007224461858486462,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.kind.assert",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.0733532938601257,
+        0.07838347764276556,
+        0.07305643317414783
+      ],
+      "mean": 0.0749310682256797,
+      "sd": 0.0029935563555923183,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.kind.assert.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        351218.0,
+        352470.0,
+        352313.0
+      ],
+      "mean": 352000.3333333333,
+      "sd": 682.0530282414509,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.kind.query",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.006950528434073702,
+        -0.02774401838205258,
+        -0.001077611370017615
+      ],
+      "mean": -0.011924052728714633,
+      "sd": 0.014011647785500266,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.kind.query.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        269661.0,
+        271540.0,
+        271086.0
+      ],
+      "mean": 270762.3333333333,
+      "sd": 980.4235479288191,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.kind.filler",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.013819103961373605,
+        -0.02001255370198034,
+        -0.000493098953300638
+      ],
+      "mean": -0.011441585538884863,
+      "sd": 0.00997455381500314,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.kind.filler.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        130081.0,
+        126950.0,
+        127561.0
+      ],
+      "mean": 128197.33333333333,
+      "sd": 1659.6627167389563,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.assert_pending",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3483157584215019,
+        0.35933151221320525,
+        0.3424482520260813
+      ],
+      "mean": 0.35003184088692946,
+      "sd": 0.008571453955289151,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.assert_pending.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        71469.0,
+        70852.0,
+        71199.0
+      ],
+      "mean": 71173.33333333333,
+      "sd": 309.29974673984674,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.assert_querying",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0700428178848318,
+        1.044157270410558,
+        1.076196024856082
+      ],
+      "mean": 1.0634653710504907,
+      "sd": 0.017001986700062022,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.assert_querying.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        10088.0,
+        10078.0,
+        10028.0
+      ],
+      "mean": 10064.666666666666,
+      "sd": 32.145502536643185,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.assert_answered",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.036806856469728,
+        -0.03076728625536517,
+        -0.03480569152364423
+      ],
+      "mean": -0.034126611416245796,
+      "sd": 0.0030765182329628507,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.assert_answered.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        269661.0,
+        271540.0,
+        271086.0
+      ],
+      "mean": 270762.3333333333,
+      "sd": 980.4235479288191,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.query",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.006950528434073702,
+        -0.02774401838205258,
+        -0.001077611370017615
+      ],
+      "mean": -0.011924052728714633,
+      "sd": 0.014011647785500266,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.query.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        269661.0,
+        271540.0,
+        271086.0
+      ],
+      "mean": 270762.3333333333,
+      "sd": 980.4235479288191,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.filler",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.013819103961373605,
+        -0.02001255370198034,
+        -0.000493098953300638
+      ],
+      "mean": -0.011441585538884863,
+      "sd": 0.00997455381500314,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.P_fit.E_G.class.filler.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        130081.0,
+        126950.0,
+        127561.0
+      ],
+      "mean": 128197.33333333333,
+      "sd": 1659.6627167389563,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.kind.assert",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.07575909765556015,
+        0.07801396926385311,
+        0.0726766967932064
+      ],
+      "mean": 0.07548325457087322,
+      "sd": 0.002679307076840577,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.kind.assert.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        513631.0,
+        515109.0,
+        514108.0
+      ],
+      "mean": 514282.6666666667,
+      "sd": 754.3224332693105,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.kind.query",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.005275726457136286,
+        -0.029158065266655438,
+        -0.00043314217674480783
+      ],
+      "mean": -0.011622311300178843,
+      "sd": 0.015378220183355855,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.kind.query.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        393299.0,
+        395249.0,
+        395270.0
+      ],
+      "mean": 394606.0,
+      "sd": 1131.943903203688,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.kind.filler",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.01293604221568986,
+        -0.021371971926760144,
+        -3.0898071051527605e-05
+      ],
+      "mean": -0.011446304071167179,
+      "sd": 0.010748248607709857,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.kind.filler.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        189774.0,
+        186346.0,
+        187326.0
+      ],
+      "mean": 187815.33333333334,
+      "sd": 1765.6107536298405,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.assert_pending",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.3481645800384613,
+        0.3545850473298552,
+        0.3397353153249647
+      ],
+      "mean": 0.3474949808977604,
+      "sd": 0.0074474765801033375,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.assert_pending.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        105589.0,
+        105149.0,
+        104240.0
+      ],
+      "mean": 104992.66666666667,
+      "sd": 687.9537290641962,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.assert_querying",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0682101065856775,
+        1.039045437532975,
+        1.0746489650749707
+      ],
+      "mean": 1.0606348363978744,
+      "sd": 0.0189721198650039,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.assert_querying.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        14743.0,
+        14711.0,
+        14598.0
+      ],
+      "mean": 14684.0,
+      "sd": 76.1774244773345,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.assert_answered",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.034576112207632986,
+        -0.031332053666678836,
+        -0.03475615054691282
+      ],
+      "mean": -0.033554772140408216,
+      "sd": 0.0019270343824114953,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.assert_answered.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        393299.0,
+        395249.0,
+        395270.0
+      ],
+      "mean": 394606.0,
+      "sd": 1131.943903203688,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.query",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.005275726457136286,
+        -0.029158065266655438,
+        -0.00043314217674480783
+      ],
+      "mean": -0.011622311300178843,
+      "sd": 0.015378220183355855,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.query.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        393299.0,
+        395249.0,
+        395270.0
+      ],
+      "mean": 394606.0,
+      "sd": 1131.943903203688,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.filler",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        -0.01293604221568986,
+        -0.021371971926760144,
+        -3.0898071051527605e-05
+      ],
+      "mean": -0.011446304071167179,
+      "sd": 0.010748248607709857,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "means.U.E_G.class.filler.n",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        189774.0,
+        186346.0,
+        187326.0
+      ],
+      "mean": 187815.33333333334,
+      "sd": 1765.6107536298405,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "SEEN.b0.B.ckpt3000.g09.cap.ko.point",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.9962616822429904,
+        -0.9488076311605718,
+        1.0015792798483896
+      ],
+      "mean": 0.3496777769769361,
+      "sd": 1.124524493095013,
+      "how": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b0-ceilings/runs/b0-ceilings/ledger.json (SEEN)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "SEEN.b0.B.ckpt3000.g09.cap.ko.lo",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        0.978409091776306,
+        -1.0136173399710429,
+        0.9817098943554373
+      ],
+      "mean": 0.3155005487202335,
+      "sd": 1.1510510394217033,
+      "how": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b0-ceilings/runs/b0-ceilings/ledger.json (SEEN)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "SEEN.b0.B.ckpt3000.g09.cap.ko.hi",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1.0155395271901841,
+        -0.890930955973242,
+        1.0211528645652415
+      ],
+      "mean": 0.38192047859406114,
+      "sd": 1.102325250662958,
+      "how": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b0-ceilings/runs/b0-ceilings/ledger.json (SEEN)",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "n_P_fit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        745.0,
+        745.0,
+        745.0
+      ],
+      "mean": 745.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "n_P_test",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        187.0,
+        187.0,
+        187.0
+      ],
+      "mean": 187.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "n_U_val_never_read",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        156.0,
+        156.0,
+        156.0
+      ],
+      "mean": 156.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "n_documents",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1088.0,
+        1088.0,
+        1088.0
+      ],
+      "mean": 1088.0,
+      "sd": 0.0,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": true
+    },
+    {
+      "key": "n_querying_excluded.P_fit",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        7440.0,
+        7493.0,
+        7439.0
+      ],
+      "mean": 7457.333333333333,
+      "sd": 30.89228598426043,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "n_querying_excluded.P_test",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        1873.0,
+        1844.0,
+        1768.0
+      ],
+      "mean": 1828.3333333333333,
+      "sd": 54.22484055608954,
+      "how": "item_1b.py::measure_seed; seed order 0,1,2",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "seconds_per_seed",
+      "kind": "statistic",
+      "n": 3,
+      "samples": [
+        296.19606287498027,
+        289.8443746250123,
+        304.58526404201984
+      ],
+      "mean": 296.8752338473375,
+      "sd": 7.393876527801967,
+      "how": "wall clock",
+      "sd_exactly_zero": false
+    },
+    {
+      "key": "labels",
+      "kind": "observation",
+      "value": {
+        "kind_s": "DECODABLE",
+        "status_scx": "UNRESOLVED"
+      },
+      "how": "item_1b.py::labels_of (PREREG \u00a74, tightened)"
+    },
+    {
+      "key": "labels_read",
+      "kind": "observation",
+      "value": false,
+      "how": "False: a control failed, NOT READ"
+    }
+  ],
+  "verdict": null,
+  "finished_utc": "2026-10-20T08:05:12Z"
+}

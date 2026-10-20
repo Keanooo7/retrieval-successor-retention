@@ -1,0 +1,67 @@
+{
+  "args": {
+    "branch_search": "True",
+    "limit": "None",
+    "n_boot": "2000",
+    "run_id": "post-fails-controls-1b",
+    "runs_root": "/Users/keanooo7/retrieval-successor-retention/.worktrees/pfc-1bcde/runs",
+    "seeds": "[0, 1, 2]",
+    "suite_head": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+    "suite_log": "/private/tmp/claude-501/-Users-keanooo7-retrieval-successor-retention/0106f15a-071e-4e63-b7ba-4beedce5a19b/scratchpad/pfc/suite1/log",
+    "suite_rc": "0"
+  },
+  "bootstrap": {
+    "fn": "R1.boot_weights",
+    "n": 2000,
+    "seed_base": 20260927
+  },
+  "classes5": [
+    "assert_pending",
+    "assert_querying",
+    "assert_answered",
+    "query",
+    "filler"
+  ],
+  "device": "cpu",
+  "expected": "PREREG \u00a710: kind DECODABLE; status from [s; c; s(x)c] UNRESOLVED or NOT-DECODABLE; st_D cap above ko_D cap on seed 1.",
+  "falsifier": "NONE as a spec falsifier: Tier D diagnostic. Registered reading (\u00a74): kind probe DECODABLE iff CI lo >= 0.95 on all 3 seeds, NOT-DECODABLE iff CI hi < 0.95 on any seed, else UNRESOLVED; the [s; c; s(x)c] status probe likewise at 0.80. Caps reported with CIs, no label. Gates nothing.",
+  "gamma": 0.9,
+  "inputs": {
+    "b0_ledger": "/Users/keanooo7/retrieval-successor-retention/.worktrees/b0-ceilings/runs/b0-ceilings/ledger.json",
+    "cf_ledger": "/Users/keanooo7/retrieval-successor-retention/.worktrees/cf-ceiling/runs/cf-ceiling/ledger.json",
+    "delta_sha256": {
+      "0": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+      "1": "bf2753cef826f8d3c1647213d232c65a1e2167160be1a6c262fbea132b838700",
+      "2": "c880a2413fa2a4840724c7c005778df8cda77932f9db0fb6081db495514ce9c2"
+    },
+    "gestalt_sha256": {
+      "0": "211244f1469b90972e3b1d3b6635b3ee9eb095e78b932dc396bba64df3f5562b",
+      "1": "3a18e2917b385a6339ef82e92535953105877cf295bbaf9f6495a4749a6a0c68",
+      "2": "74e3bec7e5366d631480f9e3ac9a07916926da21ffd60be57568acb3b3723706"
+    }
+  },
+  "item": "1b",
+  "lambda": 0.0001,
+  "lambda_descriptive": [
+    1e-05,
+    0.001
+  ],
+  "loss": "class-balanced CE (mean per class, averaged) + lambda * ||weights||^2",
+  "max_iter": 1000,
+  "optimizer": "torch.optim.LBFGS(lr=1, line_search_fn='strong_wolfe', defaults)",
+  "prereg": "experiments/post-fails-controls/PREREG.md",
+  "prereg_commit": "9f22d87",
+  "question": "Is sentence kind, and an assert's pending/answered status, linearly decodable from what psi_hat sees, and where do E[G | kind] and E[G | status] rank (PREREG \u00a74)?",
+  "run_id": "post-fails-controls-1b",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "split": "U-train (offline-psi u_split) order j: P-test j % 5 == 0, P-fit rest",
+  "threads": 1,
+  "thresholds": {
+    "kind": 0.95,
+    "status": 0.8
+  }
+}
