@@ -35,17 +35,17 @@ The references are the same at every checkpoint and γ:
 
 The oracle's cap is +1.217 / +1.223 / +1.212.
 
-In the table below, cap = (hit − FIFO) / (factfiller − FIFO), with paired per-document bootstrap 95% CIs (2000 resamples). No cap replicate was dropped anywhere (`cap.*.dropped` = 0).
+In the table below, cap = (hit − FIFO) / (factfiller − FIFO), with paired per-document bootstrap 95% CIs (2000 resamples). **Every cap here is SEEN**: computed in-sample on the already-inspected U range, and any later comparison against them (e.g. `ko` against the least-squares optimum, PLAN-2026-10-19 §1) was made after they were seen. *(Label added 2026-10-19, PLAN-2026-10-19 phase 0.3; `docs/claims-register.md` rows `b0.cap.ko.g09`, `b0.cap.kb.g09`; no number changed.)* No cap replicate was dropped anywhere (`cap.*.dropped` = 0).
 
 | Rule | Seed | Hit | Hit − FIFO [CI] | Cap [CI] |
 |---|---|---|---|---|
-| **(i) kind-oracle** `ko` (A1.10 random tie) | 0 | 0.9649 | +0.159 [+0.153, +0.165] | **+0.996** [+0.978, +1.016] |
+| **(i) kind-oracle** `ko` (A1.10 random tie) — **SEEN** | 0 | 0.9649 | +0.159 [+0.153, +0.165] | **+0.996** [+0.978, +1.016] |
 | | 1 | 0.6613 | −0.148 [−0.154, −0.142] | **−0.949** [−1.014, −0.891] |
 | | 2 | 0.9669 | +0.158 [+0.153, +0.163] | **+1.002** [+0.982, +1.021] |
-| (i′) `ko_oldest` (secondary) | 0 | 0.9873 | +0.181 [+0.176, +0.187] | +1.137 [+1.120, +1.155] |
+| (i′) `ko_oldest` (secondary) — **SEEN** | 0 | 0.9873 | +0.181 [+0.176, +0.187] | +1.137 [+1.120, +1.155] |
 | | 1 | 0.7086 | −0.101 [−0.105, −0.096] | −0.645 [−0.693, −0.601] |
 | | 2 | 0.9862 | +0.177 [+0.172, +0.183] | +1.124 [+1.106, +1.143] |
-| **(ii) kind × age-band** `kb`: **NOT a legal ψ̂** | 0 | 0.9491 | +0.143 [+0.138, +0.148] | **+0.898** [+0.878, +0.917] |
+| **(ii) kind × age-band** `kb`: **NOT a legal ψ̂** — **SEEN** | 0 | 0.9491 | +0.143 [+0.138, +0.148] | **+0.898** [+0.878, +0.917] |
 | | 1 | 0.7645 | −0.045 [−0.049, −0.040] | **−0.287** [−0.323, −0.254] |
 | | 2 | 0.9770 | +0.168 [+0.163, +0.173] | **+1.066** [+1.045, +1.086] |
 | **(iii) age-only** `age` | 0 | 0.8124 | +0.007 [+0.001, +0.012] | **+0.041** [+0.004, +0.074] |
@@ -131,5 +131,5 @@ For reference:
   - **The mechanism I expected was wrong:** the break is assert < query, not assert < filler.
   - At ckpt2500, seed 0 also goes negative, which I did not predict.
 - **age:** a cap in [−0.5, 0.5] was expected; it fell there (+0.041 / +0.105 / +0.010).
-- **kb ≥ ko on seed 1:** yes (−0.287 against −0.949). **kb ≈ ko on seeds 0 and 2:** roughly (0.898 and 1.066).
+- **kb ≥ ko on seed 1:** yes (−0.287 against −0.949). **kb ≈ ko on seeds 0 and 2:** roughly (0.898 and 1.066). Both caps are **SEEN** (in-sample, already-inspected U); per-seed CIs in the headline table.
 - **C3 exact:** yes.
