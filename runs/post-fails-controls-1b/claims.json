@@ -1,10 +1,13 @@
 [
  {
-  "claim": "1b labels are {'kind_s': 'DECODABLE', 'status_scx': 'UNRESOLVED'}",
-  "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --what labels",
+  "claim": "1b exited 3; its labels are NOT READ (control failure(s): ['B-C5 seed0']); the reading rule is not applied (PREREG \u00a70)",
+  "command": ".venv/bin/python -c \"import json; d=json.load(open('runs/post-fails-controls-1b/ledger.json')); r={x['key']: x for x in d['rows']}; print(json.dumps({'exit_code': d['commands'][-1]['exit_code'], 'labels_read': r['labels_read']['value'], 'controls_failed': r['controls_failed']['value']}))\"",
   "expected": {
-   "kind_s": "DECODABLE",
-   "status_scx": "UNRESOLVED"
+   "exit_code": 3,
+   "labels_read": false,
+   "controls_failed": [
+    "B-C5 seed0"
+   ]
   }
  },
  {
