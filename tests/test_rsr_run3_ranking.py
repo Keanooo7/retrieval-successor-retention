@@ -1744,3 +1744,10 @@ def test_f3_rank_pairs_keep_only_finite_g(p2a):
     assert bool(t["mask"][0][low].all())  # a finite document loses nothing
     assert t["n_nonfinite_excluded"] > 0
     assert torch.isfinite(t["G"][t["mask"]]).all()
+    # lookahead-room's discounted_returns nan_to_num's a ±inf Delta into a HUGE finite
+    # G, so "finite G" is read off Delta: every return that draws on an infinite
+    # Delta[t + k][i] (k >= 0) is out of the pair set, every other cell stays in.
+    m = t["mask"][1]
+    assert not bool(m[4:41, 3].any()) and bool(m[41:, 3].all())
+    assert not bool(m[6:31, 5].any()) and bool(m[31:, 5].all())
+    assert int((low & ~m).sum()) == t["n_nonfinite_excluded"] == (41 - 4) + (31 - 6)
