@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common as C  # noqa: E402
+import common as C
 
 SEEDS = [0, 1, 2]
 _CACHE: dict[str, dict] = {}
@@ -24,7 +24,9 @@ def L(run: str) -> dict:
         out = {}
         for r in C.ledger(run).get("rows") or []:
             if isinstance(r, dict) and isinstance(r.get("key"), str):
-                out[r["key"]] = r["samples"] if r.get("kind") == "statistic" else r.get("value")
+                out[r["key"]] = (
+                    r["samples"] if r.get("kind") == "statistic" else r.get("value")
+                )
         _CACHE[run] = out
     return _CACHE[run]
 

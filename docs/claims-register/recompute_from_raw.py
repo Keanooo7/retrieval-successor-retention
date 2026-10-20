@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import common as C  # noqa: E402
+import common as C
 
 RUNS = {
     "decisive-shuffle": "experiments/decisive-shuffle/run.py",
@@ -57,7 +57,11 @@ class CaptureLedger:
         return row
 
     def verdict(self, *, falsifier, outcome, detail):
-        self.doc["verdict"] = {"falsifier": falsifier, "outcome": outcome, "detail": detail}
+        self.doc["verdict"] = {
+            "falsifier": falsifier,
+            "outcome": outcome,
+            "detail": detail,
+        }
 
     def command(self, *a, **k):
         pass

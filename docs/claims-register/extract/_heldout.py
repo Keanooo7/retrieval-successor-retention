@@ -10,10 +10,13 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common as C  # noqa: E402
+import common as C
 
 SEEDS = [0, 1, 2]
-BOOT = "paired per-document bootstrap percentile, n_boot 2000, 2048 EVAL docs, seed 20260927+s"
+BOOT = (
+    "paired per-document bootstrap percentile, n_boot 2000, 2048 EVAL docs, "
+    "seed 20260927+s"
+)
 
 
 def heldout_cmd(run: str, s: int) -> str:

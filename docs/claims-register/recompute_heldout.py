@@ -20,7 +20,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import common as C  # noqa: E402
+import common as C
 
 RUN_MODULE = {
     "rsr-run1": "experiments/rsr-run1/run.py",

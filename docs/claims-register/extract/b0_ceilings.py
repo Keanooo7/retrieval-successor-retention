@@ -34,7 +34,8 @@ def rows() -> list[C.Row]:
         (
             "ko",
             "headline",
-            "kind-oracle (ko, content-only, random tie) cap = (hit - FIFO)/(FactFiller - FIFO), "
+            "kind-oracle (ko, content-only, random tie) cap = (hit - FIFO)/(FactFiller "
+            "- FIFO), "
             "ckpt3000, gamma 0.9",
             None,
         ),
@@ -73,7 +74,8 @@ def rows() -> list[C.Row]:
                 "b0",
                 f"b0.cap.{h}",
                 f"B.ckpt3000.cap.{h}",
-                f"lookahead-room hindsight rule TargetPolicy(G_r_i, gamma {gm}) cap, ckpt3000",
+                f"lookahead-room hindsight rule TargetPolicy(G_r_i, gamma {gm}) cap, "
+                "ckpt3000",
                 tier="secondary",
                 prereg=P,
                 seen=C.SEEN,

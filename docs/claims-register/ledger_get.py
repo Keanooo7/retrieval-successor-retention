@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import common as C  # noqa: E402
+import common as C
 
 
 def main(argv: list[str]) -> int:

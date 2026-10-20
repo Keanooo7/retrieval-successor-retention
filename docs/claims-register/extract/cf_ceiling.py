@@ -30,7 +30,8 @@ def rows() -> list[C.Row]:
             "cf",
             f"cf.cap.{g}",
             f"B.ckpt3000.cf.{g}.cap",
-            f"hindsight TargetPolicy(G^Delta_gamma) cap, primary arm, ckpt3000, gamma {gm} "
+            "hindsight TargetPolicy(G^Delta_gamma) cap, primary arm, ckpt3000, gamma "
+            f"{gm} "
             "(FIFO-world LOO-resample Delta)",
             tier="headline",
             prereg=P,
@@ -57,7 +58,8 @@ def rows() -> list[C.Row]:
             "cf",
             "cf.cap.cfshift.g09",
             "B.ckpt3000.cfshift.g09.cap",
-            "sensitivity arm G^{Delta shift} cap, ckpt3000, gamma 0.9 (DIAGNOSTIC, unlabelled)",
+            "sensitivity arm G^{Delta shift} cap, ckpt3000, gamma 0.9 (DIAGNOSTIC, "
+            "unlabelled)",
             tier="secondary",
             prereg=f"{C.PREREG} (PREREG 0c5320e, diagnostic arm)",
             seen=U[0],

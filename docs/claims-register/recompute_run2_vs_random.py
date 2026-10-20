@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import common as C  # noqa: E402
+import common as C
 
 RUN2 = C.ARCHIVE / "rsr-run2-run" / "runs" / "rsr-run2"
 RUN1 = C.ARCHIVE / "rsr-run1-run" / "runs" / "rsr-run1"

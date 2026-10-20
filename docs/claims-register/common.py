@@ -70,7 +70,9 @@ class Row:
     ci: list[tuple[float, float] | None] | None = None
     ci_method: str = "none computed"
     checks: list[Check] = field(default_factory=list)
-    rederive_note: str | None = None  # why there is no check, e.g. "not re-derived (cost)"
+    rederive_note: str | None = (
+        None  # why there is no check, e.g. "not re-derived (cost)"
+    )
     note: str | None = None
 
 
@@ -118,10 +120,7 @@ def dig(x: Any, path: str | list[str] | None) -> Any:
         return x
     parts = path.split(".") if isinstance(path, str) else path
     for p in parts:
-        if isinstance(x, list):
-            x = x[int(p)]
-        else:
-            x = x[p]
+        x = x[int(p)] if isinstance(x, list) else x[p]
     return x
 
 

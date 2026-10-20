@@ -39,7 +39,8 @@ def rows() -> list[C.Row]:
                 "gamma",
                 f"gamma.cap.{g}",
                 f"B.ckpt3000.{g}.cap",
-                f"hindsight TargetPolicy(G_gamma on r_i demand D) cap, ckpt3000, gamma {gm}",
+                "hindsight TargetPolicy(G_gamma on r_i demand D) cap, ckpt3000, gamma "
+                f"{gm}",
                 tier="headline",
                 prereg=P,
                 seen=sw[0],
@@ -54,7 +55,9 @@ def rows() -> list[C.Row]:
             "per-gamma reading-rule labels at ckpt3000 (PREREG §6)",
             prereg=P,
             seen=C.SEEN,
-            seen_why="the class reads all 7 gammas; gamma 0 and 0.9 were already seen (B0)",
+            seen_why=(
+                "the class reads all 7 gammas; gamma 0 and 0.9 were already seen (B0)"
+            ),
             class_key="sweep_class",
         )
     )

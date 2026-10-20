@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import common as C  # noqa: E402
+import common as C
 
 GIT = "/opt/homebrew/bin/git"
 OUT_MD = C.ROOT / "docs" / "claims-register.md"
@@ -199,7 +199,8 @@ def status(r: C.Row, res: list[dict]) -> tuple[str, str]:
     kinds = "+".join(sorted({x["kind"] for x in res}))
     if bad:
         txt = "; ".join(
-            f"{x['label']}: re-derived `{x['got']}` vs ledger `{x['expected']}`" for x in bad
+            f"{x['label']}: re-derived `{x['got']}` vs ledger `{x['expected']}`"
+            for x in bad
         )
         return "no", f"**NO** ({kinds}): {txt}"
     if dnr:
@@ -254,32 +255,62 @@ def render() -> int:
         "(PLAN-2026-10-19 phase 0.2), not by Brendan."
     )
     w("")
-    w(f"- Rendered at tree `{head[:12]}`; re-derivation outputs per experiment in "
-      "`docs/claims-register/rederive/<experiment>.json` (each records the tree head it ran at).")
-    w("- Rebuild: `.venv/bin/python docs/claims-register/build.py rederive && "
-      ".venv/bin/python docs/claims-register/build.py render`.")
-    w(f"- `$SLOT` = `{C.SLOT.strip()}`; `$LG` = `{C.LEDGER_GET}` (prints one ledger key).")
-    w("- Raw records are read from the read-only archive `~/rsr-runs-archive/<worktree>/runs/` "
-      "(sha256 manifest `~/rsr-runs-archive/MANIFEST.sha256`).")
+    w(
+        f"- Rendered at tree `{head[:12]}`; re-derivation outputs per experiment in "
+        "`docs/claims-register/rederive/<experiment>.json` (each records the tree head "
+        "it ran at)."
+    )
+    w(
+        "- Rebuild: `.venv/bin/python docs/claims-register/build.py rederive && "
+        ".venv/bin/python docs/claims-register/build.py render`."
+    )
+    w(
+        f"- `$SLOT` = `{C.SLOT.strip()}`; `$LG` = `{C.LEDGER_GET}` (prints one ledger "
+        "key)."
+    )
+    w(
+        "- Raw records are read from the read-only archive "
+        "`~/rsr-runs-archive/<worktree>/runs/` "
+        "(sha256 manifest `~/rsr-runs-archive/MANIFEST.sha256`)."
+    )
     w("")
     w("## How to read a row")
     w("")
-    w("- **value per seed / CI per seed**: from the cited ledger key (or raw record field). "
-      "Display rounds to 4 decimals; the full value is at the key. Every CI is per seed; "
-      "no CI is pooled across seeds. `n/a` = the run computed no CI for that number.")
-    w("- **PREREG'd**: the number (statistic, data, rule) is named in a PREREG or amendment "
-      "committed before the run that produced it. **EXPLORATORY**: it is not.")
-    w("- **UNSEEN**: no value of this quantity on this data had been read when its analysis "
-      "was fixed. **SEEN**: one had (a post-hoc or descriptive reading, or data already "
-      "inspected for this quantity). The reason is given per row.")
-    w("- **re-derived equal**: every check's output string-equals the ledger value in full "
-      "precision. Check kinds: `raw` = recomputed from per-document / per-seed raw records "
-      "through the run's own analysis code; `archive-ledger` = read from the run's own "
-      "out-root ledger in the archive (not the committed copy); `ledger` = read of the "
-      "committed key only (proves the register reads the right key; recomputes nothing). "
-      "A mismatch is reported in the row, never smoothed.")
+    w(
+        "- **value per seed / CI per seed**: from the cited ledger key (or raw record "
+        "field). "
+        "Display rounds to 4 decimals; the full value is at the key. Every CI is per "
+        "seed; "
+        "no CI is pooled across seeds. `n/a` = the run computed no CI for that number."
+    )
+    w(
+        "- **PREREG'd**: the number (statistic, data, rule) is named in a PREREG or "
+        "amendment "
+        "committed before the run that produced it. **EXPLORATORY**: it is not."
+    )
+    w(
+        "- **UNSEEN**: no value of this quantity on this data had been read when its "
+        "analysis "
+        "was fixed. **SEEN**: one had (a post-hoc or descriptive reading, or data "
+        "already "
+        "inspected for this quantity). The reason is given per row."
+    )
+    w(
+        "- **re-derived equal**: every check's output string-equals the ledger value in "
+        "full "
+        "precision. Check kinds: `raw` = recomputed from per-document / per-seed raw "
+        "records "
+        "through the run's own analysis code; `archive-ledger` = read from the run's own "
+        "out-root ledger in the archive (not the committed copy); `ledger` = read of the "
+        "committed key only (proves the register reads the right key; recomputes "
+        "nothing). "
+        "A mismatch is reported in the row, never smoothed."
+    )
     w("")
-    for tier, title in (("headline", "Headline contrasts"), ("secondary", "Secondary numbers")):
+    for tier, title in (
+        ("headline", "Headline contrasts"),
+        ("secondary", "Secondary numbers"),
+    ):
         w(f"## {title}")
         w("")
         for e in exps:
@@ -288,9 +319,11 @@ def render() -> int:
                 continue
             w(f"### {e}")
             w("")
-            w("| id | claim | value per seed | 95% CI per seed (method) | seeds (n) | "
-              "source (ledger path + key) | PREREG'd / EXPLORATORY | SEEN / UNSEEN | "
-              "re-derived equal | re-derivation command |")
+            w(
+                "| id | claim | value per seed | 95% CI per seed (method) | seeds (n) | "
+                "source (ledger path + key) | PREREG'd / EXPLORATORY | SEEN / UNSEEN | "
+                "re-derived equal | re-derivation command |"
+            )
             w("|---|---|---|---|---|---|---|---|---|---|")
             for r in rs:
                 cat, st = status(r, by_row.get(r.id, []))
@@ -325,8 +358,10 @@ def render() -> int:
     w("## Summary")
     w("")
     n = len(rows)
-    w(f"- Rows: **{n}** ({sum(1 for r in rows if r.tier == 'headline')} headline, "
-      f"{sum(1 for r in rows if r.tier == 'secondary')} secondary).")
+    w(
+        f"- Rows: **{n}** ({sum(1 for r in rows if r.tier == 'headline')} headline, "
+        f"{sum(1 for r in rows if r.tier == 'secondary')} secondary)."
+    )
     for cat, lab in (
         ("yes", "re-derived equal"),
         ("no", "re-derived NOT equal"),
@@ -346,14 +381,68 @@ def render() -> int:
         k = "+".join(sorted({c.kind for c in r.checks}))
         kinds[k] = kinds.get(k, 0) + 1
     w("")
-    w("Equal rows by check kind: " + ", ".join(f"`{k}` {v}" for k, v in sorted(kinds.items())))
+    w(
+        "Equal rows by check kind: "
+        + ", ".join(f"`{k}` {v}" for k, v in sorted(kinds.items()))
+    )
     w("")
+    lines += prose_section({r.id: r for r in rows})
     OUT_MD.write_text("\n".join(lines) + "\n")
     print(
         f"rows={n} " + " ".join(f"{k}={len(v)}" for k, v in sorted(cats.items())),
         file=sys.stderr,
     )
     return rc
+
+
+def _norm(q: str) -> str:
+    return q.replace("\u2212", "-").replace("+", "")
+
+
+def prose_section(by_id: dict[str, C.Row]) -> list[str]:
+    """PLAN §1 (and other prose) against the register; see ``prose.py``. The ledger
+    side is each row's value rounded to the quote's own number of decimals."""
+    import prose as PR
+
+    out = [
+        "## Prose that disagrees with the records",
+        "",
+        "PLAN is the PM's copy (`~/Documents/RSR-2026-10-19-review/PLAN.md`) and is not "
+        "edited here. Quoted figures are the prose under audit; every ledger-side figure "
+        "is the cited row's value, rounded to the quote's precision by `build.py`.",
+        "",
+        "### PLAN §1 figures, per seed",
+        "",
+        "| where | what | prose | ledger at the prose's precision | per seed | row |",
+        "|---|---|---|---|---|---|",
+    ]
+    for where, what, quotes, rid in PR.NUMERIC:
+        r = by_id[rid]
+        led, marks = [], []
+        for q, v in zip(quotes, r.values, strict=True):
+            nd = len(_norm(q).split(".")[1]) if "." in q else 0
+            s = f"{v:+.{nd}f}" if q[:1] in "+\u2212-" else f"{v:.{nd}f}"
+            led.append(s.replace("-", "\u2212"))
+            marks.append(
+                "agree" if float(_norm(q)) == float(f"{v:.{nd}f}") else "**DISAGREE**"
+            )
+        out.append(
+            f"| {where} | {what} | {' / '.join(quotes)} | {' / '.join(led)} | "
+            f"{' / '.join(marks)} | `{rid}` |"
+        )
+    out += ["", "### Statements the records contradict or qualify", ""]
+    for i, (where, said, shows, rids) in enumerate(PR.FINDINGS, 1):
+        out.append(f"{i}. **{where}** — prose: *{said}*")
+        out.append(f"   - Records: {shows}")
+        for rid in rids:
+            r = by_id[rid]
+            ci = "" if r.ci is None else "; CI " + per_seed(r.seeds, r.ci, ci_str)
+            out.append(
+                f"   - `{rid}`: {per_seed(r.seeds, r.values, C.fmt)}{ci} "
+                f"({r.seen}; {r.prereg})"
+            )
+    out.append("")
+    return out
 
 
 def main(argv=None) -> int:

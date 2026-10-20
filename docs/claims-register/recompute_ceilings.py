@@ -4,7 +4,8 @@ line ``{"<ledger key>": value-for-this-seed}`` using the ledger's own key names.
 
     recompute_ceilings.py b0    --seed S   # B0.measure_seed on lookahead-room-r2 D.pt
     recompute_ceilings.py gamma --seed S   # gamma-ceiling's measure_seed on the same D.pt
-    recompute_ceilings.py cf    --seed S   # CF's score_arm on the archived Delta (delta.pt)
+    recompute_ceilings.py cf    --seed S   # CF's score_arm on the archived Delta
+                                           # (delta.pt)
     recompute_ceilings.py sample <ledger.json> <key> <index>   # one seed's sample
 
 Raw inputs, read only from the archive (never written):

@@ -20,8 +20,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import common as C  # noqa: E402
-from flat_json import flatten  # noqa: E402
+import common as C
+from flat_json import flatten
 
 ES_OUT = C.ARCHIVE / "es-referendum-a2-run" / "runs" / "expire-span-referendum"
 RUN1_OUT = C.ARCHIVE / "rsr-run1-run" / "runs" / "rsr-run1"
