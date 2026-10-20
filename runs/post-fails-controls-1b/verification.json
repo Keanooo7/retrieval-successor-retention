@@ -1,0 +1,141 @@
+{
+ "status": "ok",
+ "seed": "917de6a00d6a811baa1a8d6ee3a07e787194701fd8fad5baf809cd5c9f43de33",
+ "claims": [
+  {
+   "claim": "seed 0 probe.kind_s.lam0.0001.bal_acc.hi = 1.0",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 0 --what probe.kind_s.lam0.0001.bal_acc.hi",
+   "expected": 1.0,
+   "observed": "1.0",
+   "match": true,
+   "rc": 0,
+   "index": 3
+  },
+  {
+   "claim": "seed 1 probe.status_scx.lam0.0001.bal_acc.point = 0.6817282857516427",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 1 --what probe.status_scx.lam0.0001.bal_acc.point",
+   "expected": 0.6817282857516427,
+   "observed": "0.6817282857516427",
+   "match": true,
+   "rc": 0,
+   "index": 10
+  },
+  {
+   "claim": "seed 1 probe.status_scx.lam0.0001.bal_acc.hi = 0.6905054263783241",
+   "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/post-fails-controls/run.py 1b recompute --seed 1 --what probe.status_scx.lam0.0001.bal_acc.hi",
+   "expected": 0.6905054263783241,
+   "observed": "0.6905054263783241",
+   "match": true,
+   "rc": 0,
+   "index": 12
+  }
+ ],
+ "verifier_sha": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+ "researcher_sha": {
+  "ledger_git_sha": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+  "spawn_prompt": "ed3e5ac0b0290039cbe98b722a0d576d2bbc43fc",
+  "agree": true,
+  "ledger_provenance_dirty": true
+ },
+ "notes": [
+  "The three drawn claims were re-executed with their own commands (run.py 1b recompute), which re-run item_1b.measure_seed from the gestalt/Delta inputs, not from the ledger. That is the claimant's code path. The independent path was used only for the B-C5 extra check.",
+  "Under the cpu-det slot every command exited 0. Observed values are the last stdout line, copied as printed.",
+  "The ledger records provenance.dirty = true for the run at ed3e5ac. No code changes between ed3e5ac and the branch head b82a81b (git diff --stat touches only PREREG.md, RESULTS and runs/)."
+ ],
+ "extra_checks": [
+  {
+   "extra": true,
+   "check": "B-C5 seed 0 (PREREG §4): 16,640-feature [s; c; s(x)c] status probe, lambda 1e-4, fit on label-shuffled P-fit (torch.randperm with torch.Generator().manual_seed(0)), P-test balanced-accuracy CI from the per-document bootstrap R1.boot_weights(187, 0, 2000). The registered expectation is that the CI contains 0.5.",
+   "ledger": {
+    "point": 0.48569407610541504,
+    "lo": 0.4791589696796134,
+    "hi": 0.4928759397825369,
+    "controls_failed": [
+     "B-C5 seed0"
+    ]
+   },
+   "path_a_claimant_code": {
+    "how": "item_1b.p_split/status_cells/run_probe called directly on the shuffled labels (claimant's code path)",
+    "point": 0.48569407610541504,
+    "lo": 0.4791589696796134,
+    "hi": 0.4928759397825369,
+    "recall": [
+     0.46896950665234277,
+     0.5024186455584873
+    ],
+    "n_cells": [
+     12101.0,
+     22740.0
+    ],
+    "fit": {
+     "loss": 0.6852117445303146,
+     "grad_max_abs": 0.00012045728355535886,
+     "n_iter": 1000,
+     "func_evals": 1086,
+     "max_iter": 1000,
+     "max_eval": 1250,
+     "converged": false,
+     "finite": true,
+     "seconds": 70.49864929204341
+    },
+    "equal_to_ledger": true
+   },
+   "path_b_verifier_reimplementation": {
+    "how": "re-implemented from the PREREG text in the verifier's own script: split, cells, P-fit standardisation, bilinear logit s.w_s + c.w_c + (sA).c + b, balanced softplus CE + 1e-4*||w||^2, torch LBFGS(lr=1, max_iter=1000, strong_wolfe), bincount per-doc counts, own boot weights (checked equal to R1.boot_weights). Shared with the claimant: only diagnostic A's load_inputs (sha-checked gestalts + generator documents).",
+    "point": 0.48574941326799637,
+    "lo": 0.4789646032282687,
+    "hi": 0.49317834345381106,
+    "recall": [
+     0.46930005784645895,
+     0.5021987686895338
+    ],
+    "test_n_cells_per_class": [
+     12101.0,
+     22740.0
+    ],
+    "n_fit_cells": 137626,
+    "n_test_cells": 34841,
+    "n_features": 16640,
+    "loss": 0.6852154681824734,
+    "n_iter": 1000,
+    "func_evals": 1068,
+    "pred_frac_answered": 0.5120978157917396,
+    "boot_weights_equal_R1": true
+   },
+   "converged": {
+    "path_a": false,
+    "path_b_n_iter": 1000,
+    "note": "both fits stopped at the 1000-iteration cap"
+   },
+   "ci_side": "below 0.5 (hi < 0.5) on both paths",
+   "control_failure_reproduced": true,
+   "descriptive_not_registered": {
+    "what": "Path b on seed-0 data with OTHER permutation seeds (manual_seed(p)). This is not part of B-C5's definition and was recorded only to show how the result varies with the permutation.",
+    "by_perm_seed": {
+     "1": {
+      "point": 0.4988394095373032,
+      "lo": 0.49170833860188806,
+      "hi": 0.5053948969019751,
+      "ci_side": "contains 0.5",
+      "n_iter": 1000
+     },
+     "2": {
+      "point": 0.4901965260581254,
+      "lo": 0.48380946605170866,
+      "hi": 0.49648866353071547,
+      "ci_side": "below 0.5",
+      "n_iter": 1000
+     },
+     "3": {
+      "point": 0.49762525895175586,
+      "lo": 0.49066482174853754,
+      "hi": 0.5046806944415853,
+      "ci_side": "contains 0.5",
+      "n_iter": 1000
+     }
+    }
+   },
+   "match": true
+  }
+ ]
+}
