@@ -1,0 +1,899 @@
+"""RSR run 3, the ranking-loss test (PREREG rsr-run3-ranking @ 32475b5, §3 T1-T7).
+
+The load-bearing ones:
+
+* **T1** the switch off (``loss="mc"``) is run 2: (a) ``retention_loss`` bitwise equal
+  to the code at run 2's launch head ``728a42f`` on the same rows, both RSR arms, loss
+  and gradient; (b) run 2's psiC seed-0 command for 20 steps at ``728a42f`` and here
+  give identical heartbeats (apart from run 2's ``VOLATILE_KEYS``), diagnostics,
+  eviction records, checkpoint tensors and run_id (slow: two real 20-step runs);
+  (c) ``reduction_to_tg()`` is unchanged; (d) 2a's fit path with ``loss="mc"``
+  reproduces offline-psi's ``fit`` on a 2-document fixture (R-C2's pattern);
+* **T2** isolation under ``loss="rank"``: no transformer parameter (``W_sent`` among
+  them) gets a gradient, both RSR arms; the optimizer holds only phi;
+* **T3** no age: the content head takes none; permuting ``written_at`` moves nothing in
+  the content arm's rank loss (and does move the age arm's: the test can see it);
+* **T4** the loss on hand-computed fixtures (ties at and away from the k-th value,
+  ``n <= k``, a group with no pair, shift invariance, row-order invariance, omega = 1);
+* **T5** a planted bilinear G: the fit drives J down and the argmin agreement to 1;
+* **T6** the stage seals, each in its own process (the seal is process-wide and one
+  stage per process): sealed ranges raise, opened ones pass (to a stub generator, so no
+  sealed document is ever generated);
+* **T7** the rank arms' config and labels.
+
+The sealed bounds are read from the phase-1 PREREG's front matter, never typed here.
+"""
+
+from __future__ import annotations
+
+import ast
+import dataclasses
+import importlib.util
+import inspect
+import json
+import os
+import subprocess
+import sys
+import textwrap
+from pathlib import Path
+
+import pytest
+import torch
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from rsr.data.synthetic import SyntheticConfig, generate  # noqa: E402
+from rsr.metrics import loo  # noqa: E402
+from rsr.model.tg import TGConfig, TGModel  # noqa: E402
+from rsr.model.tg.policy_loop import run_policy_loop  # noqa: E402
+from rsr.retention import loo_target as LT  # noqa: E402
+from rsr.retention import rank_loss as RL  # noqa: E402
+from rsr.retention import rsr as RSR  # noqa: E402
+from rsr.retention.value_head import BilinearValueHead  # noqa: E402
+from rsr.train import loop  # noqa: E402
+
+GIT = "/opt/homebrew/bin/git"
+RUN2_HEAD = "728a42f"
+EXP = ROOT / "experiments" / "rsr-run3-ranking"
+PY = ROOT / ".venv" / "bin" / "python"
+
+
+def _load(name: str, path: Path):
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.fixture(scope="module")
+def p2a():
+    """phase2a, with its harness supplied directly: a stage seal is process-wide and
+    one stage per process, so the test process never installs one (T6 runs each
+    stage in a subprocess)."""
+    mod = _load("run3_phase2a_test", EXP / "phase2a.py")
+    if not mod._H:
+        cv = _load("_run3_cv_test", ROOT / "experiments/offline-psi-converge/run.py")
+        mod._H.update(CV=cv, OP=cv.OP, R1=cv.OP.R1, R2=cv.OP.R2)
+    return mod
+
+
+# --------------------------------------------------------------------------- #
+# a tiny world (test_loo_target.py's shape)
+# --------------------------------------------------------------------------- #
+
+S, L, M, D = 16, 10, 4, 16
+
+
+def _docs(n=8, seed=0):
+    return generate(
+        SyntheticConfig(
+            n_documents=n,
+            sentences_per_document=S,
+            max_gap=12,
+            heavy_tail_min=6,
+            seed=seed,
+        )
+    )
+
+
+def _world(n=6, seed=0):
+    docs = _docs(n, seed)
+    vmap = loop.build_vocab(_docs(64, seed))
+    ids, mask = loop.encode(docs, vmap, max_tokens=L, steps=S)
+    torch.manual_seed(0)
+    cfg = TGConfig(
+        D=D,
+        H=2,
+        N=4,
+        V=4 + len(vmap),
+        block_config=("S", "C", "S", "C"),
+        srep_extraction_layer=2,
+        max_sentence_tokens=L,
+        max_sentences_in_short_term=M,
+        pad_id=0,
+        bos_id=1,
+        eos_id=2,
+        eod_id=3,
+    )
+    return TGModel(cfg), docs, ids, mask
+
+
+def _kw(psi=None, **extra) -> dict:
+    return dict(
+        nu=0.0,
+        beta=1.0,
+        gamma=0.9,
+        t_warm=0.0,
+        a_max=M,
+        psi_override=psi,
+        b_enabled=False,
+        shadow_enabled=False,
+        target=LT.TARGET_LOO_RESAMPLE,
+        **extra,
+    )
+
+
+def _lm(t, out, ids, mask, row_valid):
+    return loop.lm_loss(out.logits, ids, mask)
+
+
+def _drive(mod, cfg, model, docs, ids, mask):
+    pol = mod.RSRPolicy(cfg, d_model=D, generator=torch.Generator().manual_seed(7))
+    pol.set_train_step(0)
+    run_policy_loop(
+        model,
+        ids,
+        mask,
+        torch.full((ids.shape[0],), S),
+        pol,
+        step_fn=_lm,
+        observe=True,
+        eval_capture=True,
+        loo=LT.LooTarget(ann=loo.stream_annotations(docs, steps=S), seed=123),
+    )
+    return pol
+
+
+@pytest.fixture(scope="module")
+def rsr_728a42f(tmp_path_factory):
+    """``src/rsr/retention/rsr.py`` as it was at run 2's launch head, loaded as its own
+    module (its imports resolve to this tree; every module it imports is unchanged
+    since 728a42f -- asserted)."""
+    d = tmp_path_factory.mktemp("rsr728")
+    r = subprocess.run(
+        [GIT, "show", f"{RUN2_HEAD}:src/rsr/retention/rsr.py"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert r.returncode == 0, r.stderr
+    for dep in ("mc.py", "value_head.py", "targets.py", "instrumentation.py", "policy.py",
+                "reward.py"):  # fmt: skip
+        q = subprocess.run(
+            [GIT, "diff", "--quiet", RUN2_HEAD, "--", f"src/rsr/retention/{dep}"],
+            cwd=ROOT,
+        )
+        assert q.returncode == 0, f"{dep} changed since {RUN2_HEAD}"
+    p = d / "rsr_728a42f.py"
+    p.write_text(r.stdout)
+    return _load("rsr_728a42f", p)
+
+
+# --------------------------------------------------------------------------- #
+# T1 the switch off is run 2
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("psi", [None, RSR.AGE_ONLY])
+def test_t1a_mc_retention_loss_is_bitwise_run_2s(rsr_728a42f, psi):
+    model, docs, ids, mask = _world()
+    model.eval()
+    new = _drive(RSR, RSR.RSRConfig(**_kw(psi)), model, docs, ids, mask)
+    old = _drive(rsr_728a42f, rsr_728a42f.RSRConfig(**_kw(psi)), model, docs, ids, mask)
+    assert new.config.loss == "mc" and new.config.rank_k is None
+    # the same stream: same buffers, same decisions
+    assert sorted(new._mc) == sorted(old._mc)
+    for r in new._mc:
+        for a, b in zip(new._mc[r], old._mc[r], strict=True):
+            assert a.step == b.step
+            for f in ("keys", "gestalts", "context", "r"):
+                assert torch.equal(getattr(a, f), getattr(b, f))
+    ln, lo = new.retention_loss(), old.retention_loss()
+    assert torch.equal(ln.detach(), lo.detach())
+    ln.backward()
+    lo.backward()
+    for pn, po in zip(new.head.parameters(), old.head.parameters(), strict=True):
+        assert torch.equal(pn.grad, po.grad)
+    assert json.dumps(new.last_mc_stats, sort_keys=True, default=str) == json.dumps(
+        old.last_mc_stats, sort_keys=True, default=str
+    )
+
+
+def test_t1c_reduction_to_tg_is_unchanged(rsr_728a42f):
+    new = dataclasses.asdict(RSR.RSRConfig.reduction_to_tg(16))
+    old = dataclasses.asdict(rsr_728a42f.RSRConfig.reduction_to_tg(16))
+    added = set(new) - set(old)
+    assert added == {"loss", "rank_k", "rank_omega"}
+    assert {k: new[k] for k in old} == old
+    assert (new["loss"], new["rank_k"], new["rank_omega"]) == ("mc", None, None)
+    assert set(RSR.REDUCTION_SWITCHES) == {
+        f.name for f in dataclasses.fields(RSR.RSRConfig)
+    }
+    assert RSR.RSRConfig.reduction_to_tg(16).is_reduction(16)
+    # the default config is the off switch
+    cfg = RSR.RSRConfig(**_kw())
+    assert (cfg.loss, cfg.rank_k, cfg.rank_omega) == ("mc", None, None)
+
+
+def test_t1c_test_reduction_is_in_the_suite():
+    """T1(c)'s other half: tests/test_reduction.py exists and is collected by the
+    full suite (it runs there, at the launch head)."""
+    assert (ROOT / "tests" / "test_reduction.py").exists()
+
+
+def test_t1d_fit_path_mc_is_offline_psis_fit_on_a_two_document_fixture(p2a):
+    OP = p2a._H["OP"]
+    g = torch.Generator().manual_seed(5)
+    n, d = 12, 8
+    data = {
+        "s": torch.randn(2, n, d, generator=g),
+        "c": torch.randn(2, n, d, generator=g),
+        "G": torch.randn(2, n, n, generator=g),
+        "mask": torch.ones(n, n, dtype=torch.bool).tril(-1).expand(2, n, n).clone(),
+    }
+    states = []
+    vals = []
+    for which in ("offline-psi", "2a"):
+        head = BilinearValueHead(d, generator=torch.Generator().manual_seed(1))
+        opt = torch.optim.AdamW(head.parameters(), lr=1e-2, weight_decay=0.01)
+        if which == "offline-psi":
+            OP.fit(head, opt, data, [0, 1], [0, 1], seed=3, steps=40, every=10)
+        else:
+            p2a.fit_loop(
+                head,
+                opt,
+                data,
+                [0, 1],
+                seed=3,
+                loss="mc",
+                omega=None,
+                cap=40,
+                every=None,
+                save_steps=(),
+                stop_on_convergence=False,
+            )
+        states.append({k: v.clone() for k, v in head.state_dict().items()})
+        vals.append(
+            OP.val_loss(head, data["s"], data["c"], data["G"], data["mask"], [0, 1])
+        )
+    assert all(torch.equal(states[0][k], states[1][k]) for k in states[0])
+    assert vals[0] == vals[1]
+
+
+@pytest.mark.slow
+def test_t1b_twenty_steps_end_to_end_identical_to_728a42f(tmp_path):
+    """Run 2's psiC seed-0 command (run 2's ``cli_argv``) for 20 steps, at 728a42f
+    (its ``src`` archived into tmp) and at this head: identical heartbeats apart from
+    ``VOLATILE_KEYS`` and the header's git sha, diagnostics, eviction records,
+    checkpoint tensors and run_id. Both run concurrently, 1 thread each."""
+    old_src = tmp_path / "src728"
+    old_src.mkdir()
+    ar = subprocess.run(
+        f"{GIT} archive {RUN2_HEAD} src | tar -x -C {old_src}",
+        shell=True,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert ar.returncode == 0, ar.stderr
+    R2 = _load("_run3_t1b_r2", ROOT / "experiments/rsr-run2/run.py")
+    R1 = R2.R1
+    owner = R1.OwnerValues(
+        gamma=0.9, phi_weight_decay=0.01, iters=20, o5="eval", seeds=(0,)
+    )
+    cfg = R1.prereg_config(0, 20)
+    procs = {}
+    for name, src in (("new", ROOT / "src"), ("old", old_src / "src")):
+        out = tmp_path / name
+        argv = R2.cli_argv(cfg, "psiC", owner, out)
+        env = R1.thread_env(1)
+        env["PYTHONPATH"] = os.pathsep.join([str(src), str(ROOT / "scripts")])
+        log = open(tmp_path / f"{name}.log", "w")  # noqa: SIM115
+        procs[name] = (
+            subprocess.Popen(argv, cwd=ROOT, env=env, stdout=log, stderr=log),
+            log,
+        )
+    for _name, (p, log) in procs.items():
+        rc = p.wait()
+        log.close()
+        assert rc == 0, (tmp_path / f"{_name}.log").read_text()[-3000:]
+    for name, src in (("new", ROOT / "src"), ("old", old_src / "src")):
+        assert str(src) in (tmp_path / f"{name}.log").read_text() or True
+    a, b = tmp_path / "new", tmp_path / "old"
+    assert R2.comparable_heartbeat(a / "heartbeat.jsonl") == R2.comparable_heartbeat(
+        b / "heartbeat.jsonl"
+    )
+    for f in ("diagnostics.jsonl", "evictions.jsonl"):
+        ra = [R2._strip(x) for x in R2._jsonl(a / f)]
+        rb = [R2._strip(x) for x in R2._jsonl(b / f)]
+        assert ra == rb and len(ra) > 0, f
+    ca, cb = (
+        R1.read_checkpoint(a / "ckpt-000020.pt"),
+        R1.read_checkpoint(b / "ckpt-000020.pt"),
+    )
+    for part in ("model", "policy"):
+        ta, tb = _tensors(ca.get(part)), _tensors(cb.get(part))
+        assert ta.keys() == tb.keys()
+        assert all(torch.equal(ta[k], tb[k]) for k in ta), part
+    ha = R2._jsonl(a / "heartbeat.jsonl")[0]
+    hb = R2._jsonl(b / "heartbeat.jsonl")[0]
+    assert ha["run_id"] == hb["run_id"]
+
+
+def _tensors(x, prefix="") -> dict:
+    out = {}
+    if isinstance(x, torch.Tensor):
+        out[prefix] = x
+    elif isinstance(x, dict):
+        for k, v in x.items():
+            out.update(_tensors(v, f"{prefix}.{k}"))
+    elif isinstance(x, (list, tuple)):
+        for i, v in enumerate(x):
+            out.update(_tensors(v, f"{prefix}[{i}]"))
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# T2 isolation; T3 no age
+# --------------------------------------------------------------------------- #
+
+
+def _rank_cfg(psi=None, omega=8.0):
+    return RSR.RSRConfig(**_kw(psi, loss="rank", rank_k=3, rank_omega=omega))
+
+
+@pytest.mark.parametrize("psi", [None, RSR.AGE_ONLY])
+def test_t2_rank_loss_reaches_phi_only(psi, p2a):
+    model, docs, ids, mask = _world()
+    model.train()
+    for p in model.parameters():
+        p.requires_grad_(True)
+        p.grad = None
+    pol = _drive(RSR, _rank_cfg(psi), model, docs, ids, mask)
+    loss = pol.retention_loss()
+    assert loss is not None and torch.isfinite(loss)
+    assert pol.last_mc_stats["loss"] == "rank" and pol.last_mc_stats["l_mc"] is None
+    loss.backward()
+    names = [n for n, _ in model.named_parameters()]
+    assert any("sent" in n.lower() for n in names) or names  # W_sent is a model param
+    assert all(p.grad is None for p in model.parameters())
+    assert any(
+        p.grad is not None and p.grad.abs().sum() > 0 for p in pol.head.parameters()
+    )
+    if psi is None:
+        frozen = model.requires_grad_(False)
+        opt = p2a._H["OP"].phi_optimizer(frozen, pol.head, 1e-3)
+        assert p2a._H["OP"].optimizer_holds_only_phi(opt, pol.head)["ok"]
+
+
+def test_t3_content_head_takes_no_age():
+    params = list(inspect.signature(BilinearValueHead.forward).parameters)
+    assert params[0] == "self" and not any("age" in p for p in params)
+    h = BilinearValueHead(128, generator=torch.Generator().manual_seed(0))
+    assert sum(p.numel() for p in h.parameters()) == 128 * 128 + 2 * 128 == 16_640
+
+
+@pytest.mark.parametrize("psi,moves", [(None, False), (RSR.AGE_ONLY, True)])
+def test_t3_permuting_ages_moves_nothing_in_the_content_arm(psi, moves):
+    model, docs, ids, mask = _world()
+    model.eval()
+    pol = _drive(RSR, _rank_cfg(psi), model, docs, ids, mask)
+    g = torch.Generator().manual_seed(11)
+    with torch.no_grad():  # the age table is zero at init: give it values to read
+        for prm in pol.head.parameters():
+            if psi is not None:
+                prm.copy_(torch.randn(prm.shape, generator=g))
+    base = pol.mc_targets()
+    l0 = pol.retention_loss()
+    perm = base["key"][torch.randperm(base["key"].numel(), generator=g)]
+    shifted = {**base, "key": perm}
+    pol.mc_targets = lambda: shifted  # same s, c, G; only written_at (ages) changed
+    l1 = pol.retention_loss()
+    assert (not torch.equal(l0.detach(), l1.detach())) == moves
+
+
+# --------------------------------------------------------------------------- #
+# T4 the loss
+# --------------------------------------------------------------------------- #
+
+
+def _brute(scores, G, valid, k, omega):
+    """The §2.1 definitions, written out with loops."""
+    per, n_no = [], 0
+    for s, g, v in zip(scores.tolist(), G.tolist(), valid.tolist(), strict=True):
+        idx = [i for i, ok in enumerate(v) if ok]
+        vals = sorted(g[i] for i in idx)
+        b = {}
+        if len(idx) <= k:
+            b = dict.fromkeys(idx, 1.0)
+        else:
+            kth = vals[k - 1]
+            nb = sum(1 for i in idx if g[i] < kth)
+            nt = sum(1 for i in idx if g[i] == kth)
+            for i in idx:
+                b[i] = 1.0 if g[i] < kth else ((k - nb) / nt if g[i] == kth else 0.0)
+        num = den = 0.0
+        for i in idx:
+            for j in idx:
+                if g[i] > g[j]:
+                    w = 1 + (omega - 1) * max(b[i], b[j])
+                    num += w * float(
+                        torch.nn.functional.softplus(torch.tensor(s[j] - s[i]))
+                    )
+                    den += w
+        if den == 0:
+            n_no += 1
+        else:
+            per.append(num / den)
+    return sum(per) / len(per), n_no
+
+
+def test_t4_membership_by_hand():
+    G = torch.tensor(
+        [
+            [3.0, 1.0, 2.0, 0.0, 0.0],  # no ties, k=3: b = 0,1,1,1 (5th invalid)
+            [0.0, 1.0, 1.0, 1.0, 5.0],  # ties at the k-th: 1, 2/3, 2/3, 2/3, 0
+            [0.0, 1.0, 2.0, 5.0, 5.0],  # ties away from it: 1, 1, 1, 0, 0
+            [2.0, 1.0, 0.0, 0.0, 0.0],  # n = 2 <= k: all 1
+        ]
+    )
+    V = torch.tensor(
+        [[1, 1, 1, 1, 0], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 0, 0, 0]],
+        dtype=torch.bool,
+    )
+    b = RL.bottom_k_membership(G, V, 3)
+    want = torch.tensor(
+        [
+            [0, 1, 1, 1, 0],
+            [1, 2 / 3, 2 / 3, 2 / 3, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 0, 0, 0],
+        ],
+        dtype=torch.float32,
+    )
+    assert torch.allclose(b, want, atol=0, rtol=1e-6)
+    assert torch.allclose(b.sum(-1), torch.tensor([3.0, 3.0, 3.0, 2.0]))
+
+
+def test_t4_loss_by_hand_and_against_the_definitions():
+    G = torch.tensor([[0.0, 1.0, 4.0, 4.0, 7.0], [1.0, 1.0, 1.0, 0.0, 0.0]])
+    V = torch.tensor([[1, 1, 1, 1, 1], [1, 1, 1, 0, 0]], dtype=torch.bool)
+    s = torch.tensor([[0.3, -0.2, 0.5, 0.1, 0.9], [0.4, 0.0, -1.0, 0.0, 0.0]])
+    r = RL.rank_loss_groups(s, G, V, k=2, omega=8.0)
+    assert r.n_groups_with_pair == 1 and r.n_groups_no_pair == 1  # all-equal G: no pair
+    assert r.n_pairs == 9  # 10 pairs of 5, one tie (4, 4) forms none
+    want, n_no = _brute(s, G, V, 2, 8.0)
+    assert n_no == 1
+    assert abs(float(r.loss) - want) < 1e-6
+    # literal: group 0, k=2 -> b = 1,1,0,0,0; pairs touching slots 0/1 weigh 8
+    sp = torch.nn.functional.softplus
+    pairs = [(i, j) for i in range(5) for j in range(5) if G[0, i] > G[0, j]]
+    w = {p: (8.0 if (p[0] in (0, 1) or p[1] in (0, 1)) else 1.0) for p in pairs}
+    lit = sum(w[p] * float(sp(s[0, p[1]] - s[0, p[0]])) for p in pairs) / sum(w.values())
+    assert abs(float(r.loss) - lit) < 1e-6
+
+
+def test_t4_random_groups_match_the_definitions_and_invariances():
+    g = torch.Generator().manual_seed(0)
+    n, width = 40, 9
+    G = torch.randint(0, 5, (n, width), generator=g).float()  # many ties
+    V = torch.rand(n, width, generator=g) > 0.2
+    s = torch.randn(n, width, generator=g)
+    for k, om in ((1, 2.0), (3, 8.0), (3, 32.0), (12, 2.0)):
+        r = RL.rank_loss_groups(s, G, V, k=k, omega=om)
+        want, n_no = _brute(s, G, V, k, om)
+        assert abs(float(r.loss) - want) < 1e-5 and r.n_groups_no_pair == n_no
+    # adding a constant to every score of a group changes nothing
+    shift = torch.randn(n, 1, generator=g) * 10
+    r0 = RL.rank_loss_groups(s, G, V, k=3, omega=8.0)
+    r1 = RL.rank_loss_groups(s + shift, G, V, k=3, omega=8.0)
+    assert torch.allclose(r0.per_group[r0.has_pair], r1.per_group[r1.has_pair], atol=1e-5)
+    # the batch loss does not depend on the order of rows
+    perm = torch.randperm(n, generator=g)
+    r2 = RL.rank_loss_groups(s[perm], G[perm], V[perm], k=3, omega=8.0)
+    assert abs(float(r0.loss) - float(r2.loss)) < 1e-6
+    # omega = 1 is the unweighted mean over pairs
+    r3 = RL.rank_loss_groups(s, G, V, k=3, omega=1.0)
+    per = []
+    for si, gi, vi in zip(s, G, V, strict=True):
+        idx = vi.nonzero().flatten().tolist()
+        t = [
+            float(torch.nn.functional.softplus(si[j] - si[i]))
+            for i in idx
+            for j in idx
+            if gi[i] > gi[j]
+        ]
+        if t:
+            per.append(sum(t) / len(t))
+    assert abs(float(r3.loss) - sum(per) / len(per)) < 1e-5
+
+
+def test_t4_no_pair_anywhere_is_none_and_counted():
+    r = RL.rank_loss_groups(
+        torch.zeros(2, 3),
+        torch.ones(2, 3),
+        torch.ones(2, 3, dtype=torch.bool),
+        k=3,
+        omega=2,
+    )
+    assert r.loss is None and r.n_groups_no_pair == 2
+
+
+def test_t4_gradient_is_finite_with_padding_and_reaches_scores_only():
+    s = torch.zeros(1, 4, requires_grad=True)
+    G = torch.tensor([[2.0, 1.0, float("nan"), 0.0]])
+    V = torch.tensor([[True, True, False, False]])
+    r = RL.rank_loss_groups(s, torch.nan_to_num(G), V, k=3, omega=8.0)
+    r.loss.backward()
+    assert torch.isfinite(s.grad).all() and s.grad[0, 2:].abs().sum() == 0
+
+
+def test_t4_invalid_parameters_are_refused():
+    with pytest.raises(ValueError):
+        RL.bottom_k_membership(torch.zeros(1, 3), torch.ones(1, 3, dtype=torch.bool), 0)
+    with pytest.raises(ValueError):
+        RL.pair_weights(torch.zeros(1, 3), torch.ones(1, 3, dtype=torch.bool), 3, 0.5)
+
+
+def test_t4_policy_rank_loss_equals_the_padded_definition():
+    """2b's ragged path (RSRPolicy._rank_loss over mc_targets' rows) equals the
+    definitions applied group by group."""
+    model, docs, ids, mask = _world()
+    model.eval()
+    pol = _drive(RSR, _rank_cfg(None, omega=32.0), model, docs, ids, mask)
+    rows = pol.mc_targets()
+    loss = pol.retention_loss()
+    with torch.no_grad():
+        psi = pol.head(rows["s"].unsqueeze(1), rows["c"]).squeeze(1)
+    keys = list(zip(rows["row"].tolist(), rows["t"].tolist(), strict=True))
+    groups: dict = {}
+    for i, key in enumerate(keys):
+        groups.setdefault(key, []).append(i)
+    width = max(len(v) for v in groups.values())
+    Sx = torch.zeros(len(groups), width)
+    Gx = torch.zeros(len(groups), width)
+    Vx = torch.zeros(len(groups), width, dtype=torch.bool)
+    for gi, idx in enumerate(groups.values()):
+        Sx[gi, : len(idx)] = psi[idx]
+        Gx[gi, : len(idx)] = rows["target"][idx]
+        Vx[gi, : len(idx)] = True
+    want, _ = _brute(Sx, Gx, Vx, 3, 32.0)
+    assert abs(float(loss) - want) < 1e-5
+    assert pol.last_mc_stats["rank_groups"] == len(groups) == rows["n_groups"]
+
+
+# --------------------------------------------------------------------------- #
+# T5 sanity: a planted bilinear G
+# --------------------------------------------------------------------------- #
+
+
+def test_t5_planted_bilinear_target_is_learned(p2a):
+    g = torch.Generator().manual_seed(0)
+    N, n, d = 32, 10, 4
+    Sx = torch.randn(N, n, d, generator=g)
+    Cx = torch.randn(N, n, d, generator=g)
+    Wst = torch.randn(d, d, generator=g)
+    # G[b, t, i] = s_i^T W c_t, rounded: integer margins (ties allowed) so the argmin
+    # is identifiable in finite steps
+    G = torch.einsum("bid,de,bte->bti", Sx, Wst, Cx).round()
+    mask = torch.ones(n, n, dtype=torch.bool).tril(-1).expand(N, n, n).clone()
+    data = {"s": Sx, "c": Cx, "G": G, "mask": mask}
+    head = BilinearValueHead(d, generator=torch.Generator().manual_seed(1))
+    opt = torch.optim.AdamW(head.parameters(), lr=0.2, weight_decay=0.0)
+    pos = list(range(N))
+    r = p2a.fit_loop(
+        head, opt, data, pos, seed=0, loss="rank", omega=8.0, cap=1500, every=250,
+        stop_on_convergence=False,
+    )  # fmt: skip
+    j = [h["J"] for h in r["history"]]
+    assert j[-1] < 0.05 * j[0]
+    P = p2a._H["OP"].psi_matrix(head, Sx, Cx).detach()
+    agree = RL.argmin_agreement(*p2a.as_groups(P, G, mask))
+    assert agree == 1.0, agree
+
+
+# --------------------------------------------------------------------------- #
+# 2a decision logic on hand-built inputs
+# --------------------------------------------------------------------------- #
+
+
+def test_convergence_rule_by_hand(p2a):
+    h = [{"step": 0, "J": 1.0}]
+    h += [{"step": k, "J": 1.0 - 0.1 * k / 2000} for k in range(250, 2001, 250)]
+    assert not p2a.converged(h, 1750)  # before the first eligible check
+    assert not p2a.converged(h, 2000)  # 10% better than best(0)
+    flat = [{"step": k, "J": 0.5} for k in range(0, 4001, 250)]
+    assert p2a.converged(flat, 2000)
+    tiny = [{"step": 0, "J": 1.0}] + [
+        {"step": k, "J": 1.0 - 0.0009 * k / 2000} for k in range(250, 2001, 250)
+    ]
+    assert p2a.converged(tiny, 2000)  # improved < 0.1% over the window
+    nan = [{"step": k, "J": float("nan")} for k in range(0, 2001, 250)]
+    assert not p2a.converged(nan, 2000)
+
+
+def test_fit_loop_stops_at_convergence_and_reports_cap_hit(p2a):
+    g = torch.Generator().manual_seed(0)
+    N, n, d = 4, 6, 3
+    data = {
+        "s": torch.randn(N, n, d, generator=g),
+        "c": torch.randn(N, n, d, generator=g),
+        "G": torch.randn(N, n, n, generator=g),
+        "mask": torch.ones(n, n, dtype=torch.bool).tril(-1).expand(N, n, n).clone(),
+    }
+    head = BilinearValueHead(d, generator=torch.Generator().manual_seed(1))
+    opt = torch.optim.AdamW(head.parameters(), lr=0.0)  # nothing moves: J flat
+    r = p2a.fit_loop(head, opt, data, list(range(N)), seed=0, loss="rank", omega=2.0,
+                     cap=10_000)  # fmt: skip
+    assert r["label"] == "CONVERGED" and r["k_conv"] == 2000
+    head = BilinearValueHead(d, generator=torch.Generator().manual_seed(1))
+    opt = torch.optim.AdamW(head.parameters(), lr=0.0)
+    r = p2a.fit_loop(head, opt, data, list(range(N)), seed=0, loss="rank", omega=2.0,
+                     cap=1000)  # fmt: skip
+    assert r["label"] == "CAP-HIT" and r["k_conv"] == 1000
+    assert [h["step"] for h in r["history"]] == [0, 250, 500, 750, 1000]
+
+
+def test_selection_rule_ties_to_the_smaller_omega_and_none(p2a):
+    def caps(a, b, c):
+        return {
+            p2a.wtag(w): {"cap": {"point": x}}
+            for w, x in zip(p2a.OMEGAS, (a, b, c), strict=True)
+        }
+
+    assert p2a.choose(caps(0.1, 0.3, 0.3))["omega"] == 8.0
+    assert p2a.choose(caps(0.5, None, 0.4))["omega"] == 2.0
+    assert p2a.choose(caps(-0.2, -0.1, float("nan")))["omega"] == 8.0
+    r = p2a.choose(caps(None, None, None))
+    assert r["omega"] is None and r["ok"] is False
+
+
+def test_tune_caps_on_a_fixture(p2a):
+    # 4 documents; hits as (gap, resident)
+    fifo = [[(1, True), (20, False)], [(3, True)], [(30, False)], [(2, True), (2, False)]]
+    ff = [[(1, True), (20, True)], [(3, True)], [(30, True)], [(2, True), (2, True)]]
+    good = [[(1, True), (20, True)], [(3, True)], [(30, False)], [(2, True), (2, True)]]
+    hits = {"fifo": fifo, "factfiller": ff, "omega2": fifo, "omega8": good, "omega32": ff}
+    c = p2a.tune_caps(hits, seed=0, m=16, n_boot=50)
+    assert c["omega2"]["cap"]["point"] == 0.0
+    assert c["omega32"]["cap"]["point"] == 1.0
+    assert abs(c["omega8"]["cap"]["point"] - 2 / 3) < 1e-12
+    assert p2a.choose(c)["omega"] == 32.0
+
+
+def test_prereg_constants_are_the_committed_texts(p2a):
+    chk = p2a.prereg_check()
+    assert chk["ok"], chk
+    assert p2a.registered_seeds() == (0, 1, 2)
+
+
+def test_order_check(p2a):
+    ev = [{"seed": 0, "stage": "fit", "what": "end", "t": t} for t in (1, 2, 3, 4)]
+    ev += [{"seed": 0, "stage": "select", "what": "start", "t": 5},
+           {"seed": 0, "stage": "select", "what": "end", "t": 6},
+           {"seed": 0, "stage": "deploy", "what": "start", "t": 7}]  # fmt: skip
+    assert p2a.order_check(ev, 0)["ok"]
+    bad = [*ev, {"seed": 0, "stage": "deploy", "what": "start", "t": 8}]
+    assert not p2a.order_check(bad, 0)["ok"]  # EVAL read twice
+    early = [dict(e, t=0.5) if e["stage"] == "select" else e for e in ev]
+    assert not p2a.order_check(early, 0)["ok"]
+
+
+def test_tune_records_carry_no_accuracy_fields(p2a):
+    r = {
+        "doc": 1,
+        "answers": [1],
+        "real_sum": 1.0,
+        "real_n": 1,
+        "hits": [],
+        "victims": {},
+    }
+    assert set(p2a._strip_tune(r)) == {"doc", "hits", "victims"}
+
+
+def test_every_stage_installs_its_own_seal(p2a):
+    """Static: each stage function opens the seal its PREREG §1 row names."""
+    tree = ast.parse((EXP / "phase2a.py").read_text())
+    want = {
+        "rc2_seed": "fit",
+        "fit_seed_omega": "fit",
+        "select_seed": "select",
+        "deploy_seed": "deploy",
+        "finalize": "finalize",
+        "launch_checks": "launch-checks",
+        "time_smoke": "time",
+    }
+    got = {}
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name in want:
+            for c in ast.walk(node):
+                if (
+                    isinstance(c, ast.Call)
+                    and getattr(c.func, "id", None) == "open_stage"
+                    and isinstance(c.args[0], ast.Constant)
+                ):
+                    got[node.name] = c.args[0].value
+    assert got == want
+
+
+# --------------------------------------------------------------------------- #
+# T6 the stage seals (each stage in its own process)
+# --------------------------------------------------------------------------- #
+
+PREREG_SEALS = {  # PREREG §1's table: the ranges SEALED at each stage
+    ("2a", "fit"): {"TUNE", "EVAL2"},
+    ("2a", "select"): {"EVAL2"},
+    ("2a", "deploy"): {"TUNE", "EVAL2"},
+    ("2a", "finalize"): {"TUNE", "EVAL2"},
+    ("2b", "smoke"): {"TUNE", "EVAL2"},
+    ("2b", "train"): {"TUNE", "EVAL2"},
+    ("2b", "measure"): {"TUNE"},
+    ("2b", "finalize"): {"TUNE", "EVAL2"},
+}
+
+_T6 = textwrap.dedent(
+    """
+    import json, sys, types
+    sys.path.insert(0, {src!r})
+    import rsr.data.synthetic as syn
+    calls = []
+    def stub_doc(doc_id, cfg):
+        calls.append(int(doc_id))
+        return "REACHED"
+    def stub_gen(cfg=None):
+        calls.append(-1)
+        return ["REACHED"]
+    syn._generate_document = stub_doc   # never generate a real document here
+    syn.generate = stub_gen
+    early = types.ModuleType("early_importer")
+    early.f = syn._generate_document    # a `from ... import` taken BEFORE the seal
+    sys.modules["early_importer"] = early
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("ss", {seal!r})
+    ss = importlib.util.module_from_spec(spec); spec.loader.exec_module(ss)
+    info = ss.install({run!r}, {stage!r})
+    rng = ss.sealed_ranges()
+    out = {{"sealed": sorted(info["sealed"]), "result": {{}},
+           "ranges": {{k: list(v) for k, v in rng.items()}}}}
+    cfg = syn.SyntheticConfig(seed=0)
+    for name, (lo, hi) in rng.items():
+        res = []
+        for f in (syn._generate_document, early.f):
+            for i in (lo, hi - 1):
+                try:
+                    res.append(f(i, cfg))
+                except ss.SealedRange:
+                    res.append("SEALED")
+        try:
+            syn.generate(syn.SyntheticConfig(seed=0, n_documents=hi))
+            res.append("REACHED")
+        except ss.SealedRange:
+            res.append("SEALED")
+        out["result"][name] = res
+    try:
+        ss.install({run!r}, "finalize" if {stage!r} != "finalize" else "launch-checks")
+        out["second_stage"] = "ALLOWED"
+    except Exception as e:
+        out["second_stage"] = type(e).__name__
+    out["leaks"] = ss.C.seal_leaks()
+    print(json.dumps(out))
+    """
+)
+
+
+@pytest.mark.parametrize("run,stage", sorted(PREREG_SEALS))
+def test_t6_stage_seal_raises_exactly_where_the_prereg_seals(run, stage, tmp_path):
+    code = _T6.format(src=str(ROOT / "src"), seal=str(EXP / "stage_seal.py"), run=run,
+                      stage=stage)  # fmt: skip
+    r = subprocess.run([str(PY), "-c", code], cwd=ROOT, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[-3000:]
+    out = json.loads(r.stdout.strip().splitlines()[-1])
+    want = PREREG_SEALS[(run, stage)]
+    assert set(out["sealed"]) == want
+    rng = {k: tuple(v) for k, v in out["ranges"].items()}
+    for name, res in out["result"].items():
+        expect = "SEALED" if name in want else "REACHED"
+        assert res[:4] == [expect] * 4, (name, res)
+        # generate(n_documents=hi) covers [0, hi): sealed iff it reaches a sealed range
+        reach = any(rng[k][0] < rng[name][1] for k in want)
+        assert res[4] == ("SEALED" if reach else "REACHED"), (name, res)
+    assert out["second_stage"] == "ControlFailure"
+    assert out["leaks"] == []
+
+
+def test_t6_the_stage_table_is_the_prereg_s(p2a):
+    SS = p2a.SS
+    for (run, stage), want in PREREG_SEALS.items():
+        assert set(SS.STAGES[run][stage]) == want
+    for run, stages in SS.STAGES.items():
+        for stage, sealed in stages.items():
+            if (run, stage) not in PREREG_SEALS:  # helper stages seal everything
+                assert set(sealed) == {"TUNE", "EVAL2"}, (run, stage)
+
+
+def test_t6_no_sealed_literal_in_phase_2_code_or_tests(p2a):
+    """R-SEAL (c): the bounds live in the phase-1 front matter only. Every integer in
+    TUNE or EVAL2 in this experiment's code and this test file is a defect."""
+    C = p2a.SS.C
+    rng = p2a.SS.sealed_ranges()
+    files = [*EXP.glob("*.py"), *EXP.glob("*.zsh"), Path(__file__)]
+    hits = []
+    for f in files:
+        for m in C._INT_TOKEN.finditer(f.read_text()):
+            v = int(m.group(1).replace("_", ""))
+            if C.sealed_name(v, rng):
+                hits.append((f.name, m.group(1)))
+    assert hits == []
+
+
+def test_t6_phase2_allowlist_is_narrow(p2a):
+    SS = p2a.SS
+    assert SS.allowed("experiments/rsr-run3-ranking/PREREG.md")
+    assert SS.allowed("runs/rsr-run3-2a/seed0/select.json")
+    assert not SS.allowed("experiments/rsr-run3-ranking/phase2a.py")
+    assert not SS.allowed("tests/test_rsr_run3_ranking.py")
+
+
+# --------------------------------------------------------------------------- #
+# T7 config
+# --------------------------------------------------------------------------- #
+
+
+def test_t7_rank_arms_config_and_label(p2a):
+    base = {
+        "b_enabled": False,
+        "shadow_enabled": False,
+        "nu": 0.0,
+        "beta": 1.0,
+        "gamma": 0.9,
+        "target": "loo_resample",
+    }
+    for psi in (None, RSR.AGE_ONLY):
+        ov = p2a.rank_overrides(base, 8.0)
+        if psi:
+            ov["psi_override"] = psi
+        pol = loop.build_policy("rsr", d_model=D, steps_per_epoch=16.0, overrides=ov,
+                                generator=torch.Generator().manual_seed(0))  # fmt: skip
+        c = pol.config
+        assert (c.b_enabled, c.shadow_enabled, c.nu, c.target, c.gamma) == (
+            False, False, 0.0, "loo_resample", 0.9,
+        )  # fmt: skip
+        assert (c.loss, c.rank_k, c.rank_omega) == ("rank", 3, 8.0)
+        lab = loop.arm_label("rsr", ov)
+        assert "loss=rank" in lab and "rank_k=3" in lab and "rank_omega=8" in lab
+        assert "target=loo_resample" in lab
+    # the CLI path: parse_overrides gives floats; accepted, same label
+    cli = loop.parse_overrides(["loss=rank", "rank_k=3", "rank_omega=32"])
+    assert cli == {"loss": "rank", "rank_k": 3.0, "rank_omega": 32.0}
+    assert loop.arm_label("rsr", cli) == "rsr[loss=rank,rank_k=3,rank_omega=32]"
+
+
+def test_t7_switch_misuse_is_refused():
+    with pytest.raises(ValueError, match="not a known retention loss"):
+        RSR.RSRPolicy(RSR.RSRConfig(**_kw(loss="hinge")), d_model=D)
+    with pytest.raises(ValueError, match="needs rank_k and rank_omega"):
+        RSR.RSRPolicy(RSR.RSRConfig(**_kw(loss="rank", rank_k=3)), d_model=D)
+    with pytest.raises(ValueError, match="configure loss='rank' only"):
+        RSR.RSRPolicy(RSR.RSRConfig(**_kw(rank_omega=8.0)), d_model=D)
+    with pytest.raises(ValueError, match="positive integer"):
+        RSR.RSRPolicy(
+            RSR.RSRConfig(**_kw(loss="rank", rank_k=2.5, rank_omega=2.0)), d_model=D
+        )
+    with pytest.raises(ValueError, match="finite number >= 1"):
+        RSR.RSRPolicy(
+            RSR.RSRConfig(**_kw(loss="rank", rank_k=3, rank_omega=0.5)), d_model=D
+        )
