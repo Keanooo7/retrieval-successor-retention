@@ -536,3 +536,36 @@ the drafter's open questions. Each one keeps or tightens PLAN §2; none loosens 
 6. **Base head.** Committed on `22662bc` (integration head, full suite
    `passed=2670 failed=0 skipped=0 errors=0` rc 0, read directly). `git diff --stat 654e70c 22662bc`
    touches `scripts/battery_env.py` only, so no input this file names changed.
+
+
+---
+
+## Amendment 1a-S (2026-10-20): item 1a timing smoke and projection
+
+**Appended by a model** (Claude Opus 5.5, the 1a builder), committed alone, after the
+1a harness and before 1a launches. It replaces §3's "Timing: placeholder" for item 1a
+only; nothing above this line is edited. Generated from the smoke's own record
+(`runs/post-fails-controls-1a-smoke/measure-seed0.json`, sha256 `2cb534e0eb672336232af66f21174bf76714f48a5566c7d4050d8c711d2433de`, committed in
+`e4688e0`); no number below is typed.
+
+**Smoke.** `run.py 1a measure --seed 0 --limit 32`, one `cpu-det` slot, 1 thread, at
+`669ec67`, on the first 32 EVAL documents
+(`995000`-`995031`: already used, not
+sealed). Exit 0; every control green (A-C2/A-C3 compared against run 2's records
+as a prefix and flagged `smoke`). The smoke computed per-seed statistics on those 32
+documents as a side effect of the code path; they are not a result and are not reported.
+
+| pass | batches of 16 | seconds | s / batch |
+|---|---|---|---|
+| fifo | 2 | 1.977 | 0.989 |
+| oracle | 2 | 2.013 | 1.007 |
+| factfiller | 2 | 1.971 | 0.986 |
+| kindoracle | 2 | 2.005 | 1.002 |
+
+Fixed overhead (two substrate-manifest checks, harness load, reads, controls):
+57.0 s of a 65 s wall.
+
+**Projection.** 4 passes x 128 batches x 0.996 s + 57.0 s = 9.4 min
+per seed; 0.31 h for 3 seeds on 2 slots (seeds 0 and 1 in parallel, then
+2), 0.47 h serially. Plus the full suite and the launch checks (§1.1
+search on every branch). Far below the 8 h stop: item 1a launches.
