@@ -1300,8 +1300,8 @@ def test_pm1_2b_plan_no_longer_refuses_at_k_above_3000(p2b, tmp_path):
     assert big["K_2b"] == 96_000 and big["fifo_iters"] == 3000
     assert big["fifo_ckpt_every"] == 40 and big["ckpt_every"] == p2b.ckpt_every(96_000)
     assert not any("C10" in x for x in big["problems"])
-    assert big["unruled_at_K_gt_3000"]  # recorded, and measure refuses before EVAL2
-    assert not p2b.measure_precheck(big)["ok"]
+    assert big["unruled_at_K_gt_3000"] == []  # Amendment PM-2 rules on all five
+    assert p2b.measure_precheck(big)["ok"]
     small = p2b.make_plan(_ledger_2a(tmp_path, [2000, 2000, 1000], win))
     assert small["ok"] and small["unruled_at_K_gt_3000"] == []
     assert p2b.measure_precheck(small)["ok"]
@@ -1398,3 +1398,179 @@ def test_pm1_c_f_on_run_2s_fifo_checkpoint_and_tampered(p2b):
     assert not p2b.c_f({**payload, "meta": {**payload["meta"], "config": conf}}, sub)[
         "ok"
     ]
+
+
+# --------------------------------------------------------------------------- #
+# Amendment PM-2 (f9eeb48): every fifo read at R-1, every RSR read at K_2b
+# --------------------------------------------------------------------------- #
+
+PM2_PLAN = {
+    "omega_s": {"0": 2.0, "1": 8.0, "2": 32.0},
+    "fifo_iters": 3000,
+    "K_2b": 96_000,
+}
+
+
+def test_pm2_fifo_checkpoint_reads_are_at_r1(p2b, tmp_path):
+    R1 = p2b.harness()["R1"]
+    p2b.set_plan(PM2_PLAN)
+    f = R1.checkpoint_path(R1.arm_dir(tmp_path, "fifo", 0), 96_000)
+    assert f.name == "ckpt-003000.pt"
+    assert R1.checkpoint_path(R1.arm_dir(tmp_path, "psiC", 0), 96_000).name == (
+        "ckpt-096000.pt"
+    )
+    assert (
+        R1.checkpoint_path(R1.arm_dir(tmp_path, "fifo", 0), 40).name == "ckpt-000040.pt"
+    )
+    p2b.set_plan({**PM2_PLAN, "K_2b": 3000})
+    assert R1.checkpoint_path(R1.arm_dir(tmp_path, "fifo", 0), 3000).name == (
+        "ckpt-003000.pt"
+    )
+
+
+def test_pm2_c6_per_arm_against_its_own_iters(p2b):
+    R1 = p2b.harness()["R1"]
+    p2b.set_plan(PM2_PLAN)
+    cfg = R1.prereg_config(0, 96_000)
+
+    def arm(n):
+        r = {"steps_done": n, "steps_requested": n}
+        h = {"footer": {"status": "completed"}, "beats": [{}] * 3, "crash": None}
+        return r, h
+
+    res, hbs = {}, {}
+    for a, n in (("psiC", 96_000), ("fifo", 3000), ("age", 96_000)):
+        res[a], hbs[a] = arm(n)
+    assert R1.c6_steps(res, hbs, cfg)["ok"]
+    res["fifo"], hbs["fifo"] = arm(96_000)
+    assert not R1.c6_steps(res, hbs, cfg)["ok"]
+    res["fifo"], hbs["fifo"] = arm(3000)
+    res["age"], hbs["age"] = arm(3000)
+    assert not R1.c6_steps(res, hbs, cfg)["ok"]
+
+
+def test_pm2_c2_views(p2b, monkeypatch):
+    R1 = p2b.harness()["R1"]
+    p2b.set_plan({**PM2_PLAN, "K_2b": 6000})
+    seen = []
+
+    def fake(beats, ids, cfg, sampling, *, samplings=None):
+        steps = {a: sorted(b["step"] for b in v) for a, v in beats.items()}
+        seen.append(
+            (
+                sorted(beats),
+                cfg.iters,
+                {a: (s[0], s[-1]) for a, s in steps.items()},
+                sorted(ids),
+                sorted(samplings or {}),
+            )
+        )
+        return {
+            "ok": True,
+            "warm_steps_compared": 16,
+            "c_loss_lm_warm_mismatch_steps": [],
+            "steps_compared": len(steps),
+        }
+
+    monkeypatch.setattr(p2b, "_C2_ORIG", fake)
+    beats = {
+        a: [{"step": k} for k in range(6000 if a != "fifo" else 3000)] for a in R1.ARMS
+    }
+    ids = {a: {k: [k] for k in range(6000 if a != "fifo" else 3000)} for a in R1.ARMS}
+    sam = dict.fromkeys(R1.ARMS, "perm")
+    cfg = R1.prereg_config(0, 6000)
+    out = R1.c2_pairing(beats, ids, cfg, "perm", samplings=sam)
+    assert out["ok"] and out["warm_steps_compared"] == 16
+    assert out["c_loss_lm_warm_mismatch_steps"] == []
+    rsr = next(v for v in seen if v[0] == ["age", "psiC"])
+    assert rsr[1] == 6000 and rsr[2] == {"age": (0, 5999), "psiC": (0, 5999)}
+    for a in ("psiC", "age"):
+        v = next(v for v in seen if v[0] == sorted([a, "fifo"]))
+        assert v[1] == 3000 and v[2] == {a: (0, 2999), "fifo": (0, 2999)}
+        assert v[3] == sorted([a, "fifo"]) and v[4] == sorted([a, "fifo"])
+
+    def bad(beats, ids, cfg, sampling, *, samplings=None):
+        r = fake(beats, ids, cfg, sampling, samplings=samplings)
+        return {**r, "ok": "fifo" not in beats}
+
+    monkeypatch.setattr(p2b, "_C2_ORIG", bad)
+    assert not R1.c2_pairing(beats, ids, cfg, "perm", samplings=sam)["ok"]
+
+
+def test_pm2_c4_reads_fifo_at_r1(p2b, monkeypatch):
+    R1 = p2b.harness()["R1"]
+    p2b.set_plan(PM2_PLAN)
+    got = []
+    monkeypatch.setattr(
+        p2b,
+        "_C4_ORIG",
+        lambda d, cfg: got.append((Path(d).parent.name, cfg.iters)) or {"ok": True},
+    )
+    out = R1.c4_measure(R1.arm_dir(Path("x"), "fifo", 0), R1.prereg_config(0, 96_000))
+    assert out["ok"] and got == [("fifo", 3000)]
+
+
+def test_pm2_delta_loss_lm_is_matched_steps_and_labelled(p2b, monkeypatch):
+    R1 = p2b.harness()["R1"]
+    p2b.set_plan({**PM2_PLAN, "K_2b": 6000})
+    calls = []
+
+    def fake(hbs, diags, cfg):
+        calls.append(cfg.iters)
+        return {
+            "iters": cfg.iters,
+            "delta_loss_lm": {"psiC": {"how": f"to {cfg.iters}"}},
+            "rsr": {"psiC": {"iters_used": cfg.iters}},
+        }
+
+    monkeypatch.setattr(p2b, "_TRAIN_ORIG", fake)
+    out = R1.analyse_training({}, {}, R1.prereg_config(0, 6000))
+    assert calls == [6000, 3000]
+    assert out["rsr"]["psiC"]["iters_used"] == 6000  # the RSR arms at their own iters
+    d = out["delta_loss_lm"]
+    assert d["psiC"]["how"] == "to 3000"  # pairs and blocks over [T_warm, R-1) only
+    assert d["label"] == "matched steps <= R-1 (3000); Amendment PM-2"
+
+
+def test_pm2_delta_loss_lm_real_pairs_only_where_fifo_has_a_row(p2b):
+    R1 = p2b.harness()["R1"]
+    p2b.set_plan({**PM2_PLAN, "K_2b": 6000})
+    hbs = {
+        a: {
+            "beats": [
+                {"step": k, "loss_lm": 1.0 if a == "fifo" else 0.5}
+                for k in range(6000 if a != "fifo" else 3000)
+            ]
+        }
+        for a in R1.ARMS
+    }
+    out = R1.analyse_training(
+        hbs, {a: [] for a in R1.RSR_ARMS}, R1.prereg_config(0, 6000)
+    )
+    for a in R1.RSR_ARMS:
+        blocks = out["delta_loss_lm"][a]["blocks"]
+        assert blocks and max(b["steps"][1] for b in blocks) <= 3000
+        assert out["delta_loss_lm"][a]["n"] == 3000 - 16
+
+
+def test_pm2_precheck_before_eval2(p2b, tmp_path):
+    R1 = p2b.harness()["R1"]
+    plan = {**PM2_PLAN, "K_2b": 6000, "ok": True, "unruled_at_K_gt_3000": []}
+    p2b.set_plan(plan)
+
+    def make(arm, n, ckpt):
+        d = R1.arm_dir(tmp_path, arm, 0)
+        d.mkdir(parents=True, exist_ok=True)
+        rows = [{"kind": "beat", "step": k} for k in range(n)]
+        (d / "heartbeat.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+        (d / f"ckpt-{ckpt:06d}.pt").write_bytes(b"x")
+
+    make("psiC", 6000, 6000)
+    make("age", 6000, 6000)
+    make("fifo", 3000, 3000)
+    assert p2b.pm2_precheck(tmp_path, 0, plan)["ok"]
+    (R1.arm_dir(tmp_path, "fifo", 0) / "ckpt-003000.pt").unlink()
+    r = p2b.pm2_precheck(tmp_path, 0, plan)
+    assert not r["ok"] and r["problems"]
+    make("fifo", 2999, 3000)  # fifo's beats do not cover [0, R-1)
+    assert not p2b.pm2_precheck(tmp_path, 0, plan)["ok"]
