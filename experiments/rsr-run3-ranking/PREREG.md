@@ -545,3 +545,25 @@ else above was changed from the draft. Each decision keeps or tightens PLAN §2.
 7. **§10 B1 and B2 are accepted as errors in PLAN/brief.** ADR-0009 lives only on
    `docs/adr-learning-path`, and L9 is signed in the cited ruling. "Run 2 still improving at 3000"
    was offline-psi's fit, not run 2's. Both go to the PLAN errata (phase 0.4).
+
+## Amendment 2a-S (2026-10-20): phase 2a timing smoke and projection
+
+**Appended by a model** (Claude Opus 5.5, the phase-2 builder), committed alone, after the 2a harness and before 2a launches. It fills §4.8's placeholder; nothing above this line is edited. Generated from the smoke's own record (`runs/rsr-run3-2a-smoke/time-seed0.json`, sha256 `579f8c07d701f275f3774ec3773dc46c188a8816951d04f38693e710f7297b8b`, committed in `17897a0`) by `phase2a.render_amendment_2aS`; no number below is typed.
+
+**Smoke.** `run.py 2a time --seed 0 --steps 50`, one `cpu-det` slot, 1 thread, at `b10f5e9` (clean tree), 2026-10-20T08:52:06Z to 2026-10-20T08:52:58Z. U documents only (U-train for the fit and J, the first 64 U-val documents for the deploy block); TUNE, EVAL and EVAL2 never generated (R-SEAL census: 0 sealed ids, ok = True). Exit 3 by design (a smoke is never the run); failed controls: none. Load average at start 11.74 (the battery held 8 cpu-det slots), at end 11.60. The loss values the smoke computed are not results and are not reported.
+
+| configuration | steps | median s / step | one J over U-train (s) |
+|---|---|---|---|
+| L_MC (R-C2's path) | 50 | 0.00253 | — |
+| rank, ω = 2 | 50 | 0.01683 | 0.714 |
+| rank, ω = 8 | 50 | 0.01675 | 0.709 |
+| rank, ω = 32 | 50 | 0.01687 | 0.718 |
+
+Deploy block: 64 documents in 7.957 s (0.1243 s per document; residency mismatches 0); FIFO + FactFiller references for the block 0.342 s. Substrate manifest check (`shasum -c`, twice per process) 27.4 s each. Descriptive U caps for one configuration 8.9 s.
+
+**Projection (worst case: every fit CAP-HIT at 200,000 steps, J at step 0 and every 250 steps = 801 evaluations).** One fit: ω = 2 1.09 h, ω = 8 1.09 h, ω = 32 1.10 h. One TUNE deploy (512 documents) 1.1 min; one EVAL deploy (2048) 4.2 min; R-C2 15 s per seed.
+
+- **Serial (one slot, everything one after another): 10.48 h -- ABOVE the 8 h line.**
+- **Wall under `launch_2a.zsh`'s layout** (9 fits + 3 R-C2 concurrently (12 slots), then 3 selects, then 3 deploys (3 slots each stage); 1 thread per process): 1.27 h. This needs 12 concurrent cpu-det slots for the fits; with fewer the slots queue (`--wait`) and the wall grows toward the serial figure. Measured on one process under the battery's load; 12 concurrent processes may each run slower. Not included: the full suite at the launch head (T1(b) runs two 20-step processes) and the launch checks (§1 (d) search on every branch).
+
+§4.8 says "a projection above 8 h stops 2a and returns to the PM" and does not say whether the projection is CPU-serial or wall-clock under a layout. The two readings disagree here (serial above, layout below), so this amendment does not choose: **the go/no-go on this projection is the PM's.** Nothing above is changed to fit either number.
