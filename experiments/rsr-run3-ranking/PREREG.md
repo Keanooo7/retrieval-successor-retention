@@ -623,3 +623,24 @@ fifo's own `iters` (R-1); every read of an RSR arm is at that arm's own `iters` 
 
 No threshold, label rule or class rule changes. If any of these five cannot be computed as stated,
 2b's `measure` refuses before EVAL2 is opened. That is exit 3, and the sealed range is not spent.
+
+## Amendment PM-3 (2026-10-20, PM): 2a's launch no longer waits for the integration battery. Committed alone, before any launch
+
+PM-1 bullet 1 made the battery's exit a binding launch condition for 2a. That condition assumed the
+integration battery would finish within about 3 h. Measured at 03:34 it runs about 12 minutes per
+mutation (shard 0 at mutation about 17 of 73 after 3.5 h), so it will exit around 14:30–15:00.
+
+The stop line's purpose is already enforced by PM-1 bullet 2, the slot-check:
+- it records the cpu-det slots granted at launch;
+- it recomputes the wall projection from Amendment 2a-S's measured per-fit time for exactly those slots;
+- it exits 3 before any fit if that projection exceeds 8 h.
+
+The review of `66352af` measured 3–4 free slots → 3.49 h.
+
+**Ruling.** PM-1 bullet 1's wait-for-the-battery condition is withdrawn.
+- 2a may launch while the battery runs, provided the slot-check passes.
+- The slot-check, its 8 h line, and every other control are unchanged.
+- Each 2a process runs at 1 thread whatever the concurrency, so results do not depend on how many
+  slots are granted.
+- The battery's own result is unaffected in kind. Its suites run longer under the extra load, and any
+  timeout shows up as a DID_NOT_RUN row, never as a pass.
