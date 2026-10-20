@@ -242,6 +242,12 @@ def e2e(tmp_path_factory, r1, substrate) -> dict:
     ow = owner(r1)
     with pytest.MonkeyPatch.context() as mp:
         _ledger_seams(mp, r1)
+        # Hermetic launch record: launch_direct records the ambient launch env (A3c.1),
+        # and C10 fails a launch from a non-shared RSR_ORCH_ROOT. The battery's shards
+        # always set RSR_ORCH_ROOT, so without this the fixture is red under the battery
+        # only (integration 2026-10-19, battery 22662bc44f2e: baseline not green).
+        for k in (*r1.LAUNCH_ENV_VARS, "DRY_RUN"):
+            mp.delenv(k, raising=False)
         rcs = r1.launch_direct([cfg], ow, out_root, threads=1, allow_dirty=True)
         doc = r1.measure_seed(cfg, ow, out_root, threads=1)
         results = out_root / "RESULTS.md"
