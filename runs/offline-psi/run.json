@@ -1,0 +1,50 @@
+{
+ "run_id": "offline-psi",
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "exit": 0,
+ "status": "ok",
+ "summary": {
+  "deploy_labels": {
+   "0": "EQUIV",
+   "1": "EQUIV",
+   "2": "LOSS"
+  },
+  "deploy_class": "FAILS",
+  "fit_label": "FIT-MISSES",
+  "fit_caps": {
+   "0": {
+    "point": -0.0746887966804977,
+    "lo": -0.16668388429752054,
+    "hi": 0.012076122724124685
+   },
+   "1": {
+    "point": 0.08242950108459907,
+    "lo": -0.016475490196078454,
+    "hi": 0.1721364860869278
+   },
+   "2": {
+    "point": -0.20353982300884985,
+    "lo": -0.2982093549664476,
+    "hi": -0.11403367289190697
+   }
+  },
+  "newcomer": "NEWCOMER-REDUCED",
+  "age1_share_cf_all": {
+   "0": 0.12109375,
+   "1": 0.0574493408203125,
+   "2": 0.1884918212890625
+  },
+  "readable": true,
+  "readout_row": "MISSES / any: content+age arm or a richer head (both change the thesis)"
+ },
+ "tree": {
+  "sha": "5e8d9ce50d7350b08540585adf55047c7396135a",
+  "dirty": true,
+  "porcelain": "?? runs/offline-psi/\n"
+ },
+ "command": ".venv/bin/python experiments/offline-psi/run.py finalize --out-root runs/offline-psi"
+}
