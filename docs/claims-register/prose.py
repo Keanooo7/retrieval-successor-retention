@@ -126,3 +126,21 @@ FINDINGS = [
         ["es.acc.es-fifo"],
     ),
 ]
+
+#: (where, the prose's statement, what the records show, row a, row b): the per-seed
+#: comparison of a against b is computed by ``build.compare`` from the rows.
+COMPARE = [
+    (
+        f"{PLAN}:61",
+        "B0's kind × age-band rule (kb, cap 0.90 / −0.29 / 1.07) is no better than kind "
+        "alone (ko).",
+        "The records contradict it on every seed where the computed line below reads "
+        "'CIs disjoint, b0.cap.kb.g09 higher' (B0 RESULTS itself records 'kb ≥ ko on "
+        "seed 1: yes'). Both caps are SEEN and in-sample, and kb reads age, so it is "
+        "not a legal ψ̂: this does not reopen the content+age route, which CLAUDE.md's "
+        "age prohibition rejects on its own. The statement as written is not what the "
+        "records show.",
+        "b0.cap.kb.g09",
+        "b0.cap.ko.g09",
+    ),
+]

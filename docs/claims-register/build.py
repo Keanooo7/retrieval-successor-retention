@@ -31,6 +31,19 @@ GIT = "/opt/homebrew/bin/git"
 OUT_MD = C.ROOT / "docs" / "claims-register.md"
 RED = C.HERE / "rederive"
 
+#: Results whose numbers RESEARCH-CONTEXT or a RESULTS file still cites but that have
+#: NO rows here yet (review 9c4b3a2 F-2). Stated in the register's header.
+NOT_YET = [
+    "B2 psi-hat probe (its gating all-query deltas, psi-hat-U / psi-hat-C)",
+    "newcomer bake-off",
+    "B1 beta inertness",
+    "B5 substrate convergence",
+    "E0h (the within-step R^2, unratified)",
+    "retention-readability",
+    "carry-forward",
+    "lookahead-room (run 1 and r2)",
+]
+
 #: Register order: run 1, run 2 and the post-FAILS diagnostics first, then the
 #: ceilings, E0d, Expire-Span and the substrate runs.
 ORDER = [
@@ -274,6 +287,21 @@ def render() -> int:
         "(sha256 manifest `~/rsr-runs-archive/MANIFEST.sha256`)."
     )
     w("")
+    w("## Scope")
+    w("")
+    w(
+        "**Covered** (one row per number, per seed): "
+        + ", ".join(f"`{e}`" for e in exps)
+        + "."
+    )
+    w("")
+    w(
+        "**NOT yet in the register:** "
+        + "; ".join(NOT_YET)
+        + ". A number from them is not yet in the register; it must be added here, "
+        "re-derived, before it is cited."
+    )
+    w("")
     w("## How to read a row")
     w("")
     w(
@@ -441,8 +469,37 @@ def prose_section(by_id: dict[str, C.Row]) -> list[str]:
                 f"   - `{rid}`: {per_seed(r.seeds, r.values, C.fmt)}{ci} "
                 f"({r.seen}; {r.prereg})"
             )
+    n = len(PR.FINDINGS)
+    for i, (where, said, shows, ra, rb) in enumerate(PR.COMPARE, n + 1):
+        out.append(f"{i}. **{where}** — prose: *{said}*")
+        out.append(f"   - Records: {shows}")
+        out.append(
+            f"   - Per seed, computed from the rows: {compare(by_id[ra], by_id[rb])}"
+        )
+        for rid in (ra, rb):
+            r = by_id[rid]
+            ci = "" if r.ci is None else "; CI " + per_seed(r.seeds, r.ci, ci_str)
+            out.append(
+                f"   - `{rid}`: {per_seed(r.seeds, r.values, C.fmt)}{ci} "
+                f"({r.seen}; {r.prereg})"
+            )
     out.append("")
     return out
+
+
+def compare(a: C.Row, b: C.Row) -> str:
+    """Per seed: a - b (points), and whether the two rows' per-seed CIs are disjoint
+    (and which is higher) or overlap. Unpaired CIs; a descriptive reading only."""
+    parts = []
+    for s, va, vb, ca, cb in zip(a.seeds, a.values, b.values, a.ci, b.ci, strict=True):
+        if ca[0] > cb[1]:
+            rel = f"CIs disjoint, `{a.id}` higher"
+        elif cb[0] > ca[1]:
+            rel = f"CIs disjoint, `{b.id}` higher"
+        else:
+            rel = "CIs overlap"
+        parts.append(f"s{s} difference {C.fmt(va - vb)} ({rel})")
+    return f"`{a.id}` \u2212 `{b.id}`: " + "; ".join(parts)
 
 
 def main(argv=None) -> int:
