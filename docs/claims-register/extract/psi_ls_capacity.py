@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common as C
-from _ofam import SEEDS, UBOOT, labels_cmd, rec_row, record, src
+from _ofam import SEEDS, TBOOT, UBOOT, labels_cmd, rec_row, record, src
 
 EXPERIMENT = "psi-ls-capacity"
 EXP = EXPERIMENT
@@ -88,6 +88,7 @@ def rows() -> list[C.Row]:
             prereg=P,
             seen=U_CAP[0],
             seen_why=U_CAP[1],
+            ci_method=TBOOT,
         )
     )
     summ = record(EXP, "summary.json")
@@ -192,6 +193,7 @@ def rows() -> list[C.Row]:
                 prereg=PD,
                 seen=U_CAP[0],
                 seen_why=U_CAP[1],
+                ci_method=TBOOT if k == "cap_train" else UBOOT,
             )
         )
     # Ridge path (PREREG §3 item 4, descriptive; RESULTS F1 hypothesis, F10 U-val spent)

@@ -21,6 +21,12 @@ import common as C
 SEEDS = [0, 1, 2]
 FAM = f"{C.PY} docs/claims-register/recompute_offline_psi_family.py"
 UBOOT = "paired per-document bootstrap percentile over the U-val documents, n_boot 2000"
+#: LS ``cap_train`` (psi-ls-capacity run.py ``cap_reading(..., inp["train"], ...)``):
+#: the same bootstrap, drawn over the U-train documents (the fit set), not U-val.
+TBOOT = (
+    "paired per-document bootstrap percentile over the U-train documents "
+    "(the fit set), n_boot 2000"
+)
 
 
 def fam_cmd(exp: str, s: int) -> str:
@@ -76,6 +82,7 @@ def rec_row(
     point: str = "point",
     extra_checks: list[C.Check] | None = None,
     note: str | None = None,
+    ci_method: str = UBOOT,
 ) -> C.Row:
     """A statistic at ``path`` (dotted) in diagnostic A's / LS's ``seed<s>/result.json``,
     per seed; raw checks pick the same path from the family recompute."""
@@ -107,7 +114,7 @@ def rec_row(
         seeds=SEEDS,
         values=vals,
         ci=cis if with_ci else None,
-        ci_method=UBOOT if with_ci else "none computed",
+        ci_method=ci_method if with_ci else "none computed",
         source=src(
             exp,
             "seed{s}/result.json",
