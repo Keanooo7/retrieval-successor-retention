@@ -1,0 +1,62 @@
+{
+  "status": "ok",
+  "seed": "195770f0c67f865b904cbb27b3eab9ace9bd99adbed30279749353783d00ae9e",
+  "claims": [
+    {
+      "claim": "seed2.heldout.contrasts.acc.all.psiC_minus_fifo (headline, seed drawn = 2): point exact; lo/hi/sd within bootstrap Monte Carlo tolerance",
+      "command": ".venv/bin/python recompute.py runs/rsr-run1  (verifier's own script, sha256 5e56cb99a58e70b1140bf2b0aaa921514bdd48d4ef714dbaedee33a4f0c5c359, source in method.recompute_py) -> headline_seed2: pooled accuracy over all answers (gap>=1) psiC minus fifo from heldout/seed2/{psiC,fifo}.jsonl.gz; own numpy paired doc bootstrap (20000 reps, default_rng(12345)); plus exact replay of the run's torch draw (seed 20260927+2, 2000 reps)",
+      "expected": "point -0.1683317475420234 exactly; lo -0.17260170742366177, hi -0.16391614441375604, sd 0.0022025630175940545 (stated tolerance: own-bootstrap |dlo|,|dhi| <= 0.25*sd, |dsd|/sd <= 5%; torch replay exact)",
+      "observed": "point -0.1683317475420234 (acc_psiC 0.6347658314832435, acc_fifo 0.8030975790252669, n_answers 37836, n_docs 2048); own bootstrap lo -0.17262236858407362 hi -0.16411838063588785 sd 0.002181116105302156; torch replay lo/hi/sd [-0.17260170742366177, -0.16391614441375604, 0.0022025630175940545]",
+      "match": true
+    },
+    {
+      "claim": "seed0.heldout.heldout_evictions.psiC.victim_age_distribution['19'] (seed and bin drawn)",
+      "command": ".venv/bin/python recompute.py runs/rsr-run1  (verifier's own script, sha256 5e56cb99a58e70b1140bf2b0aaa921514bdd48d4ef714dbaedee33a4f0c5c359, source in method.recompute_py) -> victim_age_seed0_psiC: age = t - victims[t] from each doc's victims dict in heldout/seed0/psiC.jsonl.gz, counted at 19; cross-checked against evictions[*][1]",
+      "expected": "1038",
+      "observed": "1038 (from victims dict); 1038 (from evictions triples); n_evictions 65536",
+      "match": true
+    },
+    {
+      "claim": "seed1.heldout.contrasts.oracle_regret.gap_2_to_M.psiC.sd (drawn)",
+      "command": ".venv/bin/python recompute.py runs/rsr-run1  (verifier's own script, sha256 5e56cb99a58e70b1140bf2b0aaa921514bdd48d4ef714dbaedee33a4f0c5c359, source in method.recompute_py) -> oracle_regret_gap2toM_psiC_seed1: oracle minus psiC pooled accuracy over answers with 2<=gap<=16, own numpy bootstrap sd; plus exact torch replay (seed 20260927+1)",
+      "expected": "0.002873104291504116 (stated tolerance: own bootstrap |dsd|/sd <= 5%; torch replay exact)",
+      "observed": "own bootstrap sd 0.0028563763316130225 (rel diff 0.0058); torch replay sd 0.002873104291504116; point 0.39775984477664594",
+      "match": true
+    },
+    {
+      "claim": "seed1.heldout.contrasts.oracle_regret.gap_2_to_M.age.point (drawn)",
+      "command": ".venv/bin/python recompute.py runs/rsr-run1  (verifier's own script, sha256 5e56cb99a58e70b1140bf2b0aaa921514bdd48d4ef714dbaedee33a4f0c5c359, source in method.recompute_py) -> oracle_regret_gap2toM_age_seed1: pooled accuracy oracle minus age over answers with 2<=gap<=16, heldout/seed1/{oracle,age}.jsonl.gz",
+      "expected": "-0.003175023151210543 exactly",
+      "observed": "-0.003175023151210543 (acc_oracle 0.9114521321162411, acc_age 0.9146271552674516)",
+      "match": true
+    },
+    {
+      "claim": "seed0.heldout.heldout_evictions.age.fraction_oldest (drawn)",
+      "command": ".venv/bin/python recompute.py runs/rsr-run1  (verifier's own script, sha256 5e56cb99a58e70b1140bf2b0aaa921514bdd48d4ef714dbaedee33a4f0c5c359, source in method.recompute_py) -> fraction_oldest_seed0_age: residency replayed from each doc's victims dict (asserting n_live_before at every step); victim == min(resident) counted; not read off the displacement field",
+      "expected": "1.0",
+      "observed": "1.0 (65536/65536)",
+      "match": true
+    }
+  ],
+  "verifier_sha": "ed6302aae37a2831c9b8567b9f80a093b4c00f70",
+  "method": {
+    "no_claims_json": "runs/rsr-run1/claims.json does not exist; claims drawn from ledger.json by method.draw_py (seeded by sha256(run_id)), per the spawn prompt. Report prose (RESULTS.md) not read.",
+    "draw_py_sha256": "0ef6d0c29666c4364d310d52c72b2f54b03968e2282fed452bef9762bcea4e11",
+    "draw_py": "\"\"\"Seeded draw over rsr-run1's ledger (no claims.json exists).\nrng = random.Random(int(sha256(run_id),16)), consumed in this fixed order:\n 1. headline seed s_h = rng.randrange(3)  -> seed{s_h}.heldout.contrasts.acc.all.psiC_minus_fifo.point (+lo/hi)\n 2. victim-age seed s_v = rng.randrange(3); bin = rng.choice(sorted int bins of seed{s_v}.heldout.heldout_evictions.psiC.victim_age_distribution)\n 3. 3 extra keys: rng.sample over the sorted list of ledger rows whose key contains '.heldout.' and whose value is a\n    non-bool int/float scalar, excluding the T<n> timing keys (wall-clock, not recomputable) and the two already drawn.\n\"\"\"\nimport hashlib, json, random, re, sys\nrun_id = \"rsr-run1\"\nseed = hashlib.sha256(run_id.encode()).hexdigest()\nrng = random.Random(int(seed, 16))\nd = json.load(open(sys.argv[1]))\nrows = {r[\"key\"]: r[\"value\"] for r in d[\"rows\"]}\ns_h = rng.randrange(3)\nh_key = f\"seed{s_h}.heldout.contrasts.acc.all.psiC_minus_fifo.point\"\ns_v = rng.randrange(3)\nv_key = f\"seed{s_v}.heldout.heldout_evictions.psiC.victim_age_distribution\"\nbins = sorted(rows[v_key], key=int)\nb = rng.choice(bins)\npool = sorted(k for k, v in rows.items()\n              if \".heldout.\" in k and isinstance(v, (int, float)) and not isinstance(v, bool)\n              and not re.match(r\"seed\\d\\.T\\d\", k) and k != h_key)\nextra = rng.sample(pool, 3)\nprint(json.dumps({\"seed\": seed, \"headline\": h_key, \"victim_age\": [v_key, b], \"pool_size\": len(pool), \"extra\": extra}, indent=1))\n",
+    "recompute_py": "\"\"\"Independent recomputation of the drawn rsr-run1 claims from the saved held-out\nper-document files only. Own parsing, own bucket logic, own (numpy) bootstrap; no\nimport from experiments/rsr-run1/run.py. A second, exact replay of the run's torch\nbootstrap draw (generator seed 20260927+seed, n_boot 2000) is reported separately.\"\"\"\nimport gzip, json, sys\nimport numpy as np\nR = sys.argv[1]  # runs/rsr-run1\nM = 16\n\ndef load(seed, arm):\n    with gzip.open(f\"{R}/heldout/seed{seed}/{arm}.jsonl.gz\", \"rt\") as fh:\n        return [json.loads(x) for x in fh if x.strip()]\n\ndef counts(recs, lo, hi):\n    \"\"\"per doc (n answers with lo<=gap<=hi, n correct)\"\"\"\n    out = np.zeros((len(recs), 2))\n    for i, r in enumerate(recs):\n        for a in r[\"answers\"]:\n            if lo <= a[1] <= hi:\n                out[i, 0] += 1\n                out[i, 1] += 1 if a[2] else 0\n    return out\n\ndef point(c):\n    return c[:, 1].sum() / c[:, 0].sum()\n\ndef own_boot(ca, cb, n_boot=20000, seed=12345):\n    rng = np.random.default_rng(seed)\n    D = len(ca)\n    reps = np.empty(n_boot)\n    for b in range(n_boot):\n        idx = rng.integers(0, D, D)\n        reps[b] = point(ca[idx]) - point(cb[idx])\n    return reps\n\ndef torch_replay(ca, cb, seed):\n    import torch\n    g = torch.Generator().manual_seed(20260927 + seed)\n    idx = torch.randint(0, len(ca), (2000, len(ca)), generator=g)\n    W = torch.zeros(2000, len(ca), dtype=torch.float64).scatter_add_(1, idx, torch.ones(2000, len(ca), dtype=torch.float64))\n    def rep(c):\n        x = torch.tensor(c, dtype=torch.float64)\n        return (W @ x[:, 1]) / (W @ x[:, 0])\n    r = rep(ca) - rep(cb)\n    return float(torch.quantile(r, 0.025)), float(torch.quantile(r, 0.975)), float(r.std())\n\nout = {}\n# 1. headline seed2 acc.all psiC - fifo\np, f = load(2, \"psiC\"), load(2, \"fifo\")\nassert [r[\"doc\"] for r in p] == [r[\"doc\"] for r in f]\ncp, cf = counts(p, 1, 10**9), counts(f, 1, 10**9)\nreps = own_boot(cp, cf)\nout[\"headline_seed2\"] = {\"point\": point(cp) - point(cf), \"acc_psiC\": point(cp), \"acc_fifo\": point(cf),\n    \"n_answers\": cp[:, 0].sum(), \"n_docs\": len(p),\n    \"own_boot_lo\": float(np.quantile(reps, .025)), \"own_boot_hi\": float(np.quantile(reps, .975)), \"own_boot_sd\": float(reps.std(ddof=1)),\n    \"torch_replay_lo_hi_sd\": torch_replay(cp, cf, 2)}\n# 2. seed0 psiC victim age histogram, bin 19: age = t - victims[t] (victims dict), cross-checked vs evictions[1]\np0 = load(0, \"psiC\")\nages_v, ages_e = [], []\nfor r in p0:\n    for t, v in r[\"victims\"].items():\n        ages_v.append(int(t) - int(v))\n    ages_e += [e[1] for e in r[\"evictions\"]]\nout[\"victim_age_seed0_psiC\"] = {\"bin19_from_victims\": int(sum(a == 19 for a in ages_v)),\n    \"bin19_from_evictions\": int(sum(a == 19 for a in ages_e)), \"n_evictions\": len(ages_v)}\n# 3/4. seed1 oracle_regret gap_2_to_M: oracle - psiC (sd), oracle - age (point)\no1, p1, a1 = load(1, \"oracle\"), load(1, \"psiC\"), load(1, \"age\")\nco, cp1, ca1 = counts(o1, 2, M), counts(p1, 2, M), counts(a1, 2, M)\nreps = own_boot(co, cp1)\nout[\"oracle_regret_gap2toM_psiC_seed1\"] = {\"point\": point(co) - point(cp1), \"own_boot_sd\": float(reps.std(ddof=1)),\n    \"torch_replay_lo_hi_sd\": torch_replay(co, cp1, 1)}\nout[\"oracle_regret_gap2toM_age_seed1\"] = {\"point\": point(co) - point(ca1), \"acc_oracle\": point(co), \"acc_age\": point(ca1)}\n# 5. seed0 age arm fraction_oldest: replay residency from the victims dict; is the victim the oldest resident?\na0 = load(0, \"age\")\nn = old = 0\nfor r in a0:\n    vict = {int(t): int(v) for t, v in r[\"victims\"].items()}\n    T = len(r[\"n_live_before\"])\n    resident = []\n    for t in range(T):\n        assert len(resident) == r[\"n_live_before\"][t], (r[\"doc\"], t)\n        if t in vict:\n            v = vict[t]\n            assert v in resident\n            n += 1\n            old += v == min(resident)\n            resident.remove(v)\n        resident.append(t)\nout[\"fraction_oldest_seed0_age\"] = {\"oldest\": old, \"n\": n, \"fraction\": old / n}\nprint(json.dumps(out, indent=1, default=float))\n",
+    "inputs": "held-out per-document files at .worktrees/rsr-run1-run/runs/rsr-run1/heldout/seed{0,1,2}/*.jsonl.gz (untracked, not copied); no training, no measure-seed re-run"
+  },
+  "finalize_rerun": {
+    "clean": true,
+    "observed": [
+      "cmp RESULTS.md RESULTS.attempt1-dirty.md: rc 0 (byte-identical)",
+      "finalize.attempt1.rc = 1, finalize.attempt1.log ends in ledger.DirtyTree on experiments/rsr-run1/RESULTS.md; scripts/ledger.py raises DirtyTree before its write_text, so attempt 1 wrote no ledger",
+      "finalize.rc = 0; finalize.log empty",
+      "measure-seed{0,1,2}.json mtimes 03:15:05/03:15:25/03:15:07, all before both finalize attempts (03:16:35, 03:16:52); measure-seed*.rc all 0",
+      "all 3429 seed* ledger rows equal their measure-seed<s>.json source values (0 diffs, 0 missing); run.json headline per-seed equals measure-seed contrasts acc.all.psiC_minus_fifo (0 diffs); ledger 'headline' row == run.json headline",
+      "experiments/rsr-run1/RESULTS.md is not tracked at ed6302a; run worktree porcelain has only '?? runs/rsr-run1/'",
+      "provenance note: finalize.attempt1.rc mtime is 03:16:52 (the second attempt's time), not 03:16:35, so the rc file was written or copied after attempt 1; the value 1 agrees with the uncaught DirtyTree traceback in the log",
+      "ledger provenance.dirty = true and run.json tree.dirty = true; the only porcelain line is the untracked runs/rsr-run1/ output dir"
+    ]
+  }
+}
