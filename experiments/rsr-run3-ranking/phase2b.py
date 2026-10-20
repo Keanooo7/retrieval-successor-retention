@@ -519,10 +519,11 @@ def measure_precheck(plan: dict) -> dict:
 
 
 def amendment_2bS(path: Path = PREREG_PATH) -> dict | None:
-    """The committed Amendment 2b-S, machine-read: its section must carry the lines
+    """The committed Amendment 2b-S, machine-read: a heading ``## Amendment 2b-S``
+    (any case; review LB-1: the file's own convention), whose section carries the lines
     ``- 2a ledger sha256: `<64 hex>``` and ``- K_2b: <int>``. None if absent."""
     t = Path(path).read_text()
-    m = re.search(r"^## AMENDMENT 2b-S\b.*?(?=^## |\Z)", t, re.S | re.M)
+    m = re.search(r"^## amendment 2b-s(?![\w-]).*?(?=^## |\Z)", t, re.S | re.M | re.I)
     if m is None:
         return None
     sec = m.group(0)
@@ -703,59 +704,187 @@ def measure_cfg(seed: int, K: int):
     return dataclasses.replace(R1.prereg_config(seed, K), eval_range=ev2)
 
 
+def read_arms(cfg, out_root: Path) -> dict:
+    """The training artefacts run 1's measure_seed reads per arm (no EVAL2): the
+    launch record, CLI results, heartbeats, job records and rcs."""
+    R1 = harness()["R1"]
+    out_root = Path(out_root)
+    lg = out_root / "launch-git.json"
+    out: dict[str, Any] = {
+        "launch": json.loads(lg.read_text()) if lg.exists() else None,
+        "results": {},
+        "hbs": {},
+        "jobs": {},
+        "rcs": {},
+    }
+    for a in R1.ARMS:
+        k = R1.job_key(a, cfg.seed)
+        rcf = out_root / "logs" / f"{k}.rc"
+        out["rcs"][a] = int(rcf.read_text().strip()) if rcf.exists() else None
+        out["results"][a] = R1.read_cli_result(out_root / "logs" / f"{k}.log")
+        out["hbs"][a] = R1.read_heartbeat(R1.arm_dir(out_root, a, cfg.seed))
+        out["jobs"][a] = R1.job_record(cfg, a)
+    return out
+
+
+def c_f_at_r1(cfg, out_root: Path) -> dict:
+    """C-F on fifo's checkpoint at its own iters (R-1) against the substrate."""
+    R1 = harness()["R1"]
+    fpay = R1.read_checkpoint(
+        R1.checkpoint_path(R1.arm_dir(out_root, "fifo", cfg.seed), fifo_iters())
+    )
+    sub, _ = R1.load_substrate_model(cfg)
+    return c_f(fpay, sub)
+
+
+def pre_eval2_controls(
+    cfg,
+    owner,
+    out_root: Path,
+    plan: dict,
+    *,
+    ledger_2a: Path | None,
+    footer_seeds=None,
+) -> dict:
+    """Review LB-1 / LB-2: every control that needs no EVAL2 document, through the real
+    PM-1/PM-2 wrappers, BEFORE EVAL2 is opened; any failure refuses the seed there
+    (so a C10 or C2 failure stops it before its held-out passes):
+    footers -> PM-2 precheck -> C6, C10 (per arm), C2 / C8 / C3 (run 1's cheap
+    controls), C4, C-F, C11 / C11', C-K, C-omega. ``ledger_2a`` None = the S-2b
+    smoke (no 2a ledger, no Amendment 2b-S: C-K and C-omega not applicable)."""
+    H = harness()
+    R1, R2 = H["R1"], H["R2"]
+    ctl: dict[str, Any] = {}
+
+    def run(name, fn):
+        try:
+            ctl[name] = fn()
+        except Exception as e:  # did not run: recorded, never a pass
+            ctl[name] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
+        return bool(ctl[name].get("ok"))
+
+    def done():
+        failed = [k for k, v in ctl.items() if not v.get("ok")]
+        return {"controls": ctl, "failed": failed, "ok": not failed}
+
+    seeds = plan["seeds"] if footer_seeds is None else footer_seeds
+    if not run("footers", lambda: training_footers(out_root, seeds)):
+        return done()
+    if not run("PM-2.precheck", lambda: pm2_precheck(out_root, cfg.seed, plan)):
+        return done()
+    arms = read_arms(cfg, out_root)
+    res, hbs, launch = arms["results"], arms["hbs"], arms["launch"] or {}
+    if any(v is None for v in res.values()):
+        ctl["results"] = {
+            "ok": False,
+            "missing": [a for a, v in res.items() if v is None],
+        }
+        return done()
+    run("C6", lambda: R1.c6_steps(res, hbs, cfg))
+    run(
+        "C10",
+        lambda: R1.c10_launch_values(
+            cfg, owner, launch, res, hbs, arms["jobs"], out_root, rcs=arms["rcs"]
+        ),
+    )
+
+    def cheap():
+        d = {"controls": {}}
+        R1._cheap_controls(d, cfg, out_root, res, hbs)
+        ctl.update({k: d["controls"][k] for k in ("C8", "C3") if k in d["controls"]})
+        return d["controls"]["C2"]
+
+    run("C2", cheap)
+    run("C4", lambda: R1.c4_measure(R1.arm_dir(out_root, "fifo", cfg.seed), cfg))
+    run("C-F", lambda: c_f_at_r1(cfg, out_root))
+    run("C11", lambda: R2.c11_target(res, hbs, launch))
+    run("C11prime", lambda: c11_prime(res, hbs, launch, ctl.get("C11")))
+    steps_done = {a: (res.get(a) or {}).get("steps_done") for a in res}
+    if ledger_2a is None:
+        na = {"ok": False, "not_applicable": "S-2b smoke: no 2a ledger / 2b-S yet"}
+        ctl["C-K"], ctl["C-omega"] = dict(na), dict(na)
+    else:
+        a2 = read_2a(ledger_2a)
+        kc = {sd: a2["selection"][sd]["k_conv"] for sd in plan["seeds"]}
+        run("C-K", lambda: c_k(plan, launch, steps_done, kc))
+        run("C-omega", lambda: c_omega(plan, a2, amendment_2bS()))
+    return done()
+
+
+def eval2_closure(cfg) -> dict:
+    """Review F6 / R-SEAL (e): run 1's C0 on the held-out range (EVAL2 at measure)
+    BEFORE any model loads -- the ES model included."""
+    R1 = harness()["R1"]
+    try:
+        return R1.check_c0(cfg)
+    except R1.ControlFailure as e:
+        return {"ok": False, "error": str(e)}
+
+
+def refuse_before_eval2(out_root: Path, seed: int, ctl: dict, why: str) -> int:
+    doc = {
+        "run_id": RUN_ID,
+        "seed": seed,
+        "refused_before_eval2": True,
+        "why": why,
+        "controls": {**ctl, "R-SEAL.census": SS.census()},
+    }
+    doc["controls_failed"] = [
+        k for k, v in doc["controls"].items() if not (isinstance(v, dict) and v.get("ok"))
+    ]
+    doc.update(exit=int(Exit.DID_NOT_RUN), status="did_not_run", finished_utc=utc())
+    (Path(out_root) / f"measure-seed{seed}.json").write_text(
+        json.dumps(doc, indent=2, default=str) + "\n"
+    )
+    print(f"DID NOT RUN (before EVAL2): {why}", file=sys.stderr)
+    return int(Exit.DID_NOT_RUN)
+
+
 def measure_stage(seed: int, out_root: Path, *, ledger_2a: Path = OUT_2A / "ledger.json"):
-    """§5.4-§5.7 for one seed: the measure stage's seal (EVAL2 opened), the footer
-    precondition, run 2's ``measure_seed`` on EVAL2 at K_2b, then the added controls.
-    (The §5.4 descriptive passes beyond run 2's -- psiR@3000, run 2's psiC, 2a's head,
-    pinned ES -- run in ``extra_passes``.)"""
+    """§5.4-§5.7 for one seed, in this order (review LB-1/LB-2/F6): the measure
+    stage's seal; plan precheck; every check that needs no EVAL2 document
+    (``pre_eval2_controls``, real wrappers; any failure refuses here, so C10 / C2 stop
+    the seed before its held-out passes and EVAL2 is not spent); EVAL2's closure (C0)
+    before any model loads; C-ES on EVAL[0:32]; run 2's ``measure_seed`` on EVAL2 at
+    K_2b; §5.4's descriptive passes and §5.6's contrasts."""
     out_root = Path(out_root)
     seal = SS.install("2b", "measure")
     H = harness()
     R1, R2 = H["R1"], H["R2"]
     SS.rebind()
     C.forbid_constants_record()
+    base = {"R-SEAL.install": {**seal, "ok": True}}
     plan = json.loads((out_root / "plan.json").read_text())
     pre = measure_precheck(plan)
     if not pre["ok"]:
-        raise R1.Refused(f"2b measure refused before EVAL2 is opened: {pre}")
+        return refuse_before_eval2(out_root, seed, {**base, "plan": pre}, "plan")
     set_plan(plan)
-    seeds = plan["seeds"]
-    foot = training_footers(out_root, seeds)
-    if not foot["ok"]:
-        raise R1.Refused(f"a training process has no completed footer: {foot}")
-    pm2 = pm2_precheck(out_root, seed, plan)
-    if not pm2["ok"]:
-        raise R1.Refused(f"2b measure refused before EVAL2 is opened (PM-2): {pm2}")
     K = int(plan["K_2b"])
     cfg = measure_cfg(seed, K)
-    es = c_es(seed, cfg)  # before EVAL2 is read (§5.7 C-ES)
-    doc = R2.measure_seed(cfg, owner_values(K), out_root, threads=1)
-    a2 = read_2a(ledger_2a)
-    launch = doc.get("launch") or {}
-    results = {
-        a: R1.read_cli_result(Path((doc.get("arms") or {}).get(a, {}).get("log", "")))
-        if (doc.get("arms") or {}).get(a)
-        else None
-        for a in R1.ARMS
-    }
-    hbs = {a: R1.read_heartbeat(R1.arm_dir(out_root, a, seed)) for a in R1.ARMS}
-    steps_done = {a: (results.get(a) or {}).get("steps_done") for a in R1.ARMS}
-    ctl = doc["controls"]
-    ctl["R-SEAL.install"] = {**seal, "ok": True}
-    ctl["R-SEAL.footers"] = foot
-    ctl["PM-2.precheck"] = pm2
-    ctl["C11prime"] = c11_prime(results, hbs, launch, ctl.get("C11"))
-    kc = {s: a2["selection"][s]["k_conv"] for s in seeds}
-    ctl["C-K"] = c_k(plan, launch, steps_done, kc)
-    ctl["C-omega"] = c_omega(plan, a2, amendment_2bS())
-    try:
-        fpay = R1.read_checkpoint(
-            R1.checkpoint_path(R1.arm_dir(out_root, "fifo", seed), fifo_iters())
+    owner = owner_values(K)
+    foot = training_footers(out_root, plan["seeds"])  # every process, every seed
+    if not foot["ok"]:
+        return refuse_before_eval2(
+            out_root, seed, {**base, "footers": foot}, "a training footer is missing"
         )
-        sub, _ = R1.load_substrate_model(cfg)
-        ctl["C-F"] = c_f(fpay, sub)
-    except Exception as e:  # did not run: recorded, never a pass
-        ctl["C-F"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
+    pe = pre_eval2_controls(cfg, owner, out_root, plan, ledger_2a=ledger_2a)
+    if not pe["ok"]:
+        return refuse_before_eval2(
+            out_root, seed, {**base, **pe["controls"]}, f"failed {pe['failed']}"
+        )
+    clo = eval2_closure(cfg)
+    if not clo.get("ok"):
+        ctl = {**base, **pe["controls"], "R-SEAL.closure_EVAL2": clo}
+        return refuse_before_eval2(out_root, seed, ctl, "EVAL2 closure failed")
+    es = c_es(seed, cfg)  # after the closure (F6), before EVAL2's documents are read
+    doc = R2.measure_seed(cfg, owner, out_root, threads=1)
+    hbs = {a: R1.read_heartbeat(R1.arm_dir(out_root, a, seed)) for a in R1.ARMS}
+    ctl = doc["controls"]
+    ctl.update(base)
+    ctl["R-SEAL.closure_EVAL2"] = clo
+    for k in ("footers", "PM-2.precheck", "C-F", "C11prime", "C-K", "C-omega"):
+        ctl[k] = pe["controls"][k]
+    doc["pre_eval2_controls"] = pe
     doc.setdefault("scoped_controls", {})["C-ES"] = {
         k: v for k, v in es.items() if not k.startswith("_")
     }
@@ -997,6 +1126,58 @@ def smoke_measure(out: Path) -> dict:
     return res
 
 
+def smoke_pre(out: Path, standin: tuple[int, int]) -> dict:
+    """Review LB-2: on an S-2b variant with fifo steps != RSR steps (launch_2b.zsh,
+    SMOKE=1 SMOKE_STEPS / SMOKE_FIFO_STEPS), push measure's pre-held-out controls
+    through the REAL PM-1/PM-2 wrappers (C10 split, C6, C2, C4 views, C-F, the PM-2
+    precheck, C11') and the closure, with the held-out range replaced by an already-used
+    non-sealed stand-in (never EVAL2). Writes ``smoke-pre.json``; a smoke is never the
+    run (exit 3). C10 fails by design on a smoke launch (out / job_suffix / smoke, and
+    the registered R-1 != the smoke's steps); its problems are listed per view."""
+    SS.install("2b", "smoke")
+    H = harness()
+    R1 = H["R1"]
+    SS.rebind()
+    out = Path(out)
+    launch = json.loads((out / "launch-git.json").read_text())
+    plan0 = json.loads((out / "plan.json").read_text())
+    K, fi = int(launch["steps"]), int(launch["fifo_steps"])
+    seeds = [int(x) for x in str(launch.get("smoke_seeds") or "0 1 2").split()]
+    plan = {**plan0, "K_2b": K, "fifo_iters": fi, "seeds": seeds}
+    set_plan(plan)
+    rows: dict[str, Any] = {}
+    for sd in seeds:
+        cfg = dataclasses.replace(
+            R1.prereg_config(sd, K),
+            eval_range=tuple(standin),
+            job_suffix=launch.get("job_suffix") or "",
+        )
+        pe = pre_eval2_controls(
+            cfg, owner_values(K), out, plan, ledger_2a=None, footer_seeds=seeds
+        )
+        rows[str(sd)] = {
+            "pre_eval2": pe,
+            "closure_standin": eval2_closure(cfg),
+            "c10_problems": {
+                k: (
+                    v.get("launch_problems"),
+                    {a: r.get("problems") for a, r in (v.get("per_arm") or {}).items()},
+                )
+                for k, v in ((pe["controls"].get("C10") or {}).get("views") or {}).items()
+            },
+        }
+    res = {
+        "K": K,
+        "fifo_iters": fi,
+        "standin": list(standin),
+        "seeds": rows,
+        "census": SS.census({"STANDIN": tuple(standin)}),
+        "exit": 3,
+    }
+    (out / "smoke-pre.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
+    return res
+
+
 # --------------------------------------------------------------------------- #
 # launch-checks and finalize
 # --------------------------------------------------------------------------- #
@@ -1148,6 +1329,9 @@ def main(argv: list[str]) -> int:
     pm.add_argument("--ledger-2a", default=str(OUT_2A / "ledger.json"))
     psm = sub.add_parser("smoke-measure")
     psm.add_argument("--out", required=True)
+    psp = sub.add_parser("smoke-pre")
+    psp.add_argument("--out", required=True)
+    psp.add_argument("--standin", type=int, nargs=2, required=True)
     plc = sub.add_parser("launch-checks")
     plc.add_argument("--out-root", default=str(OUT_DEFAULT))
     pfz = sub.add_parser("finalize")
@@ -1163,6 +1347,11 @@ def main(argv: list[str]) -> int:
         )
     if a.cmd == "finalize":
         return finalize(Path(a.out_root))
+    if a.cmd == "smoke-pre":
+        r = smoke_pre(Path(a.out), tuple(a.standin))
+        failed = {s: v["pre_eval2"]["failed"] for s, v in r["seeds"].items()}
+        print(json.dumps({"failed": failed, "census_ok": r["census"]["ok"]}, indent=1))
+        return 3  # a smoke is never the run
     if a.cmd == "smoke-measure":
         r = smoke_measure(Path(a.out))
         print(json.dumps({k: v for k, v in r.items() if k != "census"}, indent=1))
