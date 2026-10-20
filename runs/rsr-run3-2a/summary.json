@@ -1,0 +1,482 @@
+{
+ "run_id": "rsr-run3-2a",
+ "exit": 0,
+ "status": "ok",
+ "controls": {
+  "stage_docs": {
+   "n": 19,
+   "expected": 19,
+   "ok": true
+  },
+  "R-SEAL": {
+   "n": 61,
+   "failed": [],
+   "ok": true
+  },
+  "R-C1": {
+   "n": 60,
+   "failed": [],
+   "ok": true
+  },
+  "R-C2": {
+   "n": 3,
+   "failed": [],
+   "ok": true
+  },
+  "R-C3": {
+   "n": 58,
+   "failed": [],
+   "ok": true
+  },
+  "R-C4": {
+   "n": 15,
+   "failed": [],
+   "ok": true
+  },
+  "R-C5": {
+   "grid_complete": true,
+   "selection_recomputes": true,
+   "ok": true
+  },
+  "R-C6": {
+   "order": {
+    "0": {
+     "n_fit_end": 4,
+     "n_select_start": 1,
+     "n_deploy_start": 1,
+     "ok": true
+    },
+    "1": {
+     "n_fit_end": 4,
+     "n_select_start": 1,
+     "n_deploy_start": 1,
+     "ok": true
+    },
+    "2": {
+     "n_fit_end": 4,
+     "n_select_start": 1,
+     "n_deploy_start": 1,
+     "ok": true
+    }
+   },
+   "guards": {
+    "0": true,
+    "1": true,
+    "2": true
+   },
+   "ok": true
+  },
+  "R-C7": {
+   "n": 6,
+   "failed": [],
+   "ok": true
+  },
+  "R-C8": {
+   "n": 3,
+   "failed": [],
+   "ok": true
+  },
+  "R-C9": {
+   "n": 3,
+   "failed": [],
+   "ok": true
+  },
+  "G-C3": {
+   "rc": 0,
+   "summary": "passed=2794 failed=0 skipped=0 errors=0",
+   "passed": 2794,
+   "failed": 0,
+   "skipped": 0,
+   "errors": 0,
+   "skipped_tests": [],
+   "ok": true,
+   "head": "8b0d14f09e47360c1e2105498a67bb0e3c705b72",
+   "head_is_launch_head": true,
+   "log": "/Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a/logs/suite.log"
+  },
+  "prereg_text": {
+   "n": 19,
+   "failed": [],
+   "ok": true
+  },
+  "PM-1.slots": {
+   "projection": {
+    "slots": 4,
+    "recomputed": true,
+    "wall_s": 12537.579245855915,
+    "wall_h": 3.482660901626643,
+    "stop_h": 8.0,
+    "ok": true,
+    "layout_wall_h_2aS": 1.2701648911605783,
+    "serial_h_2aS": 10.476872222753057,
+    "rule": "Amendment PM-1: >= 9 slots launches; fewer -> wall on the granted slots from 2a-S's measured per-fit time must be <= 8 h",
+    "note": "granted = free cpu-det slots probed now + this probe's own; each job then acquires one slot (--wait), so at most this many run at once"
+   },
+   "lane": {
+    "capacity": 12,
+    "held": [
+     {
+      "slot": 0,
+      "holder": {
+       "pid": 48196,
+       "lane": "cpu-det",
+       "job_id": "20261020T131728-cpu-det-48196",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T13:17:28+00:00"
+      }
+     },
+     {
+      "slot": 1,
+      "holder": {
+       "pid": 5104,
+       "lane": "cpu-det",
+       "job_id": "i2-10817167e270-20261020T070354-5098-s1of8",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T07:03:55+00:00"
+      }
+     },
+     {
+      "slot": 2,
+      "holder": {
+       "pid": 5103,
+       "lane": "cpu-det",
+       "job_id": "i2-10817167e270-20261020T070354-5098-s0of8",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T07:03:55+00:00"
+      }
+     },
+     {
+      "slot": 3,
+      "holder": {
+       "pid": 5105,
+       "lane": "cpu-det",
+       "job_id": "i2-10817167e270-20261020T070354-5098-s2of8",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T07:03:55+00:00"
+      }
+     },
+     {
+      "slot": 4,
+      "holder": {
+       "pid": 5106,
+       "lane": "cpu-det",
+       "job_id": "i2-10817167e270-20261020T070354-5098-s3of8",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T07:03:55+00:00"
+      }
+     },
+     {
+      "slot": 5,
+      "holder": {
+       "pid": 5107,
+       "lane": "cpu-det",
+       "job_id": "i2-10817167e270-20261020T070354-5098-s4of8",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T07:03:55+00:00"
+      }
+     },
+     {
+      "slot": 6,
+      "holder": {
+       "pid": 5108,
+       "lane": "cpu-det",
+       "job_id": "i2-10817167e270-20261020T070354-5098-s5of8",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T07:03:55+00:00"
+      }
+     },
+     {
+      "slot": 7,
+      "holder": {
+       "pid": 5109,
+       "lane": "cpu-det",
+       "job_id": "i2-10817167e270-20261020T070354-5098-s6of8",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T07:03:55+00:00"
+      }
+     },
+     {
+      "slot": 8,
+      "holder": {
+       "pid": 5110,
+       "lane": "cpu-det",
+       "job_id": "i2-10817167e270-20261020T070354-5098-s7of8",
+       "item_id": null,
+       "acquired_utc": "2026-10-20T07:03:55+00:00"
+      }
+     }
+    ],
+    "free": 3,
+    "self_slots": 1,
+    "granted": 4
+   },
+   "ok": true
+  },
+  "stage_exits": {
+   "exits": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "ok": true
+  }
+ },
+ "controls_failed": [],
+ "labels": {
+  "0": "LOSS",
+  "1": "EQUIV",
+  "2": "LOSS"
+ },
+ "labels_raw_not_read": null,
+ "gate_to_2b": false,
+ "reading": "2a not WIN on all 3 seeds: phase 2 stops (structurally hard); Gate A",
+ "per_seed": {
+  "0": {
+   "headline": {
+    "lo": -0.06359246122824427,
+    "hi": -0.055820889524661896,
+    "sd": 0.001995328936285675,
+    "dropped": 0,
+    "point": -0.05975748289435445,
+    "reading": "CI below 0",
+    "sd_exactly_zero": false,
+    "delta": 0.03802185560447721,
+    "label": "LOSS"
+   },
+   "selection": {
+    "seed": 0,
+    "omega_s": 2.0,
+    "k_conv": 12750,
+    "convergence": "CONVERGED",
+    "phi_sha256": "21ad98a009139fd39b6cd3aa816bd3c7d6ecc967237a78b2554a7de13da2d687",
+    "phi_path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a/seed0/phi-selected.pt",
+    "cap_point": -0.30836120401337724,
+    "rule": "highest TUNE cap point; ties to the smaller omega (\u00a74.3)",
+    "written_utc": "2026-10-20T13:37:52Z",
+    "file_sha256": "61fef47f5a4c06e44f655f3ca27feb0f9cbfa21b8acf7e269297999f59a15464"
+   },
+   "configs": {
+    "omega2": {
+     "label": "CONVERGED",
+     "k_conv": 12750,
+     "tune_cap": {
+      "lo": -0.36493935818063555,
+      "hi": -0.2548957681476844,
+      "sd": 0.02827883700029516,
+      "dropped": 0,
+      "point": -0.30836120401337724
+     },
+     "u_val_cap": {
+      "point": -0.54356846473029,
+      "lo": -0.6440723923673662,
+      "hi": -0.44601023802729334
+     }
+    },
+    "omega8": {
+     "label": "CONVERGED",
+     "k_conv": 15750,
+     "tune_cap": {
+      "lo": -1.284432492385697,
+      "hi": -1.1012710330619218,
+      "sd": 0.046977067359488665,
+      "dropped": 0,
+      "point": -1.1892976588628752
+     },
+     "u_val_cap": {
+      "point": -1.1576763485477173,
+      "lo": -1.305330052374933,
+      "hi": -1.027027027027027
+     }
+    },
+    "omega32": {
+     "label": "CONVERGED",
+     "k_conv": 20750,
+     "tune_cap": {
+      "lo": -1.5545527735595146,
+      "hi": -1.3454421513806416,
+      "sd": 0.053490010117767675,
+      "dropped": 0,
+      "point": -1.4468227424749152
+     },
+     "u_val_cap": {
+      "point": -1.3838174273858914,
+      "lo": -1.547227147595516,
+      "hi": -1.238369821947674
+     }
+    }
+   }
+  },
+  "1": {
+   "headline": {
+    "lo": -0.03557932644852174,
+    "hi": -0.02803578196132468,
+    "sd": 0.0019269169058734428,
+    "dropped": 0,
+    "point": -0.031766569844203896,
+    "reading": "CI below 0",
+    "sd_exactly_zero": false,
+    "delta": 0.03675691427360389,
+    "label": "EQUIV"
+   },
+   "selection": {
+    "seed": 1,
+    "omega_s": 2.0,
+    "k_conv": 20500,
+    "convergence": "CONVERGED",
+    "phi_sha256": "9998bd396e3d32c1344f49c1a63fef88105117e24716ed41defba77abb511dc6",
+    "phi_path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a/seed1/phi-selected.pt",
+    "cap_point": -0.041077441077441004,
+    "rule": "highest TUNE cap point; ties to the smaller omega (\u00a74.3)",
+    "written_utc": "2026-10-20T13:40:22Z",
+    "file_sha256": "e900111ea85a63f0b4e93e42740afa77b33544ff349095a133ada3bca6b1bd92"
+   },
+   "configs": {
+    "omega2": {
+     "label": "CONVERGED",
+     "k_conv": 20500,
+     "tune_cap": {
+      "lo": -0.09495346681447348,
+      "hi": 0.009885391367842977,
+      "sd": 0.0269478583333663,
+      "dropped": 0,
+      "point": -0.041077441077441004
+     },
+     "u_val_cap": {
+      "point": -0.028199566160520387,
+      "lo": -0.11309315316473367,
+      "hi": 0.05610265613492757
+     }
+    },
+    "omega8": {
+     "label": "CONVERGED",
+     "k_conv": 27500,
+     "tune_cap": {
+      "lo": -0.687589317794597,
+      "hi": -0.5576131185211006,
+      "sd": 0.033631263228922466,
+      "dropped": 0,
+      "point": -0.6208754208754211
+     },
+     "u_val_cap": {
+      "point": -0.5184381778741864,
+      "lo": -0.6383532180135835,
+      "hi": -0.4128120275639001
+     }
+    },
+    "omega32": {
+     "label": "CONVERGED",
+     "k_conv": 34750,
+     "tune_cap": {
+      "lo": -0.9889883412042509,
+      "hi": -0.8445373514937277,
+      "sd": 0.037554013561435194,
+      "dropped": 0,
+      "point": -0.912457912457913
+     },
+     "u_val_cap": {
+      "point": -0.7765726681127983,
+      "lo": -0.9259302027200412,
+      "hi": -0.6539885826771661
+     }
+    }
+   }
+  },
+  "2": {
+   "headline": {
+    "lo": -0.10469767967363264,
+    "hi": -0.09671164889355406,
+    "sd": 0.002045679310998946,
+    "dropped": 0,
+    "point": -0.10061845861084673,
+    "reading": "CI below 0",
+    "sd_exactly_zero": false,
+    "delta": 0.03185756551141167,
+    "label": "LOSS"
+   },
+   "selection": {
+    "seed": 2,
+    "omega_s": 2.0,
+    "k_conv": 12500,
+    "convergence": "CONVERGED",
+    "phi_sha256": "0778f646dde62c50919c590373479e9827f9c10497fd0fae452183c9881a93d4",
+    "phi_path": "/Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a/seed2/phi-selected.pt",
+    "cap_point": -0.5033200531208497,
+    "rule": "highest TUNE cap point; ties to the smaller omega (\u00a74.3)",
+    "written_utc": "2026-10-20T13:39:53Z",
+    "file_sha256": "b7b883f1c65be66ee992edcd4abaee6791ae1771daae2662feea8f43026982af"
+   },
+   "configs": {
+    "omega2": {
+     "label": "CONVERGED",
+     "k_conv": 12500,
+     "tune_cap": {
+      "lo": -0.5642317274839008,
+      "hi": -0.44437338085580197,
+      "sd": 0.03127990506671807,
+      "dropped": 0,
+      "point": -0.5033200531208497
+     },
+     "u_val_cap": {
+      "point": -0.7389380530973458,
+      "lo": -0.8761634091211282,
+      "hi": -0.6178802008608321
+     }
+    },
+    "omega8": {
+     "label": "CONVERGED",
+     "k_conv": 14750,
+     "tune_cap": {
+      "lo": -1.1184542895008456,
+      "hi": -0.9535120651132578,
+      "sd": 0.04274213746316024,
+      "dropped": 0,
+      "point": -1.0332005312084989
+     },
+     "u_val_cap": {
+      "point": -1.2146017699115046,
+      "lo": -1.397138456937799,
+      "hi": -1.0551065542414482
+     }
+    },
+    "omega32": {
+     "label": "CONVERGED",
+     "k_conv": 19750,
+     "tune_cap": {
+      "lo": -1.2341648916531758,
+      "hi": -1.05369801730151,
+      "sd": 0.045628542457379385,
+      "dropped": 0,
+      "point": -1.1394422310756966
+     },
+     "u_val_cap": {
+      "point": -1.3628318584070802,
+      "lo": -1.5573801229508208,
+      "hi": -1.1844084756494062
+     }
+    }
+   }
+  }
+ },
+ "newcomer_label": "NEWCOMER-REDUCED",
+ "seeds_actually_run": [
+  0,
+  1,
+  2
+ ]
+}

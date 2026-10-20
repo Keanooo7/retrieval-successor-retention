@@ -1,0 +1,77 @@
+[
+  {
+    "claim": "seed 0: acc.all(psiR-2a) - acc.all(fifo) on EVAL, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what headline --seed 0",
+    "expected": "-0.059757 -0.063592 -0.055821 LOSS"
+  },
+  {
+    "claim": "seed 0: omega_s and the TUNE cap points of the 3 configs",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what selection --seed 0",
+    "expected": "omega_s=2 omega2=-0.308361 omega8=-1.189298 omega32=-1.446823"
+  },
+  {
+    "claim": "seed 0: K_conv of the 3 configs",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what kconv --seed 0",
+    "expected": "omega2=12750 omega8=15750 omega32=20750"
+  },
+  {
+    "claim": "seed 0: sha256 of the selected frozen phi",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what phi --seed 0",
+    "expected": "21ad98a009139fd39b6cd3aa816bd3c7d6ecc967237a78b2554a7de13da2d687"
+  },
+  {
+    "claim": "seed 0: delta_seed machine-read (R-C9)",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what delta --seed 0",
+    "expected": "0.03802185560447721"
+  },
+  {
+    "claim": "seed 1: acc.all(psiR-2a) - acc.all(fifo) on EVAL, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what headline --seed 1",
+    "expected": "-0.031767 -0.035579 -0.028036 EQUIV"
+  },
+  {
+    "claim": "seed 1: omega_s and the TUNE cap points of the 3 configs",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what selection --seed 1",
+    "expected": "omega_s=2 omega2=-0.041077 omega8=-0.620875 omega32=-0.912458"
+  },
+  {
+    "claim": "seed 1: K_conv of the 3 configs",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what kconv --seed 1",
+    "expected": "omega2=20500 omega8=27500 omega32=34750"
+  },
+  {
+    "claim": "seed 1: sha256 of the selected frozen phi",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what phi --seed 1",
+    "expected": "9998bd396e3d32c1344f49c1a63fef88105117e24716ed41defba77abb511dc6"
+  },
+  {
+    "claim": "seed 1: delta_seed machine-read (R-C9)",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what delta --seed 1",
+    "expected": "0.03675691427360389"
+  },
+  {
+    "claim": "seed 2: acc.all(psiR-2a) - acc.all(fifo) on EVAL, CI, label",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what headline --seed 2",
+    "expected": "-0.100618 -0.104698 -0.096712 LOSS"
+  },
+  {
+    "claim": "seed 2: omega_s and the TUNE cap points of the 3 configs",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what selection --seed 2",
+    "expected": "omega_s=2 omega2=-0.503320 omega8=-1.033201 omega32=-1.139442"
+  },
+  {
+    "claim": "seed 2: K_conv of the 3 configs",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what kconv --seed 2",
+    "expected": "omega2=12500 omega8=14750 omega32=19750"
+  },
+  {
+    "claim": "seed 2: sha256 of the selected frozen phi",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what phi --seed 2",
+    "expected": "0778f646dde62c50919c590373479e9827f9c10497fd0fae452183c9881a93d4"
+  },
+  {
+    "claim": "seed 2: delta_seed machine-read (R-C9)",
+    "command": "PYTHONPATH=scripts .venv/bin/python -m orchestrator.slot run --lane cpu-det --slots 1 --wait 3600 -- .venv/bin/python experiments/rsr-run3-ranking/run.py 2a recompute --out-root /Users/keanooo7/retrieval-successor-retention/.worktrees/run3-2a-d/runs/rsr-run3-2a --what delta --seed 2",
+    "expected": "0.03185756551141167"
+  }
+]

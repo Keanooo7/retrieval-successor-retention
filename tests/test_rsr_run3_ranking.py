@@ -1299,6 +1299,19 @@ def test_pm1_launcher_gates_every_fit_on_the_slot_check():
     assert "slot-check.rc" in t and "nothing fitted" in t
 
 
+def test_lb4_every_seeds_rc2_finishes_before_any_fit_or_select():
+    """Review 01b41ea LB-4: select's pre-select gate needs EVERY seed's rc2.json; the
+    slot runner polls, so the launcher runs all three R-C2 to completion (one
+    ``wait``) before any grid fit, select or deploy is started."""
+    t = (EXP / "launch_2a.zsh").read_text()
+    rc2 = t.index("2a fit --seed $s --rc2")
+    first_wait = t.index("wait", rc2)
+    for later in ("2a fit --seed $s --omega", "2a select", "2a deploy"):
+        assert t.index(later) > first_wait, later
+    block = t[t.rindex("for s in 0 1 2", 0, rc2) : first_wait]
+    assert "--omega" not in block and "select" not in block
+
+
 def test_pm1_2b_plan_no_longer_refuses_at_k_above_3000(p2b, tmp_path):
     win = {"0": "WIN", "1": "WIN", "2": "WIN"}
     big = p2b.make_plan(_ledger_2a(tmp_path, [2000, 95_500, 1000], win))
@@ -1994,3 +2007,15 @@ def test_lb2_smoke_needs_no_fifo_iters_in_the_plan_but_the_run_does(tmp_path):
         check=False,
     )
     assert p.returncode == 3 and "no fifo_iters" in p.stderr, p.stderr
+
+
+def test_save_tensor_creates_the_seed_dir(p2a, tmp_path):
+    """2a launch 2 (90baaf4): the first fit of a seed to finish crashed because
+    ``seed<s>/`` did not exist when it saved phi. Every tensor save goes through
+    ``save_tensor``, which creates the directory."""
+    p = p2a.phi_file(tmp_path / "runs" / "rsr-run3-2a", 0, 2.0, "kconv")
+    assert not p.parent.exists()
+    p2a.save_tensor({"w": torch.zeros(2)}, p)
+    assert torch.equal(torch.load(p)["w"], torch.zeros(2))
+    src = Path(p2a.__file__).read_text()
+    assert src.count("torch.save(") == 1  # only inside save_tensor itself

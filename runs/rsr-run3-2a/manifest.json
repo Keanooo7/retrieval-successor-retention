@@ -1,0 +1,123 @@
+{
+  "boot_seed_base": 20260927,
+  "convergence": {
+    "cap": 200000,
+    "j_at_step_0": true,
+    "j_every": 250,
+    "min_step": 2000,
+    "rel": 0.001,
+    "window": 2000
+  },
+  "delta_sha": {
+    "0": "1c047a363a8928c18fd017329b8aa6171debfb1046fb0c96e258d20364c87d72",
+    "1": "bf2753cef826f8d3c1647213d232c65a1e2167160be1a6c262fbea132b838700",
+    "2": "c880a2413fa2a4840724c7c005778df8cda77932f9db0fb6081db495514ce9c2"
+  },
+  "device": "cpu",
+  "eval_batch": 16,
+  "eval_range": [
+    995000,
+    997048
+  ],
+  "expected": "- 2a fit: CONVERGED well before 200,000 steps for every \u03c9; the ranking fit's FIFO-world U-val cap\n  above the LS fit's on at least two seeds.\n- 2a deploy: not WIN on all 3 seeds. Seed 1 is the likeliest miss, because its kind means order\n  assert below query (`experiments/b0-ceilings/RESULTS.md:57-62`; the kind-oracle's LOSS there,\n  `experiments/post-fails-controls/RESULTS-1a.md:29`), so a head that learns kind but not status\n  inherits that order. Modal outcome: phase 2 stops at 2a.",
+  "falsifier": "NONE as a falsifier of the thesis; this is the PLAN \u00a72 phase-2 kill-gate input: 2a WIN on all 3 seeds gates 2b; anything else stops phase 2 at Gate A.",
+  "fit_batch": 16,
+  "fit_set": "U-train (offline-psi u_split)",
+  "gestalt_sha": {
+    "0": "211244f1469b90972e3b1d3b6635b3ee9eb095e78b932dc396bba64df3f5562b",
+    "1": "3a18e2917b385a6339ef82e92535953105877cf295bbaf9f6495a4749a6a0c68",
+    "2": "74e3bec7e5366d631480f9e3ac9a07916926da21ffd60be57568acb3b3723706"
+  },
+  "manifest_sha256": "33dd493d38067e88663b76e9b009e30211c99f75a8ed896a3808486f02fa565f",
+  "memory_slots": 16,
+  "n_boot": 2000,
+  "omegas": [
+    2.0,
+    8.0,
+    32.0
+  ],
+  "pairs": "cf_all",
+  "prereg": "experiments/rsr-run3-ranking/PREREG.md",
+  "prereg_commit": "32475b5",
+  "rank_k": 3,
+  "rc2_arms": [
+    "cf_all",
+    "cf_live"
+  ],
+  "rc2_step": 3000,
+  "run_id": "rsr-run3-2a",
+  "save_steps": [
+    3000,
+    10000
+  ],
+  "sealed": {
+    "EVAL2": [
+      984000,
+      986048
+    ],
+    "TUNE": [
+      997200,
+      997712
+    ]
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "stage_seals": {
+    "deploy": [
+      "TUNE",
+      "EVAL2"
+    ],
+    "finalize": [
+      "TUNE",
+      "EVAL2"
+    ],
+    "fit": [
+      "TUNE",
+      "EVAL2"
+    ],
+    "launch-checks": [
+      "TUNE",
+      "EVAL2"
+    ],
+    "select": [
+      "EVAL2"
+    ],
+    "slot-check": [
+      "TUNE",
+      "EVAL2"
+    ],
+    "time": [
+      "TUNE",
+      "EVAL2"
+    ]
+  },
+  "steps_per_stream": 48,
+  "substrate": {
+    "0": {
+      "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/ckpt-003000.pt",
+      "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+      "root": "/Users/keanooo7/retrieval-successor-retention",
+      "sha256": "0ee3f8a69b507d927c631eb85116e1cd9739ee4472c44eb7f145d739a118da60",
+      "source_config": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed0/result.json"
+    },
+    "1": {
+      "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed1/ckpt-003000.pt",
+      "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+      "root": "/Users/keanooo7/retrieval-successor-retention",
+      "sha256": "dadd1e08a3849c1211c8479394df4060f91cd2a6e188b97701b783f2068a3da8",
+      "source_config": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed1/result.json"
+    },
+    "2": {
+      "checkpoint": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed2/ckpt-003000.pt",
+      "manifest": "/Users/keanooo7/rsr-substrate/2026-09-27/MANIFEST.sha256",
+      "root": "/Users/keanooo7/retrieval-successor-retention",
+      "sha256": "b507ebc573a54316f9d3c20337f49e664bb9c414388af925c5a8e87efd6b63b8",
+      "source_config": "/Users/keanooo7/retrieval-successor-retention/.worktrees/fresh-stream/runs/fresh-stream/B/seed2/result.json"
+    }
+  },
+  "threads_per_process": 1,
+  "tune_from": "experiments/post-fails-controls/PREREG.md"
+}
