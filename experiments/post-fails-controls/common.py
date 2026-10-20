@@ -281,7 +281,8 @@ def branch_search(
     repo: Path | str = ROOT,
     git: str = GIT,
 ) -> dict:
-    """G-C1(e): every local branch, ``git grep`` for any integer in TUNE or EVAL2.
+    """G-C1(e): every local branch, ``git grep`` (one thread: it runs inside one
+    cpu-det slot) for any integer in TUNE or EVAL2.
     A hit outside :data:`SEARCH_ALLOWED` is a NEW hit (exit 3, to the PM). A git
     failure is recorded as did-not-run (never as "no hit")."""
     ranges = ranges or sealed_ranges()
@@ -306,7 +307,7 @@ def branch_search(
     errors = []
     for ref in refs:
         g = subprocess.run(
-            [git, "grep", "-I", "-n", "-E", pat, ref, "--"],
+            [git, "grep", "--threads", "1", "-I", "-n", "-E", pat, ref, "--"],
             cwd=repo,
             capture_output=True,
             text=True,
