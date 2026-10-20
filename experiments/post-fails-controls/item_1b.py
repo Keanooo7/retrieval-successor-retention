@@ -994,7 +994,9 @@ def recompute(what: str, seed: int | None) -> str:
         per = {s: measure_seed(s) for s in SEEDS}
         return repr(labels_of(per))
     r = measure_seed(int(seed))
-    _, pname, lk, _, f = what.split(".")
+    # probe.<pname>.lam<lambda:g>.bal_acc.<field>; lambda's text may hold a dot
+    head, f = what.rsplit(".bal_acc.", 1)
+    _, pname, lk = head.split(".", 2)
     return repr(r["probes"][pname][lk]["bal_acc"][f])
 
 

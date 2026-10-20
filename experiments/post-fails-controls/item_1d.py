@@ -482,8 +482,13 @@ def render(out_root: Path = OUT_DEFAULT) -> Path:
 
 
 def recompute(what: str, seed: int) -> str:
-    g, rest = what.split(".", 1)
-    p, w = (float(x[1:]) for x in g.split("_"))
+    import re
+
+    mt = re.match(r"^p([0-9.]+?)_w([0-9.]+?)\.(hit|contrast)\.(.+)$", what)
+    if mt is None:
+        raise ValueError(what)
+    p, w = float(mt.group(1)), float(mt.group(2))
+    rest = f"{mt.group(3)}.{mt.group(4)}"
     ids = list(range(*EVAL))
     r = measure_point(seed, p, w, ids, R1.boot_weights(len(ids), seed, N_BOOT))["summary"]
     parts = rest.split(".")
