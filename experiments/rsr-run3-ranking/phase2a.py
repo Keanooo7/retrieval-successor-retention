@@ -467,7 +467,9 @@ def close_stage(doc: dict, named: dict | None = None) -> None:
 
 
 def finish(doc: dict, path: Path) -> int:
-    ctl = doc.get("controls", {})
+    ctl = doc.setdefault("controls", {})
+    if SS._STATE["stage"] is not None and "R-SEAL.census" not in ctl:
+        ctl["R-SEAL.census"] = SS.census()  # also on a stage that stopped early
     failed = sorted(
         k for k, v in ctl.items() if not (isinstance(v, dict) and v.get("ok"))
     )
@@ -810,6 +812,40 @@ def standin_docs(seed: int, n: int, offset: int = 0) -> list:
     return [docs[p] for p in val[offset : offset + n]]
 
 
+def preselect_gate(out_root: Path, seed: int, *, standin: int | None) -> dict:
+    """Review 66352af F0/F2: every control that precedes ``select`` must have passed
+    before TUNE is opened, so a run whose numbers cannot be read never spends TUNE.
+    Real run: the seed's 3 grid fits exited 0 and are not smokes; R-C2 (``rc2.json``)
+    exited 0 with R-C2 ok for EVERY registered seed; launch-checks and the PM-1 slot
+    check exited 0. Stand-in smoke: only the seed's own smoke fits (``fit_done``)."""
+    out_root = Path(out_root)
+    problems: list[str] = []
+    for w in OMEGAS:
+        f = _read(fit_file(out_root, seed, w))
+        good = (
+            fit_done(f)
+            if standin is not None
+            else bool(f and f.get("exit") == 0 and not f.get("smoke"))
+        )
+        if not good:
+            problems.append(f"fit {wtag(w)}: exit {(f or {}).get('exit')}")
+    if standin is None:
+        for sd in registered_seeds():
+            r = _read(seed_dir(out_root, sd) / "rc2.json")
+            ok = bool(
+                r
+                and r.get("exit") == 0
+                and ((r.get("controls") or {}).get("R-C2") or {}).get("ok")
+            )
+            if not ok:
+                problems.append(f"R-C2 seed {sd}: {'missing' if r is None else 'failed'}")
+        for name in ("launch.json", "launch-slots.json"):
+            r = _read(out_root / name)
+            if not (r and r.get("exit") == 0):
+                problems.append(f"{name}: {'missing' if r is None else r.get('exit')}")
+    return {"problems": problems, "ok": not problems}
+
+
 def select_seed(
     seed: int, out_root: Path, *, n_boot: int = N_BOOT, standin: int | None = None
 ) -> int:
@@ -830,16 +866,15 @@ def select_seed(
         ctl = open_stage("select", doc)
         event(out_root, "select", "start", seed=seed)
         OP, R1, R2 = harness()["OP"], harness()["R1"], harness()["R2"]
-        fits = {}
-        for w in OMEGAS:
-            f = json.loads(fit_file(out_root, seed, w).read_text())
-            fits[wtag(w)] = f
-        ctl["R-C6.fits_done"] = {
-            "exits": {k: v.get("exit") for k, v in fits.items()},
-            "ok": all(fit_done(v) for v in fits.values()),
+        ctl["R-C6.preselect"] = preselect_gate(out_root, seed, standin=standin)
+        if not ctl["R-C6.preselect"]["ok"]:
+            raise C.ControlFailure(
+                f"a pre-select control failed: TUNE is not opened "
+                f"{ctl['R-C6.preselect']['problems']}"
+            )
+        fits = {
+            wtag(w): json.loads(fit_file(out_root, seed, w).read_text()) for w in OMEGAS
         }
-        if not ctl["R-C6.fits_done"]["ok"]:
-            raise C.ControlFailure("a fit did not exit 0: TUNE is not opened")
         cfg = R1.prereg_config(seed, OP.CKPT)
         if standin is None:
             ctl["R-SEAL.closure_TUNE"] = tune_closure(seed)  # before any model loads
