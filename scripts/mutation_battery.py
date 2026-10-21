@@ -576,6 +576,366 @@ _S1_NO_VALUE_HEAD_GROUP = (
     "frozen arm has no trainable parameter left (build_param_groups raises)."
 )
 
+# Integration 2026-10-19 (battery at 1081716): the couplings the full battery
+# found once run 1, run 2, Expire-Span, E0d, offline-psi and the rest merged. Each
+# was read against the failure the battery recorded and the code path its test
+# drives before it was declared. tests/test_rsr_run1_harness.py builds two session
+# fixtures with the real code: `substrate` trains a 3-step FIFO checkpoint through
+# train() and rewrites it as arm B's legacy form (config in a hash-bound
+# result.json); `e2e` launches the three arms (psiC, fifo, age) as real
+# `python -m rsr.train.loop` subprocesses warm-started from it, then runs
+# measure_seed and finalize in-process. Nearly every run-1 coupling is a defect
+# reaching that one run; the name tuples say which tests read which part of it.
+#: run-1 harness tests that take the session `substrate` fixture and not `e2e`.
+_R1H_SUBSTRATE_ONLY: tuple[str, ...] = (
+    "test_a_dirty_tree_is_refused",
+    "test_a_launched_run_root_is_refused",
+    "test_a_started_arm_is_refused_not_resumed",
+    "test_a_wrong_substrate_sha_is_rc_1_with_no_heartbeat_and_measure_says_so",
+    "test_c0_sees_an_overlapping_or_aliasing_range",
+    "test_c2a_pool_ids_green_and_red",
+    "test_c4_goes_red_on_a_reference_it_does_not_reproduce",
+    "test_c4_refuses_a_ledger_row_that_is_not_the_prereg_value",
+    "test_in_loop_residency_matches_the_replay_for_every_reference",
+    "test_lru_observes_held_out_and_so_departs_from_fifo",
+    "test_measure_refuses_a_foreign_orch_root_when_strict",
+    "test_run_batch_matches_an_independent_recomputation",
+    "test_t7_probe_sees_a_rule_that_changes_with_gamma",
+    "test_t7_the_oracle_is_one_rule_across_the_probed_gammas",
+    "test_the_permutation_replay_visits_every_pool_document_once_per_epoch",
+    "test_time_batch_never_runs_an_eval_document",
+)
+#: run-1 harness tests that take the session `e2e` fixture (one real run of the three
+#: arms).
+_R1H_E2E: tuple[str, ...] = (
+    "test_a3d2_an_arms_exit_1_does_not_hide_a_control_failure",
+    "test_a3d2_c6_crashed_outranks_a_control_failure_at_exit_3",
+    "test_a_c9_failure_marks_only_the_oracle_numbers_not_read",
+    "test_a_c9_failure_tags_the_oracle_ledger_rows",
+    "test_a_failed_control_outranks_inconclusive_liveness_within_a_seed",
+    "test_a_filled_a4_table_under_the_heading_passes_c10",
+    "test_an_exit_1_stop_still_reads_c2_c3_c8_and_a_failure_gives_3",
+    "test_c10_compares_the_owner_values_with_the_registered_ones",
+    "test_c10_is_green_on_the_fixture",
+    "test_c10_reads_every_value_from_the_jobs_command",
+    "test_c10_requires_srep_0_in_every_recorded_config",
+    "test_c10_sees_a_cadence_that_is_not_the_derived_one",
+    "test_c10_sees_a_value_the_launcher_recorded_but_the_job_did_not_run",
+    "test_c10_sees_disagreeing_provenance",
+    "test_c10_strict_wants_each_job_record_pinned_to_the_run_sha",
+    "test_c10_under_v6_checks_every_and_the_new_launch_fields",
+    "test_c1_sees_a_labelled_allow_flag_or_another_checkpoint",
+    "test_c2_is_green_on_the_real_arms",
+    "test_c2_requires_the_logged_pool_ids",
+    "test_c2_sees_a_batch_every_arm_shares_but_the_sampler_did_not_draw",
+    "test_c2_sees_a_batch_mismatch_in_one_arm",
+    "test_c2_sees_a_warm_step_loss_that_is_not_bitwise_equal",
+    "test_c3_sees_one_moved_weight",
+    "test_c5_c6_c8_go_red",
+    "test_c7_sees_in_loop_residency_that_disagrees_with_the_replay",
+    "test_c9_and_c9b_are_green_on_the_row_correct_oracle",
+    "test_c9_sees_a_demand_whose_order_depends_on_gamma",
+    "test_c9b_sees_a_batched_oracle_with_another_rows_demand",
+    "test_e2e_c4_reproduces_the_substrate_exactly",
+    "test_e2e_every_arm_ran_live_with_its_own_rc",
+    "test_e2e_every_control_passes_and_the_run_exits_0",
+    "test_e2e_fifo_evicts_age_m_and_shifts_nothing_held_out",
+    "test_e2e_headline_is_per_seed_and_across_seeds_with_a_sign_count",
+    "test_e2e_launch_record_precedes_every_arm",
+    "test_e2e_ledger_is_written_with_the_run_meta",
+    "test_e2e_lru_held_out_observes_and_departs_from_fifo",
+    "test_e2e_per_document_answer_vectors_are_written",
+    "test_e2e_results_carry_headline_scope_caveat_and_no_forbidden_word",
+    "test_e2e_snapshots_are_measured_as_diagnostics",
+    "test_every_arm_records_its_sampler_and_c2_requires_them_to_agree",
+    "test_finalize_takes_status_and_exit_from_one_worst_seed",
+    "test_ledger_statuses_follow_a3b_3",
+    "test_measure_seed_dry_run_reads_a_steps_0_launch_and_c10_still_fails_it",
+    "test_measure_seed_passes_every_arms_sampler_into_c2",
+    "test_o5_train_names_the_confound_beside_every_psic_number",
+    "test_run_level_histograms_are_cross_checked_against_the_per_step_sums",
+    "test_the_decision_context_choice_does_not_change_held_out_decisions",
+    "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+    "test_the_held_out_policy_runs_the_scored_rule_with_the_trained_head",
+    "test_the_ledger_records_what_ran_not_what_was_asked",
+    "test_the_real_a4_table_is_filled_with_the_owners_values",
+    "test_the_step_diag_reading_is_diagnostic_and_never_the_headline",
+    "test_the_training_analysis_reads_loss_lm_never_loss",
+    "test_two_exit_3_arms_tie_to_the_first_in_psic_fifo_age",
+)
+#: the one `e2e` test that reads only the run's paths: green with no arm output.
+_R1H_PATHS_ONLY: tuple[str, ...] = (
+    "test_finalize_takes_status_and_exit_from_one_worst_seed",
+)
+#: `e2e` tests that read only the FIFO arm's checkpoint (C9, C9b).
+_R1H_FIFO_CKPT_ONLY: tuple[str, ...] = (
+    "test_c9_and_c9b_are_green_on_the_row_correct_oracle",
+    "test_c9_sees_a_demand_whose_order_depends_on_gamma",
+    "test_c9b_sees_a_batched_oracle_with_another_rows_demand",
+)
+#: the `e2e` test a crashed arm's heartbeat still satisfies.
+_R1H_HEARTBEAT_ONLY: tuple[str, ...] = ("test_e2e_launch_record_precedes_every_arm",)
+#: `e2e` tests that redden when every arm's liveness is invalid (rc 3 after a completed
+#: footer; checkpoints kept).
+_R1H_LIVENESS_INVALID: tuple[str, ...] = (
+    "test_a3d2_an_arms_exit_1_does_not_hide_a_control_failure",
+    "test_a3d2_c6_crashed_outranks_a_control_failure_at_exit_3",
+    "test_a_c9_failure_marks_only_the_oracle_numbers_not_read",
+    "test_a_c9_failure_tags_the_oracle_ledger_rows",
+    "test_a_failed_control_outranks_inconclusive_liveness_within_a_seed",
+    "test_a_filled_a4_table_under_the_heading_passes_c10",
+    "test_c5_c6_c8_go_red",
+    "test_c7_sees_in_loop_residency_that_disagrees_with_the_replay",
+    "test_e2e_c4_reproduces_the_substrate_exactly",
+    "test_e2e_every_arm_ran_live_with_its_own_rc",
+    "test_e2e_every_control_passes_and_the_run_exits_0",
+    "test_e2e_fifo_evicts_age_m_and_shifts_nothing_held_out",
+    "test_e2e_headline_is_per_seed_and_across_seeds_with_a_sign_count",
+    "test_e2e_ledger_is_written_with_the_run_meta",
+    "test_e2e_lru_held_out_observes_and_departs_from_fifo",
+    "test_e2e_per_document_answer_vectors_are_written",
+    "test_e2e_results_carry_headline_scope_caveat_and_no_forbidden_word",
+    "test_e2e_snapshots_are_measured_as_diagnostics",
+    "test_every_arm_records_its_sampler_and_c2_requires_them_to_agree",
+    "test_ledger_statuses_follow_a3b_3",
+    "test_measure_seed_dry_run_reads_a_steps_0_launch_and_c10_still_fails_it",
+    "test_measure_seed_passes_every_arms_sampler_into_c2",
+    "test_o5_train_names_the_confound_beside_every_psic_number",
+    "test_run_level_histograms_are_cross_checked_against_the_per_step_sums",
+    "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+    "test_the_ledger_records_what_ran_not_what_was_asked",
+    "test_the_real_a4_table_is_filled_with_the_owners_values",
+    "test_the_step_diag_reading_is_diagnostic_and_never_the_headline",
+    "test_two_exit_3_arms_tie_to_the_first_in_psic_fifo_age",
+)
+#: `e2e` tests that read an arm's checkpoints (C3, C9, the held-out policy, C10's
+#: derived cadence) or an exit-1 copy: also red when an INERT run's checkpoints are
+#: quarantined.
+_R1H_QUARANTINE_READERS: tuple[str, ...] = (
+    "test_an_exit_1_stop_still_reads_c2_c3_c8_and_a_failure_gives_3",
+    "test_c10_compares_the_owner_values_with_the_registered_ones",
+    "test_c10_is_green_on_the_fixture",
+    "test_c10_strict_wants_each_job_record_pinned_to_the_run_sha",
+    "test_c10_under_v6_checks_every_and_the_new_launch_fields",
+    "test_c3_sees_one_moved_weight",
+    "test_c9_and_c9b_are_green_on_the_row_correct_oracle",
+    "test_c9_sees_a_demand_whose_order_depends_on_gamma",
+    "test_c9b_sees_a_batched_oracle_with_another_rows_demand",
+    "test_the_decision_context_choice_does_not_change_held_out_decisions",
+    "test_the_held_out_policy_runs_the_scored_rule_with_the_trained_head",
+)
+#: `e2e` tests that redden whenever any control of the fixture's seed is red (its
+#: status, ledger, A4 table, the A3b.3 / A3d.2 copies).
+_R1H_A_CONTROL_RED: tuple[str, ...] = (
+    "test_a_c9_failure_marks_only_the_oracle_numbers_not_read",
+    "test_a_failed_control_outranks_inconclusive_liveness_within_a_seed",
+    "test_a_filled_a4_table_under_the_heading_passes_c10",
+    "test_an_exit_1_stop_still_reads_c2_c3_c8_and_a_failure_gives_3",
+    "test_e2e_every_control_passes_and_the_run_exits_0",
+    "test_e2e_ledger_is_written_with_the_run_meta",
+    "test_ledger_statuses_follow_a3b_3",
+)
+#: `e2e` copies that break C10 on purpose and assert C10 is the only control red.
+_R1H_C10_ALONE_EXPECTED: tuple[str, ...] = (
+    "test_a3d2_an_arms_exit_1_does_not_hide_a_control_failure",
+    "test_the_real_a4_table_is_filled_with_the_owners_values",
+)
+#: C10 tests that read the fixture's own recorded configs.
+_R1H_C10_ON_THE_FIXTURE: tuple[str, ...] = (
+    "test_c10_compares_the_owner_values_with_the_registered_ones",
+    "test_c10_is_green_on_the_fixture",
+    "test_c10_strict_wants_each_job_record_pinned_to_the_run_sha",
+    "test_c10_under_v6_checks_every_and_the_new_launch_fields",
+)
+#: `e2e` tests that redden when no arm ran.
+_R1H_NO_ARM_RAN: tuple[str, ...] = tuple(t for t in _R1H_E2E if t not in _R1H_PATHS_ONLY)
+#: `e2e` tests that redden when the RSR arms exit 1 before a heartbeat and the FIFO arm
+#: runs.
+_R1H_PSIC_AGE_REFUSED: tuple[str, ...] = tuple(
+    t for t in _R1H_NO_ARM_RAN if t not in _R1H_FIFO_CKPT_ONLY
+)
+#: ... and when the RSR arms crash after their heartbeat header (a heartbeat exists).
+_R1H_PSIC_AGE_CRASHED: tuple[str, ...] = tuple(
+    t for t in _R1H_PSIC_AGE_REFUSED if t not in _R1H_HEARTBEAT_ONLY
+)
+#: `e2e` tests that redden when every arm reads INERT (exit 5) and its checkpoints are
+#: quarantined.
+_R1H_INERT: tuple[str, ...] = (*_R1H_LIVENESS_INVALID, *_R1H_QUARANTINE_READERS)
+#: `e2e` tests that redden when C2 is red on the fixture.
+_R1H_C2_RED: tuple[str, ...] = (
+    *_R1H_A_CONTROL_RED,
+    *_R1H_C10_ALONE_EXPECTED,
+    "test_every_arm_records_its_sampler_and_c2_requires_them_to_agree",
+)
+
+_R1H_SUBSTRATE_S003 = (
+    "the run-1 harness's session `substrate` fixture trains its 3-step FIFO checkpoint "
+    "through the real train() on the default synthetic corpus, and answer_targets refuses"
+    " an out-of-band corpus (ValueError 'does not end in its answer'), so the fixture "
+    "errors at setup for every test that takes `substrate` or `e2e`: "
+    "_S003_REFUSAL_COUPLING, seen from the run-1 harness. (integ 2026-10-19, battery at "
+    "1081716)"
+)
+_R1H_SUBSTRATE_NO_CONFIG = (
+    "the run-1 harness's session `substrate` fixture rewrites train()'s checkpoint as arm"
+    " B's legacy form by popping payload['meta']['config'] into result.json; with no "
+    "config recorded the pop raises KeyError 'config' at setup, so every test that takes "
+    "`substrate` or `e2e` errors: the checkpoint's config record, seen from the fixture "
+    "built on it. (integ 2026-10-19, battery at 1081716)"
+)
+_R1H_OVERRIDES_UNSTAMPED = (
+    "measure_seed, inside the session `e2e` fixture, rebuilds each RSR arm's held-out "
+    "policy from its checkpoint's frozen policy_overrides (run.py eval_policy -> "
+    "build_policy); stamped empty, RSRConfig.from_registry reads nu and raises "
+    "UnmeasuredConstant (E1), so the fixture errors for every test that takes `e2e`: the "
+    "stamped overrides, seen from their one reader. (integ 2026-10-19, battery at "
+    "1081716)"
+)
+_R1H_PSIC_AGE_DID_NOT_RUN_TAIL = (
+    " -- so the psiC and age arms (real `python -m rsr.train.loop` subprocesses of the "
+    "session `e2e` fixture) exit 1 before a heartbeat (ARM_DID_NOT_RUN) while the FIFO "
+    "arm runs. Every e2e test that reads an RSR arm's checkpoints, beats, held-out pass "
+    "or controls, the seed's status or ledger, or a copy of the run with one control "
+    "broken on purpose reddens; the three that read only the FIFO checkpoint (C9, C9b) "
+    "and finalize's path test stay green. (integ 2026-10-19, battery at 1081716)"
+)
+_R1H_NO_ARM_RAN_TAIL = (
+    " -- so all three arms of the session `e2e` fixture exit 1 before a heartbeat "
+    "(ARM_DID_NOT_RUN): every e2e test that reads any arm's output or the seed's "
+    "controls, status, ledger or RESULTS reddens; only finalize's path test stays green. "
+    "(integ 2026-10-19, battery at 1081716)"
+)
+_R1H_DEFAULT_PATH_STAMP = (
+    "the run-1 `substrate` fixture is trained by train() on the default path, so its "
+    "frozen config -- written to result.json as arm B's -- now carries n_documents: None "
+    "(corpus-size-curve's stamp) or stream: None (fresh-stream's). Each arm's warm start "
+    "rebuilds that legacy source's vocabulary from it (loop._config_vocab_documents: "
+    "int(None), or None['vocab_documents']) and raises TypeError -- so all three arms of "
+    "the session `e2e` fixture exit 1 before a heartbeat (ARM_DID_NOT_RUN): every e2e "
+    "test that reads any arm's output or the seed's controls, status, ledger or RESULTS "
+    "reddens; only finalize's path test stays green. (integ 2026-10-19, battery at "
+    "1081716)"
+)
+_R1H_SUBSTRATE_INERT = (
+    "the run-1 `substrate` fixture is 3 real train() steps at lr 1e-2, sized so that its "
+    "frozen arms measure liveness `live` (SUB_ITERS); this mutation changes what those "
+    "steps minimise (PAD scored again; or the srep-norm hinge dropped -- the fixture "
+    "trains at TGConfig's 0.01, the arms at 0.0, so only the substrate moves), and every "
+    "arm on that substrate reads INERT (rc 5, status partial) with its checkpoints "
+    "quarantined. Every e2e test that reads the seed's status, ledger or RESULTS, a "
+    "held-out pass, or a quarantined checkpoint (C3, C9, the held-out policy, C10's "
+    "derived cadence) reddens: the substrate's objective, seen from the fixture that is "
+    "tuned on it. (integ 2026-10-19, battery at 1081716)"
+)
+_R1H_LIVENESS_CONTROL_INVALID = (
+    "every arm's train() ends with memory_liveness's controls; with the shuffle control "
+    "blind (identity permutation, no permutation applied) or unfaithful (a perturbed "
+    "replay, the bos gestalt swapped too), the measurement is invalid for all three arms "
+    "of the session `e2e` fixture (rc 3 after a completed footer: 'ARM_DID_NOT_RUN "
+    "(liveness invalid)'). The seed did not run, so every e2e test that reads its status,"
+    " ledger, held-out passes or a copy of it reddens; checkpoints are kept, so their "
+    "readers stay green: _LIVENESS_INSTRUMENT_COUPLING, seen from the run-1 harness. "
+    "(integ 2026-10-19, battery at 1081716)"
+)
+_R1H_LIVENESS_DECOY_INVALID = (
+    "every arm's train() measures liveness against a decoy that must be the untrained "
+    "model at the same seed; pointed at the trained model, or copied after the warm start"
+    " (so it IS the frozen substrate the arm runs), A_decoy == A_trained, ratio 1.0, band"
+    " invalid for all three arms of the session `e2e` fixture (rc 3: 'ARM_DID_NOT_RUN "
+    "(liveness invalid)'). Every e2e test that reads the seed's status, ledger, held-out "
+    "passes or a copy of it reddens: _LIVENESS_HOOK_COUPLING, seen from the run-1 "
+    "harness. (integ 2026-10-19, battery at 1081716)"
+)
+_R1H_C2_RED_TAIL = (
+    " -- so C2 (A1.8 m-4, the arms' pairing control) is red on the session `e2e` run: the"
+    " seed fails (exit 1), and every test that reads its clean controls, ledger or A4 "
+    "table, a copy of it with C10 broken on purpose (A3b.3 / A3d.2 expect C10 alone), or "
+    "C2 on the real arms reddens. (integ 2026-10-19, battery at 1081716)"
+)
+_R1H_OBSERVE_NEVER_REACHED = (
+    "observe() never runs, so the RSR arms of the session `e2e` fixture compute no L_MC: "
+    "every beat's loss_mc is None and C8 (finite loss_mc, phi_grad_norm) is red, so the "
+    "seed fails and every test reading its clean controls, ledger, A4 table or a C10 copy"
+    " reddens; and run 1's held-out LRU, which reads attn.alpha in observe(), evicts "
+    "exactly as FIFO (both run-1 LRU tests). (integ 2026-10-19, battery at 1081716)"
+)
+_PSI_LS_CLOSED_FORM_COUPLING = (
+    "psi-ls-capacity solves for phi in closed form: its feature map is "
+    "BilinearValueHead's forward written out (the 1/d bilinear multiplier, W's "
+    "orientation, the linear term), and head_state maps the solution back onto the head, "
+    "checked against the head's own forward (offline-psi's psi_matrix). A value-head "
+    "forward edit makes the two disagree, so the planted head is not recovered and the "
+    "residual and KKT checks are off: the head's arithmetic, seen from the experiment "
+    "that inverts it. (integ 2026-10-19, battery at 1081716)"
+)
+_VALUE_HEAD_GROUP_READERS = (
+    "the test asserts the value-head optimizer group BY NAME (VALUE_HEAD_GROUP) on what "
+    "build_param_groups or train() built -- Expire-Span's w, b (ADR-0010 q9), "
+    "offline-psi's phi optimizer (C4), the frozen arm's only group, T9's real call site "
+    "-- so renaming the group reddens each: the group, seen from its readers. (integ "
+    "2026-10-19, battery at 1081716)"
+)
+_SET_TRAIN_STEP_DROPPED = (
+    "the test trains an RSR arm through the real train() past its first eviction (the "
+    "psiC arms of the Expire-Span wiring and q9 tests, slice 1's TINY arms, T9's call "
+    "site); with no set_train_step the policy's first eviction raises correction 31's "
+    "unset-step RuntimeError: _T_WARM_COUPLING's call-site half, seen from each "
+    "RSR-through-train test. (integ 2026-10-19, battery at 1081716)"
+)
+_EAGER_REGISTRY_COUPLING = (
+    "the test builds an RSR policy with labelled overrides -- psiC's nu=0, beta, gamma "
+    "(Expire-Span wiring, T9), offline-psi's RUN2_OV through new_policy / deploy_policy, "
+    "slice 1's L12 arms -- the path ADR-0009 L12 exists for. Read eagerly, from_registry "
+    "reads nu before the overrides apply and raises UnmeasuredConstant (E1); the test "
+    "that a field left un-overridden still raises sees nu's error, not its field's. "
+    "(integ 2026-10-19, battery at 1081716)"
+)
+_BUILD_POLICY_BYPASSED_ES = (
+    "train() builds FIFOPolicy whatever policy_name says: an Expire-Span arm never "
+    "reaches build_policy's ES branch (the CLI's grad_path refusal is not raised; the "
+    "checkpoint carries no w, b; no policy_overrides / expire_span_n_layers are stamped, "
+    "which es_policy_from_payload reads; no span loss is charged), and a psiC arm raises "
+    "AttributeError where train() stamps T_warm from policy.config: "
+    "_S1_RSR_THROUGH_TRAIN, seen from the Expire-Span tests. (integ 2026-10-19, battery "
+    "at 1081716)"
+)
+_S003_REFUSAL_THROUGH_TRAIN = (
+    "the test trains through the real train() on the default synthetic corpus (the "
+    "Expire-Span wiring and q9 runs, slice 1's TINY arms, T9's real call site), and "
+    "answer_targets refuses an out-of-band corpus (ValueError 'does not end in its "
+    "answer'): _S003_REFUSAL_COUPLING, seen from the integration's new train() tests. "
+    "(integ 2026-10-19, battery at 1081716)"
+)
+_LOOKAHEAD_RETURNS_READERS = (
+    "b2-psi-probe's returns, gamma-ceiling's hindsight_target and offline-psi's target_of"
+    " are lookahead-room's discounted_returns, imported (LR.discounted_returns), so an "
+    "undiscounted return reddens every test that pins a discounted value or gamma 0 == D:"
+    " one return, four readers. (integ 2026-10-19, battery at 1081716)"
+)
+_B2_BOOTSTRAP_READERS = (
+    "newcomer-bakeoff's boot_reps and run 1's contrast are asserted equal, value for "
+    "value, to B2's paired_bootstrap (imported); B2 drawing from the global RNG instead "
+    "of torch.Generator(20260927 + seed) changes its replicates: one bootstrap, three "
+    "readers. (integ 2026-10-19, battery at 1081716)"
+)
+_ES_PRE_WIRING_HASH = (
+    "tests/test_expire_span_arm.py's PRE_WIRING pins each FIFO / psiC arm's run_id (the "
+    "frozen config's hash), label and global-RNG digest after train(), measured before "
+    "the Expire-Span wiring; this mutation changes what train() stamps into that config "
+    "(or the label) for the arms it names, so their run_id or label moves: the frozen "
+    "record, seen from the arms that must not have moved. (integ 2026-10-19, battery at "
+    "1081716)"
+)
+_ES_PRE_WIRING_RNG = (
+    "tests/test_expire_span_arm.py's PRE_WIRING pins each arm's global-RNG digest after "
+    "train() (the same draws in the same order); this mutation leaves dropout live in a "
+    "frozen-eval arm's training forwards (or removes it from a psiC arm's after the first"
+    " eval capture), so that arm draws a different number of masks and its digest moves: "
+    "the mode, seen from the arms that must not have moved. (integ 2026-10-19, battery at"
+    " 1081716)"
+)
+
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -602,6 +962,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "diagnostics-off test.",
                 "test_a_directly_built_policy_collects_no_diagnostics",
             ),
+            (
+                "tests/test_rsr_learning_path.py::test_the_reduction_through_train_has_no_head_no_observe_and_no_loss",
+                (
+                    "T13 drives REDUCTION_SWITCHES through the real train() as "
+                    "L12 overrides with no_warmup_ablation=True; the table's "
+                    "t_warm = inf is a t_warm override other than 0, which "
+                    "build_policy refuses (ValueError naming the T_warm = 0 "
+                    "arm): the reduction table, seen from the through-train "
+                    "reduction test. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -625,6 +996,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "'neg_age': the age-only arm is a psi_override VALUE and must stay out "
                 "of the reduction. The same switch, asserted from the age-only side.",
                 "test_the_reduction_still_pins_neg_age",
+            ),
+            (
+                "tests/test_rsr_learning_path.py::test_the_reduction_through_train_has_no_head_no_observe_and_no_loss",
+                (
+                    "T13 builds the reduction arm through train() from "
+                    "REDUCTION_SWITCHES and asserts policy.head is None; "
+                    "psi_override None makes it build the learned "
+                    "BilinearValueHead: the same switch, seen through train(). "
+                    "(integ 2026-10-19, battery at 1081716)"
+                ),
             ),
         ),
     ),
@@ -683,6 +1064,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_directly_built_policy_collects_no_diagnostics",
                 "test_the_reduction_still_pins_neg_age",
             ),
+            (
+                "tests/test_rsr_learning_path.py::test_the_reduction_through_train_has_no_head_no_observe_and_no_loss",
+                (
+                    "T13 passes REDUCTION_SWITCHES as train()'s overrides; with"
+                    " nu gone from the table, from_registry reads nu and raises"
+                    " UnmeasuredConstant (E1): _REDUCTION_TABLE_COUPLING, seen "
+                    "through train(). (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -729,6 +1119,23 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "2026-09-29: the step-3 use of occupant 1 is forgotten by step 4, "
                 "so LRU evicts it as FIFO would -- the same lost cross-step state, "
                 "seen from the compaction test",
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "run 1's held-out LRU keeps its last-use state per row "
+                        "across steps; in MemoryState.accum, rebuilt with every "
+                        "step's memory state, it does not survive, so the LRU pass "
+                        "evicts exactly as FIFO: the in-process LRU test and the "
+                        "e2e held-out pass (fraction_oldest 1.0) both read FIFO's "
+                        "victims. (integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_e2e_lru_held_out_observes_and_departs_from_fifo",
+                    "test_lru_observes_held_out_and_so_departs_from_fifo",
+                )
             ),
         ),
     ),
@@ -797,6 +1204,28 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_value_head_arithmetic.py::test_W_is_not_silently_transposed",
                 _MUP_COUPLING,
             ),
+            (
+                "tests/test_offline_psi.py::test_psi_matrix_is_the_heads_own_slot_scoring",
+                (
+                    "offline-psi's psi_matrix scores every (t, i) cell in one "
+                    "batched call of the head's own forward, and the test "
+                    "compares it with per-slot calls at atol 1e-6, rtol 0. "
+                    "Without the 1/d multiplier the scores are d = 128 times "
+                    "larger and the float32 batched-vs-per-slot gap (measured "
+                    "3.8e-6, against 3.0e-8 at 1/d) exceeds that absolute "
+                    "tolerance: a tolerance sized for 1/d-scaled scores. (integ"
+                    " 2026-10-19, battery at 1081716)"
+                ),
+            ),
+            *(
+                (f"tests/test_psi_ls_capacity.py::{t}", _PSI_LS_CLOSED_FORM_COUPLING)
+                for t in (
+                    "test_head_state_maps_w_onto_the_heads_own_forward",
+                    "test_kkt_split_is_zero_on_the_kept_subspace_and_flags_truncation",
+                    "test_solve_recovers_a_planted_head_exactly",
+                    "test_xt_resid_from_cells_equals_the_normal_equation_gradient",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -812,6 +1241,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_forward_matches_the_formula_computed_by_hand",
                 "the hand-computed forward is the same arithmetic the transpose gate "
                 "checks; one edit cannot break one and not the other",
+            ),
+            *(
+                (f"tests/test_psi_ls_capacity.py::{t}", _PSI_LS_CLOSED_FORM_COUPLING)
+                for t in (
+                    "test_head_state_maps_w_onto_the_heads_own_forward",
+                    "test_kkt_split_is_zero_on_the_kept_subspace_and_flags_truncation",
+                    "test_solve_recovers_a_planted_head_exactly",
+                    "test_xt_resid_from_cells_equals_the_normal_equation_gradient",
+                )
             ),
         ),
     ),
@@ -843,6 +1281,41 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "head's two terms, seen from B1's trainer. Found by the night/2026-09-30 "
                 "pre-readout screen.",
             ),
+            (
+                "tests/test_offline_psi.py::test_fit_gives_gradient_to_phi_only_and_the_optimizer_holds_phi_only",
+                (
+                    "offline-psi's C4 test asserts every phi parameter receives"
+                    " the fit's gradient; with the linear term dropped u never "
+                    "enters psi-hat and u.grad stays None. (integ 2026-10-19, "
+                    "battery at 1081716)"
+                ),
+            ),
+            *(
+                (f"tests/test_psi_ls_capacity.py::{t}", _PSI_LS_CLOSED_FORM_COUPLING)
+                for t in (
+                    "test_head_state_maps_w_onto_the_heads_own_forward",
+                    "test_kkt_split_is_zero_on_the_kept_subspace_and_flags_truncation",
+                    "test_solve_recovers_a_planted_head_exactly",
+                    "test_xt_resid_from_cells_equals_the_normal_equation_gradient",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_learning_path.py::{t}",
+                    (
+                        "with the linear term dropped u never enters psi-hat, so "
+                        "u.grad stays None: the L_MC-reaches-phi test, the policy's"
+                        " own detach test and the warmup test each assert that "
+                        "every phi parameter (W and u) receives L_MC's gradient. "
+                        "(integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_l_mc_reaches_phi_and_nothing_else",
+                    "test_the_policys_own_detach_holds_for_attached_inputs",
+                    "test_warmup_evicts_fifo_and_phi_still_trains",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -861,6 +1334,25 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_param_groups.py::"
                 "test_the_value_head_lr_follows_its_own_one_over_d_rule",
                 _MUP_COUPLING,
+            ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _VALUE_HEAD_GROUP_READERS)
+                for t in (
+                    "test_build_param_groups_puts_the_policy_where_phi_goes",
+                    "test_w_and_b_take_exactly_phis_optimizer_group_and_settings",
+                )
+            ),
+            (
+                "tests/test_offline_psi.py::test_fit_gives_gradient_to_phi_only_and_the_optimizer_holds_phi_only",
+                _VALUE_HEAD_GROUP_READERS,
+            ),
+            (
+                "tests/test_rsr_learning_path.py::test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                _VALUE_HEAD_GROUP_READERS,
+            ),
+            (
+                "tests/test_train_loop.py::test_the_value_head_lands_in_its_own_mup_group",
+                _VALUE_HEAD_GROUP_READERS,
             ),
         ),
     ),
@@ -956,6 +1448,23 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "which is built from rank_shift: counting the window gives {3: "
                 "176}, not {0: 176}.",
                 "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "run 1's held-out eviction metrics read instrumentation's "
+                        "rank shift: counting the sliding window, every FIFO victim"
+                        " shifts 15 instead of 0 (the e2e FIFO test's {0: n}) and "
+                        "FIFO's fraction_oldest reads 0.0, not 1.0 (the e2e LRU "
+                        "test): _DISPLACEMENT_COUPLING, seen from run 1. (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_e2e_fifo_evicts_age_m_and_shifts_nothing_held_out",
+                    "test_e2e_lru_held_out_observes_and_departs_from_fifo",
+                )
             ),
         ),
     ),
@@ -1308,6 +1817,24 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
                 "test_the_cli_routes_the_pool_and_the_warm_start",
             ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "run 1's CLI (run.py main) parses with "
+                        "rsr.exit_codes.ArgumentParser; a missing owner flag is a "
+                        "usage error, which this mutation exits as 2 instead of 3: "
+                        "the shared usage-error path (_USAGE_ERROR_COUPLING), seen "
+                        "from run 1's CLI. (integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_the_cli_refuses_without_each_owner_value[--gamma]",
+                    "test_the_cli_refuses_without_each_owner_value[--iters]",
+                    "test_the_cli_refuses_without_each_owner_value[--o5]",
+                    "test_the_cli_refuses_without_each_owner_value[--phi-weight-decay]",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -1349,6 +1876,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "93.4% of which are PAD on the committed synthetic corpus -- so the number "
         "minimised, reported and exponentiated into a perplexity is mostly the "
         "model's skill at predicting zeros",
+        off_gate_allowed=(
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_SUBSTRATE_INERT)
+                for t in _R1H_INERT
+            ),
+        ),
     ),
     Mutation(
         "W_O dropped from the capture path",
@@ -1497,6 +2030,61 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
                 "test_the_age_only_arm_through_train_is_labelled_and_learns",
             ),
+            *(
+                (
+                    f"tests/test_loo_target.py::{t}",
+                    (
+                        "the LOO target's observe() buffers Delta per live slot and"
+                        " retention_loss() reads that buffer; never reached, "
+                        "nothing is buffered, so the coverage, default-target, "
+                        "refusal, imputation and no-gradient tests read an empty "
+                        "buffer or a None loss. (integ 2026-10-19, battery at "
+                        "1081716)"
+                    ),
+                )
+                for t in (
+                    "test_coverage_counts_every_live_cell_once",
+                    "test_default_target_is_run_1s_r_i_exactly",
+                    "test_loo_target_refuses_a_trace_without_loo",
+                    "test_missing_donors_are_imputed_zero_and_counted_by_kind",
+                    "test_no_gradient_reaches_any_transformer_parameter[None]",
+                    "test_no_gradient_reaches_any_transformer_parameter[age_only]",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_learning_path.py::{t}",
+                    (
+                        "every one of these reads what observe() produces in the "
+                        "real loop -- L_MC, the per-row buffers, the shared "
+                        "decision context, the eval-mode traces it receives; never "
+                        "reached, the buffers are empty and retention_loss() is "
+                        "None. (integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_every_trace_reaching_observe_in_train_is_eval_mode",
+                    "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
+                    "test_l_mc_reaches_phi_and_nothing_else",
+                    "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                    "test_the_decision_and_the_regression_read_one_context",
+                    "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                    "test_the_return_is_truncated_at_each_rows_length",
+                    "test_the_rsr_arm_builds_and_steps_on_mps",
+                    "test_two_rows_keep_two_buffers",
+                    "test_warmup_evicts_fifo_and_phi_still_trains",
+                )
+            ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_OBSERVE_NEVER_REACHED)
+                for t in (
+                    *_R1H_A_CONTROL_RED,
+                    *_R1H_C10_ALONE_EXPECTED,
+                    "test_c5_c6_c8_go_red",
+                    "test_e2e_lru_held_out_observes_and_departs_from_fifo",
+                    "test_lru_observes_held_out_and_so_departs_from_fifo",
+                )
+            ),
         ),
     ),
     # ----------------------------------------------------------------------- #
@@ -1593,6 +2181,36 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
                 "test_every_pool_arm_records_its_sampler_in_the_hash",
             ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _BUILD_POLICY_BYPASSED_ES)
+                for t in (
+                    "test_expire_span_is_a_registered_policy_and_a_cli_choice",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                    "test_frozen_predictor_and_through_gestalt_do_NOT_update_w_b_identically",
+                    "test_the_config_and_overrides_are_stamped_into_the_hash_and_label",
+                    "test_the_frozen_arm_trains_w_b_and_leaves_the_model_bit_equal",
+                    "test_w1_eval_mode_frozen_training_still_charges_the_span_loss",
+                    "test_w_and_b_take_exactly_phis_optimizer_group_and_settings",
+                )
+            ),
+            (
+                "tests/test_expire_span_referendum.py::test_es_policy_from_payload_restores_the_trained_w_b",
+                _BUILD_POLICY_BYPASSED_ES,
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the RSR arms run train(policy_name='rsr'); with FIFOPolicy"
+                        " built unconditionally train() raises AttributeError where"
+                        " it stamps T_warm from policy.config "
+                        "(_S1_RSR_THROUGH_TRAIN)"
+                    )
+                    + _R1H_PSIC_AGE_DID_NOT_RUN_TAIL,
+                )
+                for t in _R1H_PSIC_AGE_REFUSED
+            ),
         ),
     ),
     # Correction 31: T_warm counts optimizer steps, not sentences.
@@ -1633,6 +2251,35 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_records_are_drained_and_checkpoints_stay_bounded",
                 "test_rsr_beats_carry_the_decision_attribution",
                 "test_the_run_level_histograms_split_warmup_from_scored",
+            ),
+            (
+                "tests/test_rsr_learning_path.py::test_warmup_evicts_fifo_and_phi_still_trains",
+                (
+                    "the warmup test drives an RSR arm through train() and "
+                    "asserts every eviction in its warm optimizer steps is "
+                    "'fifo_warmup'; compared with the sentence index, the "
+                    "evictions after sentence T_warm are scored ('psi'): "
+                    "_T_WARM_COUPLING, seen from slice 1. (integ 2026-10-19, "
+                    "battery at 1081716)"
+                ),
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the RSR arms compare T_warm (1 optimizer step on the "
+                        "fixture) with the sentence index, so inside step 0 every "
+                        "eviction after sentence 0 is scored by psi: loss_lm at k <"
+                        " T_warm differs from the FIFO arm's (C2 (c)) and the "
+                        "diagnostics count no warm step"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (
+                    *_R1H_C2_RED,
+                    "test_c2_is_green_on_the_real_arms",
+                    "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+                )
             ),
         ),
     ),
@@ -1682,6 +2329,49 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "and raise 'no training step was set' at their first eviction.",
                 "test_a_resume_into_a_dir_with_later_rows_is_refused",
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
+            ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _SET_TRAIN_STEP_DROPPED)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                    "test_w_and_b_take_exactly_phis_optimizer_group_and_settings",
+                )
+            ),
+            *(
+                (f"tests/test_rsr_learning_path.py::{t}", _SET_TRAIN_STEP_DROPPED)
+                for t in (
+                    "test_beta_zero_leaves_phi_bitwise_at_init",
+                    "test_every_trace_reaching_observe_in_train_is_eval_mode",
+                    "test_fifo_and_rsr_arms_see_the_same_first_batch",
+                    "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                    "test_steps_per_epoch_is_derived_from_the_pool[16]",
+                    "test_steps_per_epoch_is_derived_from_the_pool[8]",
+                    "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                    "test_the_rsr_arm_builds_and_steps_on_mps",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "train() never calls set_train_step, so the RSR arms of the"
+                        " session `e2e` fixture raise correction 31's unset-step "
+                        "RuntimeError at their first eviction, after the heartbeat "
+                        "header: both crash (ARM_CRASHED) while the FIFO arm runs. "
+                        "Every e2e test that reads an RSR arm's checkpoints, beats,"
+                        " held-out pass or controls, the seed's status or ledger, "
+                        "or a copy of the run reddens; the FIFO-only C9 tests, "
+                        "finalize's path test and the launch-record test (a "
+                        "heartbeat exists) stay green. (integ 2026-10-19, battery "
+                        "at 1081716)"
+                    ),
+                )
+                for t in _R1H_PSIC_AGE_CRASHED
+            ),
+            (
+                "tests/test_train_loop.py::test_the_value_head_lands_in_its_own_mup_group",
+                _SET_TRAIN_STEP_DROPPED,
             ),
         ),
     ),
@@ -1759,6 +2449,29 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "which the registry refuses (steps_per_epoch > 0).",
                 "test_every_pool_arm_records_its_sampler_in_the_hash",
             ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _ES_PRE_WIRING_HASH)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "steps_per_epoch = iters = 3 makes T_warm the whole 3-step "
+                        "arm of the session `e2e` fixture: the diagnostics count 3 "
+                        "warm steps, not 1, and the held-out policy at step 3 is "
+                        "still in warmup (fifo_warmup only, never 'psi'). (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+                    "test_the_held_out_policy_runs_the_scored_rule_with_the_trained_head",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -1771,6 +2484,30 @@ MUTATIONS: tuple[Mutation, ...] = (
         "`--help`; it simply does not arrive. A flag that is accepted and "
         "discarded is worse than an absent one -- the absent one is an error at "
         "the shell.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span_arm.py::test_expire_span_is_a_registered_policy_and_a_cli_choice",
+                (
+                    "--policy never reaches train(), so '--policy expire_span' "
+                    "with no overrides runs as the default FIFO and the CLI's "
+                    "grad_path refusal (ValueError) is never raised. (integ "
+                    "2026-10-19, battery at 1081716)"
+                ),
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "--policy never reaches train(), so the psiC and age arms "
+                        "run as the default 'fifo' with their --policy-override "
+                        "flags, which build_policy refuses on the FIFO arm "
+                        "(ValueError)"
+                    )
+                    + _R1H_PSIC_AGE_DID_NOT_RUN_TAIL,
+                )
+                for t in _R1H_PSIC_AGE_REFUSED
+            ),
+        ),
     ),
     Mutation(
         "srep-norm hinge back out of the objective",
@@ -1783,6 +2520,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "`grep -c srep_norm src/rsr/train/loop.py` returned 0. The hinge is "
         "still *reported*, so this mutation also checks that reporting a term is "
         "not mistaken for optimising it.",
+        off_gate_allowed=(
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_SUBSTRATE_INERT)
+                for t in _R1H_INERT
+            ),
+        ),
     ),
     Mutation(
         "ppl computed from the penalised loss",
@@ -1808,6 +2551,22 @@ MUTATIONS: tuple[Mutation, ...] = (
         "the claim this proves is the SMALLER one the manager corrected the "
         "brief to: unreachable *at the default*, not from the CLI -- "
         "`--vocab 0` always reached it.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "--vocab's default reaches every arm subprocess: each "
+                        "builds a 50257-row embedding while the `substrate` fixture"
+                        " (trained by train() directly, V derived from the corpus) "
+                        "has the derived V, so the strict warm-start "
+                        "load_state_dict refuses the shapes"
+                    )
+                    + _R1H_NO_ARM_RAN_TAIL,
+                )
+                for t in _R1H_NO_ARM_RAN
+            ),
+        ),
     ),
     Mutation(
         "from_registry reads every field eagerly again",
@@ -1865,6 +2624,70 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
                 "test_every_pool_arm_records_its_sampler_in_the_hash",
             ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _EAGER_REGISTRY_COUPLING)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                    "test_w_and_b_take_exactly_phis_optimizer_group_and_settings",
+                )
+            ),
+            *(
+                (f"tests/test_offline_psi.py::{t}", _EAGER_REGISTRY_COUPLING)
+                for t in (
+                    "test_deploy_guard_refuses_without_selection_mismatch_or_existing_output",
+                    "test_deploy_policy_is_the_frozen_phi_with_no_warmup",
+                    "test_fit_gives_gradient_to_phi_only_and_the_optimizer_holds_phi_only",
+                    "test_fit_keeps_the_selected_state_and_is_deterministic",
+                    "test_new_policy_head_is_run_2s_initial_phi",
+                    "test_the_fit_reads_u_train_only_for_gradient_and_u_val_only_for_selection",
+                )
+            ),
+            *(
+                (f"tests/test_offline_psi_converge.py::{t}", _EAGER_REGISTRY_COUPLING)
+                for t in (
+                    "test_fit_stops_at_the_first_converged_check",
+                    "test_trajectory_equals_offline_psis_fit_at_shared_steps",
+                )
+            ),
+            *(
+                (f"tests/test_rsr_learning_path.py::{t}", _EAGER_REGISTRY_COUPLING)
+                for t in (
+                    "test_a_field_left_unoverridden_still_raises",
+                    "test_a_t_warm_override_needs_the_ablation_declaration",
+                    "test_b_enabled_false_is_required",
+                    "test_beta_zero_leaves_phi_bitwise_at_init",
+                    "test_every_trace_reaching_observe_in_train_is_eval_mode",
+                    "test_fifo_and_rsr_arms_see_the_same_first_batch",
+                    "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                    "test_override_arms_build_on_an_empty_ledger",
+                    "test_overrides_are_stamped_into_frozen_hash_and_label",
+                    "test_phi_is_initialised_from_its_own_seeded_stream",
+                    "test_shadow_enabled_false_must_be_passed_explicitly",
+                    "test_steps_per_epoch_is_derived_from_the_pool[16]",
+                    "test_steps_per_epoch_is_derived_from_the_pool[8]",
+                    "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                    "test_the_reduction_through_train_has_no_head_no_observe_and_no_loss",
+                    "test_the_rsr_arm_builds_and_steps_on_mps",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the RSR arms pass nu=0, beta=1, gamma as labelled "
+                        "overrides, but the eager from_registry reads nu before "
+                        "they apply and raises UnmeasuredConstant "
+                        "(_EAGER_REGISTRY_COUPLING)"
+                    )
+                    + _R1H_PSIC_AGE_DID_NOT_RUN_TAIL,
+                )
+                for t in _R1H_PSIC_AGE_REFUSED
+            ),
+            (
+                "tests/test_train_loop.py::test_the_value_head_lands_in_its_own_mup_group",
+                _EAGER_REGISTRY_COUPLING,
+            ),
         ),
     ),
     Mutation(
@@ -1892,6 +2715,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "liveness_batch reads -- changes the band or reason it asserts.",
                 "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
             ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_CONTROL_INVALID)
+                for t in _R1H_LIVENESS_INVALID
+            ),
         ),
     ),
     Mutation(
@@ -1918,6 +2745,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "liveness_batch reads -- changes the band or reason it asserts.",
                 "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
             ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_CONTROL_INVALID)
+                for t in _R1H_LIVENESS_INVALID
+            ),
         ),
     ),
     Mutation(
@@ -1943,6 +2774,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "liveness_batch reads -- changes the band or reason it asserts.",
                 "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
             ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_CONTROL_INVALID)
+                for t in _R1H_LIVENESS_INVALID
+            ),
         ),
     ),
     Mutation(
@@ -1966,6 +2801,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "controls, its hook, its decoy, or a None stamped into the config "
                 "liveness_batch reads -- changes the band or reason it asserts.",
                 "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_CONTROL_INVALID)
+                for t in _R1H_LIVENESS_INVALID
             ),
         ),
     ),
@@ -2418,6 +3257,65 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
                 "test_every_pool_arm_records_its_sampler_in_the_hash",
+            ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _S003_REFUSAL_THROUGH_TRAIN)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo_frozen_eval]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                    "test_frozen_predictor_and_through_gestalt_do_NOT_update_w_b_identically",
+                    "test_the_config_and_overrides_are_stamped_into_the_hash_and_label",
+                    "test_the_frozen_arm_trains_w_b_and_leaves_the_model_bit_equal",
+                    "test_w1_eval_mode_frozen_training_still_charges_the_span_loss",
+                    "test_w_and_b_take_exactly_phis_optimizer_group_and_settings",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_expire_span_referendum.py::{t}",
+                    (
+                        "the referendum's ES pass and es_policy_from_payload's "
+                        "training run read answers through answer_targets (refused:"
+                        " ValueError), and E0 (check_val) requires run 1's "
+                        "EXPECTED_VOCAB_SHA256, S0-03's map, which an out-of-band "
+                        "corpus (no answer tokens in the stream) does not produce: "
+                        "_S003_CORPUS_COUPLING, seen from the referendum. (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_es_policy_from_payload_restores_the_trained_w_b",
+                    "test_the_es_pass_applies_the_mask_at_every_step",
+                    "test_the_es_pass_draws_no_dropout_at_eval",
+                    "test_val_is_disjoint_and_closed",
+                )
+            ),
+            *(
+                (f"tests/test_rsr_learning_path.py::{t}", _S003_REFUSAL_THROUGH_TRAIN)
+                for t in (
+                    "test_a_frozen_fifo_arm_runs_without_an_optimizer",
+                    "test_beta_zero_leaves_phi_bitwise_at_init",
+                    "test_every_trace_reaching_observe_in_train_is_eval_mode",
+                    "test_fifo_and_rsr_arms_see_the_same_first_batch",
+                    "test_one_step_moves_the_transformer_identically_with_and_without_l_mc",
+                    "test_overrides_are_stamped_into_frozen_hash_and_label",
+                    "test_phi_is_initialised_from_its_own_seeded_stream",
+                    "test_steps_per_epoch_is_derived_from_the_pool[16]",
+                    "test_steps_per_epoch_is_derived_from_the_pool[8]",
+                    "test_the_frozen_option_is_recorded_and_moves_no_transformer_weight",
+                    "test_the_reduction_through_train_has_no_head_no_observe_and_no_loss",
+                    "test_the_rsr_arm_builds_and_steps_on_mps",
+                )
+            ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_SUBSTRATE_S003)
+                for t in (*_R1H_E2E, *_R1H_SUBSTRATE_ONLY)
+            ),
+            (
+                "tests/test_train_loop.py::test_the_value_head_lands_in_its_own_mup_group",
+                _S003_REFUSAL_THROUGH_TRAIN,
             ),
         ),
     ),
@@ -3173,6 +4071,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "S5. Without the barrier the jobs of a wave start their timed loops at "
         "different times, so at high k the early ones run partly alone: "
         "makespan(k) is biased down and cpu_det_slots up.",
+        off_gate_allowed=(
+            (
+                "tests/test_capacity_c0.py::test_output_hash_identical_runs_equal_while_checkpoint_files_differ",
+                (
+                    "the end-to-end Wave test asserts S5 on real subprocesses: "
+                    "no job saw go before every job of the wave was ready (max "
+                    "ready_wall <= min go_seen_wall). A barrier that releases "
+                    "at once lets the first job start before the second is "
+                    "ready (measured: ready 0.028 s after go seen). The "
+                    "barrier, seen end to end; timing-dependent, so it may also"
+                    " stay green under the mutation. (integ 2026-10-19, battery"
+                    " at 1081716)"
+                ),
+            ),
+        ),
     ),
     # --- retrieval-curve (docs/lab-notes/dispatch-retrieval-curve.md, Bar) ---
     Mutation(
@@ -3261,6 +4174,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "frozen config; a None n_documents stamped into every default-path "
                 "config breaks the rebuild (int(None)).",
                 "test_a_legacy_source_is_checked_through_its_hash_bound_config",
+            ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_DEFAULT_PATH_STAMP)
+                for t in _R1H_NO_ARM_RAN
             ),
         ),
     ),
@@ -3520,6 +4437,28 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "config breaks the rebuild (None['vocab_documents']).",
                 "test_a_legacy_source_is_checked_through_its_hash_bound_config",
             ),
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "PRE_WIRING pins the four wiring arms' run_id (the config "
+                        "hash); stream: None stamped on the default path moves "
+                        "every one (TINY passes n_documents, so corpus-size-curve's"
+                        " n_documents stamp leaves them unchanged). (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo_frozen_eval]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                )
+            ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_DEFAULT_PATH_STAMP)
+                for t in _R1H_NO_ARM_RAN
+            ),
         ),
     ),
     Mutation(
@@ -3642,6 +4581,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            and torch.allclose(a.double(), b.double(), atol=1e-3)\n",
         "fresh-stream PREREG control 2: arm B's model and optimizer state after load "
         "must equal ckpt-001000.pt exactly.",
+        off_gate_allowed=(
+            (
+                "tests/test_b5_convergence.py::test_compare_payloads_is_exact",
+                (
+                    "b5-convergence's compare_payloads compares tensors through"
+                    " fresh-stream's _same (imported, FS._same), so with "
+                    "control 2 made approximate its exactness test's 2**-20 "
+                    "difference compares equal: one equality, two readers. "
+                    "(integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
+        ),
     ),
     # --- scaffold-dose (experiments/scaffold-dose/PREREG.md, 4249567) ---
     Mutation(
@@ -3914,6 +4865,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "it recomputes every condition by direct indexing; a whole-row "
                 "knockout is not the stated single-slot one.",
             ),
+            (
+                "tests/test_loo_target.py::test_on_policy_delta_is_the_knockout_it_claims_on_a_non_fifo_memory",
+                (
+                    "the on-policy LOO target computes Delta through "
+                    "loo.knockout_kv, and the test recomputes each cell with a "
+                    "hand-built single-slot knockout on a non-FIFO memory; a "
+                    "knockout that clobbers the whole row disagrees with it. "
+                    "(integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -3933,6 +4894,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "if b == row or not bool(valid[b, rank]):",
         "W4 resample semantics: the donor gestalt comes from a DIFFERENT document, "
         "or the 'knockout' can re-insert the target document's own content.",
+        off_gate_allowed=(
+            (
+                "tests/test_loo_target.py::test_pick_donor_fast_is_pick_donor",
+                (
+                    "loo_target.pick_donor_fast is asserted equal to "
+                    "loo.pick_donor on random memories; the mutated pick_donor "
+                    "admits a same-document donor and the two disagree. (integ "
+                    "2026-10-19, battery at 1081716)"
+                ),
+            ),
+        ),
     ),
     Mutation(
         "loo: a resample donor's sentence kind is not checked",
@@ -3954,6 +4926,22 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "E0d's C6 (PREREG §6) counts cells that receive a donor; with kind "
                 "unchecked any doc's slot qualifies, coverage rises above 0.80 on the "
                 "2-document fixture, and the refusal the test expects never fires.",
+            ),
+            *(
+                (
+                    f"tests/test_loo_target.py::{t}",
+                    (
+                        "loo_target's fast donor picker is asserted equal to "
+                        "loo.pick_donor, directly and through bit-equality of the "
+                        "FIFO-memory Delta with loo.loo_delta_loss; with the kind "
+                        "unchecked in pick_donor the two choose different donors. "
+                        "(integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_fifo_memory_delta_is_bit_equal_to_loo_delta_loss",
+                    "test_pick_donor_fast_is_pick_donor",
+                )
             ),
         ),
     ),
@@ -4382,12 +5370,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        decoy.load_state_dict(model.state_dict())\n",
         "decisive PREREG *Mutation bar* (decoy aliasing): A_decoy == A_trained, "
         "ratio == 1.0 exactly, which the rule makes invalid (3), never 0.",
-        off_gate_allowed=_r1_declare(
-            "the run-1 decoy test reads train()'s liveness record (band and reason, "
-            "cold and warm); a mutation of the liveness measurement -- its shuffle "
-            "controls, its hook, its decoy, or a None stamped into the config "
-            "liveness_batch reads -- changes the band or reason it asserts.",
-            "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the run-1 decoy test reads train()'s liveness record (band and reason, "
+                "cold and warm); a mutation of the liveness measurement -- its shuffle "
+                "controls, its hook, its decoy, or a None stamped into the config "
+                "liveness_batch reads -- changes the band or reason it asserts.",
+                "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
+            ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_DECOY_INVALID)
+                for t in _R1H_LIVENESS_INVALID
+            ),
         ),
     ),
     Mutation(
@@ -4700,6 +5694,25 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "pins rule_g09 = 0.4 + 0.9 * 0.7 on the same matrix -- the return, "
                 "seen from the target table.",
             ),
+            *(
+                (f"tests/test_b2_psi_probe.py::{t}", _LOOKAHEAD_RETURNS_READERS)
+                for t in (
+                    "test_returns_start_at_k0_and_the_shifted_companion_starts_at_k1",
+                    "test_target_matrices_by_arm",
+                )
+            ),
+            *(
+                (f"tests/test_gamma_ceiling.py::{t}", _LOOKAHEAD_RETURNS_READERS)
+                for t in (
+                    "test_gamma0_target_equals_D_exactly",
+                    "test_hindsight_pairs_gamma0_equals_b0_rule_g0",
+                    "test_hindsight_rule_keeps_the_sentence_with_future_demand",
+                )
+            ),
+            (
+                "tests/test_offline_psi.py::test_target_is_never_cut_at_fifo_eviction",
+                _LOOKAHEAD_RETURNS_READERS,
+            ),
         ),
     ),
     Mutation(
@@ -5001,6 +6014,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "in every Q-step, so each A2 test that pins n_t = 15, bin {1} "
                 "excluded, or a value computed on the A1.3 population reddens.",
             ),
+            (
+                "tests/test_e0d.py::test_h_age_oracle_is_the_min_over_the_ages_present",
+                (
+                    "H_age-oracle (A2.6) is computed on A1.3's population, "
+                    "which bos_keep defines; keeping rank M - 1 puts age 1 back"
+                    " into it (n_t_values [16], not [15]). (integ 2026-10-19, "
+                    "battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -5169,6 +6191,29 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test that pins a value of it; ties are everywhere in pct (age-only "
                 "scores tie inside every bin), so the end-to-end label and class "
                 "tests move too.",
+            ),
+            *(
+                (
+                    f"tests/test_e0d.py::{t}",
+                    (
+                        "each runs e0d.main() end to end on the 'good' cleared "
+                        "fixture and needs exit 0 before it checks the seed cache "
+                        "or the manifest; with ties counted 0 the AUROC moves and "
+                        "the class changes (exit 2): the statistic, seen from the "
+                        "runner's crash-safety and provenance tests. (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_a_seed_cache_is_not_reused_when_the_git_sha_is_unknown",
+                    "test_a_seed_cache_whose_key_does_not_match_exits_3[doc_range]",
+                    "test_a_seed_cache_whose_key_does_not_match_exits_3[git_sha]",
+                    "test_a_seed_cache_whose_key_does_not_match_exits_3[run_py_sha256]",
+                    "test_a_seed_cache_whose_key_does_not_match_exits_3[seed]",
+                    "test_an_unreadable_seed_cache_exits_3",
+                    "test_each_seed_is_persisted_as_it_completes_and_reused_on_restart",
+                    "test_the_manifest_names_amendment_3",
+                )
             ),
         ),
     ),
@@ -5722,6 +6767,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "control cannot reach A*, so the seeds read CEILING and the class "
                 "moves to exit 2.",
             ),
+            (
+                "tests/test_e0d.py::test_the_ledger_records_the_launched_argv",
+                (
+                    "end-to-end main() on the argv fixture, which needs "
+                    "CONFOUND's exit 1: with r_i as its own control a bad "
+                    "score's control cannot reach A*, so the seeds read CEILING"
+                    " and the run exits 2 -- the coupling already declared for "
+                    "the two main() tests. (integ 2026-10-19, battery at "
+                    "1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -5800,6 +6856,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_e0d.py::test_c8_committed_rulings_in_a_temp_repo",
                 "every C8 test runs on copies of the two real ruling texts, which the "
                 "anchored form cannot read (Part D.2 item 5).",
+            ),
+            (
+                "tests/test_e0d.py::test_the_real_rulings_dir_authorises_e0d_iff_both_statistic_rulings",
+                (
+                    "the test runs C8 on this tree's real docs/owner/rulings, "
+                    "which now holds the amended e0d-statistic ruling; the "
+                    "anchored key reads neither real ruling (the key sits in a "
+                    "table cell or a list item) and check_authority raises "
+                    "ControlFailed: the gate, seen from the real directory. "
+                    "(integ 2026-10-19, battery at 1081716)"
+                ),
             ),
         ),
     ),
@@ -6629,6 +7696,24 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "underfull row, which is the other half of the defect this gate "
                 "names",
             ),
+            (
+                "tests/test_offline_psi.py::test_gestalt_forward_is_fifos_world_and_records_c_t",
+                (
+                    "offline-psi's GestaltRecorder.on_write records "
+                    "slots.gestalts[slot]; told the victim index, it records "
+                    "another occupant, so C5's s_t == srep_t check fails at "
+                    "every step. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
+            (
+                "tests/test_rsr_run1_harness.py::test_lru_observes_held_out_and_so_departs_from_fifo",
+                (
+                    "run 1's held-out LRU updates its last-use state for the "
+                    "slot on_write names; told the victim index, it stamps the "
+                    "wrong slot, so even the blind LRU pass no longer evicts as"
+                    " FIFO. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     # T5(b), 2026-09-30: the review gate (docs/review-records.md). Proven by hand
@@ -6844,6 +7929,27 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "moves to slot 2 and the logged psi vector changes -- the same leak "
                 "seen through the tie-break and the per-eviction log.",
             ),
+            *(
+                (
+                    f"tests/test_newcomer_bakeoff.py::{t}",
+                    (
+                        "newcomer-bakeoff wraps B2's ProbeArgminPolicy (imported) "
+                        "and its C9 control checks that age never reaches the "
+                        "score: with age in B2's score C9 fails ('age reaches "
+                        "R1@0.9') in every fit-core and unit test, and the grace "
+                        "test's inner score moves: the probe's age exclusion, seen "
+                        "from its importer. (integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_a_unit_runs_every_arm_and_logs_content_and_victim_position",
+                    "test_fit_core_passes_every_control_on_b2_s_own_fits",
+                    "test_fit_core_refuses_when_the_c_refit_is_not_b2_s",
+                    "test_fit_core_refuses_when_the_tree_does_not_reproduce_b2_s_fit_val",
+                    "test_grace_logs_the_inner_score_unchanged_and_age_never_enters_it",
+                    "test_units_are_atomic_resumable_and_keyed",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -6912,6 +8018,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the outcome rule's table carries the same clause as one of its rows "
                 "(rand_lo = -0.01 must not be WIN); the dedicated test isolates it. "
                 "Inspected: both fail on that one row and nothing else.",
+            ),
+            (
+                "tests/test_b2_psi_probe.py::test_win_needs_the_random_floor_not_the_ref",
+                (
+                    "the test asserts psiU is UNRESOLVED when it beats its ref "
+                    "but not the random arm: WIN's random-floor clause, the one"
+                    " this mutation drops, read from the outcome table. (integ "
+                    "2026-10-19, battery at 1081716)"
+                ),
             ),
         ),
     ),
@@ -7008,6 +8123,25 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG A1.5: the logits come from a forward pre-hook and the forward pass is "
         "unchanged (test_fidelity / test_reduction untouched). A hook that edits its "
         "input passes the softmax control, since the recompute sees the same edit.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_b2_psi_probe.py::{t}",
+                    (
+                        "both compare E0h's rows with a forward the hook does not "
+                        "touch (an independent capture of the same document; the "
+                        "hook-free log-alpha path): a pre-hook that scales x by "
+                        "1.001 changes the forward the rows are read from, so the "
+                        "U@0.0 values differ. (integ 2026-10-19, battery at "
+                        "1081716)"
+                    ),
+                )
+                for t in (
+                    "test_e0h_rows_pair_each_slot_with_its_own_sentence",
+                    "test_the_log_alpha_fallback_when_the_hook_cannot_be_built",
+                )
+            ),
+        ),
     ),
     Mutation(
         "b2-psi-probe: EVAL units are held in RAM until the tier ends",
@@ -7082,6 +8216,16 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG §9.2: the paired bootstrap uses torch.Generator(20260927 + seed). "
         "Unseeded, every CI changes run to run and consumes the global stream "
         "(build review F4, M7).",
+        off_gate_allowed=(
+            (
+                "tests/test_newcomer_bakeoff.py::test_boot_reps_are_b2_s_replicates",
+                _B2_BOOTSTRAP_READERS,
+            ),
+            (
+                "tests/test_rsr_run1_harness.py::test_the_bootstrap_is_b2s_paired_bootstrap_exactly",
+                _B2_BOOTSTRAP_READERS,
+            ),
+        ),
     ),
     Mutation(
         "b2-psi-probe: WIN's random clause reads the ref contrast",
@@ -7475,6 +8619,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "ends by asserting the fresh newcomer is not the victim; under argmax "
                 "it is.",
             ),
+            (
+                "tests/test_expire_span_arm.py::test_frozen_predictor_and_through_gestalt_do_NOT_update_w_b_identically",
+                (
+                    "the measured FINDING (predictor and through_gestalt give "
+                    "different w, b after five frozen train() steps) rests on "
+                    "which masked memories every later gestalt reads; evicting "
+                    "the slot with the MOST remaining span changes that "
+                    "trajectory, and measured under the mutation the two paths "
+                    "come out bit-equal. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -7510,6 +8665,22 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_expire_span.py::test_the_span_loss_carries_gradient_only_through_the_span",
                 "its one charged memory is chosen by age; wrong ages charge none.",
             ),
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "a newcomer aged from the row's oldest tenant is born "
+                        "expired and masked out: the five-step finding's two grad "
+                        "paths come out bit-equal, and W-1's span loss (loss - "
+                        "loss_lm) falls below its 1e-3 bar (measured 2.9e-4). "
+                        "(integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_frozen_predictor_and_through_gestalt_do_NOT_update_w_b_identically",
+                    "test_w1_eval_mode_frozen_training_still_charges_the_span_loss",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -7530,6 +8701,20 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_expire_span.py::test_through_gestalt_changes_the_model_gradients",
                 "with the detach gone `predictor` and `through_gestalt` are one setting.",
             ),
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "without the detach `predictor` IS `through_gestalt`: the "
+                        "finding's two paths, and the detach=False control, come "
+                        "out bit-equal. (integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_frozen_predictor_and_through_gestalt_do_NOT_update_w_b_identically",
+                    "test_the_paths_differ_only_through_the_gestalts_dependence_on_w_b[False]",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -7547,6 +8732,22 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "with no draws two seeds give the same all-ones mask; the test asserts "
                 "they differ.",
             ),
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "both W-1 tests assert that structured dropout's private "
+                        "generator advances in training (policy_training=True; "
+                        "eval-mode frozen training); it never fires, so the "
+                        "generator state is unchanged. (integ 2026-10-19, battery "
+                        "at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_w1_an_eval_caller_gets_the_mask_but_no_loss_and_no_dropout",
+                    "test_w1_eval_mode_frozen_training_still_charges_the_span_loss",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -7558,6 +8759,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "tests/test_reduction.py's RNG trap: identical values, but the "
         "constructor consumed global draws, shifting data order and dropout "
         "for every later arm.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span_arm.py::test_building_expire_span_draws_nothing_from_the_global_rng",
+                (
+                    "the arm-side copy of the same trap: "
+                    "build_policy('expire_span') must leave the global RNG "
+                    "untouched, and torch.randn(...) * 0.0 draws from it. "
+                    "(integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
+        ),
     ),
     Mutation(
         "model: Expire-Span mask never reaches cross-attention",
@@ -7583,6 +8795,30 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "fully-expired spans must change the loss vs FIFO; unmasked, it is "
                 "FIFO's.",
             ),
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "Eq. 4's mask is the only route from w, b to a later "
+                        "gestalt: dropped, the finding's two grad paths and the "
+                        "detach=False control come out bit-equal. (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_frozen_predictor_and_through_gestalt_do_NOT_update_w_b_identically",
+                    "test_the_paths_differ_only_through_the_gestalts_dependence_on_w_b[False]",
+                )
+            ),
+            (
+                "tests/test_expire_span_referendum.py::test_the_es_pass_applies_the_mask_at_every_step",
+                (
+                    "the referendum's ES pass must read a different answer NLL "
+                    "than run 1's unmasked recorder on the same victims; with "
+                    "the mask dropped from cross-attention the two are equal. "
+                    "(integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -7594,6 +8830,23 @@ MUTATIONS: tuple[Mutation, ...] = (
         "Eq. 7 (P7:L332-335): the alpha term must enter the objective the arm "
         "trains on; a loop that discards it runs alpha = 0 under a config "
         "stamped otherwise.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "W-1's tests assert the span loss is charged in training "
+                        "(acc > 0 with policy_training=True; loss - loss_lm > 1e-3 "
+                        "in eval-mode frozen training); the loop drops it. (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_w1_an_eval_caller_gets_the_mask_but_no_loss_and_no_dropout",
+                    "test_w1_eval_mode_frozen_training_still_charges_the_span_loss",
+                )
+            ),
+        ),
     ),
     Mutation(
         "expire-span: the mask ramp is not clamped at 1",
@@ -7681,6 +8934,15 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_expire_span.py::test_memory_weight_returns_no_span_loss_at_eval",
                 "the unit form of the same guard: the policy returns None at eval.",
+            ),
+            (
+                "tests/test_expire_span_arm.py::test_w1_an_eval_caller_gets_the_mask_but_no_loss_and_no_dropout",
+                (
+                    "the eval-caller test asserts acc == 0 with the model in "
+                    "eval mode and policy_training=None; charged at eval, it "
+                    "reads the span loss (0.0432). (integ 2026-10-19, battery "
+                    "at 1081716)"
+                ),
             ),
         ),
     ),
@@ -7776,6 +9038,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "from the eval capture: TrainModeTrace.",
                 "test_a_resume_into_a_dir_with_later_rows_is_refused",
             ),
+            (
+                "tests/test_expire_span_arm.py::test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                (
+                    "the psiC wiring arm captures r_i in its eval forward; with"
+                    " model.eval() dropped the trace is train-mode and "
+                    "reward._require_eval raises TrainModeTrace (the "
+                    "frozen-eval arm's model is already in eval, so it stays "
+                    "green): _S1_TRAIN_MODE_TRACE, seen from the Expire-Span "
+                    "wiring tests. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -7788,10 +9061,32 @@ MUTATIONS: tuple[Mutation, ...] = (
         "forward runs without dropout -- a different objective for the RSR arm "
         "than for the FIFO arm, so the arms no longer differ only in the eviction "
         "rule (§3.7).",
-        off_gate_allowed=_s1_declare(
-            _S1_MODE_NOT_RESTORED,
-            "test_every_trace_reaching_observe_in_train_is_eval_mode",
-            "test_the_training_forward_is_unchanged_by_the_eval_forward",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_MODE_NOT_RESTORED,
+                "test_every_trace_reaching_observe_in_train_is_eval_mode",
+                "test_the_training_forward_is_unchanged_by_the_eval_forward",
+            ),
+            (
+                "tests/test_expire_span_arm.py::test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                _ES_PRE_WIRING_RNG,
+            ),
+            *(
+                (
+                    f"tests/test_loo_target.py::{t}",
+                    (
+                        "the LOO target's knockouts run inside the same "
+                        "eval-capture forward; the mode-restored test and both "
+                        "no-gradient tests assert model.training after the loop. "
+                        "(integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_mode_is_restored_after_the_knockouts",
+                    "test_no_gradient_reaches_any_transformer_parameter[None]",
+                    "test_no_gradient_reaches_any_transformer_parameter[age_only]",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -7854,10 +9149,27 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 L10 / T7, the row-0 bug class (OraclePolicy, LRU 2026-09-29). "
         "written_at is unique per row, not per batch: merged, two rows' keys "
         "collide and each row's G mixes in the other's r.",
-        off_gate_allowed=_s1_declare(
-            _S1_ROWS_MERGED,
-            "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
-            "test_the_return_is_truncated_at_each_rows_length",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_ROWS_MERGED,
+                "test_l_mc_is_unweighted_sum_over_slots_then_mean_over_row_steps",
+                "test_the_return_is_truncated_at_each_rows_length",
+            ),
+            *(
+                (
+                    f"tests/test_loo_target.py::{t}",
+                    (
+                        "both tests index the policy's buffer pol._mc by row; "
+                        "merged into row 0, every row's samples sit under key 0 and"
+                        " the per-row comparisons fail. (integ 2026-10-19, battery "
+                        "at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_default_target_is_run_1s_r_i_exactly",
+                    "test_policy_target_is_the_imputed_delta_at_live_cells",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -7931,6 +9243,23 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the pairing the test asserts.",
                 "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
             ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "phi's init draws from the data-order generator in the RSR "
+                        "arms only, so their pool permutation is not the FIFO "
+                        "arm's: the logged pool ids and batch fingerprints disagree"
+                        " across arms and with C2's replay (C2 (a), (b))"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (
+                    *_R1H_C2_RED,
+                    "test_c2_is_green_on_the_real_arms",
+                    "test_c2_sees_a_batch_every_arm_shares_but_the_sampler_did_not_draw",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -7971,6 +9300,52 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "found').",
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
             ),
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "Expire-Span's w, b (and psiC's phi) reach the optimizer "
+                        "only as train()'s retention_params; with None passed, a "
+                        "frozen arm has no trainable parameter and "
+                        "build_param_groups raises 'no trainable parameters found':"
+                        " _S1_NO_VALUE_HEAD_GROUP, seen from the Expire-Span arm. "
+                        "(integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                    "test_frozen_predictor_and_through_gestalt_do_NOT_update_w_b_identically",
+                    "test_the_config_and_overrides_are_stamped_into_the_hash_and_label",
+                    "test_the_frozen_arm_trains_w_b_and_leaves_the_model_bit_equal",
+                    "test_w1_eval_mode_frozen_training_still_charges_the_span_loss",
+                    "test_w_and_b_take_exactly_phis_optimizer_group_and_settings",
+                )
+            ),
+            (
+                "tests/test_expire_span_referendum.py::test_es_policy_from_payload_restores_the_trained_w_b",
+                (
+                    "es_policy_from_payload's test trains a frozen Expire-Span "
+                    "arm first; its w, b reach the optimizer only as "
+                    "retention_params, so build_param_groups raises 'no "
+                    "trainable parameters found': _S1_NO_VALUE_HEAD_GROUP, seen"
+                    " from the referendum. (integ 2026-10-19, battery at "
+                    "1081716)"
+                ),
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the RSR arms are frozen (--freeze-transformer), so phi is "
+                        "their only trainable tensor; with value_head=None "
+                        "build_param_groups finds no trainable parameters "
+                        "(ValueError), and the frozen FIFO arm, which builds no "
+                        "optimizer, runs"
+                    )
+                    + _R1H_PSIC_AGE_DID_NOT_RUN_TAIL,
+                )
+                for t in _R1H_PSIC_AGE_REFUSED
+            ),
         ),
     ),
     Mutation(
@@ -8001,6 +9376,19 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 L12: the overrides are stamped into `frozen`, so into the hash "
         "and the run_id. A frozen config that does not say what the arm departed "
         "from proves nothing about what it ran.",
+        off_gate_allowed=(
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _ES_PRE_WIRING_HASH)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                )
+            ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_OVERRIDES_UNSTAMPED)
+                for t in _R1H_E2E
+            ),
+        ),
     ),
     Mutation(
         "slice1: the frozen option leaves the transformer trainable",
@@ -8013,11 +9401,29 @@ MUTATIONS: tuple[Mutation, ...] = (
         "and "
         "W_sent get no update in run 1. Left trainable, the transformer sits in "
         "the optimizer (and its decoupled decay) while the run is labelled frozen.",
-        off_gate_allowed=_s1_declare(
-            "the frozen FIFO arm is the same rule with no head: left trainable, the "
-            "transformer is put in an optimizer the frozen arm must not have (its "
-            "checkpoint carries optimizer state).",
-            "test_a_frozen_fifo_arm_runs_without_an_optimizer",
+        off_gate_allowed=(
+            *_s1_declare(
+                "the frozen FIFO arm is the same rule with no head: left trainable, the "
+                "transformer is put in an optimizer the frozen arm must not have (its "
+                "checkpoint carries optimizer state).",
+                "test_a_frozen_fifo_arm_runs_without_an_optimizer",
+            ),
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "with the transformer trainable the frozen Expire-Span "
+                        "arm's model moves (embed.weight differs from the frozen "
+                        "FIFO arm's), and q9's single-group assertion finds the "
+                        "transformer's groups beside w, b. (integ 2026-10-19, "
+                        "battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_the_frozen_arm_trains_w_b_and_leaves_the_model_bit_equal",
+                    "test_w_and_b_take_exactly_phis_optimizer_group_and_settings",
+                )
+            ),
         ),
     ),
     # ---- run-1 readiness (feat/rsr-run1-ready): review record
@@ -8033,6 +9439,25 @@ MUTATIONS: tuple[Mutation, ...] = (
         "m-1 / §3.4, correction 31: k counted from the source's step 3000 starts "
         "past T_warm (16 steps at pool 256 / batch 16) and skips the warmup "
         "silently -- the review's exact finding.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "k counts from the substrate's step 3, past T_warm = 1, so "
+                        "the RSR arms are scored from their first step: loss_lm at "
+                        "k < T_warm differs from the FIFO arm's (C2 (c)) and the "
+                        "diagnostics count no warm step"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (
+                    *_R1H_C2_RED,
+                    "test_c2_is_green_on_the_real_arms",
+                    "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+                )
+            ),
+        ),
     ),
     Mutation(
         "run1: the warm-start sha256 is not compared",
@@ -8079,6 +9504,26 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_an_identical_map_from_another_document_count_is_accepted",
                 "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
             ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "no arm's frozen config carries the warm-start record, so "
+                        "C1 (the warm-start provenance control) is red on the "
+                        "session `e2e` run: the seed fails, every test reading its "
+                        "clean controls, ledger or A4 table reddens, the A3b.3 / "
+                        "A3d.2 copies that expect C10 alone see ['C1', 'C10'], and "
+                        "C1's own green/red test reads the empty record. (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    *_R1H_A_CONTROL_RED,
+                    *_R1H_C10_ALONE_EXPECTED,
+                    "test_a3d2_c6_crashed_outranks_a_control_failure_at_exit_3",
+                    "test_c1_sees_a_labelled_allow_flag_or_another_checkpoint",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -8115,6 +9560,12 @@ MUTATIONS: tuple[Mutation, ...] = (
         "m-1, the review's liveness note: the decoy is the untrained model at the "
         "same seed (R-2026-09-22-inert-exit-5's decisive PREREG Decoy); copied "
         "after the load it is the substrate, and a frozen run reads ratio 1.0.",
+        off_gate_allowed=(
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_DECOY_INVALID)
+                for t in _R1H_LIVENESS_INVALID
+            ),
+        ),
     ),
     Mutation(
         "run1: the pool is not stamped into the frozen config",
@@ -8142,6 +9593,22 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_every_pool_epoch_covers_the_pool_exactly_once",
                 "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
             ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the arms train on documents [0, 2) while their pool record"
+                        " says [993000, 993002): every step's batch fingerprint "
+                        "disagrees with C2's replay of the pool (C2 (b))"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (
+                    *_R1H_C2_RED,
+                    "test_c2_is_green_on_the_real_arms",
+                    "test_c2_sees_a_batch_every_arm_shares_but_the_sampler_did_not_draw",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -8159,6 +9626,29 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "both C-2 sampler tests assert the recorded sampling string (None).",
                 "test_every_pool_epoch_covers_the_pool_exactly_once",
                 "test_with_replacement_is_reachable_only_outside_pool_mode",
+            ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _ES_PRE_WIRING_HASH)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the RSR arms' epoch block records sampling None: run 1's "
+                        "C2 tests on the e2e arms read the replay sampler from "
+                        "psiC's config['epoch']['sampling'] and assert it is the "
+                        "permutation (and that every arm's record agrees with it). "
+                        "(integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_c2_is_green_on_the_real_arms",
+                    "test_every_arm_records_its_sampler_and_c2_requires_them_to_agree",
+                )
             ),
         ),
     ),
@@ -8179,6 +9669,27 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_a_frozen_warm_started_arm_moves_no_transformer_weight",
                 "test_c1_the_mode_is_in_frozen_the_hash_and_the_label",
             ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _ES_PRE_WIRING_HASH)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo_frozen_eval]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "no arm's config records frozen_model_mode, so C10 fails on"
+                        " the session `e2e` run ('frozen_model_mode None is not "
+                        "O5=eval'): the seed fails, every test reading its clean "
+                        "controls, ledger or A4 table reddens, and every C10 test "
+                        "on the fixture's own configs reads the missing record. "
+                        "(integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (*_R1H_A_CONTROL_RED, *_R1H_C10_ON_THE_FIXTURE)
+            ),
         ),
     ),
     Mutation(
@@ -8197,11 +9708,30 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADAMW_EPS: float = 1e-12\n",
         "P-2: B1 measured beta live at eps 1e-8 and inert at 1e-12; the pin is "
         "what makes beta mean what B1 measured.",
-        off_gate_allowed=_s1_declare(
-            "the slice-1 eps test asserts torch's default == the recorded default "
-            "== ADAMW_EPS at torch 2.14.0; moving the pin off 1e-8 breaks that "
-            "equality, which is the point of keeping it.",
-            "test_the_adamw_eps_pin_equals_torchs_recorded_default",
+        off_gate_allowed=(
+            *_s1_declare(
+                "the slice-1 eps test asserts torch's default == the recorded default "
+                "== ADAMW_EPS at torch 2.14.0; moving the pin off 1e-8 breaks that "
+                "equality, which is the point of keeping it.",
+                "test_the_adamw_eps_pin_equals_torchs_recorded_default",
+            ),
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "the optimizer record (eps included) is stamped into the "
+                        "frozen config of every RSR or frozen arm, so eps 1e-12 "
+                        "moves those three wiring arms' run_id off PRE_WIRING's; "
+                        "the plain FIFO arm records no optimizer and stays green. "
+                        "(integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo_frozen_eval]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -8217,6 +9747,23 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the every-step test compares each beat's `diag` with the step's "
                 "diagnostics.jsonl row (None is not subscriptable).",
                 "test_the_diagnostics_are_written_every_step_whatever_beat_every",
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "every beat's diag is None: run 1's analysis builds the "
+                        "section 7.1 per-phase diagnostics of the session `e2e` run"
+                        " from it, so the run-level cross-check, the warm/scored "
+                        "split and the A4.2 step-diag reading find nothing. (integ "
+                        "2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_run_level_histograms_are_cross_checked_against_the_per_step_sums",
+                    "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+                    "test_the_step_diag_reading_is_diagnostic_and_never_the_headline",
+                )
             ),
         ),
     ),
@@ -8255,6 +9802,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "rank 1 for every FIFO victim, not age 4.",
                 "test_the_run_level_histograms_split_warmup_from_scored",
             ),
+            (
+                "tests/test_rsr_run1_harness.py::test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+                (
+                    "victim_age = rank (1 for a FIFO victim): the warm block's "
+                    "victim-age histogram on the session `e2e` run is {1}, not "
+                    "{16}. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -8278,6 +9833,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "from the same log ({}).",
                 "test_the_run_level_histograms_split_warmup_from_scored",
             ),
+            (
+                "tests/test_rsr_run1_harness.py::test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+                (
+                    "the rank-shift log counts no victim ages: the warm block's"
+                    " victim-age histogram on the session `e2e` run is empty, "
+                    "not {16}. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -8288,6 +9851,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "    avg = first.to(torch.float64) + 1.0  # MUTATED\n",
         "m-8: ages tie heavily (every FIFO victim is age M); Spearman needs "
         "average ranks.",
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run2_harness.py::test_avg_ranks_match_rankdata_with_ties",
+                (
+                    "run 2's avg_ranks_rows is asserted equal, row by row on "
+                    "tied inputs, to rsr.metrics.vacuity.rankdata; rankdata "
+                    "without average ranks disagrees. (integ 2026-10-19, "
+                    "battery at 1081716)"
+                ),
+            ),
+        ),
     ),
     Mutation(
         "run1: partial rho is not residualised on content",
@@ -8314,6 +9888,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "slots.ages()  # MUTATED\n",
         "CLAUDE.md: age is excluded from psi_hat -- supplying it invites collapse "
         "onto recency and hides the vacuity failure (§3.2.2, §7.1).",
+        off_gate_allowed=(
+            (
+                "tests/test_offline_psi.py::test_deploy_policy_is_the_frozen_phi_with_no_warmup",
+                (
+                    "deploy_policy builds the frozen-phi RSR policy and the "
+                    "test asserts its eviction is argmin of the content head "
+                    "alone; with ages added to psi it is not (15 vs 7). (integ "
+                    "2026-10-19, battery at 1081716)"
+                ),
+            ),
+        ),
     ),
     Mutation(
         "run1: the age-only head ignores age",
@@ -8462,6 +10047,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "of refusing.",
                 "test_the_cli_warm_start_reaches_the_real_verification",
             ),
+            (
+                "tests/test_rsr_run1_harness.py::test_a_wrong_substrate_sha_is_rc_1_with_no_heartbeat_and_measure_says_so",
+                (
+                    "a wrong --warm-start-sha256 is no longer refused, so the "
+                    "FIFO arm runs (rc 0) where run 1 requires rc 1, no "
+                    "heartbeat and WarmStartRefused. (integ 2026-10-19, battery"
+                    " at 1081716)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -8493,6 +10087,19 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_the_warm_start_restores_weights_only",
                 "test_the_warm_start_runs_t_warm_at_relative_steps",
             ),
+            (
+                "tests/test_expire_span_referendum.py::test_es_policy_from_payload_restores_the_trained_w_b",
+                (
+                    "es_policy_from_payload rebuilds the Expire-Span policy "
+                    "from payload['meta']['config']; not recorded, it raises "
+                    "KeyError 'config': the checkpoint's config, seen from the "
+                    "referendum. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
+            *(
+                (f"tests/test_rsr_run1_harness.py::{t}", _R1H_SUBSTRATE_NO_CONFIG)
+                for t in (*_R1H_E2E, *_R1H_SUBSTRATE_ONLY)
+            ),
         ),
     ),
     Mutation(
@@ -8523,6 +10130,30 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pool=None,  # MUTATED\n",
         "MINOR-7: run 1's RESULTS quotes one command; a flag that does not reach "
         "train() makes that command lie.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "with --pool dropped every arm trains on the default corpus"
+                        " by with-replacement draws and logs no pool ids, the RSR "
+                        "arms' epoch becomes 64 / 2 = 32 steps (T_warm past the "
+                        "3-step run, so the held-out policy is only ever "
+                        "fifo_warmup), and the arms' sampler records disagree (C2 "
+                        "(a), (b), sampler agreement)"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (
+                    *_R1H_C2_RED,
+                    "test_c2_is_green_on_the_real_arms",
+                    "test_c2_sees_a_batch_every_arm_shares_but_the_sampler_did_not_draw",
+                    "test_measure_seed_passes_every_arms_sampler_into_c2",
+                    "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
+                    "test_the_held_out_policy_runs_the_scored_rule_with_the_trained_head",
+                )
+            ),
+        ),
     ),
     Mutation(
         "run1: a partial pool flag set is not refused",
@@ -8658,6 +10289,27 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        srep_norm_reg_weight=None,  # MUTATED\n",
         "Defect 4: arm B trained at 0.0; a flag that does not reach train() "
         "runs run 1 at 0.01 under a command that says 0.0.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the arms run at TGConfig's srep_norm_reg_weight 0.01 under"
+                        " a command that says 0.0, so C10's A3c.5 check ('config "
+                        "srep_norm_reg_weight 0.01 != 0.0') is red on the session "
+                        "`e2e` run: the seed fails, every test reading its clean "
+                        "controls, ledger or A4 table reddens, and every C10 test "
+                        "on the fixture's configs reads 0.01. (integ 2026-10-19, "
+                        "battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    *_R1H_A_CONTROL_RED,
+                    *_R1H_C10_ON_THE_FIXTURE,
+                    "test_c10_requires_srep_0_in_every_recorded_config",
+                )
+            ),
+        ),
     ),
     Mutation(
         "run1: the run-level histograms merge warmup and scored evictions",
@@ -8667,6 +10319,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         '        self.phase_shifts["fifo_warmup"].add(record)  # MUTATED\n',
         "Defect 5: a RESULTS must never read one histogram that mixes FIFO-warmup "
         "and scored evictions.",
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run1_harness.py::test_run_level_histograms_are_cross_checked_against_the_per_step_sums",
+                (
+                    "every eviction lands in the fifo_warmup phase histogram, "
+                    "so on the session `e2e` run the run-level histograms "
+                    "disagree with the per-step warm/scored sums "
+                    "(run_level_histograms_agree False). (integ 2026-10-19, "
+                    "battery at 1081716)"
+                ),
+            ),
+        ),
     ),
     # ---- run-1 PREREG review R-2 (permutation epochs) and item 7 (eval mode)
     Mutation(
@@ -8684,6 +10348,18 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "pool (sorted == range(8)); with replacement it repeats documents.",
                 "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
             ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "pool batches drawn with replacement: an epoch no longer "
+                        "covers the pool exactly once and the ids disagree with "
+                        "C2's permutation replay (C2 (a), (b))"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (*_R1H_C2_RED, "test_c2_is_green_on_the_real_arms")
+            ),
         ),
     ),
     Mutation(
@@ -8695,6 +10371,24 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            perm = torch.arange(self.n, device=self.device)  # MUTATED\n",
         "R-2: the order is drawn from the data-order generator; a fixed order is "
         "one pass but the same document sequence every epoch and every seed.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the epoch order is arange, not a randperm from the seed's "
+                        "generator: the logged ids and fingerprints disagree with "
+                        "C2's replay (C2 (b))"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (
+                    *_R1H_C2_RED,
+                    "test_c2_is_green_on_the_real_arms",
+                    "test_c2_sees_a_batch_every_arm_shares_but_the_sampler_did_not_draw",
+                )
+            ),
+        ),
     ),
     Mutation(
         "run1: a pool resume loses its epoch position",
@@ -8735,6 +10429,13 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
             ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _ES_PRE_WIRING_RNG)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo_frozen_eval]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -8756,6 +10457,27 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the blocks draw dropout masks from the global RNG.",
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[fifo]",
+            ),
+            *(
+                (f"tests/test_expire_span_arm.py::{t}", _ES_PRE_WIRING_RNG)
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo_frozen_eval]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "dropout stays live in every frozen arm's blocks, and the "
+                        "RSR arms' eval-capture forward restores the prior "
+                        "top-level mode (eval) to every submodule while the FIFO "
+                        "arm's blocks stay in train: loss_lm at k < T_warm is no "
+                        "longer bitwise equal across arms (C2 (c))"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (*_R1H_C2_RED, "test_c2_is_green_on_the_real_arms")
             ),
         ),
     ),
@@ -8789,6 +10511,54 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "train mode (the FIFO case has no eval forward, so it stays green).",
                 "test_c1_eval_mode_holds_on_the_fifo_and_age_only_arms[age_only]",
             ),
+            (
+                "tests/test_expire_span_arm.py::test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                _ES_PRE_WIRING_RNG,
+            ),
+            *(
+                (
+                    f"tests/test_loo_target.py::{t}",
+                    (
+                        "both run the LOO target on an eval-mode model and compare "
+                        "with reference forwards in eval; restored to train() after"
+                        " the first capture, the later forwards draw dropout and "
+                        "the deltas differ. (integ 2026-10-19, battery at 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_fifo_memory_delta_is_bit_equal_to_loo_delta_loss",
+                    "test_on_policy_delta_is_the_knockout_it_claims_on_a_non_fifo_memory",
+                )
+            ),
+            (
+                "tests/test_offline_psi.py::test_gestalt_forward_is_fifos_world_and_records_c_t",
+                (
+                    "gestalt_forward runs the model in eval and checks each "
+                    "step's decision context (the eval capture) against the "
+                    "training forward's srep; restored to train() after a "
+                    "capture, the next forward runs with dropout and C5 reports"
+                    " c_t != context. (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the RSR arms' eval-capture forward restores train() on "
+                        "their frozen eval-mode model while the FIFO arm stays in "
+                        "eval: dropout is live in the RSR arms' later forwards, so "
+                        "loss_lm at k < T_warm differs across arms (C2 (c)), and "
+                        "the held-out decision-context test sees dropout-perturbed "
+                        "decisions"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (
+                    *_R1H_C2_RED,
+                    "test_c2_is_green_on_the_real_arms",
+                    "test_the_decision_context_choice_does_not_change_held_out_decisions",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -8807,6 +10577,25 @@ MUTATIONS: tuple[Mutation, ...] = (
         '        label = f"{label}[eval]"  # C-1: "+frozen[eval]" (PREREG A1.3 item 3)\n',
         "        pass  # MUTATED\n",
         "C-1 test (e): an eval-mode arm must not read like a train-mode one.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_expire_span_arm.py::{t}",
+                    (
+                        "the frozen-eval arms' label (in the hash and the run_id) "
+                        "loses '[eval]', moving PRE_WIRING's two frozen-eval "
+                        "run_ids and labels, and the Expire-Span label test asserts"
+                        " the '+frozen[eval]' suffix. (integ 2026-10-19, battery at"
+                        " 1081716)"
+                    ),
+                )
+                for t in (
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo_frozen_eval]",
+                    "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
+                    "test_the_config_and_overrides_are_stamped_into_the_hash_and_label",
+                )
+            ),
+        ),
     ),
     Mutation(
         "run1: a pool not divisible by the batch is accepted",
@@ -8832,6 +10621,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "is not written for the FIFO arm).",
                 "test_the_pool_order_is_paired_across_arms_and_drawn_from_the_seed",
             ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    ("no step record carries pool_doc_ids, which C2 (a) requires")
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (*_R1H_C2_RED, "test_c2_is_green_on_the_real_arms")
+            ),
         ),
     ),
     Mutation(
@@ -8852,6 +10649,25 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        pass  # MUTATED\n",
         "Review MINOR-1: a FIFO pool arm under a different sampler would share its "
         "config hash and run_id (PREREG A1.7 C-2 item 2: 'so the hash changes').",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "no pool arm stamps frozen['sampling']: the FIFO arm "
+                        "records None and each RSR arm's epoch block disagrees with"
+                        " its top-level record (arm_sampling: DISAGREE), so C2's "
+                        "sampler agreement fails (C2 without samplings is still "
+                        "green)"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (
+                    *_R1H_C2_RED,
+                    "test_measure_seed_passes_every_arms_sampler_into_c2",
+                )
+            ),
+        ),
     ),
     Mutation(
         "run1: a resume into a dir with later rows is not refused",
@@ -8870,6 +10686,24 @@ MUTATIONS: tuple[Mutation, ...] = (
         '        if policy_name == "rsr":  # MUTATED\n            model.eval()\n',
         "Review MINOR-4(a), HM-C: A1.3 puts the frozen transformer in eval mode in "
         "EVERY arm, the FIFO comparator included.",
+        off_gate_allowed=(
+            (
+                "tests/test_expire_span_arm.py::test_fifo_and_psic_arms_are_unchanged_by_the_wiring[fifo_frozen_eval]",
+                _ES_PRE_WIRING_RNG,
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run1_harness.py::{t}",
+                    (
+                        "the FIFO arm is never put in eval mode and trains with "
+                        "dropout live while the RSR arms run in eval: loss_lm at k "
+                        "< T_warm differs across arms (C2 (c))"
+                    )
+                    + _R1H_C2_RED_TAIL,
+                )
+                for t in (*_R1H_C2_RED, "test_c2_is_green_on_the_real_arms")
+            ),
+        ),
     ),
     Mutation(
         "run1: the age-only guard accepts a negative nu",
