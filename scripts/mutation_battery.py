@@ -936,6 +936,54 @@ _ES_PRE_WIRING_RNG = (
 )
 
 
+# Integration 2026-10-20 (battery at c702c0a): the couplings the full battery
+# found once run 3's ranking tests (tests/test_rsr_run3_ranking.py) and the
+# post-fails controls 1a-1e merged. Each was read against the failure the
+# battery recorded and the code path its test drives before it was declared.
+# T1(a)/(c) pin this head's retention code to run 2's launch head 728a42f (a
+# fixture that also asserts six retention modules are unchanged since then);
+# T1(b) runs run 2's psiC command for 20 steps at 728a42f and here and requires
+# the two runs identical. A per-mutation prefix names what the mutation changes
+# and the observed failure; the constants below name the pin.
+_RANK_728A42F_GUARD = (
+    "run 3's rsr_728a42f fixture (taken by T1(a), both RSR arms, and by T1(c)) loads "
+    "src/rsr/retention/rsr.py as it was at run 2's launch head 728a42f against this "
+    "tree's imports, and first asserts, with `git diff --quiet 728a42f`, that every "
+    "rsr.retention module it imports (mc, value_head, targets, instrumentation, policy, "
+    "reward) is unchanged since 728a42f. A mutation of one of those files is a "
+    "working-tree diff against 728a42f, so the fixture errors at setup ('<module>.py "
+    "changed since 728a42f') and all three tests redden whatever the mutation does: a "
+    "provenance guard, by design. (integ 2026-10-20, battery at c702c0a)"
+)
+_RANK_T1A_BITWISE_TAIL = (
+    ": run 3's T1(a) drives this head's RSRPolicy and 728a42f's rsr.py (the rsr_728a42f "
+    "fixture) over one tiny world through run_policy_loop (observe, eval capture, the LOO"
+    " target) and requires their MC buffers (step, keys, gestalts, context, r), L_MC, "
+    "phi's gradients and last_mc_stats bitwise equal -- the pin that run 3's switch off "
+    "is run 2. (integ 2026-10-20, battery at c702c0a)"
+)
+_RANK_T1B_PIN_TAIL = (
+    ": run 3's T1(b) runs run 2's psiC seed-0 command (R2.cli_argv: frozen transformer in"
+    " eval mode, the document pool, the warm start from arm B's checkpoint, "
+    "target=loo_resample) for 20 steps twice, at 728a42f's archived src and at this head,"
+    " and requires rc 0 on both and identical heartbeats (VOLATILE_KEYS and the header's "
+    "git sha aside), diagnostics, eviction records, checkpoint tensors and run_id. Only "
+    "this head's src carries the mutation, so whatever it changes in that run reaches the"
+    " pin: T1(b) is a bit-identity pin of run 2's whole default path, by design. (integ "
+    "2026-10-20, battery at c702c0a)"
+)
+_RANK_T1B_EXIT_NONZERO = (
+    "; the new-side run exits non-zero and T1(b)'s `assert rc == 0` fails on the run's "
+    "log tail"
+)
+_RANK_T1B_LIVENESS_EXIT_3 = (
+    ", so the end-of-train liveness band is 'invalid' and main() exits 3 (liveness_exit);"
+    " T1(b)'s `assert rc == 0` fails on the run's log tail, the printed result's liveness"
+    " record"
+)
+_RANK_T1B_HEARTBEATS = "; T1(b)'s heartbeat comparison fails"
+
+
 MUTATIONS: tuple[Mutation, ...] = (
     Mutation(
         "t_warm back to inf",
@@ -973,6 +1021,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "reduction test. (integ 2026-10-19, battery at 1081716)"
                 ),
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1c_reduction_to_tg_is_unchanged",
+                (
+                    "run 3's T1(c) requires RSRConfig.reduction_to_tg(16) "
+                    "field-for-field equal to 728a42f's (rsr_728a42f fixture); "
+                    "with the table's t_warm = inf the dicts differ on t_warm "
+                    "(inf vs 0.0): the reduction table, seen from run 3's "
+                    "T1(c). (integ 2026-10-20, battery at c702c0a)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -1005,6 +1063,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "psi_override None makes it build the learned "
                     "BilinearValueHead: the same switch, seen through train(). "
                     "(integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1c_reduction_to_tg_is_unchanged",
+                (
+                    "run 3's T1(c) requires RSRConfig.reduction_to_tg(16) "
+                    "field-for-field equal to 728a42f's (rsr_728a42f fixture); "
+                    "with psi_override None in the table the dicts differ on "
+                    "psi_override (None vs 'neg_age'): the reduction table, "
+                    "seen from run 3's T1(c). (integ 2026-10-20, battery at "
+                    "c702c0a)"
                 ),
             ),
         ),
@@ -1071,6 +1140,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                     " nu gone from the table, from_registry reads nu and raises"
                     " UnmeasuredConstant (E1): _REDUCTION_TABLE_COUPLING, seen "
                     "through train(). (integ 2026-10-19, battery at 1081716)"
+                ),
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1c_reduction_to_tg_is_unchanged",
+                (
+                    "run 3's T1(c) calls RSRConfig.reduction_to_tg(16), which "
+                    "builds RSRConfig from REDUCTION_SWITCHES; with nu gone "
+                    "from the table the required field is missing (TypeError: "
+                    "RSRConfig.__init__() missing 'nu'): "
+                    "_REDUCTION_TABLE_COUPLING, seen from run 3's T1(c). (integ"
+                    " 2026-10-20, battery at c702c0a)"
                 ),
             ),
         ),
@@ -1226,6 +1306,24 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_xt_resid_from_cells_equals_the_normal_equation_gradient",
                 )
             ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "without the 1/d multiplier psi-hat is d = 128 times "
+                    "larger, so L_MC, phi's updates and the RSR arm's eviction "
+                    "scores change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -1250,6 +1348,23 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_solve_recovers_a_planted_head_exactly",
                     "test_xt_resid_from_cells_equals_the_normal_equation_gradient",
                 )
+            ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "psi-hat reads W transposed, so the scores, L_MC and phi's "
+                    "updates change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -1316,6 +1431,23 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_warmup_evicts_fifo_and_phi_still_trains",
                 )
             ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "psi-hat loses its linear term u, so the scores, L_MC and "
+                    "phi's updates change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -1354,6 +1486,19 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_train_loop.py::test_the_value_head_lands_in_its_own_mup_group",
                 _VALUE_HEAD_GROUP_READERS,
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t2_rank_loss_reaches_phi_only[None]",
+                (
+                    "run 3's T2 (content arm) builds offline-psi's "
+                    "phi_optimizer and asserts "
+                    "optimizer_holds_only_phi(...)['ok'], which requires the "
+                    "group names to be exactly [VALUE_HEAD_GROUP]; with the "
+                    "group named 'transformer.hidden' ok is False (assert "
+                    "False): the value-head group asserted by name "
+                    "(_VALUE_HEAD_GROUP_READERS), seen from run 3's T2. (integ "
+                    "2026-10-20, battery at c702c0a)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -1382,6 +1527,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "test_r_i_is_read_from_the_same_forward_gated_and_rescaled",
                 _E0D_READS_R_COUPLING,
             ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
+            ),
         ),
     ),
     Mutation(
@@ -1396,6 +1549,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_capture_bridge.py::"
                 "test_a_train_mode_capture_is_refused_downstream",
                 _CAPTURE_BRIDGE_COUPLING,
+            ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
             ),
         ),
     ),
@@ -1466,6 +1627,24 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_e2e_lru_held_out_observes_and_departs_from_fifo",
                 )
             ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "instrumentation's rank shift counts the sliding window, so"
+                    " every beat's diag (ADR-0006's displacement distribution) "
+                    "changes"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -1492,6 +1671,14 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_e0d.py::test_r_i_sums_to_fill_share_and_is_zero_on_dead_slots",
                 _E0D_READS_R_COUPLING,
+            ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
             ),
         ),
     ),
@@ -1881,6 +2068,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_SUBSTRATE_INERT)
                 for t in _R1H_INERT
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "lm_loss averages over padding, so every beat's loss_lm "
+                    "(and the loss) changes"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -2085,6 +2281,64 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_lru_observes_held_out_and_so_departs_from_fifo",
                 )
             ),
+            *(
+                (
+                    f"tests/test_rsr_run3_ranking.py::{t}",
+                    (
+                        "observe() is never reached in run_policy_loop, so no "
+                        "decision context is captured and the new policy's first "
+                        "L_MC sample reads None (AttributeError: 'NoneType' object "
+                        "has no attribute 'detach')"
+                    )
+                    + _RANK_T1A_BITWISE_TAIL,
+                )
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "observe() is never reached, so the RSR arm collects no "
+                    "L_MC sample and phi never trains"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run3_ranking.py::{t}",
+                    (
+                        "run 3's T2 drives the rank-loss arms through "
+                        "run_policy_loop(observe=True) and requires a finite "
+                        "retention_loss(); with observe() never reached no sample "
+                        "is collected and the loss is None (assert (None is not "
+                        "None)). (integ 2026-10-20, battery at c702c0a)"
+                    ),
+                )
+                for t in (
+                    "test_t2_rank_loss_reaches_phi_only[None]",
+                    "test_t2_rank_loss_reaches_phi_only[age_only]",
+                )
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run3_ranking.py::{t}",
+                    (
+                        "run 3's T3 / T4 drive the rank-loss arm through "
+                        "run_policy_loop(observe=True) and read mc_targets(); with "
+                        "observe() never reached nothing is collected and "
+                        "mc_targets() is None (TypeError: 'NoneType' object is not "
+                        "subscriptable). (integ 2026-10-20, battery at c702c0a)"
+                    ),
+                )
+                for t in (
+                    "test_t3_permuting_ages_moves_nothing_in_the_content_arm[None-False]",
+                    "test_t3_permuting_ages_moves_nothing_in_the_content_arm[age_only-True]",
+                    "test_t4_policy_rank_loss_equals_the_padded_definition",
+                )
+            ),
         ),
     ),
     # ----------------------------------------------------------------------- #
@@ -2211,6 +2465,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
                 for t in _R1H_PSIC_AGE_REFUSED
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "train() builds FIFOPolicy whatever --policy says, so the "
+                    "psiC command raises AttributeError where train() stamps "
+                    "T_warm from policy.config"
+                )
+                + _RANK_T1B_EXIT_NONZERO
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     # Correction 31: T_warm counts optimizer steps, not sentences.
@@ -2280,6 +2544,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_c2_is_green_on_the_real_arms",
                     "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
                 )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "warm compares T_warm with the sentence index, not the "
+                    "optimizer step, so the warm/scored status of the run's "
+                    "evictions changes"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -2372,6 +2646,16 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_train_loop.py::test_the_value_head_lands_in_its_own_mup_group",
                 _SET_TRAIN_STEP_DROPPED,
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "train() never calls set_train_step, so the psiC policy "
+                    "raises correction 31's unset-step RuntimeError at its "
+                    "first eviction"
+                )
+                + _RANK_T1B_EXIT_NONZERO
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -2472,6 +2756,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_the_held_out_policy_runs_the_scored_rule_with_the_trained_head",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "steps_per_epoch is iters, not epoch_steps(pool, batch), so"
+                    " the frozen config's epoch block, and with it config_hash "
+                    "and run_id, change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -2507,6 +2801,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
                 for t in _R1H_PSIC_AGE_REFUSED
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "--policy never reaches train(), so the psiC command runs "
+                    "as the default 'fifo' with its --policy-override flags, "
+                    "which build_policy refuses on the FIFO arm (ValueError)"
+                )
+                + _RANK_T1B_EXIT_NONZERO
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -2538,6 +2842,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "is the LM loss; with a regulariser in it the field keeps its name and "
         "stops being the thing the name says. Pinned so the next person to add a "
         "term to the objective is told.",
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("every beat's ppl is exp of the penalised loss, not of loss_lm")
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+        ),
     ),
     Mutation(
         "--vocab default back to 50257",
@@ -2565,6 +2877,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                     + _R1H_NO_ARM_RAN_TAIL,
                 )
                 for t in _R1H_NO_ARM_RAN
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the command passes no --vocab, so the 50257 default builds"
+                    " a 50257-row embedding while arm B's warm-start checkpoint"
+                    " has the derived V, and the strict warm-start "
+                    "load_state_dict refuses the shapes"
+                )
+                + _RANK_T1B_EXIT_NONZERO
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -2688,6 +3011,35 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "tests/test_train_loop.py::test_the_value_head_lands_in_its_own_mup_group",
                 _EAGER_REGISTRY_COUPLING,
             ),
+            *(
+                (
+                    f"tests/test_rsr_run3_ranking.py::{t}",
+                    (
+                        "run 3's T7 and 2b build the rank arms with "
+                        "loop.build_policy('rsr', overrides=...) from labelled "
+                        "overrides (nu=0, beta=1, gamma=0.9, the switch); read "
+                        "eagerly, from_registry reads nu before the overrides apply"
+                        " and raises UnmeasuredConstant (E1): "
+                        "_EAGER_REGISTRY_COUPLING, seen from run 3. (integ "
+                        "2026-10-20, battery at c702c0a)"
+                    ),
+                )
+                for t in (
+                    "test_2b_cli_argv_is_run_2s_plus_the_switch_and_fifo_is_run_1s",
+                    "test_t7_rank_arms_config_and_label",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the psiC command's labelled overrides (nu=0, beta=1, "
+                    "gamma) apply after an eager from_registry has read nu, "
+                    "which raises UnmeasuredConstant (E1): "
+                    "_EAGER_REGISTRY_COUPLING"
+                )
+                + _RANK_T1B_EXIT_NONZERO
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -2719,6 +3071,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_CONTROL_INVALID)
                 for t in _R1H_LIVENESS_INVALID
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the shuffle control's default permutation is the identity,"
+                    " so the trained and decoy readings are both exactly 0 and "
+                    "control_live_decoy_ok fails"
+                )
+                + _RANK_T1B_LIVENESS_EXIT_3
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -2749,6 +3111,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_CONTROL_INVALID)
                 for t in _R1H_LIVENESS_INVALID
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the shuffle replay hands every row its own memory, so the "
+                    "trained and decoy readings are both exactly 0 and "
+                    "control_live_decoy_ok fails"
+                )
+                + _RANK_T1B_LIVENESS_EXIT_3
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -2778,6 +3150,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_CONTROL_INVALID)
                 for t in _R1H_LIVENESS_INVALID
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "every shuffle replay adds 1e-3 to the memory, so the "
+                    "own-memory control (perm = identity) is no longer exactly "
+                    "zero and control_own_memory_ok fails"
+                )
+                + _RANK_T1B_LIVENESS_EXIT_3
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -2805,6 +3187,17 @@ MUTATIONS: tuple[Mutation, ...] = (
             *(
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_CONTROL_INVALID)
                 for t in _R1H_LIVENESS_INVALID
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the shuffle replay also permutes the bos gestalt (bc, bv),"
+                    " which moves the liveness readings off what they were: the"
+                    " band is no longer 'live', so main() exits non-zero "
+                    "(liveness_exit) and T1(b)'s `assert rc == 0` fails on the "
+                    "run's log tail, the printed result's liveness record"
+                )
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -2866,9 +3259,21 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            return kv.clone() + 1e-3",
         "PREREG Secondary 2: the replacement path's own control. A path that moves "
         "tokens by itself would read as 'memory is read' on any model.",
-        off_gate_allowed=tuple(
-            (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
-            for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+        off_gate_allowed=(
+            *tuple(
+                (f"tests/test_liveness_wiring.py::{t}", _LIVENESS_INSTRUMENT_COUPLING)
+                for t in ("test_the_controls_read_what_they_must_on_a_real_run",)
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the self-replacement adds 1e-3, so random_self_ok and the "
+                    "random-replacement readings in the footer's liveness "
+                    "record change (descriptive: the band does not read them)"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -2880,6 +3285,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "PREREG Secondary 2 requires the Gaussian rescaled to the replaced slot's "
         "L2 norm; an unscaled draw changes magnitude as well as content, and the "
         "live-memory reading still moves, so only the norm check sees it.",
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the random replacement is not norm-matched, so "
+                    "random_replacement_A / _ratio in the footer's liveness "
+                    "record change (descriptive: the band does not read them)"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+        ),
     ),
     Mutation(
         "the answer-token mask is ignored",
@@ -2899,6 +3316,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "            vals.append(1.0)",
         "the descriptive cosine would read 'rows collinear' whatever the memory "
         "holds, which is exactly the rival hypothesis it exists to test.",
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the footer's liveness record reports cross_row_cosine = "
+                    "1.0 (descriptive: the band does not read it)"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+        ),
     ),
     Mutation(
         "the oracle evicts the sentence most needed",
@@ -2924,6 +3352,18 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "the test asserts it keeps every queried fact resident, which an "
                 "oracle evicting the most-needed sentence cannot: the oracle, seen "
                 "from readability's upper-bound arm.",
+            ),
+            (
+                "tests/test_post_fails_controls_1d.py::test_measure_point_small_and_record_format",
+                (
+                    "item 1d's measure_point runs "
+                    "rsr.baselines.oracle.OraclePolicy beside FIFO and the test"
+                    " asserts Belady's residency dominates FIFO's; the inverted"
+                    " oracle evicts the most-needed sentence and its hit rate "
+                    "falls below FIFO's (0.61 < 0.88): the oracle, seen from "
+                    "post-fails-controls 1d. (integ 2026-10-20, battery at "
+                    "c702c0a)"
+                ),
             ),
         ),
     ),
@@ -3316,6 +3756,40 @@ MUTATIONS: tuple[Mutation, ...] = (
             (
                 "tests/test_train_loop.py::test_the_value_head_lands_in_its_own_mup_group",
                 _S003_REFUSAL_THROUGH_TRAIN,
+            ),
+            *(
+                (
+                    f"tests/test_post_fails_controls_1a.py::{t}",
+                    (
+                        "item 1a's module fixture `tiny` runs R1.run_heldout over U"
+                        " ids 64, 65 of the default synthetic corpus, and encoding "
+                        "them goes through answer_targets, which refuses an "
+                        "out-of-band corpus (ValueError 'doc 64 sentence 4 ... does"
+                        " not end in its answer'), so every test that takes `tiny` "
+                        "errors at setup: _S003_REFUSAL_COUPLING, seen from "
+                        "post-fails-controls 1a. (integ 2026-10-20, battery at "
+                        "c702c0a)"
+                    ),
+                )
+                for t in (
+                    "test_every_pass_ran_and_residency_holds",
+                    "test_factfiller_in_loop_equals_model_free",
+                    "test_kindoracle_is_b0s_ko_rule_in_the_loop",
+                    "test_kindoracle_score_has_no_age",
+                    "test_no_statistic_before_a_c2",
+                    "test_pairing",
+                    "test_records_equal_is_record_for_record",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the default synthetic corpus goes out of band and train() "
+                    "refuses it in answer_targets (ValueError): "
+                    "_S003_REFUSAL_COUPLING"
+                )
+                + _RANK_T1B_EXIT_NONZERO
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -4179,6 +4653,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_DEFAULT_PATH_STAMP)
                 for t in _R1H_NO_ARM_RAN
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "frozen['n_documents'] = None is stamped on a run that set "
+                    "none, so config_hash and run_id change (a pool run's "
+                    "liveness batch reads the pool, so its band does not move)"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -4458,6 +4942,17 @@ MUTATIONS: tuple[Mutation, ...] = (
             *(
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_DEFAULT_PATH_STAMP)
                 for t in _R1H_NO_ARM_RAN
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "frozen['stream'] = None is stamped, so liveness_batch's "
+                    "`'stream' in config` branch reads None['vocab_documents'] "
+                    "and the measurement raises TypeError "
+                    "(_LIVENESS_BATCH_STAMP_COUPLING)"
+                )
+                + _RANK_T1B_LIVENESS_EXIT_3
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -4875,6 +5370,26 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "(integ 2026-10-19, battery at 1081716)"
                 ),
             ),
+            (
+                "tests/test_post_fails_controls_1e.py::test_group_kv_replaces_members_and_passes_the_rest_through",
+                (
+                    "item 1e's group_kv applies rsr.metrics.loo.knockout_kv "
+                    "once per member; with the knockout clobbering the whole "
+                    "row, slots that are not members are replaced too (out[0, "
+                    "0] != kv[0, 0]: assert False): the knockout, seen from "
+                    "post-fails-controls 1e. (integ 2026-10-20, battery at "
+                    "c702c0a)"
+                ),
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the LOO knockout replaces every slot of the row, so "
+                    "target=loo_resample's r_i, L_MC and phi's updates change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -5207,6 +5722,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         '    return int.from_bytes(h[:8], "little") % (2**63)',
         ("    return (((seed * 1_000_003 + doc_id) * 8_191 + t) * 131 + role) % (2**63)"),
         ("PR #48 minor: (seed, doc, t, role) must not alias; E0d's roles are 16 + rank."),
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the LOO seed mix changes, so loo_resample's replacement "
+                    "draws, r_i, L_MC and phi's updates change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+        ),
     ),
     Mutation(
         "loo: a duplicate key in a document is not flagged",
@@ -5344,6 +5870,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "liveness_batch reads -- changes the band or reason it asserts.",
                 "test_a_frozen_warm_start_measures_liveness_against_the_untrained_decoy",
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("the footer's liveness record is {'band': 'live'}, not the measurement")
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -5381,6 +5913,12 @@ MUTATIONS: tuple[Mutation, ...] = (
             *(
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_DECOY_INVALID)
                 for t in _R1H_LIVENESS_INVALID
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("the decoy is the trained model, so ratio == 1.0 exactly")
+                + _RANK_T1B_LIVENESS_EXIT_3
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -7121,6 +7659,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "means use t >= 16, so widening the rows must change them. The "
                 "coupling is the point: the means are only as right as their rows.",
             ),
+            (
+                "tests/test_post_fails_controls_1b.py::test_class_means_pool_rows_row_weighted",
+                (
+                    "item 1b's class_means pools over B0.row_mask "
+                    "(experiments/b0-ceilings/run.py), and the test counts its "
+                    "rows as t in [m, S); with under-full steps included the "
+                    "count is 1128, not 1008: B0's row mask, seen from "
+                    "post-fails-controls 1b. (integ 2026-10-20, battery at "
+                    "c702c0a)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -8630,6 +9179,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "come out bit-equal. (integ 2026-10-19, battery at 1081716)"
                 ),
             ),
+            (
+                "tests/test_post_fails_controls_1c.py::test_es_scores_argmin_matches_policy",
+                (
+                    "item 1c's es_scores re-derives Expire-Span's score (max "
+                    "over layers of e - age) and the test requires its argmin "
+                    "to equal ExpireSpanPolicy.select_eviction; the policy now "
+                    "takes the argmax (assert 1 == 15): the eviction rule, seen"
+                    " from post-fails-controls 1c's independent copy. (integ "
+                    "2026-10-20, battery at c702c0a)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -8919,6 +9479,19 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0010 q6: a slot any layer still reads is alive (as P7:L353-355 "
         "says for heads). min over layers evicts a slot a deep layer is still "
         "retaining.",
+        off_gate_allowed=(
+            (
+                "tests/test_post_fails_controls_1c.py::test_es_scores_argmin_matches_policy",
+                (
+                    "item 1c's es_scores re-derives Expire-Span's score (max "
+                    "over layers of e - age) and the test requires its argmin "
+                    "to equal ExpireSpanPolicy.select_eviction; the policy now "
+                    "takes the min over layers (assert 1 == 0): the eviction "
+                    "rule, seen from post-fails-controls 1c's independent copy."
+                    " (integ 2026-10-20, battery at c702c0a)"
+                ),
+            ),
+        ),
     ),
     Mutation(
         "expire-span: span loss charged at eval",
@@ -9108,6 +9681,32 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 §1 / T5. write_at compacts the prefix after a middle-slot "
         "eviction, so an index names different gestalts at different steps; G "
         "keyed by index sums one slot's early r with its successor's later r.",
+        off_gate_allowed=(
+            *(
+                (
+                    f"tests/test_rsr_run3_ranking.py::{t}",
+                    (
+                        "the MC samples are keyed by slot index, not written_at, so"
+                        " the new buffers' keys differ from 728a42f's (assert "
+                        "False)"
+                    )
+                    + _RANK_T1A_BITWISE_TAIL,
+                )
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the MC return is keyed by slot index, not written_at, so "
+                    "G, L_MC and phi's updates change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+        ),
     ),
     Mutation(
         "slice1: the return's discount starts at k = 1",
@@ -9118,10 +9717,29 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 T5: G_i(t) = sum_{k=0} gamma^k r_i(t+k) (spec §3.3, correction "
         "2). Every term one power of gamma short is a plausible-looking return "
         "with the wrong scale and the wrong gamma=0 limit.",
-        off_gate_allowed=_s1_declare(
-            _S1_RETURN_ARITHMETIC,
-            "test_g_is_keyed_by_written_at_through_a_middle_slot_eviction",
-            "test_the_return_is_truncated_at_each_rows_length",
+        off_gate_allowed=(
+            *_s1_declare(
+                _S1_RETURN_ARITHMETIC,
+                "test_g_is_keyed_by_written_at_through_a_middle_slot_eviction",
+                "test_the_return_is_truncated_at_each_rows_length",
+            ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the MC return's discount starts at k = 1, so G, L_MC and "
+                    "phi's updates change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9170,6 +9788,40 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_policy_target_is_the_imputed_delta_at_live_cells",
                 )
             ),
+            *(
+                (
+                    f"tests/test_rsr_run3_ranking.py::{t}",
+                    (
+                        "every row's MC samples land in row 0's buffer, so the new "
+                        "buffers are {0} where 728a42f's are one per row (assert "
+                        "[0] == [0, 1, 2, 3, 4, 5])"
+                    )
+                    + _RANK_T1A_BITWISE_TAIL,
+                )
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "every row's MC samples land in row 0's buffer, so G, L_MC "
+                    "and phi's updates change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t4_policy_rank_loss_equals_the_padded_definition",
+                (
+                    "run 3's T4 compares the policy's rank loss with the padded"
+                    " definition over the policy's own (row, step) groups; with"
+                    " every row's samples in row 0's buffer the group count is "
+                    "15, not 90 (assert 15 == 90): the per-row buffers, seen "
+                    "from run 3's T4. (integ 2026-10-20, battery at c702c0a)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -9181,10 +9833,32 @@ MUTATIONS: tuple[Mutation, ...] = (
         "ADR-0009 L9 (signed): unweighted, sum over live slots, then mean over "
         "(row, t). B1 measured beta LIVE at eps = 1e-8, so the loss scale is not "
         "inert and the reduction is part of what beta means.",
-        off_gate_allowed=_r1_declare(
-            "the age-only L_MC by hand is sum-then-mean (0.25 + 0.0625 over one "
-            "group = 0.3125); a per-slot mean gives 0.15625.",
-            "test_the_age_only_arm_regresses_and_evicts_on_age_alone",
+        off_gate_allowed=(
+            *_r1_declare(
+                "the age-only L_MC by hand is sum-then-mean (0.25 + 0.0625 over one "
+                "group = 0.3125); a per-slot mean gives 0.15625.",
+                "test_the_age_only_arm_regresses_and_evicts_on_age_alone",
+            ),
+            *(
+                (
+                    f"tests/test_rsr_run3_ranking.py::{t}",
+                    (
+                        "L_MC is a per-slot mean, so the new loss differs from "
+                        "728a42f's sum-then-mean (assert False)"
+                    )
+                    + _RANK_T1A_BITWISE_TAIL,
+                )
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("L_MC is a per-slot mean, so its value and phi's updates change")
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9259,6 +9933,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_c2_is_green_on_the_real_arms",
                     "test_c2_sees_a_batch_every_arm_shares_but_the_sampler_did_not_draw",
                 )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "phi is initialised from the data-order generator, so phi's"
+                    " init and the data order both change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -9346,6 +10029,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
                 for t in _R1H_PSIC_AGE_REFUSED
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the frozen RSR arm's only trainable tensor, phi, is not "
+                    "passed to build_param_groups, which raises 'no trainable "
+                    "parameters found' (_S1_NO_VALUE_HEAD_GROUP)"
+                )
+                + _RANK_T1B_EXIT_NONZERO
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9387,6 +10080,12 @@ MUTATIONS: tuple[Mutation, ...] = (
             *(
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_OVERRIDES_UNSTAMPED)
                 for t in _R1H_E2E
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("frozen['policy_overrides'] is empty, so config_hash and run_id change")
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -9457,6 +10156,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "set_train_step counts from arm B's source step, so the "
+                    "T_warm warm/scored boundary moves"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9524,6 +10232,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_c1_sees_a_labelled_allow_flag_or_another_checkpoint",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("frozen['warm_start'] is absent, so config_hash and run_id change")
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9565,6 +10279,17 @@ MUTATIONS: tuple[Mutation, ...] = (
                 (f"tests/test_rsr_run1_harness.py::{t}", _R1H_LIVENESS_DECOY_INVALID)
                 for t in _R1H_LIVENESS_INVALID
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "init_state is re-copied after the warm start loads, so the"
+                    " liveness decoy is the warm-started model; the transformer"
+                    " is frozen, so the trained model's weights are the decoy's"
+                    " and ratio == 1.0 exactly"
+                )
+                + _RANK_T1B_LIVENESS_EXIT_3
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9575,6 +10300,17 @@ MUTATIONS: tuple[Mutation, ...] = (
         "pool.length]}\n",
         "        pass  # MUTATED\n",
         "m-2: two pools would share a config hash and a run_id.",
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "frozen['pool'] is absent, so config_hash and run_id change"
+                    " (and the liveness batch is no longer the pool's)"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+        ),
     ),
     Mutation(
         "run1: the pool's offset is ignored",
@@ -9608,6 +10344,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_c2_is_green_on_the_real_arms",
                     "test_c2_sees_a_batch_every_arm_shares_but_the_sampler_did_not_draw",
                 )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the pool is generated from offset 0, not the command's "
+                    "offset, so the run trains on other documents"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -9650,6 +10395,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_every_arm_records_its_sampler_and_c2_requires_them_to_agree",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the frozen config's epoch block records sampling None, so "
+                    "config_hash and run_id change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9689,6 +10443,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     ),
                 )
                 for t in (*_R1H_A_CONTROL_RED, *_R1H_C10_ON_THE_FIXTURE)
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "frozen['frozen_model_mode'] is absent, so config_hash and "
+                    "run_id change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -9732,6 +10495,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "AdamW eps is 1e-12, so phi's updates and the frozen "
+                    "optimizer record (config_hash, run_id) change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9764,6 +10536,10 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_the_diagnostics_split_warm_from_scored_and_report_the_first_block",
                     "test_the_step_diag_reading_is_diagnostic_and_never_the_headline",
                 )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("every beat's diag is None") + _RANK_T1B_HEARTBEATS + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -9810,6 +10586,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "{16}. (integ 2026-10-19, battery at 1081716)"
                 ),
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "each eviction's victim_age is its rank, so every beat's "
+                    "diag victim-age histogram changes"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9841,6 +10626,23 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "not {16}. (integ 2026-10-19, battery at 1081716)"
                 ),
             ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the rank-shift log counts no victim ages, so every beat's "
+                    "diag victim_age_distribution is empty"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9861,6 +10663,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "battery at 1081716)"
                 ),
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "rankdata no longer averages ties, so every beat's diag "
+                    "Spearman / partial rho changes"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9871,12 +10682,23 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        Z = ones  # MUTATED\n",
         "m-8 / §7.1 item 1: 'partial correlation, not raw rho' -- without the "
         "covariates it is v0.1's raw Spearman under the partial's name.",
-        off_gate_allowed=_r1_declare(
-            "both assert None where the covariates leave nothing defined: content "
-            "that determines age (now 1.0) and 32 covariates over 8 samples (now "
-            "-0.258). Without the residualisation neither case is undefined.",
-            "test_partial_rho_is_one_for_a_score_that_is_age_and_none_when_undefined",
-            "test_victim_age_and_rank_histograms_by_hand",
+        off_gate_allowed=(
+            *_r1_declare(
+                "both assert None where the covariates leave nothing defined: content "
+                "that determines age (now 1.0) and 32 covariates over 8 samples (now "
+                "-0.258). Without the residualisation neither case is undefined.",
+                "test_partial_rho_is_one_for_a_score_that_is_age_and_none_when_undefined",
+                "test_victim_age_and_rank_histograms_by_hand",
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the partial rho is not residualised on content, so every "
+                    "beat's diag partial_rho_score_age_given_content changes"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9898,6 +10720,23 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "2026-10-19, battery at 1081716)"
                 ),
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                (
+                    "the content arm's psi adds the slot ages, so the new L_MC "
+                    "differs from 728a42f's (assert False)"
+                )
+                + _RANK_T1A_BITWISE_TAIL,
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the content head's score adds the slot ages, so the RSR "
+                    "arm's eviction decisions and L_MC change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -9908,12 +10747,32 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        return self.table[torch.zeros_like(idx)]  # MUTATED\n",
         "m-8 / §7.1 item 2: an 'age-only' arm that is a constant is not recency "
         "at its strongest; content+age ~= age-only would then mean nothing.",
-        off_gate_allowed=_r1_declare(
-            "both drive AgeOnlyValueHead with a hand-set table: the histogram test "
-            "picks its middle-slot victim by theta[age] (now slot 0, all ties), and "
-            "the content-head test's age-only half expects theta[age] = (4,3,2,1).",
-            "test_victim_age_and_rank_histograms_by_hand",
-            "test_the_content_head_never_reads_age",
+        off_gate_allowed=(
+            *_r1_declare(
+                "both drive AgeOnlyValueHead with a hand-set table: the histogram test "
+                "picks its middle-slot victim by theta[age] (now slot 0, all ties), and "
+                "the content-head test's age-only half expects theta[age] = (4,3,2,1).",
+                "test_victim_age_and_rank_histograms_by_hand",
+                "test_the_content_head_never_reads_age",
+            ),
+            *(
+                (f"tests/test_rsr_run3_ranking.py::{t}", _RANK_728A42F_GUARD)
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                    "test_t1c_reduction_to_tg_is_unchanged",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t3_permuting_ages_moves_nothing_in_the_content_arm[age_only-True]",
+                (
+                    "run 3's T3 checks that permuting ages DOES move the "
+                    "age-only arm's rank loss (the test can see age); with the "
+                    "age-only head reading table[0] for every slot it does not "
+                    "move (assert not True == True): the age-only head, seen "
+                    "from run 3's T3. (integ 2026-10-20, battery at c702c0a)"
+                ),
+            ),
         ),
     ),
     Mutation(
@@ -9979,6 +10838,18 @@ MUTATIONS: tuple[Mutation, ...] = (
         "        allow_unrecorded_vocabulary=ws.allow_unrecorded_vocabulary,\n",
         "        # MUTATED\n",
         "MAJOR-1 ruling: the allow flag enters the config hash.",
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the warm-start record stamped into the frozen config loses"
+                    " allow_unrecorded_vocabulary, so config_hash and run_id "
+                    "change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+        ),
     ),
     Mutation(
         "run1: a warm-start seed mismatch accepted",
@@ -10010,6 +10881,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "src_seed token (0 / unrecorded).",
                 "test_a_seed_mismatch_is_refused_unless_labelled",
                 "test_an_unrecorded_vocabulary_needs_the_labelled_flag",
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the warm-start label loses src_seed, so arm_label, "
+                    "config_hash and run_id change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -10153,6 +11033,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_the_held_out_policy_runs_the_scored_rule_with_the_trained_head",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the CLI passes pool=None, so the run trains on the default"
+                    " corpus with replacement and stamps no pool"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -10174,6 +11063,14 @@ MUTATIONS: tuple[Mutation, ...] = (
         "Defect 1 (RESEARCH-CONTEXT §10.1 defect 4): train() asks "
         "policy.attribution(); without it every RSR beat records null, against "
         "§3.4's per-eviction attribution from the first policy run.",
+        off_gate_allowed=(
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("the policy has no attribution(), so the RSR beats carry none")
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
+        ),
     ),
     Mutation(
         "run1: train() stops draining the eviction records",
@@ -10191,6 +11088,15 @@ MUTATIONS: tuple[Mutation, ...] = (
             *_r1_declare(
                 "the same-dir resume test reads evictions.jsonl, which is never written.",
                 "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "train() never drains the eviction records, so the new run "
+                    "writes no evictions.jsonl and T1(b)'s read of it raises "
+                    "FileNotFoundError"
+                )
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -10221,6 +11127,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 "them into the fresh dir's evictions.jsonl ([0, 1, 2, 3], not [2, "
                 "3]).",
                 "test_a_resume_into_a_dir_with_later_rows_is_refused",
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "drain_records keeps what it returns, so every drain "
+                    "re-writes all earlier records and T1(b)'s evictions.jsonl "
+                    "comparison fails ('evictions.jsonl')"
+                )
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -10309,6 +11224,16 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_c10_requires_srep_0_in_every_recorded_config",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the command's --srep-norm-reg-weight 0.0 never reaches "
+                    "train(), so the run's loss and frozen config (config_hash,"
+                    " run_id) change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -10360,6 +11285,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                 )
                 for t in (*_R1H_C2_RED, "test_c2_is_green_on_the_real_arms")
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "pool batches are drawn with replacement, not from the "
+                    "epoch permutation, so the run sees other batches"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -10387,6 +11321,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_c2_is_green_on_the_real_arms",
                     "test_c2_sees_a_batch_every_arm_shares_but_the_sampler_did_not_draw",
                 )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the pool order is arange, not a seeded permutation, so the"
+                    " run sees other batches"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -10436,6 +11379,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_fifo_and_psic_arms_are_unchanged_by_the_wiring[psiC_frozen_eval]",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the frozen eval mode is not applied, so dropout is live "
+                    "and the losses change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -10478,6 +11430,15 @@ MUTATIONS: tuple[Mutation, ...] = (
                     + _R1H_C2_RED_TAIL,
                 )
                 for t in (*_R1H_C2_RED, "test_c2_is_green_on_the_real_arms")
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "the blocks stay in train mode under the frozen eval mode, "
+                    "so dropout is live and the losses change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -10559,6 +11520,32 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_the_decision_context_choice_does_not_change_held_out_decisions",
                 )
             ),
+            *(
+                (
+                    f"tests/test_rsr_run3_ranking.py::{t}",
+                    (
+                        "T1(a) puts the one model in eval() once and drives both "
+                        "policies over it; eval_forward now leaves it in train mode"
+                        " after the first capture, so dropout is live and the two "
+                        "drives' buffers differ (assert False)"
+                    )
+                    + _RANK_T1A_BITWISE_TAIL,
+                )
+                for t in (
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[None]",
+                    "test_t1a_mc_retention_loss_is_bitwise_run_2s[age_only]",
+                )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "eval_forward leaves the frozen-eval model in train mode "
+                    "after each capture, so dropout is live and the losses "
+                    "change"
+                )
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -10595,6 +11582,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                     "test_the_config_and_overrides_are_stamped_into_the_hash_and_label",
                 )
             ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("the arm label loses [eval], so config_hash and run_id change")
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
+            ),
         ),
     ),
     Mutation(
@@ -10628,6 +11621,14 @@ MUTATIONS: tuple[Mutation, ...] = (
                     + _R1H_C2_RED_TAIL,
                 )
                 for t in (*_R1H_C2_RED, "test_c2_is_green_on_the_real_arms")
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                (
+                    "no step record carries pool_doc_ids, so T1(b)'s "
+                    "diagnostics.jsonl comparison fails ('diagnostics.jsonl')"
+                )
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
@@ -10666,6 +11667,12 @@ MUTATIONS: tuple[Mutation, ...] = (
                     *_R1H_C2_RED,
                     "test_measure_seed_passes_every_arms_sampler_into_c2",
                 )
+            ),
+            (
+                "tests/test_rsr_run3_ranking.py::test_t1b_twenty_steps_end_to_end_identical_to_728a42f",
+                ("frozen['sampling'] is absent, so config_hash and run_id change")
+                + _RANK_T1B_HEARTBEATS
+                + _RANK_T1B_PIN_TAIL,
             ),
         ),
     ),
