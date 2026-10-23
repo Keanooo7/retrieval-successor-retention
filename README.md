@@ -8,18 +8,33 @@ evicts the oldest slot.
 **RSR replaces that one line** with a learned policy that evicts the slot with the
 lowest predicted *future* retrieval demand given the current discourse state.
 
-> Kintsch & van Dijk (1978) specified retention by structural importance over a
-> capacity-limited discourse buffer — the leading-edge strategy — and it
-> reproduced the human recall gradient. Does a system trained only to predict the
-> next sentence *discover* that policy? RSR is the test.
+> Kintsch & van Dijk (1978) implemented and validated a retention rule for a
+> capacity-limited discourse buffer, the leading-edge strategy, originally proposed
+> by Kintsch & Vipond (1978). It walks the microstructure coherence graph built from
+> argument overlap and "emphasizes recency and frequency"
+> ([`docs/spec-corrections.md`](docs/spec-corrections.md), corrections 25–27). RSR
+> asked whether a system trained only to predict the next sentence *discovers* that
+> policy. **That question has not been tested** (see Status): the learned heads did
+> not beat FIFO, and the leading-edge baseline is still a stub.
 
 ## Status
 
-As of 2026-10-20. **Only weeks 1–4 are approved** (spec §16); everything downstream
-is a projection, not a permission. The live plan is
-[`docs/PLAN-2026-10-19.md`](docs/PLAN-2026-10-19.md). Every number the paper may cite
-is re-derived from the run records, one row per number with its ledger key, per-seed
-CI, seed count and PREREG status, in [`docs/claims-register.md`](docs/claims-register.md).
+As of 2026-10-23. **Only weeks 1–4 are approved** (spec §16); everything downstream
+is a projection, not a permission. The 2026-10-19 plan,
+[`docs/PLAN-2026-10-19.md`](docs/PLAN-2026-10-19.md), is superseded by the owner's
+rulings of 2026-10-20 and 2026-10-22, which are not yet committed here. On 2026-10-20
+the owner upheld the kill rule for the original thesis: no further attempts on the
+run 1 / run 2 / 2a configuration. The remaining work is a diagnostic paper. Every
+number the paper may cite is re-derived from the run records, one row per number with
+its ledger key, per-seed CI, seed count and PREREG status, in
+[`docs/claims-register.md`](docs/claims-register.md).
+
+**Four content-only value heads have been deployed frozen against FIFO, and none won
+on any seed.** Two were fitted offline: offline-psi's head (labels EQUIV / EQUIV / LOSS,
+deploy class FAILS; register row `ofpsi.deploy.label`) and the 2a ranking head (labels
+LOSS / EQUIV / LOSS; [`experiments/rsr-run3-ranking/RESULTS-2a.md`](experiments/rsr-run3-ranking/RESULTS-2a.md)).
+The other two were trained in the loop, below. Diagnostics of why (a sign check, a decodability probe, imitation-trained heads) are
+on unmerged branches and are not reported here until they reach `main`.
 
 **Two RSR runs have trained ψ̂ in the loop, and both lose to FIFO on every seed.** Each
 trains the content-only head ψC online by `L_MC` (gradient to `φ` only) on fresh-stream
@@ -60,8 +75,9 @@ verifier verdicts and review records, in
 [`docs/results/2026-09-30-verified.md`](docs/results/2026-09-30-verified.md)
 (`scripts/verified_results.py`; a test fails if that file and the ledgers disagree).
 The headroom exists; `r_i` ranks the slot being retrieved *now* above its same-age
-peers (E0d); an offline ψ̂ eviction rule was harmful through the model (B2); and ψ̂
-trained in the loop lost to FIFO in both RSR runs. Why it loses is not established, and
+peers (E0d); an offline ψ̂ eviction rule was harmful through the model (B2); ψ̂
+trained in the loop lost to FIFO in both RSR runs; and no deployed content-only value
+head won against FIFO on any seed. Why the heads fail is not established on `main`, and
 nothing here measures what connects those facts.
 
 **Where to find the audit trail**
@@ -77,12 +93,12 @@ nothing here measures what connects those facts.
 | Document | Role |
 |---|---|
 | [`docs/RESEARCH-CONTEXT.md`](docs/RESEARCH-CONTEXT.md) | **Start here.** The single orientation document — claim, sources, decisions, measured numbers, what is broken, what no agent may touch |
-| [`docs/spec-corrections.md`](docs/spec-corrections.md) | **Read before the spec.** 31 corrections that win over the spec body |
+| [`docs/spec-corrections.md`](docs/spec-corrections.md) | **Read before the spec.** 32 corrections that win over the spec body |
 | [`docs/spec/rsr_model_spec_v0.5.md`](docs/spec/rsr_model_spec_v0.5.md) | The model specification, verbatim |
 | [`CLAUDE.md`](CLAUDE.md) | Standing rules for every agent session |
 | [`docs/decisions/`](docs/decisions/) | ADRs for anything expensive to reverse |
 | [`docs/release-conditions.md`](docs/release-conditions.md) | §16's eight conditions, each linking its evidence |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | **What happens next and in what order.** Supersedes §8's week numbering. Names the blocker that gates four experiments at once |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | The 2026-09-20 sequencing, read through the 2026-10-19 plan. Both are superseded (see Status); kept for the record |
 | [`docs/cognitive-grounding.md`](docs/cognitive-grounding.md) | What the cognitive literature licenses, and what it does not. Read before writing anything that cites McClelland or Kintsch |
 | [`docs/citation-audit.md`](docs/citation-audit.md) | E0f. 13 of 14 primary sources checked. **The spec misstates [P11], Kintsch & van Dijk, in three places** (corrections 25–27); the hypothesis is untested, the spec's reading of the source is what failed |
 
@@ -124,11 +140,11 @@ machine's CPU, in a throwaway venv; the exact command is in
 src/rsr/
   model/        tg base, memory, gestalt write
   retention/    policy, value_head, reward           [shadow, bias = STUBS, raise]
-  baselines/    fifo, lru, random, oracle             [h2o, expire_span,
-                (oracle: synthetic only)                leading_edge = STUBS]
+  baselines/    fifo, lru, random, oracle,            [h2o, leading_edge = STUBS]
+                expire_span (oracle: synthetic only)
   data/         synthetic generator                   [pg19, coref = STUBS]
   metrics/      memory_liveness (shuffle control),    [reintroduction,
-                headroom (E-feas), loo (E0d)            vacuity, gini = STUBS]
+                headroom (E-feas), loo (E0d), vacuity   gini = STUBS]
   mup/          param groups                          [coord_check = STUB]
   constants.py  the registry that refuses unmeasured reads
 configs/        base + model/ + data/ + experiment/
@@ -137,11 +153,13 @@ preregistration/  committed BEFORE the experiment they govern
 ```
 
 **A stub raises `NotImplementedError`.** They are marked above rather than omitted
-because the layout is also the work plan. Three baselines, both anti-collapse
-mechanisms, and three of the spec's four metrics are not implemented. The fourth,
-leave-one-out, which §3.2.1 makes the arbiter of truth, landed in #48 as E0d's
-instrument. Two further instruments were added since: the shuffle control
-(`runs/shuffle-control/`) and E-feas's retention headroom (`runs/efeas-synthetic/`). See
+because the layout is also the work plan. Two baselines (H2O and the leading-edge
+strategy), both anti-collapse mechanisms, and two of the spec's four metrics
+(reintroduction and Gini) are not implemented. Leave-one-out, which §3.2.1 makes the
+arbiter of truth, landed in #48 as E0d's instrument; the vacuity statistic and the
+Expire-Span baseline are also implemented. Two further instruments were added since:
+the shuffle control (`runs/shuffle-control/`) and E-feas's retention headroom
+(`runs/efeas-synthetic/`). See
 `docs/RESEARCH-CONTEXT.md` §10 for the full register, and read it before reading
 any result in `runs/`.
 
@@ -152,7 +170,7 @@ commits on `main` as of 2026-09-21, 111 carry a `Co-Authored-By` trailer naming 
 (`git log --no-merges --format=%B | grep -i '^co-authored-by'`). Research direction,
 pre-registrations and the decision to accept or reject a result were human calls; the
 agents wrote most of the code and ran most of the experiments. A return is accepted only
-after part of it is re-executed by a separate session (`.claude/agents/rsr-manager.md`).
+after part of it is re-executed by a separate session (`.claude/agents/rsr-verifier.md`).
 The development history is complete in this repository.
 
 ## Licence
